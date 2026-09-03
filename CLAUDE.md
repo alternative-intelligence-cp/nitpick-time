@@ -104,8 +104,12 @@ compiler's own bootstrap ladder, and `[dependencies]` resolves to nothing.
 lands it, probes are run by hand — `meta/roadmap/0.0/0.0.0.md` §2 has the
 command.
 
-The compiler is at `../../nitpick`. Build it per its own `CLAUDE.md`. LLVM
-20.1.2 exactly, pinned; `llvm-config --version` to check.
+The compiler binary is the **pinned toolchain** the board names
+(`../BOARD.md`, W-18): `$NPKC` and `$NPKRT` are supplied to every session by the
+orchestrator, or set by hand from `../.internal/toolchain/<commit>/`. Never build the
+compiler from here and never read its `build/` directly — the guard refuses
+the first, and the second is rebuilt under you. LLVM 20.1.2 exactly, pinned;
+`llvm-config --version` to check.
 
 ## Where things go
 

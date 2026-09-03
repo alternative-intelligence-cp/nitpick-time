@@ -1,0 +1,114 @@
+// expect-exit: 0
+//
+// PROBE 01 — a derived `Ord` follows DECLARATION ORDER.
+//
+// ASKS: does `#[derive(Ord, Eq)]` on `{ int64:a; uint32:b; }` compare `a` first
+// and `b` only to break a tie?
+//
+// DEPENDS ON THE ANSWER: TIME_MODEL.md M-6 and SAFETY.md S-14 (TM-011) make
+// `Timestamp = { int64:secs; uint32:nanos }`'s FIELD ORDER SEMANTIC on exactly
+// this basis -- seconds-then-nanoseconds is the comparison the library wants,
+// and every comparison of two instants rests on it. A negative verdict costs
+// the derived comparison: `Timestamp` grows a hand-written `timestamp_cmp`, M-6
+// is rewritten, and every other value type is re-examined for the assumption.
+//
+// P-6: this probe ASSERTS the answer the specification already states rather
+// than printing what it found, so that a compiler change to it is a red run.
+// The compiler's TRAITS_REFERENCE.md §2.5 says "`Ord` compares in declaration
+// order, so reordering a struct's fields is a semantic change" -- but its own
+// backend suite exercises a derived `Ord` on an ENUM only (`derive_ord_enum`),
+// where "declaration order" means the variant order and nothing about fields.
+// The struct case is what `ntime` needs and it is unexercised there, which is
+// the whole reason this probe exists.
+//
+// HOW IT PROVES IT. Agreeing with declaration order is not enough on its own:
+// for `{ int64:a; uint32:b; }` a compiler that sorted fields by width, by
+// alignment, by signedness or by name would give the same answers. So the probe
+// carries a TWIN, `Flip = { uint32:b; int64:a; }` -- the same two fields, the
+// same names, the same types, declared the other way round. If `Pair` is
+// decided by `a` and `Flip` by `b`, the only thing that changed is the order
+// they were written in.
+mod:probe01_derive_ord;
+
+error:E9;
+
+// `Timestamp`'s shape, exactly (TM-011).
+#[derive(Ord, Eq)]
+struct:Pair = { int64:a; uint32:b; };
+
+// The same fields, declared the other way round. Nothing but the order differs.
+#[derive(Ord, Eq)]
+struct:Flip = { uint32:b; int64:a; };
+
+func:main = int32(cstring[]:_~argv) {
+    // ---- Pair: `a` first, `b` to break the tie -------------------------
+
+    // Equal in `a`, so `b` decides: 0 < 9.
+    Pair:p10 = Pair{ a: 1i64, b: 0u32 };
+    Pair:p19 = Pair{ a: 1i64, b: 9u32 };
+    pick (p10.cmp(p19) ?! E9) { (Ordering.Less) { }, (*) { exit 10i32; } }
+    pick (p19.cmp(p10) ?! E9) { (Ordering.Greater) { }, (*) { exit 11i32; } }
+
+    // `a` DOMINATES: 2 beats 1 even though its `b` is the smaller of the two.
+    // This is the assertion `Timestamp` actually depends on -- one second later
+    // is later, whatever the nanoseconds say.
+    Pair:p20 = Pair{ a: 2i64, b: 0u32 };
+    pick (p20.cmp(p19) ?! E9) { (Ordering.Greater) { }, (*) { exit 12i32; } }
+    pick (p19.cmp(p20) ?! E9) { (Ordering.Less) { }, (*) { exit 13i32; } }
+
+    // Both fields equal is `Equal`, and `Eq` agrees with `Ord`.
+    Pair:q1 = Pair{ a: 7i64, b: 5u32 };
+    Pair:q2 = Pair{ a: 7i64, b: 5u32 };
+    pick (q1.cmp(q2) ?! E9) { (Ordering.Equal) { }, (*) { exit 14i32; } }
+    if (!(q1.eq(q2) ?! E9))                             { exit 15i32; }
+    if (q1.eq(p19) ?! E9)                               { exit 16i32; }
+
+    // ---- the signedness of each field is its own -----------------------
+
+    // `a` is SIGNED: a negative second is before the epoch, not after it. A
+    // derived comparison that read the field unsigned would put year 1969
+    // after year 9999, which is the sort of wrong that only shows up in a test
+    // that thought to use a negative timestamp.
+    Pair:neg = Pair{ a: -1i64, b: 9u32 };
+    Pair:zero = Pair{ a: 0i64, b: 0u32 };
+    pick (neg.cmp(zero) ?! E9) { (Ordering.Less) { }, (*) { exit 17i32; } }
+
+    // `b` is UNSIGNED: a value with the top bit set is large, not negative.
+    // `Timestamp.nanos` never exceeds 999_999_999 so this cannot bite the
+    // library today, but the field's type is `uint32` and the probe pins what
+    // that means rather than what the library happens to put in it.
+    Pair:bhi = Pair{ a: 0i64, b: 4294967295u32 };
+    pick (bhi.cmp(zero) ?! E9) { (Ordering.Greater) { }, (*) { exit 18i32; } }
+
+    // ---- Flip: the same fields, the other order ------------------------
+
+    // `b` now leads, so `b: 9` beats `b: 0` even though its `a` is smaller --
+    // the mirror image of the `p20` case above. Together the two assertions say
+    // that the ORDER OF DECLARATION is what decides, and that no property of
+    // the fields themselves does.
+    Flip:f_b0_a2 = Flip{ b: 0u32, a: 2i64 };
+    Flip:f_b9_a1 = Flip{ b: 9u32, a: 1i64 };
+    pick (f_b9_a1.cmp(f_b0_a2) ?! E9) { (Ordering.Greater) { }, (*) { exit 19i32; } }
+    pick (f_b0_a2.cmp(f_b9_a1) ?! E9) { (Ordering.Less) { }, (*) { exit 20i32; } }
+
+    // and `a` still breaks a tie in `b`, one level down
+    Flip:f_b0_a1 = Flip{ b: 0u32, a: 1i64 };
+    pick (f_b0_a2.cmp(f_b0_a1) ?! E9) { (Ordering.Greater) { }, (*) { exit 21i32; } }
+
+    // D-151: exit 0 additionally asserts that nothing leaked.
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (E9)             { exit 90i32; },
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

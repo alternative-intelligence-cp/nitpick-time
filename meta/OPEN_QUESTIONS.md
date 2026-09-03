@@ -77,6 +77,37 @@ Recorded here because the mismatch looks like a defect on first sight and
 somebody will eventually propose the "fix".
 **Ask: none.**
 
+### O-N4 — `npkc` is quadratic in the size of one declaration — **BLOCKING**
+**Measured at cycle 0.0.0, 2026-09-03**, against the pinned toolchain (compiler
+commit `950bb1d`). Compile time and peak memory grow as the square of the number
+of elements in one array initialiser, the number of statements in one function
+body, and the number of bytes in one string literal. The reproduction, the three
+curves and the exact commands are in
+[`../tests/probe/defect/README.md`](../tests/probe/defect/README.md).
+
+**Consequence:** TM-007 compiles the whole tzdb in as `fixed` module state, and
+`ZONE_MODEL.md` §3 sizes that at 26 838 transition rows. Probe 04 built a table
+that size: it compiles, in **281 seconds** and **30.9 GiB of resident memory**.
+A 16 GiB machine cannot build it, CI cannot build it, and every consumer pays it
+because the table is in the library it imports. Z-7's fourth table is a name
+pool — a single large string constant — which is the third axis.
+
+**Ask:** the array-initialiser and function-body paths made linear, or near
+enough that 30 000 rows costs seconds and hundreds of megabytes; and the
+string-literal path made linear in time. Nothing in the *language* changes.
+
+**Meanwhile `ntime` does nothing.** Shrinking the table, splitting it across
+modules, or shipping it as a byte blob decoded at first use would each buy the
+number back, and each is a workaround for a compiler bug buried in library code.
+Cycle 0.0.0 stopped rather than take one, and O-Z1 (ship every zone, or a
+subset?) must **not** be answered "a subset" on the strength of this — that
+would be the same workaround wearing a decision's clothes.
+
+**Gates:** cycle 0.0.5's tzdb size spike, cycle 0.5's generator, and the rest of
+0.0.0's probes only insofar as they wait on the toolchain being re-pinned. The
+probes themselves are unaffected — the defect is a resource cost, not a
+semantics change.
+
 ---
 
 ## O-x — ours

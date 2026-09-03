@@ -473,3 +473,82 @@ attacker-controlled input is a denial of service — the playbook's
 adversarial-input rule. Here the property is free rather than engineered, so it
 is worth stating as a property and checking, rather than discovering later that
 one function grew a recursive case.
+
+---
+
+# The second batch — ratified 2026-09-03
+
+The four questions this plan put to the project's author, answered as
+recommended, with one amendment on where a consumer lives.
+
+### TM-100 — the tzdata release is the latest at cycle 0.5
+**2026-09-03, settling Q-1.** Recorded in `src/zone/version.npk`; the workbench
+currently carries 2026c, and the pass records what it actually pinned rather
+than what was predicted.
+
+**A bump is a minor version, not a patch** (TM-013), because a zone rule change
+alters computed answers for dates the program already handled. That is the
+honest classification and it is the cost of compiling the database in (TM-007):
+the answers are deterministic across machines, and keeping them current is a
+release rather than a background fact.
+
+### TM-101 — intervals and recurrence are post-1.0, as cycle 1.3
+**2026-09-03, settling Q-2.** An `Interval` and a recurrence rule are genuinely
+useful and genuinely separable: everything they need is in the 1.0 surface, so
+they are built on top without touching it.
+
+**`Interval` before `RRULE`**, and they are not one cycle. RFC 5545's `RRULE`
+is a small language with its own grammar, its own conformance surface and its
+own edge cases — it deserves the scrutiny `FORMAT_MODEL.md` §1 gave format
+strings, and bundling it with a two-field struct would deny it that.
+
+### TM-102 — no humanised or relative formatting, at 1.0 or after
+**2026-09-03, settling Q-3.** "3 hours ago" does not ship.
+
+*Reasoning:* every product wants it and no two agree on the rounding policy or
+the thresholds — is 90 minutes "an hour ago" or "2 hours ago"? — and the answer
+is localisation-shaped (TM-024), which this library does not do. Shipping one
+opinion means every consumer with a different one has to work around it.
+
+`period_between` and the numeric parts are shipped instead: a program's own
+two-line function then says what *that* program means, and is right for it.
+This is a case where the library's job is to make the caller's version easy,
+not to have a version.
+
+### TM-103 — the dogfood consumers are `date` and `crontab`/`at`, in `nitpick-posix`
+**2026-09-03, settling Q-4, with the author's amendment on location.** Two
+programs, because they exercise different halves and the second half is where
+date libraries are actually wrong:
+
+- **`date`** exercises formatting and parsing breadth — every layout part,
+  both directions, the round trip.
+- **`crontab` / `at`** exercise **DST edges**: "the next run of this rule in
+  this zone" is the question that produces a wrong answer twice a year, and no
+  amount of round-trip testing finds it.
+
+Both live in
+[`nitpick-posix`](https://github.com/alternative-intelligence-cp/nitpick-posix),
+not in this repository's `examples/`: consumers are real programs with their
+own lifetimes and belong in the application workbench, and all three of these
+are POSIX utilities, so they join the set rather than taking repositories of
+their own.
+
+### TM-104 — `date`'s `%` formatting is the utility's, not the library's
+**2026-09-03. A consequence of TM-103 and TM-009 meeting, and the general shape
+worth naming.**
+
+POSIX `date` takes `+%Y-%m-%d`. TM-009 established that this library has **no
+format-specifier language**, following D-053's removal of `printf` and its
+explicit rejection of format specifiers as "a second mini-language purely to
+save characters".
+
+There is no conflict, and the resolution is the one to reuse everywhere:
+**`date` parses the `%` grammar at run time and maps it onto this library's
+typed layout.** The compatibility layer lives in the utility; the library stays
+principled and is not asked to carry a syntax it rejected on purpose.
+
+The contrast with `nitpick-regex`'s RX-102 is instructive and both are recorded
+so the difference is visible: there, the standard requires a *capability* the
+library structurally lacks, and the departure has to be stated. Here the
+standard requires a *syntax*, and syntax is exactly what a compatibility layer
+can absorb.

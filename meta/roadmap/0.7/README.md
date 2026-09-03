@@ -1,5 +1,12 @@
 # Cycle 0.7 — Calendar arithmetic
 
+> **Where the consumer lives (TM-103):** `date` **and** `crontab`/`at`, in [`nitpick-posix`](https://github.com/alternative-intelligence-cp/nitpick-posix) — **not** in this repository's
+> `examples/`. A consumer is a real program with its own lifetime, and
+> `examples/` would make one that outgrows this library move, and one that
+> consumes several pick a parent. The import is by relative path until the
+> compiler's dependency resolution lands, and the repository's GitHub
+> description and topics are set in the same pass that creates it.
+
 **`Period` addition, the clamping rules, `until`, rounding — and the dogfood
 consumers.** The cycle where the library meets somebody using it.
 

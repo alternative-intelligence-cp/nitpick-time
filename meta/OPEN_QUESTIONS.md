@@ -22,44 +22,29 @@ question is part of the record of how the answer was reached.
 
 ## Q — for the user
 
-### Q-1 — the tzdata release to pin
-Decided at cycle 0.5 against what is current then; the workbench currently
-carries **2026c**. It is not really a preference question — the answer is
-"the latest release when 0.5 runs" — but it is recorded because the release
-becomes a committed constant that changes computed answers when it moves, and
-because **a bump is a minor version** (TM-013), not a patch.
-**Recommendation:** latest at 0.5, recorded in `src/zone/version.npk`.
+### ~~Q-1 — the tzdata release to pin~~ — **SETTLED, TM-100**
+The latest release at cycle 0.5, in `src/zone/version.npk`; a bump is a minor
+version (TM-013), not a patch, because a zone rule change alters answers for
+dates the program already handled.
 
-### Q-2 — intervals and recurrence, post-1.0 or out of scope?
-An `Interval` (a start and an end, or a start and a duration) and a recurrence
-rule (RFC 5545's `RRULE`, or a simpler subset) are genuinely useful and
-genuinely separable. Everything they need is in the 1.0 surface, so they can be
-built on top without touching it.
-**Recommendation:** post-1.0, as cycle 1.3, with its own decision batch — and
-`Interval` before `RRULE`, because `RRULE` is a small language with its own
-conformance surface and deserves the same scrutiny `FORMAT_MODEL.md` §1 gave
-format strings.
+### ~~Q-2 — intervals and recurrence~~ — **SETTLED, TM-101**
+Post-1.0, cycle 1.3, `Interval` before `RRULE` — `RRULE` is a small language
+with its own conformance surface and deserves its own scrutiny rather than
+being bundled with a two-field struct.
 
-### Q-3 — humanised / relative formatting ("3 hours ago")
-Every product wants it and no two agree on the rounding policy or the
-thresholds, and it is localisation-shaped (TM-024).
-**Recommendation:** no, not at 1.0 and probably not ever. Ship
-`period_between` and the numeric parts; a program's own two-line function will
-say what that program means, and it will be right for that product.
+### ~~Q-3 — humanised / relative formatting~~ — **SETTLED, TM-102: no, ever**
+No two products agree on the rounding policy, and the question is
+localisation-shaped. `period_between` and the numeric parts ship instead, so a
+program's own two-line function says what that program means.
 
-### Q-4 — the dogfood consumer
-`nitpick-tui` found real API friction by writing a log viewer against itself
-(its T-104). The equivalent here is a program substantial enough to exercise
-zones, formatting and arithmetic together, written as a consumer rather than
-by the author.
-**Recommendation:** a `date`-equivalent CLI *plus* a small scheduler ("next run
-of this cron-shaped rule in this zone"), at cycle 0.7, in `examples/`. The CLI
-exercises formatting and parsing breadth; the scheduler exercises DST edges,
-which is where a date library is actually wrong.
-
----
-
-## O-N — the compiler's
+### ~~Q-4 — the dogfood consumer~~ — **SETTLED, TM-103 and TM-104**
+`date` **and** `crontab`/`at`, both in
+[`nitpick-posix`](https://github.com/alternative-intelligence-cp/nitpick-posix)
+rather than this repository's `examples/`. The CLI exercises format breadth;
+the scheduler exercises DST edges, which is where a date library is actually
+wrong. **TM-104** records that `date`'s `%` grammar is parsed in the *utility*
+and mapped onto this library's typed layout — the compatibility layer lives in
+the application, and the library stays principled.
 
 ### O-N1 — `npkg` cannot build a library, and `[dependencies]` resolves to nothing
 Measured at the compiler's 1.5.0 and recorded in `specs/BUILD.md` §1.

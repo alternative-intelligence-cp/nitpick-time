@@ -1,0 +1,189 @@
+# Testing
+
+The instruments. The compiler project's recurring finding is that **the checks
+that diff two lists found the holes and the tests did not**, and that a suite
+which only ever agrees with what it is handed reports green while checking
+nothing. This document is `ntime`'s answer to both.
+
+`ntime` is unusually lucky: it is almost entirely pure arithmetic over a small
+domain, so several of its properties can be checked **exhaustively** rather
+than sampled. Where that is possible it is the gate, and §3 says where.
+
+---
+
+## 1. The stages
+
+[`BUILD.md`](BUILD.md) §3 lists them; this is what each is *for*.
+
+| Stage | Answers |
+|---|---|
+| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial |
+| `accept` | the public API compiles in a program that only imports it |
+| `check` | every documented refusal actually refuses, with exactly its code |
+| `program` | the library does what it says, judged by exit code, at -O0 and under `opt -O2` |
+| `golden` | formatted output is exactly the bytes it is supposed to be |
+| `sweep` | the exhaustive properties, run in full |
+
+---
+
+## 2. What the harness checks about the tree
+
+Not tests. Checks that diff the library against the documents describing it,
+run on every full invocation, in the compiler's tradition where every one of
+them found something on its first run.
+
+| Check | Diffs |
+|---|---|
+| `check_purity` | `src/` outside `src/host/` against a ban list — `sys(`, `mono_now`, `environ`, `read_file`, `open`, `write`. **`SAFETY.md` S-10, and the most important check in the suite** |
+| `check_host_isolation` | no module outside `src/host/` and `src/lib.npk` names a `host_` symbol |
+| `check_tables_regenerate` | the committed zone tables against a fresh generator run, byte for byte |
+| `check_table_invariants` | every transition slice sorted and strictly increasing; every type index in range; every name-pool offset in range; the zone-name index lexicographically sorted |
+| `check_error_budget` | the count and names of public `error:` declarations against `SAFETY.md` §2's table |
+| `check_failsafe_arms` | the generated per-module arm list against programs that import each module and compile their `failsafe` |
+| `check_layering` | every `use` edge against `BUILD.md` §6's diagram |
+| `check_no_owning_fields` | every value stored in a table or array declares no owning field |
+| `check_int128_sites` | `int128` appears at exactly the three sites `SPAN_MODEL.md` §5 names, and nowhere else |
+| `check_constants_named` | no bound outside `src/core/limits.npk`; no magic 86400, 146097, 719468 or 1000000000 outside the algorithm module that owns it |
+| `check_no_format_string` | no function anywhere takes a pattern `string` and interprets it — `FORMAT_MODEL.md` F-5's rule, made checkable |
+| `check_specs_current` | **reports, does not fail**: spec citations that no longer resolve |
+
+**Rule V-1.** `check_purity` and `check_int128_sites` are the two that matter
+most, because they guard the two claims this library makes that are easy to
+break by accident and hard to notice: that it is reproducible, and that its
+arithmetic does not silently overflow.
+
+---
+
+## 3. The exhaustive gates
+
+**Rule V-2 (TM-026) — where a property can be checked over its whole domain, it
+is, and that is the gate.** Sampling is what you do when you cannot enumerate.
+
+| Gate | Domain | Size | Cycle |
+|---|---|---|---|
+| civil ↔ day-number round trip, both directions | every day in `[−9999-01-01, +9999-12-31]` | 7 304 485 × 2 | 0.1 |
+| `date_to_days` strictly increasing | the same sweep | — | 0.1 |
+| weekday advances by one mod seven | the same sweep | — | 0.1 |
+| month lengths match the leap rule | every (year, month) in range | 239 976 | 0.1 |
+| ISO week/ordinal round trip | the same sweep | — | 0.1 |
+| `Timestamp` ↔ civil round trip | every second would be too many; every **day boundary**, plus every second of 512 randomly chosen days | 7.3 M + 44 M | 0.2 |
+| zone transition sweep | every transition in the table, ±1 second | ~27 000 × 4 | 0.6 |
+| format/parse round trip | the generated corpus × every layout | ~10⁶ | 0.4 |
+
+**Rule V-3 — the civil sweep is the strongest statement this library makes.**
+It is self-evident (a round trip is obviously the right property), it needs no
+external corpus to trust, and it covers the negative years that no external
+oracle reaches. It runs in seconds. Nothing else in the plan is as cheap for
+as much certainty.
+
+---
+
+## 4. The round trips
+
+**Rule V-4 — the general shape**: *if the library produces a representation,
+write the reverse and check the fixed point.* `ntime` has three, and each has
+a documented exception list rather than a mysterious skip:
+
+1. **civil ↔ days** — no exceptions (V-2).
+2. **`Timestamp` ↔ `CivilDateTime`** — no exceptions, by M-11's leap-second
+   position: the mapping is a bijection by construction.
+3. **format ↔ parse** — **exactly two exceptions**, both named in
+   `FORMAT_MODEL.md` F-20: `:60` folds to `:59`, and `24:00:00` folds to the
+   next day. The exception list is a committed file with two entries, and a
+   test asserts the list has exactly two entries — so a third arriving is a
+   red run and not a quiet edit.
+
+**Rule V-5 — the format corpus is generated, not written.** Cycle 0.4 emits
+values spanning: both range extremes, the epoch, every month, both leap and
+common Februaries, every DST transition in a representative zone set, zero and
+maximal nanoseconds, and every offset in ±18:00 at 15-minute granularity.
+
+---
+
+## 5. The cross-oracles
+
+Three, each trusting something external, each **separate from the gates**
+because a gate should not depend on somebody else's library being right.
+
+**Rule V-6 — the civil cross-oracle.** A Python generator emits a few hundred
+thousand `(y, m, d, day_number, weekday, iso_week, day_of_year)` rows from
+`datetime`, committed under `tests/fixtures/civil/`. It covers years 1 … 9999
+only, because that is Python's range; the negative half has V-2's
+self-consistency and nothing else, which is stated rather than glossed.
+
+**Rule V-7 — the zone cross-oracle.** A Python generator emits, from the
+**same pinned tzdata release** via `zoneinfo`, `(zone, utc_second, offset,
+abbr, is_dst)` rows covering every transition and a sampling between them,
+committed under `tests/fixtures/zone/`. This is the check that the *generator*
+read the database correctly — which the transition sweep cannot see, because
+that only checks the table against itself.
+
+**Rule V-8 — the format cross-oracle.** RFC 3339's own examples, the HTTP-date
+examples from RFC 9110, and the ISO 8601 examples, committed verbatim as
+`(text, expected)` pairs. Small, external, and exactly the cases the standards
+authors thought were worth writing down.
+
+---
+
+## 6. Fuzzing
+
+**Rule V-9 (TM-030).** The parsers are the only place `ntime` touches bytes it
+did not produce, so they are the only place that needs a fuzzer — and they need one
+badly, because a date string is a thing programs receive from the network.
+
+`tools/fuzz_parse.py` drives every parser with random bytes and structured
+mutations of the corpus. The invariants:
+
+- **never traps** — no arithmetic overflow, no out-of-range index;
+- **always terminates** — every parser is a bounded straight-line scan
+  (`FORMAT_MODEL.md` F-16), so this is provable and the fuzzer confirms it;
+- **`consumed` never exceeds the input length**;
+- **a success is round-trippable** — anything that parses, formats and
+  re-parses to the same value.
+
+That last one is the strong invariant, and it is the one that finds the bugs a
+crash-only fuzzer misses.
+
+**Rule V-10 — anything the fuzzer found is committed as a permanent case**, in
+`tests/fixtures/fuzz/`, forever.
+
+---
+
+## 7. Stress
+
+**Rule V-11 — `// stress: 40` on everything that reads a clock.** `src/host/`'s
+five functions are the only place `ntime` can behave differently on two runs,
+so they are the only place that needs it — but they need it, because "the clock
+went backwards between two calls" is exactly the shape of defect that hides
+behind a single green run.
+
+---
+
+## 8. Performance
+
+**Rule V-12.** `harness/bench.py` writes a line per benchmark into
+`meta/bench/<date>.txt` and the harness fails on a regression worse than 20%
+against the committed baseline on the same machine. The benchmarks: civil ↔
+timestamp conversion, zone offset lookup at a transition and far from one,
+RFC 3339 format and parse, and `Period` addition across a DST boundary.
+
+**Rule V-13.** A benchmark is not a test and never gates on absolute numbers.
+
+---
+
+## 9. The harness is tested
+
+**Rule V-14 — the self-check.** `harness/selfcheck.py` feeds the harness wrong
+expectations and requires it to report every one as a failure:
+
+1. a `program` case whose `expect-exit` is wrong by one;
+2. a `check` case expecting a code the compiler does not report;
+3. a `check` case reporting a code no expectation names (D-237's rule);
+4. a `golden` case whose bytes differ by one byte;
+5. a `parse` case that does not parse;
+6. a generator whose output differs from the committed table by one line;
+7. a `sweep` case that is silently skipped — the harness must notice it did not
+   run.
+
+**Rule V-15.** The self-check runs **first** in every full invocation. A
+harness that has not proven it can fail has not proven anything.

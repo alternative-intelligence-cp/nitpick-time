@@ -1,1 +1,63 @@
+# Build output. Never committed — the artifact of record is produced by a clean
+# build, not carried in the tree (BUILD_REFERENCE.md §4.2 in the compiler repo,
+# which this library follows).
+build/
+*.o
+*.a
+
+# Emitted IR. `npkc` writes `.ll` text and the harness assembles it; the text is
+# output, not source. The ONE exception is `tests/fixtures/**/*.ll`, if a
+# hand-written floor test ever needs one — negated below so it stays committed.
+*.ll
+!tests/fixtures/**/*.ll
+
+# Linked programs the harness leaves behind with --keep.
+a.out
+*.bin
+debug_dump.*
+
+# The harness is Python until `npkg` grows generic-project support (the
+# bootstrap/harness -> npkg precedent in the compiler repo). Its bytecode is
+# output.
+__pycache__/
+*.pyc
+*.pyo
+
+# Harness logs and verdict files. A run's transcript is evidence for that run
+# and nothing else; anything worth keeping is written into a roadmap file.
+*.log
+verdicts*.txt
+
+# Gitignored scratch. Never commit anything from here.
 .internal
+
+# The RAW IANA tzdata release the generator reads. Large, versioned upstream,
+# and reproducible from the pinned release name — so it is an input, not source.
+# What the generator EMITS is committed; see the block below.
+tools/tzdata/*.tar.gz
+tools/tzdata/*.tar.lz
+tools/tzdata/extracted/
+
+# Editor and OS residue.
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Claude Code local settings (machine-specific; the shared config is committed).
+.claude/settings.local.json
+
+# NOT ignored, deliberately:
+#   src/zone/*.npk       — the GENERATED time-zone transition tables. They are
+#                          source: a build must need only the compiler, never a
+#                          Python generator, never a network fetch, and never
+#                          /usr/share/zoneinfo. The generator in tools/
+#                          regenerates them and the harness checks the committed
+#                          tables are byte-identical to what it would emit.
+#   src/zone/version.npk — the pinned IANA release name. One file, one fact.
+#   tests/fixtures/      — committed corpora: the tzdb's own test material, the
+#                          format round-trip vectors, and anything the fuzzer
+#                          found. They must be byte-stable.
+#   nitpick.lock         — read by every build, written only by `npkg update`.

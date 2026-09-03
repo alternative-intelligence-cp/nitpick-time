@@ -1,0 +1,63 @@
+# ntime — the manifest.
+#
+# The schema is the compiler's (BUILD_REFERENCE.md §1, D-077): four tables plus
+# the `[[test]]` array, and `npkg`'s parser refuses a key the schema lacks. It
+# is written in full now, ahead of the tool that reads it, because a manifest
+# that appears when the tooling arrives is a manifest nobody reviewed.
+#
+# WHAT CANNOT READ THIS YET. `npkg build` is the compiler's own bootstrap
+# ladder — it assembles `runtime/npkrt.ll` and `bootstrap/seed/stage1.ll`, has
+# the builder compile `[build] entry`, and names the result `npkc`. There is no
+# generic-project path, and `[dependencies]` is parsed but the resolver's root
+# list is initialised empty and never populated, so a `use "ntime/…"` path
+# resolves against nothing. Until that changes, `harness/` builds this library
+# by invoking `npkc`, `llc` and `ld.lld` directly — the same relationship
+# `bootstrap/harness/` has to `npkg` in the compiler repo, and it retires the
+# same way. See meta/specs/BUILD.md.
+
+[project]
+name        = "ntime"
+version     = "0.0.0"
+description = "Dates, times and time zones for Nitpick — zero dependency, no libc, no system tzdb"
+authors     = ["Randy"]
+target      = "library"
+
+[build]
+entry     = "src/lib.npk"
+output    = "build/libntime"
+# 0 while the library is being built out, matching the compiler's own choice:
+# `opt` is not invoked at all, the pipeline stays short, and the emitted IR
+# stays readable. The harness re-runs every program through `opt -O2` as a
+# CHECK regardless (the 1.3.8 instrument), which is where optimiser divergence
+# gets caught — raising this key is a separate decision from running that leg.
+opt-level = 0
+
+# THE TOOLCHAIN IS A BUILD INPUT (D-204), pinned to the exact patch release the
+# compiler pins, because a patch release may change instruction selection. These
+# lists are READ by every `llc`/`opt`/`ld.lld` invocation the harness makes; a
+# stated flag nothing consumes is the next stale document.
+[toolchain]
+llvm          = "20.1.2"
+llc-flags     = ["-O0", "-filetype=obj", "-relocation-model=static"]
+llc-opt-flags = ["-O2", "-filetype=obj", "-relocation-model=static"]
+opt-flags     = ["-O2", "-S"]
+lld-flags     = ["-static"]
+
+# EMPTY, AND EMPTY ON PURPOSE. `ntime` depends on the language and its prelude
+# and on nothing else — not on the compiler's `src/`, not on `lib/`, and not on
+# `nitpick-parse` even though the two overlap on datetime scanning (O-X1).
+# Anything added here is a zero-dependency decision and has to be argued as one
+# (meta/specs/BUILD.md §4).
+[dependencies]
+
+# TEST TARGETS. Each cycle adds its own entries as its suite is created; an
+# entry naming a directory with nothing in it is a suite that reports green
+# while checking nothing, which is the failure this table exists to prevent.
+# The stages are the compiler's (BUILD_REFERENCE §7.1) and the expectation
+# grammar lives inside each test file.
+#
+# [[test]]
+# name = "conformance"
+# stage = "compile"
+# kind = "positive"
+# path = "tests/conformance"

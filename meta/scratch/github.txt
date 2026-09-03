@@ -1,0 +1,37 @@
+Proposed GitHub metadata for alternative-intelligence-cp/nitpick-time.
+Written by the planning pass; apply after review.
+
+--- description (350 char limit; this is 218) ---
+Dates, times and time zones for Nitpick — zero dependency, no libc, no system tzdb. The IANA database is compiled in from a pinned release, so the same program gives the same answer on every machine. Monotonic and wall clocks are different types.
+
+--- topics (20 max, lowercase, alphanumeric and hyphens) ---
+datetime
+date
+time
+timezone
+tzdata
+iana-tzdb
+calendar
+iso8601
+rfc3339
+leap-seconds
+temporal
+nitpick
+nitpick-lang
+safety-critical
+zero-dependency
+no-libc
+deterministic
+formal-verification
+systems-programming
+gregorian-calendar
+
+--- notes for the reviewer ---
+- "temporal" is included because the type model follows the Temporal/Abseil
+  split (Instant / Timestamp / Civil / Zoned), and that is the term somebody
+  searching for this design would use.
+- "leap-seconds" is included even though the library deliberately does NOT
+  model them (TM-006) — it is what somebody evaluating a date library searches
+  for, and the README answers the question directly.
+- "gregorian-calendar" rather than "proleptic-gregorian": the latter is more
+  accurate and nobody searches for it.

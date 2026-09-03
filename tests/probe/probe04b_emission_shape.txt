@@ -1,0 +1,215 @@
+PROBE 04b — the emission shape of a module-level `pub fixed` array, evidenced.
+
+Compiler commit 950bb1d (the board's pin), LLVM 20.1.2, x86-64 Linux.
+Captured 2026-09-03, cycle 0.0.0, stream s2. Every command is shown with its
+exit code; every line of output below a command is that command's output,
+quoted verbatim and never summarised.
+
+WHY THIS FILE EXISTS. Probe 04 asks the same questions at 30 000 rows and
+O-N4 makes that cost 281 s and 30.9 GiB, so its answers are not re-derivable
+in practice. The EMISSION FORM is a property of how the declaration is
+lowered and not of how large it is, so it is evidenced here at 300 rows for a
+seventh of a second. What probe 04 keeps is the SIZE claim; what this keeps
+is the SHAPE claim, and anybody can re-run it.
+
+$NPKC and $NPKRT are the pinned toolchain the board names (W-18).
+
+================================================================
+1. COMPILE.  It must succeed, and cheaply.
+================================================================
+
+$ /usr/bin/time -f "%e s  %M KiB" "$NPKC" tests/probe/probe04b_emission_shape.npk -o /tmp/p04b.ll
+0.16 s  28352 KiB
+exit 0
+
+================================================================
+2. THE IR.  `constant`, not `global`.  This is the whole question:
+   an LLVM `global` is mutable storage that something must fill;
+   a `constant` is an initialised, immutable object the linker
+   places.  The line is 21 kB wide, so it is cut at 200 columns.
+================================================================
+
+$ grep -n "TRANSITIONS\" = " /tmp/p04b.ll | cut -c1-200
+10898:@"npk.probe04b_emission_shape.TRANSITIONS" = constant [300 x %"npk.probe04b_emission_shape.ZoneTransition"] [ %"npk.probe04b_emission_shape.ZoneTransition" { i64 -2208988800, i32 0 }, %"npk.prob
+exit 0
+
+   ^ `= constant [300 x %"...ZoneTransition"]` — 300 rows, and `constant`.
+
+$ grep -c "^@\"npk.probe04b_emission_shape.TRANSITIONS\" = global " /tmp/p04b.ll
+0
+exit 1 (grep -c exits 1 when the count is 0; the count is the answer)
+
+================================================================
+3. NO STARTUP WORK.  No global constructors, none of any spelling,
+   and no `appending` linkage anywhere in the module.
+================================================================
+
+$ grep -c "llvm.global_ctors" /tmp/p04b.ll
+0
+exit 1
+
+$ grep -c "llvm.global_dtors" /tmp/p04b.ll
+0
+exit 1
+
+$ grep -cE "= appending " /tmp/p04b.ll
+0
+exit 1
+
+$ grep -c "^define i32 @main" /tmp/p04b.ll        # exactly one; guards the mod:/basename defect
+1
+exit 0
+
+================================================================
+4. THE OBJECT.  Assemble, then read the symbol and the section it
+   points at.  The symbol table gives a section INDEX; the section
+   header table says what index 5 is and what its flags are.
+================================================================
+
+$ llc -O0 -filetype=obj -relocation-model=static /tmp/p04b.ll -o /tmp/p04b.o
+exit 0
+
+$ readelf -sW /tmp/p04b.o | grep TRANSITIONS
+   467: 0000000000000560  4800 OBJECT  GLOBAL DEFAULT    5 npk.probe04b_emission_shape.TRANSITIONS
+exit 0
+
+   ^ size 4800 = 300 x 16 EXACTLY, so the 16-byte row the cost model
+     multiplies by is confirmed by the linker's own accounting and not
+     only by `#size_of`.  Section index 5.
+
+$ readelf -SW /tmp/p04b.o
+There are 12 section headers, starting at offset 0x41748:
+
+Section Headers:
+  [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+  [ 0]                   NULL            0000000000000000 000000 000000 00      0   0  0
+  [ 1] .strtab           STRTAB          0000000000000000 03e928 002e1f 00      0   0  1
+  [ 2] .text             PROGBITS        0000000000000000 000040 02e464 00  AX  0   0 16
+  [ 3] .rela.text        RELA            0000000000000000 035a48 0066a8 18   I 11   2  8
+  [ 4] .rodata.cst16     PROGBITS        0000000000000000 02e4b0 000040 10  AM  0   0 16
+  [ 5] .rodata           PROGBITS        0000000000000000 02e4f0 002c90 00   A  0   0 16
+  [ 6] .rela.rodata      RELA            0000000000000000 03c0f0 0015d8 18   I 11   5  8
+  [ 7] .rodata.cst4      PROGBITS        0000000000000000 031180 000004 04  AM  0   0  1
+  [ 8] .note.GNU-stack   PROGBITS        0000000000000000 031184 000000 00      0   0  1
+  [ 9] .eh_frame         X86_64_UNWIND   0000000000000000 031188 0019e0 00   A  0   0  8
+  [10] .rela.eh_frame    RELA            0000000000000000 03d6c8 001260 18   I 11   9  8
+  [11] .symtab           SYMTAB          0000000000000000 032b68 002ee0 18      1 305  8
+Key to Flags:
+  W (write), A (alloc), X (execute), M (merge), S (strings), I (info),
+  L (link order), O (extra OS processing required), G (group), T (TLS),
+  C (compressed), x (unknown), o (OS specific), E (exclude),
+  D (mbind), l (large), p (processor specific)
+exit 0
+
+   ^ [ 5] .rodata  PROGBITS ... Flg A   — allocated, NOT `W`ritable.
+     There is no .init_array and no .ctors section in the list at all.
+
+================================================================
+5. THE LINKED PROGRAM.  The object is an intermediate; what ships
+   is the executable, and what the KERNEL enforces is the segment
+   permission, not the section flag.  So link it and look again.
+================================================================
+
+$ ld.lld -static /tmp/p04b.o "$NPKRT" -o /tmp/p04b
+exit 0
+
+$ readelf -sW /tmp/p04b | grep TRANSITIONS
+   541: 0000000000200790  4800 OBJECT  GLOBAL DEFAULT    1 npk.probe04b_emission_shape.TRANSITIONS
+exit 0
+
+$ readelf -SW /tmp/p04b | head -20
+There are 12 section headers, starting at offset 0x41d40:
+
+Section Headers:
+  [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+  [ 0]                   NULL            0000000000000000 000000 000000 00      0   0  0
+  [ 1] .rodata           PROGBITS        00000000002001d0 0001d0 002f60 00  AM  0   0 16
+  [ 2] .eh_frame         PROGBITS        0000000000203130 003130 002af4 00   A  0   0  8
+  [ 3] .text             PROGBITS        0000000000206c30 005c30 034bf9 00  AX  0   0 16
+  [ 4] .got              PROGBITS        000000000023c830 03a830 000000 00  WA  0   0  8
+  [ 5] .relro_padding    NOBITS          000000000023c830 03a830 0007d0 00  WA  0   0  1
+  [ 6] .data             PROGBITS        000000000023d830 03a830 000070 00  WA  0   0 16
+  [ 7] .bss              NOBITS          000000000023d8a0 03a8a0 000288 00  WA  0   0 16
+  [ 8] .comment          PROGBITS        0000000000000000 03a8a0 00001a 01  MS  0   0  1
+  [ 9] .symtab           SYMTAB          0000000000000000 03a8c0 003d80 18     11 379  8
+  [10] .shstrtab         STRTAB          0000000000000000 03e640 00005b 00      0   0  1
+  [11] .strtab           STRTAB          0000000000000000 03e69b 0036a2 00      0   0  1
+Key to Flags:
+  W (write), A (alloc), X (execute), M (merge), S (strings), I (info),
+  L (link order), O (extra OS processing required), G (group), T (TLS),
+  C (compressed), x (unknown), o (OS specific), E (exclude),
+exit 0
+
+$ readelf -SW /tmp/p04b | grep -c init_array
+0
+exit 1 (0 sections named init_array)
+
+$ readelf -lW /tmp/p04b | sed -n "/Program Headers/,/Section to Segment/p"
+Program Headers:
+  Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+  PHDR           0x000040 0x0000000000200040 0x0000000000200040 0x000188 0x000188 R   0x8
+  LOAD           0x000000 0x0000000000200000 0x0000000000200000 0x005c24 0x005c24 R   0x1000
+  LOAD           0x005c30 0x0000000000206c30 0x0000000000206c30 0x034bf9 0x034bf9 R E 0x1000
+  LOAD           0x03a830 0x000000000023c830 0x000000000023c830 0x000000 0x0007d0 RW  0x1000
+  LOAD           0x03a830 0x000000000023d830 0x000000000023d830 0x000070 0x0002f8 RW  0x1000
+  GNU_RELRO      0x03a830 0x000000000023c830 0x000000000023c830 0x000000 0x0007d0 R   0x1
+  GNU_STACK      0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 RW  0
+
+ Section to Segment mapping:
+exit 0
+
+$ readelf -lW /tmp/p04b | sed -n "/Section to Segment/,$ p"
+ Section to Segment mapping:
+  Segment Sections...
+   00     
+   01     .rodata .eh_frame 
+   02     .text 
+   03     .got .relro_padding 
+   04     .data .bss 
+   05     .got .relro_padding 
+   06     
+exit 0
+
+   ^ TRANSITIONS is at 0x200790, inside LOAD segment 01 (0x200000 +
+     0x5c24), whose flags are `R` — read only, with no `W`.  That is
+     the page permission the kernel installs, so a write to the table
+     is a SIGSEGV and not a silent corruption.  .rodata rides in that
+     segment; .data and .bss are in segments 03/04 and are `RW`.
+
+================================================================
+6. IT RUNS, AND ITS OWN ASSERTIONS PASS.
+   Exit 0 is also D-151's statement that nothing leaked.
+================================================================
+
+$ /tmp/p04b
+exit 0
+
+================================================================
+WHAT THIS SHOWS, AND WHAT IT DOES NOT
+================================================================
+
+SHOWN, here, at 300 rows, re-derivable in a seventh of a second:
+
+  - a module-level `pub fixed` array of structs is emitted as an LLVM
+    `constant`, never a mutable `global`;
+  - the module carries no llvm.global_ctors, no llvm.global_dtors and
+    no `appending` global of any kind, so no startup routine fills it;
+  - the object places it in `.rodata` (flags `A`, no `W`) and the
+    linked program maps it into a read-only LOAD segment;
+  - the symbol's size is 300 x 16 bytes exactly, so `#size_of` and the
+    linker agree about the row;
+  - the executable has no .init_array section at all.
+
+That is exactly SAFETY.md S-19's claim — `fixed` module state is
+read-only memory, with no initialisation at startup, nothing to leak
+and nothing to race — and it is ZONE_MODEL.md Z-7 and Z-8's premise.
+
+NOT SHOWN here, and deliberately: that thirty thousand rows behave the
+same way.  That was observed once, during the original probe 04 run on
+2026-09-03, and re-deriving it costs 281 s and 30.9 GiB of RSS.  It is
+recorded in meta/roadmap/0.0/0.0.0.md as a ONE-TIME OBSERVATION on that
+basis.  The reason to believe it anyway is not the observation but the
+mechanism: the emission form is chosen by the same lowering path for
+any element count, and O-N4 is a cost defect, not a semantics one.
+When O-N4 closes, run probe04_big_fixed_table.npk and append its own
+transcript here.

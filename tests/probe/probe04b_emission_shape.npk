@@ -1,0 +1,392 @@
+// expect-exit: 0
+//
+// PROBE 04b — probe 04's EMISSION SHAPE, at a size a machine can afford.
+//
+// ASKS exactly what probe 04 asks about the emitted artifact, and nothing it
+// asks about size: is a module-level `pub fixed` array of small structs emitted
+// as an LLVM `constant` rather than a mutable `global`; does it land in
+// `.rodata`; and is `llvm.global_ctors` absent, so the program does no startup
+// work to build it?
+//
+// WHY IT EXISTS SEPARATELY. The emission form is a property of HOW THE
+// DECLARATION IS LOWERED, not of how large it is: the same code path writes
+// three hundred rows and thirty thousand. So the shape can be evidenced at 300
+// rows for about a tenth of a second, and it is, because O-N4 makes
+// `probe04_big_fixed_table.npk` cost 281 seconds and 30.9 GiB and therefore
+// unrepeatable in practice and unrunnable in CI. Probe 04 keeps the SIZE
+// question — 30 000 rows really compile, the arithmetic holds at that count —
+// and this file keeps the SHAPE question, re-derivable by anybody, any time.
+//
+// DEPENDS ON THE ANSWER: the same rules as probe 04 — ZONE_MODEL.md Z-7 and
+// Z-8, SAFETY.md S-19 (`fixed` module state is read-only memory, no
+// initialisation at startup, nothing to leak, nothing to race) and TM-007.
+//
+// THE EVIDENCE IS COMMITTED, not summarised. `probe04b_emission_shape.txt`
+// beside this file holds the exact commands, their exit codes, and the IR and
+// `readelf` lines quoted verbatim. Regenerate it with:
+//
+//     npkc tests/probe/probe04b_emission_shape.npk -o p.ll
+//     grep -n 'TRANSITIONS' p.ll | cut -c1-160
+//     grep -c 'llvm.global_ctors' p.ll                 # must be 0
+//     llc -O0 -filetype=obj -relocation-model=static p.ll -o p.o
+//     readelf -sW p.o | grep TRANSITIONS                # section index ...
+//     readelf -SW p.o                                   # ... must be .rodata
+//
+// THE DATA is probe 04's closed form, truncated to 300 rows, so the two files
+// agree row for row over their common prefix:
+//
+//     at_utc[i]     = -2208988800 + i * 604800 + (i % 97) * 3600
+//     type_index[i] = i % 13                          for i in 0 .. 299
+mod:probe04b_emission_shape;
+
+pub struct:ZoneTransition = { int64:at_utc; int32:type_index; };
+
+pub fixed ZoneTransition[300]:TRANSITIONS = [
+    ZoneTransition{ at_utc: -2208988800i64, type_index: 0i32 },
+    ZoneTransition{ at_utc: -2208380400i64, type_index: 1i32 },
+    ZoneTransition{ at_utc: -2207772000i64, type_index: 2i32 },
+    ZoneTransition{ at_utc: -2207163600i64, type_index: 3i32 },
+    ZoneTransition{ at_utc: -2206555200i64, type_index: 4i32 },
+    ZoneTransition{ at_utc: -2205946800i64, type_index: 5i32 },
+    ZoneTransition{ at_utc: -2205338400i64, type_index: 6i32 },
+    ZoneTransition{ at_utc: -2204730000i64, type_index: 7i32 },
+    ZoneTransition{ at_utc: -2204121600i64, type_index: 8i32 },
+    ZoneTransition{ at_utc: -2203513200i64, type_index: 9i32 },
+    ZoneTransition{ at_utc: -2202904800i64, type_index: 10i32 },
+    ZoneTransition{ at_utc: -2202296400i64, type_index: 11i32 },
+    ZoneTransition{ at_utc: -2201688000i64, type_index: 12i32 },
+    ZoneTransition{ at_utc: -2201079600i64, type_index: 0i32 },
+    ZoneTransition{ at_utc: -2200471200i64, type_index: 1i32 },
+    ZoneTransition{ at_utc: -2199862800i64, type_index: 2i32 },
+    ZoneTransition{ at_utc: -2199254400i64, type_index: 3i32 },
+    ZoneTransition{ at_utc: -2198646000i64, type_index: 4i32 },
+    ZoneTransition{ at_utc: -2198037600i64, type_index: 5i32 },
+    ZoneTransition{ at_utc: -2197429200i64, type_index: 6i32 },
+    ZoneTransition{ at_utc: -2196820800i64, type_index: 7i32 },
+    ZoneTransition{ at_utc: -2196212400i64, type_index: 8i32 },
+    ZoneTransition{ at_utc: -2195604000i64, type_index: 9i32 },
+    ZoneTransition{ at_utc: -2194995600i64, type_index: 10i32 },
+    ZoneTransition{ at_utc: -2194387200i64, type_index: 11i32 },
+    ZoneTransition{ at_utc: -2193778800i64, type_index: 12i32 },
+    ZoneTransition{ at_utc: -2193170400i64, type_index: 0i32 },
+    ZoneTransition{ at_utc: -2192562000i64, type_index: 1i32 },
+    ZoneTransition{ at_utc: -2191953600i64, type_index: 2i32 },
+    ZoneTransition{ at_utc: -2191345200i64, type_index: 3i32 },
+    ZoneTransition{ at_utc: -2190736800i64, type_index: 4i32 },
+    ZoneTransition{ at_utc: -2190128400i64, type_index: 5i32 },
+    ZoneTransition{ at_utc: -2189520000i64, type_index: 6i32 },
+    ZoneTransition{ at_utc: -2188911600i64, type_index: 7i32 },
+    ZoneTransition{ at_utc: -2188303200i64, type_index: 8i32 },
+    ZoneTransition{ at_utc: -2187694800i64, type_index: 9i32 },
+    ZoneTransition{ at_utc: -2187086400i64, type_index: 10i32 },
+    ZoneTransition{ at_utc: -2186478000i64, type_index: 11i32 },
+    ZoneTransition{ at_utc: -2185869600i64, type_index: 12i32 },
+    ZoneTransition{ at_utc: -2185261200i64, type_index: 0i32 },
+    ZoneTransition{ at_utc: -2184652800i64, type_index: 1i32 },
+    ZoneTransition{ at_utc: -2184044400i64, type_index: 2i32 },
+    ZoneTransition{ at_utc: -2183436000i64, type_index: 3i32 },
+    ZoneTransition{ at_utc: -2182827600i64, type_index: 4i32 },
+    ZoneTransition{ at_utc: -2182219200i64, type_index: 5i32 },
+    ZoneTransition{ at_utc: -2181610800i64, type_index: 6i32 },
+    ZoneTransition{ at_utc: -2181002400i64, type_index: 7i32 },
+    ZoneTransition{ at_utc: -2180394000i64, type_index: 8i32 },
+    ZoneTransition{ at_utc: -2179785600i64, type_index: 9i32 },
+    ZoneTransition{ at_utc: -2179177200i64, type_index: 10i32 },
+    ZoneTransition{ at_utc: -2178568800i64, type_index: 11i32 },
+    ZoneTransition{ at_utc: -2177960400i64, type_index: 12i32 },
+    ZoneTransition{ at_utc: -2177352000i64, type_index: 0i32 },
+    ZoneTransition{ at_utc: -2176743600i64, type_index: 1i32 },
+    ZoneTransition{ at_utc: -2176135200i64, type_index: 2i32 },
+    ZoneTransition{ at_utc: -2175526800i64, type_index: 3i32 },
+    ZoneTransition{ at_utc: -2174918400i64, type_index: 4i32 },
+    ZoneTransition{ at_utc: -2174310000i64, type_index: 5i32 },
+    ZoneTransition{ at_utc: -2173701600i64, type_index: 6i32 },
+    ZoneTransition{ at_utc: -2173093200i64, type_index: 7i32 },
+    ZoneTransition{ at_utc: -2172484800i64, type_index: 8i32 },
+    ZoneTransition{ at_utc: -2171876400i64, type_index: 9i32 },
+    ZoneTransition{ at_utc: -2171268000i64, type_index: 10i32 },
+    ZoneTransition{ at_utc: -2170659600i64, type_index: 11i32 },
+    ZoneTransition{ at_utc: -2170051200i64, type_index: 12i32 },
+    ZoneTransition{ at_utc: -2169442800i64, type_index: 0i32 },
+    ZoneTransition{ at_utc: -2168834400i64, type_index: 1i32 },
+    ZoneTransition{ at_utc: -2168226000i64, type_index: 2i32 },
+    ZoneTransition{ at_utc: -2167617600i64, type_index: 3i32 },
+    ZoneTransition{ at_utc: -2167009200i64, type_index: 4i32 },
+    ZoneTransition{ at_utc: -2166400800i64, type_index: 5i32 },
+    ZoneTransition{ at_utc: -2165792400i64, type_index: 6i32 },
+    ZoneTransition{ at_utc: -2165184000i64, type_index: 7i32 },
+    ZoneTransition{ at_utc: -2164575600i64, type_index: 8i32 },
+    ZoneTransition{ at_utc: -2163967200i64, type_index: 9i32 },
+    ZoneTransition{ at_utc: -2163358800i64, type_index: 10i32 },
+    ZoneTransition{ at_utc: -2162750400i64, type_index: 11i32 },
+    ZoneTransition{ at_utc: -2162142000i64, type_index: 12i32 },
+    ZoneTransition{ at_utc: -2161533600i64, type_index: 0i32 },
+    ZoneTransition{ at_utc: -2160925200i64, type_index: 1i32 },
+    ZoneTransition{ at_utc: -2160316800i64, type_index: 2i32 },
+    ZoneTransition{ at_utc: -2159708400i64, type_index: 3i32 },
+    ZoneTransition{ at_utc: -2159100000i64, type_index: 4i32 },
+    ZoneTransition{ at_utc: -2158491600i64, type_index: 5i32 },
+    ZoneTransition{ at_utc: -2157883200i64, type_index: 6i32 },
+    ZoneTransition{ at_utc: -2157274800i64, type_index: 7i32 },
+    ZoneTransition{ at_utc: -2156666400i64, type_index: 8i32 },
+    ZoneTransition{ at_utc: -2156058000i64, type_index: 9i32 },
+    ZoneTransition{ at_utc: -2155449600i64, type_index: 10i32 },
+    ZoneTransition{ at_utc: -2154841200i64, type_index: 11i32 },
+    ZoneTransition{ at_utc: -2154232800i64, type_index: 12i32 },
+    ZoneTransition{ at_utc: -2153624400i64, type_index: 0i32 },
+    ZoneTransition{ at_utc: -2153016000i64, type_index: 1i32 },
+    ZoneTransition{ at_utc: -2152407600i64, type_index: 2i32 },
+    ZoneTransition{ at_utc: -2151799200i64, type_index: 3i32 },
+    ZoneTransition{ at_utc: -2151190800i64, type_index: 4i32 },
+    ZoneTransition{ at_utc: -2150582400i64, type_index: 5i32 },
+    ZoneTransition{ at_utc: -2150323200i64, type_index: 6i32 },
+    ZoneTransition{ at_utc: -2149714800i64, type_index: 7i32 },
+    ZoneTransition{ at_utc: -2149106400i64, type_index: 8i32 },
+    ZoneTransition{ at_utc: -2148498000i64, type_index: 9i32 },
+    ZoneTransition{ at_utc: -2147889600i64, type_index: 10i32 },
+    ZoneTransition{ at_utc: -2147281200i64, type_index: 11i32 },
+    ZoneTransition{ at_utc: -2146672800i64, type_index: 12i32 },
+    ZoneTransition{ at_utc: -2146064400i64, type_index: 0i32 },
+    ZoneTransition{ at_utc: -2145456000i64, type_index: 1i32 },
+    ZoneTransition{ at_utc: -2144847600i64, type_index: 2i32 },
+    ZoneTransition{ at_utc: -2144239200i64, type_index: 3i32 },
+    ZoneTransition{ at_utc: -2143630800i64, type_index: 4i32 },
+    ZoneTransition{ at_utc: -2143022400i64, type_index: 5i32 },
+    ZoneTransition{ at_utc: -2142414000i64, type_index: 6i32 },
+    ZoneTransition{ at_utc: -2141805600i64, type_index: 7i32 },
+    ZoneTransition{ at_utc: -2141197200i64, type_index: 8i32 },
+    ZoneTransition{ at_utc: -2140588800i64, type_index: 9i32 },
+    ZoneTransition{ at_utc: -2139980400i64, type_index: 10i32 },
+    ZoneTransition{ at_utc: -2139372000i64, type_index: 11i32 },
+    ZoneTransition{ at_utc: -2138763600i64, type_index: 12i32 },
+    ZoneTransition{ at_utc: -2138155200i64, type_index: 0i32 },
+    ZoneTransition{ at_utc: -2137546800i64, type_index: 1i32 },
+    ZoneTransition{ at_utc: -2136938400i64, type_index: 2i32 },
+    ZoneTransition{ at_utc: -2136330000i64, type_index: 3i32 },
+    ZoneTransition{ at_utc: -2135721600i64, type_index: 4i32 },
+    ZoneTransition{ at_utc: -2135113200i64, type_index: 5i32 },
+    ZoneTransition{ at_utc: -2134504800i64, type_index: 6i32 },
+    ZoneTransition{ at_utc: -2133896400i64, type_index: 7i32 },
+    ZoneTransition{ at_utc: -2133288000i64, type_index: 8i32 },
+    ZoneTransition{ at_utc: -2132679600i64, type_index: 9i32 },
+    ZoneTransition{ at_utc: -2132071200i64, type_index: 10i32 },
+    ZoneTransition{ at_utc: -2131462800i64, type_index: 11i32 },
+    ZoneTransition{ at_utc: -2130854400i64, type_index: 12i32 },
+    ZoneTransition{ at_utc: -2130246000i64, type_index: 0i32 },
+    ZoneTransition{ at_utc: -2129637600i64, type_index: 1i32 },
+    ZoneTransition{ at_utc: -2129029200i64, type_index: 2i32 },
+    ZoneTransition{ at_utc: -2128420800i64, type_index: 3i32 },
+    ZoneTransition{ at_utc: -2127812400i64, type_index: 4i32 },
+    ZoneTransition{ at_utc: -2127204000i64, type_index: 5i32 },
+    ZoneTransition{ at_utc: -2126595600i64, type_index: 6i32 },
+    ZoneTransition{ at_utc: -2125987200i64, type_index: 7i32 },
+    ZoneTransition{ at_utc: -2125378800i64, type_index: 8i32 },
+    ZoneTransition{ at_utc: -2124770400i64, type_index: 9i32 },
+    ZoneTransition{ at_utc: -2124162000i64, type_index: 10i32 },
+    ZoneTransition{ at_utc: -2123553600i64, type_index: 11i32 },
+    ZoneTransition{ at_utc: -2122945200i64, type_index: 12i32 },
+    ZoneTransition{ at_utc: -2122336800i64, type_index: 0i32 },
+    ZoneTransition{ at_utc: -2121728400i64, type_index: 1i32 },
+    ZoneTransition{ at_utc: -2121120000i64, type_index: 2i32 },
+    ZoneTransition{ at_utc: -2120511600i64, type_index: 3i32 },
+    ZoneTransition{ at_utc: -2119903200i64, type_index: 4i32 },
+    ZoneTransition{ at_utc: -2119294800i64, type_index: 5i32 },
+    ZoneTransition{ at_utc: -2118686400i64, type_index: 6i32 },
+    ZoneTransition{ at_utc: -2118078000i64, type_index: 7i32 },
+    ZoneTransition{ at_utc: -2117469600i64, type_index: 8i32 },
+    ZoneTransition{ at_utc: -2116861200i64, type_index: 9i32 },
+    ZoneTransition{ at_utc: -2116252800i64, type_index: 10i32 },
+    ZoneTransition{ at_utc: -2115644400i64, type_index: 11i32 },
+    ZoneTransition{ at_utc: -2115036000i64, type_index: 12i32 },
+    ZoneTransition{ at_utc: -2114427600i64, type_index: 0i32 },
+    ZoneTransition{ at_utc: -2113819200i64, type_index: 1i32 },
+    ZoneTransition{ at_utc: -2113210800i64, type_index: 2i32 },
+    ZoneTransition{ at_utc: -2112602400i64, type_index: 3i32 },
+    ZoneTransition{ at_utc: -2111994000i64, type_index: 4i32 },
+    ZoneTransition{ at_utc: -2111385600i64, type_index: 5i32 },
+    ZoneTransition{ at_utc: -2110777200i64, type_index: 6i32 },
+    ZoneTransition{ at_utc: -2110168800i64, type_index: 7i32 },
+    ZoneTransition{ at_utc: -2109560400i64, type_index: 8i32 },
+    ZoneTransition{ at_utc: -2108952000i64, type_index: 9i32 },
+    ZoneTransition{ at_utc: -2108343600i64, type_index: 10i32 },
+    ZoneTransition{ at_utc: -2107735200i64, type_index: 11i32 },
+    ZoneTransition{ at_utc: -2107126800i64, type_index: 12i32 },
+    ZoneTransition{ at_utc: -2106518400i64, type_index: 0i32 },
+    ZoneTransition{ at_utc: -2105910000i64, type_index: 1i32 },
+    ZoneTransition{ at_utc: -2105301600i64, type_index: 2i32 },
+    ZoneTransition{ at_utc: -2104693200i64, type_index: 3i32 },
+    ZoneTransition{ at_utc: -2104084800i64, type_index: 4i32 },
+    ZoneTransition{ at_utc: -2103476400i64, type_index: 5i32 },
+    ZoneTransition{ at_utc: -2102868000i64, type_index: 6i32 },
+    ZoneTransition{ at_utc: -2102259600i64, type_index: 7i32 },
+    ZoneTransition{ at_utc: -2101651200i64, type_index: 8i32 },
+    ZoneTransition{ at_utc: -2101042800i64, type_index: 9i32 },
+    ZoneTransition{ at_utc: -2100434400i64, type_index: 10i32 },
+    ZoneTransition{ at_utc: -2099826000i64, type_index: 11i32 },
+    ZoneTransition{ at_utc: -2099217600i64, type_index: 12i32 },
+    ZoneTransition{ at_utc: -2098609200i64, type_index: 0i32 },
+    ZoneTransition{ at_utc: -2098000800i64, type_index: 1i32 },
+    ZoneTransition{ at_utc: -2097392400i64, type_index: 2i32 },
+    ZoneTransition{ at_utc: -2096784000i64, type_index: 3i32 },
+    ZoneTransition{ at_utc: -2096175600i64, type_index: 4i32 },
+    ZoneTransition{ at_utc: -2095567200i64, type_index: 5i32 },
+    ZoneTransition{ at_utc: -2094958800i64, type_index: 6i32 },
+    ZoneTransition{ at_utc: -2094350400i64, type_index: 7i32 },
+    ZoneTransition{ at_utc: -2093742000i64, type_index: 8i32 },
+    ZoneTransition{ at_utc: -2093133600i64, type_index: 9i32 },
+    ZoneTransition{ at_utc: -2092525200i64, type_index: 10i32 },
+    ZoneTransition{ at_utc: -2091916800i64, type_index: 11i32 },
+    ZoneTransition{ at_utc: -2091657600i64, type_index: 12i32 },
+    ZoneTransition{ at_utc: -2091049200i64, type_index: 0i32 },
+    ZoneTransition{ at_utc: -2090440800i64, type_index: 1i32 },
+    ZoneTransition{ at_utc: -2089832400i64, type_index: 2i32 },
+    ZoneTransition{ at_utc: -2089224000i64, type_index: 3i32 },
+    ZoneTransition{ at_utc: -2088615600i64, type_index: 4i32 },
+    ZoneTransition{ at_utc: -2088007200i64, type_index: 5i32 },
+    ZoneTransition{ at_utc: -2087398800i64, type_index: 6i32 },
+    ZoneTransition{ at_utc: -2086790400i64, type_index: 7i32 },
+    ZoneTransition{ at_utc: -2086182000i64, type_index: 8i32 },
+    ZoneTransition{ at_utc: -2085573600i64, type_index: 9i32 },
+    ZoneTransition{ at_utc: -2084965200i64, type_index: 10i32 },
+    ZoneTransition{ at_utc: -2084356800i64, type_index: 11i32 },
+    ZoneTransition{ at_utc: -2083748400i64, type_index: 12i32 },
+    ZoneTransition{ at_utc: -2083140000i64, type_index: 0i32 },
+    ZoneTransition{ at_utc: -2082531600i64, type_index: 1i32 },
+    ZoneTransition{ at_utc: -2081923200i64, type_index: 2i32 },
+    ZoneTransition{ at_utc: -2081314800i64, type_index: 3i32 },
+    ZoneTransition{ at_utc: -2080706400i64, type_index: 4i32 },
+    ZoneTransition{ at_utc: -2080098000i64, type_index: 5i32 },
+    ZoneTransition{ at_utc: -2079489600i64, type_index: 6i32 },
+    ZoneTransition{ at_utc: -2078881200i64, type_index: 7i32 },
+    ZoneTransition{ at_utc: -2078272800i64, type_index: 8i32 },
+    ZoneTransition{ at_utc: -2077664400i64, type_index: 9i32 },
+    ZoneTransition{ at_utc: -2077056000i64, type_index: 10i32 },
+    ZoneTransition{ at_utc: -2076447600i64, type_index: 11i32 },
+    ZoneTransition{ at_utc: -2075839200i64, type_index: 12i32 },
+    ZoneTransition{ at_utc: -2075230800i64, type_index: 0i32 },
+    ZoneTransition{ at_utc: -2074622400i64, type_index: 1i32 },
+    ZoneTransition{ at_utc: -2074014000i64, type_index: 2i32 },
+    ZoneTransition{ at_utc: -2073405600i64, type_index: 3i32 },
+    ZoneTransition{ at_utc: -2072797200i64, type_index: 4i32 },
+    ZoneTransition{ at_utc: -2072188800i64, type_index: 5i32 },
+    ZoneTransition{ at_utc: -2071580400i64, type_index: 6i32 },
+    ZoneTransition{ at_utc: -2070972000i64, type_index: 7i32 },
+    ZoneTransition{ at_utc: -2070363600i64, type_index: 8i32 },
+    ZoneTransition{ at_utc: -2069755200i64, type_index: 9i32 },
+    ZoneTransition{ at_utc: -2069146800i64, type_index: 10i32 },
+    ZoneTransition{ at_utc: -2068538400i64, type_index: 11i32 },
+    ZoneTransition{ at_utc: -2067930000i64, type_index: 12i32 },
+    ZoneTransition{ at_utc: -2067321600i64, type_index: 0i32 },
+    ZoneTransition{ at_utc: -2066713200i64, type_index: 1i32 },
+    ZoneTransition{ at_utc: -2066104800i64, type_index: 2i32 },
+    ZoneTransition{ at_utc: -2065496400i64, type_index: 3i32 },
+    ZoneTransition{ at_utc: -2064888000i64, type_index: 4i32 },
+    ZoneTransition{ at_utc: -2064279600i64, type_index: 5i32 },
+    ZoneTransition{ at_utc: -2063671200i64, type_index: 6i32 },
+    ZoneTransition{ at_utc: -2063062800i64, type_index: 7i32 },
+    ZoneTransition{ at_utc: -2062454400i64, type_index: 8i32 },
+    ZoneTransition{ at_utc: -2061846000i64, type_index: 9i32 },
+    ZoneTransition{ at_utc: -2061237600i64, type_index: 10i32 },
+    ZoneTransition{ at_utc: -2060629200i64, type_index: 11i32 },
+    ZoneTransition{ at_utc: -2060020800i64, type_index: 12i32 },
+    ZoneTransition{ at_utc: -2059412400i64, type_index: 0i32 },
+    ZoneTransition{ at_utc: -2058804000i64, type_index: 1i32 },
+    ZoneTransition{ at_utc: -2058195600i64, type_index: 2i32 },
+    ZoneTransition{ at_utc: -2057587200i64, type_index: 3i32 },
+    ZoneTransition{ at_utc: -2056978800i64, type_index: 4i32 },
+    ZoneTransition{ at_utc: -2056370400i64, type_index: 5i32 },
+    ZoneTransition{ at_utc: -2055762000i64, type_index: 6i32 },
+    ZoneTransition{ at_utc: -2055153600i64, type_index: 7i32 },
+    ZoneTransition{ at_utc: -2054545200i64, type_index: 8i32 },
+    ZoneTransition{ at_utc: -2053936800i64, type_index: 9i32 },
+    ZoneTransition{ at_utc: -2053328400i64, type_index: 10i32 },
+    ZoneTransition{ at_utc: -2052720000i64, type_index: 11i32 },
+    ZoneTransition{ at_utc: -2052111600i64, type_index: 12i32 },
+    ZoneTransition{ at_utc: -2051503200i64, type_index: 0i32 },
+    ZoneTransition{ at_utc: -2050894800i64, type_index: 1i32 },
+    ZoneTransition{ at_utc: -2050286400i64, type_index: 2i32 },
+    ZoneTransition{ at_utc: -2049678000i64, type_index: 3i32 },
+    ZoneTransition{ at_utc: -2049069600i64, type_index: 4i32 },
+    ZoneTransition{ at_utc: -2048461200i64, type_index: 5i32 },
+    ZoneTransition{ at_utc: -2047852800i64, type_index: 6i32 },
+    ZoneTransition{ at_utc: -2047244400i64, type_index: 7i32 },
+    ZoneTransition{ at_utc: -2046636000i64, type_index: 8i32 },
+    ZoneTransition{ at_utc: -2046027600i64, type_index: 9i32 },
+    ZoneTransition{ at_utc: -2045419200i64, type_index: 10i32 },
+    ZoneTransition{ at_utc: -2044810800i64, type_index: 11i32 },
+    ZoneTransition{ at_utc: -2044202400i64, type_index: 12i32 },
+    ZoneTransition{ at_utc: -2043594000i64, type_index: 0i32 },
+    ZoneTransition{ at_utc: -2042985600i64, type_index: 1i32 },
+    ZoneTransition{ at_utc: -2042377200i64, type_index: 2i32 },
+    ZoneTransition{ at_utc: -2041768800i64, type_index: 3i32 },
+    ZoneTransition{ at_utc: -2041160400i64, type_index: 4i32 },
+    ZoneTransition{ at_utc: -2040552000i64, type_index: 5i32 },
+    ZoneTransition{ at_utc: -2039943600i64, type_index: 6i32 },
+    ZoneTransition{ at_utc: -2039335200i64, type_index: 7i32 },
+    ZoneTransition{ at_utc: -2038726800i64, type_index: 8i32 },
+    ZoneTransition{ at_utc: -2038118400i64, type_index: 9i32 },
+    ZoneTransition{ at_utc: -2037510000i64, type_index: 10i32 },
+    ZoneTransition{ at_utc: -2036901600i64, type_index: 11i32 },
+    ZoneTransition{ at_utc: -2036293200i64, type_index: 12i32 },
+    ZoneTransition{ at_utc: -2035684800i64, type_index: 0i32 },
+    ZoneTransition{ at_utc: -2035076400i64, type_index: 1i32 },
+    ZoneTransition{ at_utc: -2034468000i64, type_index: 2i32 },
+    ZoneTransition{ at_utc: -2033859600i64, type_index: 3i32 },
+    ZoneTransition{ at_utc: -2033251200i64, type_index: 4i32 },
+    ZoneTransition{ at_utc: -2032992000i64, type_index: 5i32 },
+    ZoneTransition{ at_utc: -2032383600i64, type_index: 6i32 },
+    ZoneTransition{ at_utc: -2031775200i64, type_index: 7i32 },
+    ZoneTransition{ at_utc: -2031166800i64, type_index: 8i32 },
+    ZoneTransition{ at_utc: -2030558400i64, type_index: 9i32 },
+    ZoneTransition{ at_utc: -2029950000i64, type_index: 10i32 },
+    ZoneTransition{ at_utc: -2029341600i64, type_index: 11i32 },
+    ZoneTransition{ at_utc: -2028733200i64, type_index: 12i32 },
+    ZoneTransition{ at_utc: -2028124800i64, type_index: 0i32 }
+];
+
+func:main = int32(cstring[]:argv) {
+    // The row size Z-7's cost model multiplies by a row count.
+    if (#size_of<ZoneTransition>() != 16i64)            { exit 10i32; }
+
+    // The ends of the table, folded at compile time.
+    if (TRANSITIONS[0].at_utc != -2208988800i64)        { exit 11i32; }
+    if (TRANSITIONS[0].type_index != 0i32)              { exit 12i32; }
+    if (TRANSITIONS[299].at_utc != -2028124800i64)      { exit 13i32; }
+    if (TRANSITIONS[299].type_index != 0i32)            { exit 14i32; }
+
+    // A row reached through an index the compiler cannot fold: `argv.len` is 1
+    // under the harness, so this is row 123 -- but only at run time, which is
+    // the access Z-8's binary search actually makes.
+    int64:live = ((argv.len =>! int64) - 1i64) + 123i64;
+    if (TRANSITIONS[live].at_utc != -2134504800i64)     { exit 15i32; }
+    if (TRANSITIONS[live].type_index != 6i32)           { exit 16i32; }
+
+    // Every row readable and strictly increasing -- Z-8's invariant, and the
+    // proof that all 300 rows are present rather than the two ends a folder
+    // could have kept.
+    int64:i = 1i64;
+    int64:prev = TRANSITIONS[0].at_utc;
+    while (i < 300i64) {
+        int64:at = TRANSITIONS[i].at_utc;
+        if (at <= prev)                                 { exit 17i32; }
+        prev = at;
+        i = i + 1i64;
+    }
+    if (prev != -2028124800i64)                         { exit 18i32; }
+
+    // D-151: exit 0 additionally asserts that nothing leaked.
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

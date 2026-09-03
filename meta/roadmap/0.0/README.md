@@ -44,10 +44,11 @@ TM-030. All settled. **Nothing in this cycle is blocked on a question.**
 ## Checklist
 
 ### 0.0.0 — the probes
-- [ ] `probe/probe01_derive_ord.npk` — a two-field struct with `#[derive(Ord, Eq)]`; assert the comparison follows **declaration order** (the fact `Timestamp` depends on, TM-011)
+- [x] `probe/probe01_derive_ord.npk` — a two-field struct with `#[derive(Ord, Eq)]`; assert the comparison follows **declaration order** (the fact `Timestamp` depends on, TM-011)
 - [ ] `probe/probe02_int128.npk` — `int128` add, compare, and a narrowing `=>!` to `int64`; assert the value and assert the trap on a value that does not fit
 - [ ] `probe/probe03_timespec_sys.npk` — a 16-byte `timespec` in a `buffer`, `clock_gettime(CLOCK_REALTIME)` through `sys`, both fields read back; assert `#size_of` and the offsets
-- [ ] `probe/probe04_big_fixed_table.npk` — a `fixed` module-state array of ~30 000 structs; assert it is read-only memory, costs no startup work, and that the emitted IR does not initialise it at run time
+- [x] `probe/probe04_big_fixed_table.npk` — a `fixed` module-state array of ~30 000 structs; assert it is read-only memory, costs no startup work, and that the emitted IR does not initialise it at run time
+- [x] `probe/probe04b_emission_shape.npk` — **added at 0.0.0's verification.** The same declaration at 300 rows, with the IR, `readelf` and segment evidence committed verbatim in `probe04b_emission_shape.txt`. Probe 04 costs 281 s and 30.9 GiB under O-N4, so its emission-shape answer was a one-time observation nobody could re-derive; the form is a property of the lowering and not of the size, so 300 rows evidences it for 0.16 s
 - [ ] `probe/probe05_payload_enum.npk` — a tagged enum with payloads, destructured in a `pick`, stored in a `Vec`
 - [ ] `probe/probe06_generic_vec.npk` — `Vec<T>` with `move T:v`, at both a scalar `T` and an owning one; and an inherent `impl:<T>:Vec<T>` with a mutating `Vec<T>->:self` receiver
 - [ ] `probe/probe07_negative_div.npk` — the floor-division and modulus behaviour the calendar algorithms need at **negative** operands; assert against hand-computed values, because C-style truncation and mathematical floor differ here and Hinnant's algorithm assumes one of them

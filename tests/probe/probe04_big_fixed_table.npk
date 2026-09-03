@@ -16,13 +16,23 @@
 //
 // THE EXIT CODE IS ONLY HALF THE VERDICT. It cannot say whether the array is
 // static data or filled at startup. The other half is read off the emitted IR
-// and the object's sections, and `meta/roadmap/0.0/0.0.0.md` §7 records what
-// they showed:
+// and the object's sections:
 //
 //     npkc tests/probe/probe04_big_fixed_table.npk -o p.ll
 //     grep 'TRANSITIONS" = constant' p.ll     # must be `constant`, not `global`
 //     grep -c llvm.global_ctors p.ll          # must be 0
 //     llc ... -o p.o && readelf -SW p.o       # the symbol's section must be .rodata
+//
+// THAT HALF IS EVIDENCED NEXT DOOR, NOT HERE. Running the four commands above
+// against THIS file costs 281 s and 30.9 GiB (O-N4), so it has been done once,
+// on 2026-09-03, and `meta/roadmap/0.0/0.0.0.md` §7 records it explicitly as a
+// ONE-TIME OBSERVATION that nobody should re-derive casually. The same four
+// commands against `probe04b_emission_shape.npk` -- the identical declaration
+// at 300 rows -- cost 0.16 s, and their full output is committed verbatim in
+// `probe04b_emission_shape.txt`. The emission FORM is chosen by the same
+// lowering path at any element count, so 300 rows evidences it; what this file
+// keeps for itself is the SIZE claim, that 30 000 rows compile at all and that
+// the arithmetic holds at that count.
 //
 // THE DATA IS SYNTHETIC AND HAS A CLOSED FORM, so this file can be regenerated
 // without a generator in `tools/`:

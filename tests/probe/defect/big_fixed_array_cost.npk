@@ -7,8 +7,16 @@
 // It is a VALID program and it COMPILES. Nothing here is a workaround and
 // nothing here is wrong; the defect is what it costs:
 //
-//     4 000 rows  ->    4.2 s and   484 MiB
-//    30 000 rows  ->  281   s and  30.9 GiB          (the real tzdb's size)
+//   THIS FILE, 4 000 rows  ->   ~6 s and  580 MiB    (measured four times)
+//   probe 04, 30 000 rows  ->  281 s and 30.9 GiB    (the real tzdb's size)
+//
+// The 4 000-row figure is THIS FILE's own, taken with
+// `/usr/bin/time -f "%e s  %M KiB"` and paired with npkc exit 0 every time:
+// 5.30 / 5.34 / 6.11 / 6.19 s at 593 592 - 593 992 KiB. Do not confuse it with
+// README.md's generic-recipe curve, whose 4 000-row cell is 4.19 s / 473 MiB
+// for a table of the same size written with short names -- an earlier draft
+// did exactly that, and chasing the discrepancy is what produced README.md's
+// fourth observation.
 //
 // `README.md` in this directory has the three measured curves, the exact
 // commands, and what it costs this library. DO NOT DELETE THIS FILE until the

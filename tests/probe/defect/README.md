@@ -50,6 +50,13 @@ Each cell is `npkc` wall time and peak resident memory, from
 
 The shape TM-007 needs. Rows are `{ int64; int32 }`, as `ZoneTransition` is.
 
+**Every row from 0 to 8 000 was produced by the generic recipe below** — a
+struct `R` with fields `a` and `b`, in an array `T`. That matters, because a
+fourth observation below says identifier length changes the cost at a fixed
+element count, so these rows are comparable with each other and **not** with a
+file that spells the same table `ZoneTransition`/`TRANSITIONS`/`at_utc`/
+`type_index`.
+
 | rows | wall | peak RSS | vs. previous |
 |---:|---:|---:|---|
 | 0 | 0.10 s | 23 MiB | — |
@@ -58,16 +65,36 @@ The shape TM-007 needs. Rows are `{ int64; int32 }`, as `ZoneTransition` is.
 | 2 000 | 1.19 s | 140 MiB | ×2.9, ×2.6 |
 | 4 000 | 4.19 s | 473 MiB | ×3.5, ×3.4 |
 | 8 000 | 15.83 s | 1.73 GiB | ×3.8, ×3.8 |
-| **30 000** | **281.35 s** | **30.9 GiB** | — |
 
-A ratio approaching 4 per doubling in both columns is quadratic growth. The
-30 000-row figure is `probe04_big_fixed_table.npk` itself.
+A ratio approaching 4 per doubling in both columns is quadratic growth.
 
-Two controls, both at 4 000 rows and both exit 0:
+**The real-identifier files, measured separately.** These are the committed
+ones, and they carry `ntime`'s own names:
+
+| file | rows | wall | peak RSS |
+|---|---:|---:|---:|
+| `big_fixed_array_cost.npk` | 4 000 | 5.30 / 5.34 / 6.11 / 6.19 s | 580 MiB (593 592 – 593 992 KiB) |
+| `probe04_big_fixed_table.npk` | 30 000 | 281.35 s | 30.9 GiB |
+
+Four runs of the committed 4 000-row file agree on memory to within 0.1 %, so
+the spread in wall time is machine load and the memory figure is solid. It sits
+**above the generic curve's 4 000-row cell** (473 MiB) at the same row count and
+with row data that `diff` says is identical. Why, and by how much, is the fourth
+observation below — which is an unreproduced measurement, not an established
+axis, and is the reason the two tables are kept apart rather than merged into
+one column.
+
+The 30 000-row figure was taken from `probe04_big_fixed_table.npk`, which is
+also a real-identifier file, so it belongs with these and not at the foot of the
+generic curve. **It has been measured once and is not re-derived**: at 281 s and
+30.9 GiB a confirmation run is not free, and nothing in this document needs it
+to be repeated.
+
+Three controls, all at 4 000 rows, all generic-recipe, all exit 0:
 
 | variant | wall | peak RSS | what it says |
 |---|---:|---:|---|
-| `main` reads the table | 4.19 s | 473 MiB | — |
+| `main` reads the table | 4.19 s | 473 MiB | the baseline |
 | `main` never reads it | 4.36 s | 496 MiB | the cost is in the **declaration**, not any use |
 | a plain `int64[4000]` instead | 1.41 s | 161 MiB | not struct-specific; it tracks the count of scalar constants |
 
@@ -103,19 +130,77 @@ pathology from the other two rather than the same one seen through a lexer.
 It matters here because `ZONE_MODEL.md` Z-7's fourth table is a **name pool**,
 which is exactly a large string constant.
 
+### A fourth observation — identifier length appears to change the cost — **ONE UNREPRODUCED MEASUREMENT**
+
+**Read the label before the numbers.** This is a hypothesis with measurements
+attached, not a fourth axis. It was found by cycle 0.0.0's **verifier** on
+2026-09-03 while checking a different claim, it has been taken once, and this
+dispatch deliberately did **not** try to confirm it. Nothing in `ntime` is
+shaped around it and nothing should be until somebody re-runs it.
+
+At a **fixed element count** of 4 000 rows, with the row data `diff`-confirmed
+identical and only the *names* varying:
+
+| the same 4 000 rows, spelled | peak RSS | vs. the generic |
+|---|---:|---|
+| generic — `struct:R = { int64:a; int32:b; }`, array `T` | 398 036 KiB (388.7 MiB) | — |
+| `ntime`'s names — `ZoneTransition`, `TRANSITIONS`, `at_utc`, `type_index` | 546 628 – 554 800 KiB (533.8 – 541.8 MiB) | **+37 – 39 %** |
+| the committed `big_fixed_array_cost.npk` | 593 592 – 593 992 KiB (≈ 579.8 MiB) | **+49 %** |
+
+Put the other way round, the generic spelling costs about **33 % less memory**
+than the committed file for the same table.
+
+Two things make it more than a curiosity and both are why it is written down:
+
+- The committed file differs from the middle row's reconstruction **only by a
+  nine-character-longer module name and two comment lines**, and that alone
+  moves the peak by about 8 % (≈ 40 MiB). If names were the whole story, two
+  comment lines should cost nothing.
+- The generic figure here (398 036 KiB) does **not** reconcile with axis 1's own
+  generic 4 000-row cell (473 MiB), taken during the original run. Two
+  measurements calling themselves the same configuration differ by a fifth, so
+  something not yet identified is varying between them. That unexplained gap is
+  the strongest reason to treat this as unconfirmed.
+
+Taken together those point away from "identifier length" as the variable and
+towards **total source bytes reaching the declaration** — which would make this
+the same pathology as axis 3 rather than a new one, and would explain axis 3's
+odd signature (quadratic in time, flat in memory) if a per-element string
+concatenation is involved.
+
+**Relayed to the compiler session on 2026-09-03 with this same label**, because
+it fits a suspect that session already had — a `string_concat` per element. It
+is theirs to confirm or discard; the ask in this document does not change.
+
 ---
 
 ## Reproducing it
 
 The committed file is the 4 000-row point, chosen so that a reader sees the
-defect in four seconds rather than five minutes:
+defect in **about six seconds and 580 MiB** rather than five minutes and
+30.9 GiB:
 
 ```
-"$NPKC" tests/probe/defect/big_fixed_array_cost.npk -o /tmp/p.ll
+/usr/bin/time -f "%e s  %M KiB" "$NPKC" tests/probe/defect/big_fixed_array_cost.npk -o /tmp/p.ll
 ```
 
-The curves are regenerated with the recipes below, which are what produced the
-tables above.
+```
+6.11 s  593796 KiB
+exit 0
+```
+
+Measured four times — 5.30 s, 5.34 s, 6.11 s, 6.19 s, at 593 592 – 593 992 KiB
+— so the memory is reproducible to within 0.1 % and the wall time carries the
+machine's load. **These are the committed file's own numbers.** An earlier draft
+of this document attributed the generic recipe's 4.19 s / 473 MiB to it; that
+was a conflation of two different files at the same row count, caught at
+verification, and the fourth observation above is what came out of chasing it.
+
+The **generic** curves are regenerated with the recipes below, which are what
+produced the 0 – 8 000 rows of axis 1 and the whole of axes 2 and 3. They do
+**not** produce the committed files: those carry `ntime`'s real identifiers, and
+the fourth observation above is the reason that is now worth saying rather than
+a detail.
 
 ```python
 # axis 1 — N rows of a fixed array of { int64; int32 }

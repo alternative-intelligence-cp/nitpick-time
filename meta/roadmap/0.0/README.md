@@ -44,17 +44,17 @@ TM-030. All settled. **Nothing in this cycle is blocked on a question.**
 ## Checklist
 
 ### 0.0.0 — the probes
-- [ ] `probe/01_derive_ord.npk` — a two-field struct with `#[derive(Ord, Eq)]`; assert the comparison follows **declaration order** (the fact `Timestamp` depends on, TM-011)
-- [ ] `probe/02_int128.npk` — `int128` add, compare, and a narrowing `=>!` to `int64`; assert the value and assert the trap on a value that does not fit
-- [ ] `probe/03_timespec_sys.npk` — a 16-byte `timespec` in a `buffer`, `clock_gettime(CLOCK_REALTIME)` through `sys`, both fields read back; assert `#size_of` and the offsets
-- [ ] `probe/04_big_fixed_table.npk` — a `fixed` module-state array of ~30 000 structs; assert it is read-only memory, costs no startup work, and that the emitted IR does not initialise it at run time
-- [ ] `probe/05_payload_enum.npk` — a tagged enum with payloads, destructured in a `pick`, stored in a `Vec`
-- [ ] `probe/06_generic_vec.npk` — `Vec<T>` with `move T:v`, at both a scalar `T` and an owning one; and an inherent `impl:<T>:Vec<T>` with a mutating `Vec<T>->:self` receiver
-- [ ] `probe/07_negative_div.npk` — the floor-division and modulus behaviour the calendar algorithms need at **negative** operands; assert against hand-computed values, because C-style truncation and mathematical floor differ here and Hinnant's algorithm assumes one of them
-- [ ] `probe/08_readlink.npk` — `readlink` through `sys` into a `buffer`, with a non-NUL-terminated result and the returned length as the authority
-- [ ] `probe/09_environ.npk` — `environ()` read, a `KEY=VALUE` entry located and split, with the borrow rules exercised
-- [ ] `probe/10_string_bytes.npk` — `string_bytes` into a scanner and `string_from_bytes` back, at every borrow edge
-- [ ] `probe/11_failsafe_arms.npk` — a program importing a module that declares one `error:`, whose `failsafe` names exactly the arms REACH-002 requires; and a negative twin that omits one and **must not compile**
+- [ ] `probe/probe01_derive_ord.npk` — a two-field struct with `#[derive(Ord, Eq)]`; assert the comparison follows **declaration order** (the fact `Timestamp` depends on, TM-011)
+- [ ] `probe/probe02_int128.npk` — `int128` add, compare, and a narrowing `=>!` to `int64`; assert the value and assert the trap on a value that does not fit
+- [ ] `probe/probe03_timespec_sys.npk` — a 16-byte `timespec` in a `buffer`, `clock_gettime(CLOCK_REALTIME)` through `sys`, both fields read back; assert `#size_of` and the offsets
+- [ ] `probe/probe04_big_fixed_table.npk` — a `fixed` module-state array of ~30 000 structs; assert it is read-only memory, costs no startup work, and that the emitted IR does not initialise it at run time
+- [ ] `probe/probe05_payload_enum.npk` — a tagged enum with payloads, destructured in a `pick`, stored in a `Vec`
+- [ ] `probe/probe06_generic_vec.npk` — `Vec<T>` with `move T:v`, at both a scalar `T` and an owning one; and an inherent `impl:<T>:Vec<T>` with a mutating `Vec<T>->:self` receiver
+- [ ] `probe/probe07_negative_div.npk` — the floor-division and modulus behaviour the calendar algorithms need at **negative** operands; assert against hand-computed values, because C-style truncation and mathematical floor differ here and Hinnant's algorithm assumes one of them
+- [ ] `probe/probe08_readlink.npk` — `readlink` through `sys` into a `buffer`, with a non-NUL-terminated result and the returned length as the authority
+- [ ] `probe/probe09_environ.npk` — `environ()` read, a `KEY=VALUE` entry located and split, with the borrow rules exercised
+- [ ] `probe/probe10_string_bytes.npk` — `string_bytes` into a scanner and `string_from_bytes` back, at every borrow edge
+- [ ] `probe/probe11_failsafe_arms.npk` — a program importing a module that declares one `error:`, whose `failsafe` names exactly the arms REACH-002 requires; and a negative twin that omits one and **must not compile**
 - [ ] a verdict line per probe recorded in `0.0.0.md`, with the exact diagnostic where one was refused
 - [ ] every design consequence written into `meta/specs/` **and** `meta/DECISIONS.md` before 0.0.1 starts
 

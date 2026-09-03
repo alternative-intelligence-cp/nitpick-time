@@ -6,9 +6,9 @@ Guidance for Claude Code sessions working in this repository.
 
 ## Before starting a session here
 
-Check **[`../../BOARD.md`](../../BOARD.md)** — it says whether this repository
+Check **[`../BOARD.md`](../BOARD.md)** — it says whether this repository
 is claimed by a stream, and by which. **One writer per repository, always.**
-[`../../WORKSTREAMS.md`](../../WORKSTREAMS.md) is the dependency graph and the
+[`../WORKSTREAMS.md`](../WORKSTREAMS.md) is the dependency graph and the
 stream partition: what gates this repository, what this repository gates, and
 what to do when a cross-stream gate is not ready yet.
 

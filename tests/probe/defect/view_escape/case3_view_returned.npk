@@ -1,8 +1,21 @@
-// expect-exit: 0
-// NOT A PROBE. This file compiles and runs, and that IS the defect.
-// When O-N9 closes, this file's expectation becomes
-//     expect-error: NITPICK-BORROW-001
-// and it stops being a defect reproduction and becomes a regression case.
+// expect-error: NITPICK-BORROW-001
+//
+// CORRECTED 2026-09-04 AT THE RE-PIN (TM-110), exactly as the note below
+// said it would be. WAS `expect-exit: 0` -- the defect's behaviour at pin
+// `950bb1d`, where this file compiled and ran and THAT was the defect.
+// O-N9 IS DISCHARGED and at pin `94874ce` this file is refused:
+//
+//   NITPICK-BORROW-001 ...:26:22: a borrow cannot travel up: it is valid only
+//   for the frame it was taken in, and this returns it out of that frame
+//   (D-004 rule 2)
+//
+// It is no longer a defect reproduction. It is a REGRESSION CASE.
+//
+// The original note, kept because it is what made this correction mechanical
+// rather than a judgement call:
+//     "When O-N9 closes, this file's expectation becomes
+//      expect-error: NITPICK-BORROW-001, and it stops being a defect
+//      reproduction and becomes a regression case."
 //
 // CASE 3 — THE SAME RULE, NOT ENFORCED, FOR A SLICE.
 //

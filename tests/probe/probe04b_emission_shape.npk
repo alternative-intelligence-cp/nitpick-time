@@ -11,11 +11,23 @@
 // WHY IT EXISTS SEPARATELY. The emission form is a property of HOW THE
 // DECLARATION IS LOWERED, not of how large it is: the same code path writes
 // three hundred rows and thirty thousand. So the shape can be evidenced at 300
-// rows for about a tenth of a second, and it is, because O-N4 makes
-// `probe04_big_fixed_table.npk` cost 281 seconds and 30.9 GiB and therefore
-// unrepeatable in practice and unrunnable in CI. Probe 04 keeps the SIZE
+// rows for about a tenth of a second, and it is.
+//
+// THE COST THAT FORCED IT IS HISTORY, NOT CURRENT FACT (2026-09-04). This
+// paragraph read "because O-N4 makes `probe04_big_fixed_table.npk` cost 281
+// seconds and 30.9 GiB and therefore unrepeatable in practice and unrunnable
+// in CI". **O-N4 is fixed** — the compiler's DEF-1, its cycle 1.5.1b — and at
+// pin `94874ce` probe 04 costs **1.24 s and 74 476 KiB**, measured here. The
+// full 30 000-row file now compiles, links, runs and is `readelf`-inspected in
+// this subcycle's record, so the SHAPE question is answered at full scale too.
+//
+// THIS FILE IS KEPT ANYWAY, and not because it is cheaper. It is committed
+// evidence with a committed transcript; it is the 300-row half of a pair whose
+// agreement is itself the argument that the emission form does not vary with
+// count; and a probe is never deleted (0.0.0 P-5). Probe 04 keeps the SIZE
 // question — 30 000 rows really compile, the arithmetic holds at that count —
-// and this file keeps the SHAPE question, re-derivable by anybody, any time.
+// and this file keeps the SHAPE question, re-derivable by anybody, any time,
+// at a size that stays trivial no matter what the compiler does next.
 //
 // DEPENDS ON THE ANSWER: the same rules as probe 04 — ZONE_MODEL.md Z-7 and
 // Z-8, SAFETY.md S-19 (`fixed` module state is read-only memory, no

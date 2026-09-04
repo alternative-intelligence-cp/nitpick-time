@@ -363,9 +363,16 @@ on every path, so `exit 0` never trips D-151.
 block is freed, and `exit 0` does not check it.** D-151 watches `wild`
 allocations; a `string`'s body is **managed**. So a `Vec<string>` whose block is
 freed and whose elements are not is a leak that exits 0 — measured at cycle
-0.0.0, 125 MiB retained over 2 000 000 elements, and `HeapOom` under a 64 MiB
-address-space cap while the corrected form finishes clean. Each element is moved
-into a scope that ends:
+0.0.0 and **re-measured unchanged at the 2026-09-04 re-pin**: 125 184 KiB
+retained over 2 000 000 elements, and `HeapOom` (exit 92) under a 64 MiB
+address-space cap, while the corrected form completes the same two million
+iterations in **under 768 KiB** of address space. The committed pair is
+`tests/probe/probe06b_element_leak.npk` and `probe06c_element_drop.npk`, which
+differ in one line. **Quote the address-space bound and not a peak-RSS figure**:
+`/usr/bin/time -f %M` reports `0 KiB` for these static binaries — it does so
+for a four-line program too — so the "0 KiB" this rule carried until the re-pin
+was a broken gauge rather than a measurement. Each element is moved into a
+scope that ends:
 
 ```nitpick
 while (i < v.count) {

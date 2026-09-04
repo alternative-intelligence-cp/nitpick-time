@@ -1,7 +1,18 @@
-// expect-exit: 170
-// NOT A PROBE, and NOT AN ASSERTION ON 170 -- see below.
-// When O-N9 closes, this file's expectation becomes
-//     expect-error: NITPICK-BORROW-001
+// expect-error: NITPICK-BORROW-001
+//
+// CORRECTED 2026-09-04 AT THE RE-PIN (TM-110), exactly as the note below
+// said it would be. WAS `expect-exit: 170` -- and 170 is `0xAA`, the
+// runtime's free-poison, read back through a bounds check that passed. That
+// exit code was the whole evidence that the escape was a real use-after-free
+// and not a tidiness complaint, so it is recorded here rather than lost:
+// four consecutive runs gave 170 at pin `950bb1d`.
+//
+// O-N9 IS DISCHARGED. At pin `94874ce` the program never runs at all,
+// because it never compiles -- refused `NITPICK-BORROW-001` at 49:22. This
+// is now a REGRESSION CASE, and the poison read is history.
+//
+// The original note: "When O-N9 closes, this file's expectation becomes
+// expect-error: NITPICK-BORROW-001".
 //
 // CASE 5 — WHAT THE CALLER ACTUALLY READS. The dangling half, demonstrated
 // rather than argued.

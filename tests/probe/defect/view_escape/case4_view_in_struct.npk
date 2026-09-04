@@ -1,7 +1,12 @@
-// expect-exit: 0
-// NOT A PROBE. This file compiles and runs, and that IS the defect.
-// When O-N9 closes, this file's expectation becomes
-//     expect-error: NITPICK-BORROW-001
+// expect-error: NITPICK-BORROW-001
+//
+// CORRECTED 2026-09-04 AT THE RE-PIN (TM-110), exactly as the note below
+// said it would be. WAS `expect-exit: 0` -- the defect's behaviour at pin
+// `950bb1d`. O-N9 IS DISCHARGED; at pin `94874ce` this file is refused
+// `NITPICK-BORROW-001` at 26:10, and it is now a REGRESSION CASE.
+//
+// The original note: "When O-N9 closes, this file's expectation becomes
+// expect-error: NITPICK-BORROW-001".
 //
 // CASE 4 — THE MINIMAL PAIR WITH CASE 2, and the clearest statement of the gap.
 //

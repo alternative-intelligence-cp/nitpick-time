@@ -24,7 +24,10 @@ entries from cycle 0.0.2.
   million element bodies, retained 125 MiB and **exited 0** (TM-106). A probe
   over an owning container therefore asserts its memory too — a `ulimit -v` cap
   today, a `peak_live` bound from the compiler's `NPK_HEAP_STATS` after the
-  1.5.1b re-pin.
+  1.5.1b re-pin. **Assert the cap, not a peak-RSS number:**
+  `/usr/bin/time -f %M` reports `0 KiB` for these static binaries, including
+  for `probe11d_floor_only.npk`, so it cannot tell a clean run from a small
+  one. `probe06b`/`probe06c` are the committed pair.
   **Nine** probes here still carry the older one-line comment *"exit 0
   additionally asserts that nothing leaked"* — **01, 02, 02b, 03, 04, 04b, 05,
   07 and 08**. Each is locally harmless — none of those files allocates a
@@ -59,8 +62,15 @@ entries from cycle 0.0.2.
 | `probe05_payload_enum.npk` | a payload enum in a `pick` and in a `Vec` | `FORMAT_MODEL.md` F-4, `SAFETY.md` S-3 |
 | `probe05b_derive_eq_refused.npk` | *(must not compile)* `#[derive(Eq)]` on a payload enum | O-N10 |
 | `probe06_generic_vec.npk` | a generic `Vec<T>` with `move`, at a scalar `T` and an owning one | TM-005, TM-106, `BUILD.md` B-12, `SAFETY.md` S-18b |
+| `probe06b_element_leak.npk` | 2 000 000 × {init, push, free the block only} — what an orphaned element costs | TM-106, `SAFETY.md` S-18b — the leaking half |
+| `probe06c_element_drop.npk` | the same, one line different: `free_names` first | the same — the remedy half. **Both exit 0**, which is the point |
 | `probe07_negative_div.npk` | does signed `/` truncate toward zero and `%` take the dividend's sign? | TM-016, `CALENDAR.md`'s negative years |
 | `probe08_readlink.npk` | `readlink` through `sys`, with the returned length as the authority | `HOST.md` H-13, H-14, H-15 |
+| `probe09_environ_split.npk` | `environ()`, every entry as `KEY=VALUE`, and `TZ` split by prefix. **Needs `TZ=Europe/Kyiv` exported**; exits 30 if not | `HOST.md`, TM-110 |
+| `probe09b_environ_view_returned.npk` | a view of an environment entry, **returned**, and read after its frame died | TM-110 — the pointer-shaped root, with a parameter confound |
+| `probe10_view_edges.npk` | the five borrow edges, and §1 is the discriminator: an `alloc`'d block viewed and returned with **no parameter in the root chain** | TM-110, `SAFETY.md` S-22 |
+| `probe10b_view_of_temporary_refused.npk` | *(must not compile)* a view of a **temporary**, returned | TM-110 — fires `NITPICK-BORROW-012` |
+| `probe10c_view_of_move_param_refused.npk` | *(must not compile)* a view of a **`move` parameter**, returned | TM-110 — a `move` parameter is the callee's own |
 | `probe11_failsafe_arms.npk` | the `failsafe` arm contract: an import that declares and raises one `error:` | TM-017, TM-107, `SAFETY.md` S-2/S-4/S-4b/S-4c/S-6 |
 | `probe11b_arm_omitted_refused.npk` | *(must not compile)* the same, minus one arm | the same rules — the negative half TM-017 rests on |
 | `probe11c_import_arm_cost.npk` | *(must not compile)* what an imported module's **arithmetic** costs a consumer | TM-107, `SAFETY.md` S-4b |

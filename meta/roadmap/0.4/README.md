@@ -92,16 +92,33 @@ documented exceptions and a test that counts them.
 - **`in` is a keyword** and a parser wants it for its input constantly; `src` is
   the reserved spelling.
 - **S-22's "a view is a parameter, never a return value" is a BELT, not the
-  language's constraint** (TM-109). This is the cycle that meets it: every
-  parser here takes a `uint8[]`. The rule is stricter than what the compiler
-  will enforce once its DEF-3 lands — a returned view of a **local** or of a
-  **temporary** is refused, but a returned view whose borrows are all rooted at
-  a **parameter** is legal, and is legal today. So if a helper here genuinely
-  wants to return a view of its own parameter, that is a request to loosen S-22
-  **by decision**, not a compiler limit to design around. The refusal is
-  `NITPICK-BORROW-001`; DEF-3 adds no new code, so there is no new diagnostic to
-  wait for. And a view of a temporary — `string_bytes(string_concat(a, b))` — is
-  doubly wrong today, because the intermediate also leaks; binding it fixes both.
+  language's constraint** (TM-109, corrected and superseded by **TM-110**).
+  This is the cycle that meets it: every parser here takes a `uint8[]`.
+
+  **DEF-3 HAS LANDED and the rule was MEASURED on 2026-09-04** at pin
+  `94874ce`, so plan against this table and not against the prediction that
+  stood here until then:
+
+  | Shape, returned out of its frame | Measured | Evidence |
+  |---|---|---|
+  | a view of a **local** | refused `NITPICK-BORROW-001` | `defect/view_escape/case3`–`case5` |
+  | a view of a **temporary** | refused **`NITPICK-BORROW-012`** | `probe10b` |
+  | a view of a **`move` parameter** | refused `NITPICK-BORROW-001` | `probe10c` |
+  | a view rooted at a plain **parameter** | **legal** | `probe10` §2, §3 |
+  | a view rooted at a **pointer-shaped binding** | **legal** | `probe10` §1, `probe09b` |
+
+  **The rule keys on the ROOT'S SHAPE, not on parameterhood** — that is
+  TM-110's correction to TM-109, and it matters here because it widens what a
+  helper may legally do. So if a helper in this cycle genuinely wants to return
+  a view of its own parameter, or of a `wild` block it allocated, that is a
+  request to loosen S-22 **by decision**, not a compiler limit to design around.
+
+  ~~DEF-3 adds no new code, so there is no new diagnostic to wait for.~~
+  **FALSE, corrected 2026-09-04:** DEF-3 adds `NITPICK-BORROW-012`, and this
+  cycle's `check_codes_tested` gains it. A view of a temporary —
+  `string_bytes(string_concat(a, b))` — is the shape that fires it, and it was
+  doubly wrong before D-246 landed, because the intermediate also leaked;
+  binding it fixes both and is still the right habit.
 - **`Bytes` and `Vec<T>` are indexed WITHOUT a bounds check** (TM-108, S-17b).
   Every formatter in this cycle writes into a `Bytes`, and `Layout` holds a
   `Vec<FmtPart>`; both are bare pointers to the emitter, so an out-of-range

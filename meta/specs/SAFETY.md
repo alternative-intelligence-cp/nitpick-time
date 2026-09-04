@@ -390,9 +390,9 @@ returning, and holds nothing across a call.
 **Rule S-21.** `ntime` spawns no processes, installs no signal handler, starts
 no thread, and blocks on nothing.
 
-**Rule S-22 (TM-109) — a view is a parameter, never a return value; and this
-rule is a BELT, deliberately stricter than the language will be.** §1's borrow
-row promises this rule here, and here it is, in both halves.
+**Rule S-22 (TM-109, amended by TM-110) — a view is a parameter, never a return
+value; and this rule is a BELT, deliberately stricter than the language.** §1's
+borrow row promises this rule here, and here it is, in both halves.
 
 **The rule.** No function in `src/` returns a `uint8[]`, a `cstring`, or a
 struct containing one. A parser takes a `uint8[]` and returns a value and an
@@ -400,37 +400,45 @@ offset — which is what `FORMAT_MODEL.md` already specifies, so the rule costs
 this library nothing. `check_no_view_returns` on cycle 0.0.3's harness list is
 what makes it enforced rather than remembered.
 
-**Why it is written as a belt.** O-N9 measured that D-004's escape rule is
-today **unenforced for slice views**: `string_bytes` on a local `string`
-returns a `uint8[]` out of its owning frame at exit 0, and reading it reads
-freed memory, while the identical program with an `@`-borrow is refused
-`NITPICK-BORROW-001`. So the rule is the safe thing to write today. The author
-ruled O-N9 **blocking** (`../OPEN_QUESTIONS.md` Q-5), so `src/fmt/` and probes
-09 and 10 wait for the compiler regardless.
+**Why it was written as a belt, and why it stays one.** O-N9 measured that
+D-004's escape rule was **unenforced for slice views**: `string_bytes` on a
+local `string` returned a `uint8[]` out of its owning frame at exit 0, and
+reading it read freed memory, while the identical program with an `@`-borrow
+was refused `NITPICK-BORROW-001`.
 
-**And it is stricter than the constraint, which matters when `src/fmt/` is
-planned.** The rule was written with no way to tell two shapes apart, and the
-compiler's fix — DEF-3, its cycle 1.5.1b step 2, proposed as its D-249 —
-distinguishes them:
+**O-N9 IS NOW DISCHARGED** (TM-110, 2026-09-04, measured against pin
+`94874ce`): a view of a local returned is refused `NITPICK-BORROW-001`,
+exactly as asked. The belt stays anyway, because what the language enforces is
+**narrower** than what this rule forbids — see the last two rows below.
 
-| Shape | After DEF-3 |
-|---|---|
-| a view of a **local**, returned — `string_bytes(local)` | **refused** |
-| a view of a **temporary**, returned — `string_bytes(string_concat(a, b))` | **refused**; bind the intermediate first |
-| a view whose borrows are all rooted at a **parameter**, returned | **legal**, and legal today |
+**It is stricter than the constraint, and this is the table to plan `src/fmt/`
+against.** Every row was produced by compiling a file at pin `94874ce`; none
+is predicted. The evidence column names it.
 
-The third row is not a concession; it is the pattern the compiler is built out
-of, and the escape analysis already has it — `borrows_only_param_rooted`
-(`src/frontend/analysis/escape.npk`) takes a second look before refusing,
-because a parameter's target lives in the caller or older and each frame proves
-its own hop. What DEF-3 changes is that a view-maker's result becomes a borrow
-**rooted where its viewed argument is rooted**, as if `@` had been written at
-that argument, so the existing rules apply to it unchanged.
+| Shape, returned out of its frame | Measured at `94874ce` | Evidence |
+|---|---|---|
+| a view of a **local** — `string_bytes(local)` | **refused** `NITPICK-BORROW-001` | `defect/view_escape/case3`–`case5` |
+| a view of a **temporary** — `string_bytes(string_concat(a,b))` | **refused** `NITPICK-BORROW-012` | `probe10b` |
+| a view of a **`move` parameter** | **refused** `NITPICK-BORROW-001` | `probe10c` |
+| a view rooted at a plain **parameter** | **legal** | `probe10` §2, §3 |
+| a view rooted at a **pointer-shaped binding** — a `wild` block, a `cstring`'s `.ptr`, a slice | **legal** | `probe10` §1, `probe09b` |
 
-**The refusal is `NITPICK-BORROW-001`**, the code a returned `@`-borrow already
-gets (`BORROW_RETURNED`, `src/frontend/analysis/analysis_codes.npk`). DEF-3
-introduces **no new diagnostic code**; a plan that waits for one is waiting for
-nothing.
+**The rule keys on the ROOT'S SHAPE, not on parameterhood** — which is the
+correction TM-110 makes to TM-109, and it took two probes to establish, because
+one cannot separate the two readings. A view whose place roots at a
+pointer-shaped binding aliases the **pointee**, which lives wherever the
+pointer's provenance says; `view_is_frame_borrow`
+(`src/frontend/analysis/escape.npk`) is the discriminator. A **`move`**
+parameter is *not* a parameter for this purpose: it is consumed at the call and
+dropped at the callee's frame exit.
+
+**DEF-3 DOES add a diagnostic code, and this document said otherwise until
+2026-09-04.** `NITPICK-BORROW-012` (`BORROW_VIEW_OF_TEMPORARY`) exists at this
+pin and `probe10b` fires it. The earlier claim came from DEF-3's *plan*, which
+its own step 2 overtook: every other refusal is shaped like "as if `@` had been
+written at that argument" and so is `BORROW-001`, but `@` of a temporary cannot
+be spelled, so no existing code's text was true of it. `check_codes_tested`
+therefore **does** gain a code.
 
 **The temporary row is doubly wrong today, and one edit fixes both halves.**
 The inner `string_concat` result is an unbound temporary passed as an argument,

@@ -165,7 +165,21 @@ resolves elsewhere.
 **It costs `ntime` nothing and blocks nothing** — the house rule is already
 `mod:` = basename. Raised alongside O-N4; nothing here is shaped around it.
 
-### O-N9 — D-004's escape rule is unenforced for slice views — ~~**NOT BLOCKING**~~ **BLOCKING, by the author's ruling on Q-5**
+### ~~O-N9 — D-004's escape rule is unenforced for slice views~~ — **DISCHARGED 2026-09-04 (TM-110)**
+> **DISCHARGED, on this workbench's own measurement against pin `94874ce`, not
+> on a correspondent's report.** The fix landed as the compiler's DEF-3
+> (its D-249, cycle 1.5.1b step 2). `defect/view_escape/` cases 3, 4 and 5 are
+> now **refused `NITPICK-BORROW-001`**, exactly as the ask below asked; case 6,
+> the shape this library writes, still compiles and runs at exit 0. The
+> transcript is `../tests/probe/defect/view_escape/TRANSCRIPT.txt` Part A, and
+> the decision is **TM-110**. **`src/fmt/` and probes 09 and 10 are
+> UNBLOCKED**; probes 09 and 10 were worked on 2026-09-04 and are committed.
+>
+> Two things in the text below are **wrong at the landed pin** and are
+> corrected in place further down, rather than deleted: the three-row table
+> (the rule keys on the root's SHAPE, not on parameterhood) and the claim that
+> DEF-3 adds no new diagnostic code (it adds `NITPICK-BORROW-012`).
+
 **Measured at cycle 0.0.0, 2026-09-03.** `string_bytes` on a local `string`
 yields a `uint8[]` that is **returned out of its owning frame with no
 diagnostic**, and reading it afterwards reads freed memory — the runtime's own
@@ -197,31 +211,68 @@ argument's storage a result aliases, and the escape analysis treats such a call
 as a borrow **rooted where that argument is rooted**, as if `@` had been written
 at the argument.
 
-**The fix distinguishes two shapes the house rule conflates, and `src/fmt/`
+**The fix distinguishes shapes the house rule conflates, and `src/fmt/`
 planning turns on it** — the full statement is `SAFETY.md` **S-22** and
-**TM-109**, and this is the summary:
+**TM-110**. ~~This was the summary as predicted on 2026-09-03 from DEF-3's
+written plan:~~
 
-| Shape | After DEF-3 |
+| ~~Shape~~ | ~~After DEF-3, as predicted~~ |
 |---|---|
-| a view of a **local**, returned — `string_bytes(local)` | **refused** |
-| a view of a **temporary**, returned — `string_bytes(string_concat(a, b))` | **refused**; bind the intermediate, which also fixes the D-246 leak it has today |
-| a view whose borrows are all rooted at a **parameter**, returned | **legal**, and legal today (`borrows_only_param_rooted`) |
+| ~~a view of a **local**, returned~~ | ~~**refused**~~ |
+| ~~a view of a **temporary**, returned~~ | ~~**refused**; bind the intermediate~~ |
+| ~~a view rooted at a **parameter**, returned~~ | ~~**legal** (`borrows_only_param_rooted`)~~ |
 
-So the house rule is **conservative, not the truth**: it was written with no way
-to tell those apart. The refusal is `NITPICK-BORROW-001`, the code a returned
-`@`-borrow already gets; **DEF-3 introduces no new diagnostic code**, so nothing
-here is waiting for one.
+**AND THIS IS WHAT WAS MEASURED**, 2026-09-04, at pin `94874ce`. Two rows are
+new and one prediction was wrong:
 
-**One sub-question this leaves open, and it is the compiler's to answer.**
-Whether a view over a **locally allocated `wild` block** may be returned —
-`string_from_bytes(buf, n)` where `buf` came from `alloc` in this frame — is not
-settled by anything on file. DEF-3's own test list puts
-`string_from_bytes(local.ptr, local.len)` among the *new refusals*, and the
-`wild_provenance` carve-out it cites belongs to the store rule (D-223,
-`NITPICK-BORROW-011`) rather than to the return rule. S-22 forbids it meanwhile,
-which costs nothing because no design here returns one.
+| Shape, returned out of its frame | Measured | Evidence |
+|---|---|---|
+| a view of a **local** | **refused** `NITPICK-BORROW-001` | `view_escape/case3`–`case5` |
+| a view of a **temporary** | **refused** `NITPICK-BORROW-012` | `probe10b` |
+| a view of a **`move` parameter** | **refused** `NITPICK-BORROW-001` | `probe10c` |
+| a view rooted at a plain **parameter** | **legal** | `probe10` §2, §3 |
+| a view rooted at a **pointer-shaped binding** | **legal** | `probe10` §1, `probe09b` |
 
-### O-N10 — the derives on a payload enum: `Eq` will not compile, `Ord` is silently wrong — **NOT BLOCKING**
+So the house rule is **conservative, not the truth**, and it is conservative in
+two ways rather than one: it forbids the parameter-rooted view *and* the
+pointer-shaped-rooted view, both of which are legal. It is kept as a belt
+regardless (TM-110).
+
+**~~DEF-3 introduces no new diagnostic code~~ — FALSE, corrected 2026-09-04.**
+It introduces **`NITPICK-BORROW-012`** (`BORROW_VIEW_OF_TEMPORARY`), which
+`probe10b` fires. The claim came from DEF-3's plan, which its own step 2
+overtook: `@` of a temporary cannot be spelled, so no existing code's text was
+true of that shape and it needed one of its own. This sentence stood in six
+documents here and every one is corrected in the same commit.
+
+**~~One sub-question this leaves open, and it is the compiler's to answer.~~
+ANSWERED 2026-09-04 BY MEASUREMENT — it is LEGAL.** Whether a view over a
+**locally allocated `wild` block** may be returned —
+`string_from_bytes(buf, n)` where `buf` came from `alloc` in this frame — was
+recorded as unsettled, because DEF-3's test list appeared to put
+`string_from_bytes(local.ptr, local.len)` among the *new refusals*.
+`tests/probe/probe10_view_edges.npk` §1 is exactly that program, with no
+parameter anywhere in its root chain, and it **compiles and runs at exit 0**.
+The root is pointer-shaped, so the view aliases the pointee rather than the
+frame. No question is outstanding for the compiler here; S-22 forbids the
+shape as a belt, by this repository's choice rather than the language's.
+
+### ~~O-N10 — the derives on a payload enum: `Eq` will not compile, `Ord` is silently wrong~~ — **DISCHARGED 2026-09-04 (TM-111)**
+> **DISCHARGED, on this workbench's own measurement against pin `94874ce`.**
+> The fix landed as the compiler's DEF-4, widened and ratified as its D-250
+> (cycle 1.5.1b step 3b). **Both halves are fixed, and the quiet half was
+> checked for correctness rather than for compiling:**
+> `defect/derive_payload_enum/case1_eq_refused.npk` now **compiles and runs at
+> exit 0** where it was `NITPICK-TYPE-034`, and `case2_ord_ignores_payload.npk`
+> now answers **`Less`** for `Literal(7).cmp(Literal(9))` where it answered
+> `Equal`. A separate check confirmed the derived `eq` distinguishes payloads
+> (`7 == 9` false, `7 == 7` true, different tags false) — a derive that merely
+> compiles would be the hollow version of this green.
+>
+> **The committed `expect-` headers on those two files are now stale** and are
+> corrected in the same commit as this note. See TM-111 for `case2`'s
+> arithmetic slip, which nearly made a correct fix look like a wrong one.
+
 **Measured at cycle 0.0.0, 2026-09-03**, by probe 05. On
 `enum:Part = { Literal(uint16); Year4; }`:
 
@@ -265,7 +316,29 @@ derived-struct field** fails the same way inside `<derived-1>` — so the step
 covers named types in structs and enums alike, and an owning payload will refuse
 the derive **by name** rather than silently generate.
 
-### O-N11 — a program with `main` and no `failsafe` compiles at exit 0 — **NOT BLOCKING**
+### ~~O-N11 — a program with `main` and no `failsafe` compiles at exit 0~~ — **DISCHARGED 2026-09-04 (TM-112)**
+> **DISCHARGED, on this workbench's own measurement against pin `94874ce`.**
+> The fix landed as the compiler's DEF-5 (cycle 1.5.1b step 1b). **The ask was
+> granted in full**, including the part that was a stretch: the refusal is
+> `NITPICK-REACH-003`, it lands at `main`, and it **lists the identities the
+> absent handler would owe**. An `npkc` refusal now replaces what was an `llc`
+> failure, so the diagnostic arrives one step earlier and names the cause.
+>
+> **The arm counts, measured rather than relayed: `case1` owes FOUR**
+> (`Unreachable`, `HeapOom`, `HeapBadRequest`, `WildLeak` — S-4b's floor, since
+> it has no import, no arithmetic and no allocation), **and `case3` owes SIX**
+> (the floor plus `probe11_arms_lib.EProbeZone` and `IntOverflow`). A board
+> carried "six" for `case1`; the six was real but belonged to the other file.
+> The control still holds: an ordinary library module with neither `main` nor
+> `failsafe` is still accepted at exit 0, so REACH-003 is asked only of a root
+> that declares `main`. Transcript:
+> `../tests/probe/defect/missing_failsafe/TRANSCRIPT.txt` Part A.
+>
+> **Cycle 0.0.3's harness still must not read `npkc` exit 0 as
+> "well-formed"** — that constraint came from this defect but does not depend
+> on it, and O-N11's own reasoning is why (`npkc` exit 0 is not a claim about
+> the IR; the `llc` leg is).
+
 **Measured at cycle 0.0.0, 2026-09-03**, by probe 11 while establishing the arm
 contract. `npkc` does not require a root file that declares `main` to declare
 `failsafe`. A four-line program with neither import nor arithmetic is accepted

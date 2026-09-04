@@ -1,3 +1,159 @@
+RE-RECORDED 2026-09-04 AT THE RE-PIN. Read this header before the numbers.
+
+O-N9 IS DISCHARGED, and this file is the measurement that discharges it --
+this workbench's own, against pin `94874ce`, not a correspondent's report.
+Cases 3, 4 and 5 are now REFUSED `NITPICK-BORROW-001`, exactly as cases 1
+and 2 always were, which is precisely the ask README.md made. Case 6, the
+shape the library actually writes, still compiles and runs at exit 0.
+
+This file therefore holds two transcripts:
+
+  PART A -- the re-recording at `94874ce`, below. What the compiler does now.
+  PART B -- the original at `950bb1d`, kept verbatim and unedited at the
+            bottom. What the compiler did when O-N9 was raised, including
+            case 5's exit 170 -- the 0xAA free-poison read back through a
+            bounds check that passed.
+
+THE SIX CASES ARE NO LONGER THE WHOLE STORY, and that is the substantive
+finding of the re-pin. DEF-3 does not merely refuse more; it DISTINGUISHES
+ROOTS, and the six cases above cannot tell the distinctions apart because
+every one of them is rooted at a local. The four files in PART A's second
+half are the discrimination:
+
+  probe09b   a view rooted at a `cstring`'s `.ptr` -- POINTER-SHAPED --
+             returned, and read after the frame died.        COMPILES, runs 0
+  probe10    the same, with NO PARAMETER anywhere in the root chain: a
+             `wild int8->` from `alloc`, viewed and returned. COMPILES, runs 0
+  probe10b   a view of a TEMPORARY, returned.       REFUSED NITPICK-BORROW-012
+  probe10c   a view of a `move` PARAMETER, returned. REFUSED NITPICK-BORROW-001
+
+WHY probe10 EXISTS SEPARATELY FROM probe09b. Two readings of the rule were
+in circulation, and 09b alone cannot separate them: its `cstring` comes out
+of a `cstring[]` PARAMETER, so "pointer-shaped roots stay legal" and "roots
+must be parameters" both predict it compiles. probe10's section 1 has no
+parameter in the root chain at all. It compiles. The rule is THE ROOT'S
+SHAPE, not parameterhood -- and the reading recorded in this repository's
+own execution record on 2026-09-03, that `borrows_only_param_rooted` made
+the parameter the whole rule, was a correct reading of a tree that did not
+yet have the refinement. At the landed pin the carve-out is real, it is
+stated in `escape.npk`'s own D-249 comment, and it is measured here.
+
+AND `NITPICK-BORROW-012` EXISTS. On 2026-09-03 this repository grepped the
+then-pinned compiler for it, found nothing, and recorded that the code "DOES
+NOT EXIST". That grep was right about the tree it read and wrong about the
+world: the code was real, allocated by DEF-3's step 2, living in an unlanded
+worktree a pin cannot show. It is `BORROW_VIEW_OF_TEMPORARY` in
+`src/frontend/analysis/analysis_codes.npk` at this pin, and probe10b fires
+it. The pin proves "not landed", never "not real".
+
+================================================================
+================================================================
+  PART A -- RE-RECORDED 2026-09-04, PIN 94874ce
+================================================================
+================================================================
+
+$ sha256sum "$NPKC" "$NPKRT"
+0f8c46789160ee1262ffe146a4164c5fef8d0f020f733ed4e4d9cbbccb3d8a84  /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/94874ce/npkc
+c9ddbcffd32eccc7787bd71c39ebefd25913170a9fae48de32eb53ca68b2239e  /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/94874ce/npkrt.o
+exit=0
+
+$ llvm-config --version
+20.1.2
+exit=0
+
+----------------------------------------------------------------
+  case1_borrow_returned
+----------------------------------------------------------------
+
+$ "$NPKC" tests/probe/defect/view_escape/case1_borrow_returned.npk -o /tmp/case1_borrow_returned.ll
+NITPICK-BORROW-001 tests/probe/defect/view_escape/case1_borrow_returned.npk:15:10: a borrow cannot travel up: it is valid only for the frame it was taken in, and this returns it out of that frame (D-004 rule 2)
+exit=1
+
+----------------------------------------------------------------
+  case2_borrow_in_struct
+----------------------------------------------------------------
+
+$ "$NPKC" tests/probe/defect/view_escape/case2_borrow_in_struct.npk -o /tmp/case2_borrow_in_struct.ll
+NITPICK-BORROW-001 tests/probe/defect/view_escape/case2_borrow_in_struct.npk:17:10: a borrow cannot travel up: it is valid only for the frame it was taken in, and this returns it out of that frame (D-004 rule 2)
+exit=1
+
+----------------------------------------------------------------
+  case3_view_returned
+----------------------------------------------------------------
+
+$ "$NPKC" tests/probe/defect/view_escape/case3_view_returned.npk -o /tmp/case3_view_returned.ll
+NITPICK-BORROW-001 tests/probe/defect/view_escape/case3_view_returned.npk:26:22: a borrow cannot travel up: it is valid only for the frame it was taken in, and this returns it out of that frame (D-004 rule 2)
+exit=1
+
+----------------------------------------------------------------
+  case4_view_in_struct
+----------------------------------------------------------------
+
+$ "$NPKC" tests/probe/defect/view_escape/case4_view_in_struct.npk -o /tmp/case4_view_in_struct.ll
+NITPICK-BORROW-001 tests/probe/defect/view_escape/case4_view_in_struct.npk:26:10: a borrow cannot travel up: it is valid only for the frame it was taken in, and this returns it out of that frame (D-004 rule 2)
+exit=1
+
+----------------------------------------------------------------
+  case5_read_after_free
+----------------------------------------------------------------
+
+$ "$NPKC" tests/probe/defect/view_escape/case5_read_after_free.npk -o /tmp/case5_read_after_free.ll
+NITPICK-BORROW-001 tests/probe/defect/view_escape/case5_read_after_free.npk:49:22: a borrow cannot travel up: it is valid only for the frame it was taken in, and this returns it out of that frame (D-004 rule 2)
+exit=1
+
+----------------------------------------------------------------
+  case6_view_param_legal
+----------------------------------------------------------------
+
+$ "$NPKC" tests/probe/defect/view_escape/case6_view_param_legal.npk -o /tmp/case6_view_param_legal.ll
+exit=0
+
+$ llc -O0 -filetype=obj -relocation-model=static /tmp/case6_view_param_legal.ll -o /tmp/case6_view_param_legal.o
+exit=0
+
+$ ld.lld -static /tmp/case6_view_param_legal.o "$NPKRT" -o /tmp/case6_view_param_legal
+exit=0
+
+$ /tmp/case6_view_param_legal
+exit=0
+
+================================================================
+  THE NEW EDGES, measured 2026-09-04 by probes 09b, 10, 10b, 10c.
+  DEF-3 does not merely refuse more: it distinguishes ROOTS. These
+  four files are the discrimination, and none of them is among the
+  six cases above.
+================================================================
+
+$ "$NPKC" tests/probe/probe09b_environ_view_returned.npk -o /tmp/probe09b_environ_view_returned.ll
+exit=0
+
+$ TZ=Europe/Kyiv /tmp/probe09b_environ_view_returned
+exit=0
+
+$ "$NPKC" tests/probe/probe10_view_edges.npk -o /tmp/probe10_view_edges.ll
+exit=0
+
+$ TZ=Europe/Kyiv /tmp/probe10_view_edges
+exit=0
+
+$ "$NPKC" tests/probe/probe10b_view_of_temporary_refused.npk -o /tmp/probe10b_view_of_temporary_refused.ll
+NITPICK-BORROW-012 tests/probe/probe10b_view_of_temporary_refused.npk:33:22: a view of a temporary: the value viewed here has no name and dies when its statement ends (D-246), so bind it first -- the view is then a borrow of that binding, checked like any other (D-249)
+exit=1
+
+$ "$NPKC" tests/probe/probe10c_view_of_move_param_refused.npk -o /tmp/probe10c_view_of_move_param_refused.ll
+NITPICK-BORROW-001 tests/probe/probe10c_view_of_move_param_refused.npk:26:22: a borrow cannot travel up: it is valid only for the frame it was taken in, and this returns it out of that frame (D-004 rule 2)
+exit=1
+
+
+================================================================
+================================================================
+  PART B -- THE ORIGINAL, 2026-09-03, PIN 950bb1d
+  Kept verbatim. Nothing below this line has been edited; it is the
+  reproduction as it stood when O-N9 was raised, and it is the
+  before-half of the pair. Case 5's exit 170 is the 0xAA poison.
+================================================================
+================================================================
+
 O-N9 — D-004's escape rule is enforced for `@`-borrows and not for slice views.
 The transcript, verbatim, with every command's exit code.
 

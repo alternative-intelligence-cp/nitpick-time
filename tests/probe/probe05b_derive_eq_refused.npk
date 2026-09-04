@@ -1,4 +1,11 @@
-// expect-error: NITPICK-TYPE-034
+// expect-exit: 0
+//
+// CORRECTED 2026-09-04 AT THE RE-PIN (TM-111). This header read
+// `expect-error: NITPICK-TYPE-034` from 2026-09-03 until now, and that was
+// true of pin `950bb1d`. At pin `94874ce`, which carries the compiler's
+// D-250, this file compiles and runs at exit 0. The probe's QUESTION is
+// answered the other way round now, and the answer below is kept as the
+// record of what it was.
 //
 // PROBE 05b — `#[derive(Eq)]` ON A PAYLOAD ENUM DOES NOT COMPILE.
 //

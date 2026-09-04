@@ -41,6 +41,43 @@
 //   block freed, elements orphaned      exit 92   -- HeapOom, the runtime's arm
 //   elements moved out first            exit 0
 //
+// ==========================================================================
+// RE-MEASURED 2026-09-04 AT THE RE-PIN. The numbers above are BEFORE-numbers
+// and they are UNCHANGED -- read that as the finding it is.
+// ==========================================================================
+//
+// The compiler's D-246 (statement-end temporaries) and D-247 (`List<T>` as
+// owning) both landed in 1.5.1b, and a leak measurement taken before them is
+// exactly the kind of number a re-pin invalidates. So it was re-run rather
+// than carried: three runs each at pin `94874ce`.
+//
+//   block freed, elements orphaned      125 184 KiB, all three runs   exit 0
+//   elements moved out first                    0 KiB, all three      exit 0
+//   under `ulimit -v 65536`:            exit 92 (HeapOom)  /  exit 0
+//
+// IDENTICAL, to the kilobyte. And it SHOULD be: D-246 fixes an unbound
+// temporary, and this string is `move`d into the `Vec` -- consumed, never a
+// temporary; D-247 makes the COMPILER's `List<T>` owning, which is a different
+// type from this library's `Vec<T>`. So TM-106 and `SAFETY.md` S-18b stand
+// exactly as written, and the obligation is still the library's.
+//
+// ONE NUMBER ABOVE IS AN INSTRUMENT ARTIFACT, and it is worth more than the
+// leak. "0 KiB" is not a measurement: `/usr/bin/time -f %M` reports 0 for
+// these static binaries -- `probe11d_floor_only`, a four-line program, also
+// reports 0, while `/bin/true` reports 1256 KiB. So the remedy half's cost was
+// never measured at all; it was read off a broken gauge that happened to say
+// something believable. Re-done as an address-space bisection, which is an
+// exit code rather than a gauge: the corrected half completes 2 000 000
+// iterations in UNDER 768 KiB (clean at 768, `HeapOom` at 512), and the
+// leaking half needs between 64 and 128 MiB. Those are the numbers to quote.
+//
+// AND THE PAIR IS NOW COMMITTED, which it was not before: this measurement
+// lived in scratch on 2026-09-03 and only the numbers were committed, so at
+// the re-pin there was nothing to re-run and the pair had to be rebuilt from
+// the prose. They are `probe06b_element_leak.npk` and
+// `probe06c_element_drop.npk`, they differ in one line, and the next re-pin
+// costs one command.
+//
 // THE FIX IS ORDINARY CODE and it is in `free_names` below: move each element
 // into a scoped local, which drops at the end of its iteration. It is not a
 // language gap. What it is, is an obligation that three entries in `0.0.4.md`
@@ -112,8 +149,10 @@ func:vec_free<T> = NIL(Vec<T>->:v) never fails {
 
 // THE OBLIGATION, DISCHARGED, at the one element type this probe owns. Each
 // element is moved into a local whose scope ends at the bottom of the loop
-// body, and the string dies there. Measured above: this is the difference
-// between 125 MiB and nothing.
+// body, and the string dies there. Measured above, and RE-MEASURED at the
+// re-pin: this is the difference between 125 MiB and under 768 KiB -- and
+// between `HeapOom` and exit 0 under a 64 MiB cap, which is the half of the
+// statement that does not depend on a gauge.
 func:free_names = NIL(Vec<string>->:v) never fails {
     int64:i = 0i64;
     while (i < v.count) {

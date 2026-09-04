@@ -910,6 +910,13 @@ them.
 ---
 
 ### TM-109 — "a view is a parameter, never a return value" is a belt, and it is stricter than the language will be
+> **SUPERSEDED IN PART by TM-110 (2026-09-04).** Its three-row table and its
+> "no new diagnostic code" claim were read out of an unlanded plan and are
+> wrong at the landed pin. The text below is left exactly as written, because
+> it records what was believed on 2026-09-03; read TM-110 for what was
+> measured. What survives unchanged: the house rule itself, and the reason it
+> is kept as a belt.
+
 **2026-09-03. Read out of the compiler's source and its written cycle 1.5.1b
 plan** at commit `950bb1d`. Nothing was compiled for this decision.
 
@@ -986,3 +993,224 @@ one.
 - **Say only "the rule is conservative" without the table.** That is the
   sentence a later reader cannot act on. The three shapes are the content; the
   adjective is not.
+
+---
+
+## The re-pin batch — measured against `94874ce`
+
+### TM-110 — the returned-view rule keys on the ROOT'S SHAPE, not on parameterhood; and DEF-3 does add a diagnostic code
+**2026-09-04. Measured**, against pinned compiler `94874ce`, which carries
+DEF-3 (the compiler's cycle 1.5.1b step 2, its D-249). **Supersedes TM-109 in
+part.** Every claim below was produced by compiling a file, not by reading a
+plan — which is the whole reason it differs from TM-109.
+
+**Why this decision exists.** TM-109 was written on 2026-09-03 from the
+compiler's source and its *written plan*, at a pin that did not have the fix.
+It said so honestly — *"Nothing was compiled for this decision."* Two of its
+claims did not survive measurement, and both would have shaped `src/fmt/`.
+
+**What was measured.** `tests/probe/probe10_view_edges.npk` and its two
+refusal twins, `tests/probe/probe09b_environ_view_returned.npk`, and the six
+files of `tests/probe/defect/view_escape/` re-run at the new pin. The
+transcripts are in `tests/probe/defect/view_escape/TRANSCRIPT.txt`, Part A.
+
+**1. O-N9 is DISCHARGED.** Cases 3, 4 and 5 — a view of a local returned, in a
+struct, and read after free — are now **refused `NITPICK-BORROW-001`**, the
+same code and the same message cases 1 and 2 always got. Case 6, the shape
+this library actually writes, still compiles and runs at exit 0. The ask
+`view_escape/README.md` made was granted exactly.
+
+**2. `NITPICK-BORROW-012` EXISTS, so DEF-3 DOES add a diagnostic code.** It is
+`BORROW_VIEW_OF_TEMPORARY` in
+`src/frontend/analysis/analysis_codes.npk`, and `probe10b` fires it:
+
+> `NITPICK-BORROW-012 …:33:22: a view of a temporary: the value viewed here
+> has no name and dies when its statement ends (D-246), so bind it first — the
+> view is then a borrow of that binding, checked like any other (D-249)`
+
+TM-109, `SAFETY.md` S-22, `OPEN_QUESTIONS.md`, `view_escape/README.md`,
+`roadmap/0.4/README.md` and `roadmap/0.0/0.0.0.md` all stated the opposite,
+because DEF-3's *plan* ended "`check_codes_tested` needs nothing new (no new
+code)" and the plan was overtaken by its own step 2. **Why the code was needed
+at all, which the plan had not foreseen:** DEF-3's other refusals are all
+shaped like "as if `@` had been written at that argument" and so are
+`BORROW-001`; but `@` of a temporary cannot be *spelled*, so no existing
+code's text is true of it. It needed a root with no name, and that needed a
+code of its own.
+
+**3. The rule keys on the ROOT'S SHAPE, not on parameterhood.** This is the
+correction that changes a plan. TM-109's third row said a returned view is
+legal when its borrows are *rooted at a parameter*, and recorded a view over a
+locally allocated `wild` block as an open sub-question the compiler had to
+answer. **The sub-question is answered, and the answer is that it is legal.**
+
+| Shape, returned out of its frame | Measured at `94874ce` | Evidence |
+|---|---|---|
+| a view of a **local** — `string_bytes(local)` | **refused** `NITPICK-BORROW-001` | `view_escape/case3`, `case4`, `case5` |
+| a view of a **temporary** — `string_bytes(string_concat(a,b))` | **refused** `NITPICK-BORROW-012` | `probe10b` |
+| a view of a **`move` parameter** | **refused** `NITPICK-BORROW-001` | `probe10c` |
+| a view rooted at a plain **parameter** | **legal** | `probe10` §2, §3 |
+| a view rooted at a **pointer-shaped binding** — a `wild` block from `alloc`, a `cstring`'s `.ptr`, a slice | **legal** | `probe10` §1, `probe09b` |
+
+**Why one probe could not settle row 5, and why there are two.** `probe09b`
+returns a view of a `cstring`'s `.ptr` and compiles — but its `cstring` comes
+out of a `cstring[]` **parameter**, so the parameter-rooted reading and the
+pointer-shaped reading both predict it compiles. `probe10` §1 removes the
+confound: `blk` is a `wild int8->` from `alloc`, a local, with **no parameter
+anywhere in its root chain**. It compiles. Parameterhood is therefore not the
+rule; the root's shape is. The compiler states it in `escape.npk`'s own D-249
+comment — a view whose place roots at a pointer-shaped binding *"aliases the
+POINTEE, which lives wherever the pointer's provenance says"* — and
+`view_is_frame_borrow` is the discriminator.
+
+**A fourth row TM-109 did not have at all: a `move` parameter is not a
+parameter for this purpose.** It is consumed at the call and dropped at the
+callee's frame exit, so a view of it travels up into storage that frame just
+freed. `vec_push<T>(Vec<T>->:v, move T:x)` already takes one (probe 06), so
+this is not a hypothetical shape here.
+
+**Three refinements from DEF-3's own whole-tree sweep, all exercised by
+`probe10` and none of them in O-N9's six cases:** a view over `#ptr_add` looks
+*through* to the pointer; a `for` over a range cannot carry a borrow whatever
+its bound reads; and a struct literal is rooted where its **field values** are.
+
+**The decision.** *`SAFETY.md` **S-22** keeps the house rule and replaces its
+three-row table with the five measured rows above, marked as measured rather
+than predicted. The rule stays a **belt**: it is still stricter than the
+language, it still costs this library nothing, and `check_no_view_returns`
+stays on 0.0.3's list.* Every site that said DEF-3 adds no new diagnostic code
+is corrected in this commit.
+
+**Why keep the belt now that the language enforces the rule.** Because what
+the language now enforces is *narrower* than what S-22 forbids: rows 4 and 5
+are legal, and S-22 forbids them anyway. A `src/fmt/` that returns a view of
+its own parameter would compile and would be correct — and would also make
+every future re-pin a re-verification of somebody else's escape analysis. The
+belt costs nothing here (`FORMAT_MODEL.md` already returns a value and an
+offset), so it stays. **What changes is that a later cycle wanting to loosen
+it now knows exactly what it is loosening towards, and that the answer is a
+decision rather than a compiler question.**
+
+*Alternatives declined:*
+
+- **Rewrite TM-109 rather than supersede it.** Against this file's own rule,
+  and it would erase the more useful record: TM-109 is a worked example of a
+  careful reading of an unlanded plan being wrong in two places. That is worth
+  keeping precisely because the reading was competent.
+- **Drop S-22 now that DEF-3 has landed.** Rows 1–3 are refused by the
+  compiler, so the belt's remaining work is rows 4 and 5 — small, but free.
+  Dropping it buys nothing and spends a re-verification at every re-pin.
+- **Record the pointer-shaped row from `escape.npk`'s comment alone.** A
+  comment is a claim about a code path; it is not evidence the path is
+  reached. `probe10` §1 is four lines and settles it, and this ecosystem has
+  been wrong often enough reading source without compiling.
+
+### TM-111 — the payload-enum derives are fixed, and `case2`'s own header nearly hid it
+**2026-09-04. Measured**, against pinned compiler `94874ce`, which carries the
+compiler's DEF-4 as widened and ratified in its **D-250** (cycle 1.5.1b step
+3b). **O-N10 is discharged.**
+
+**What was measured**, running `tests/probe/defect/derive_payload_enum/`'s
+three cases and `tests/probe/probe05b_derive_eq_refused.npk` through the full
+four-step recipe:
+
+| File | Was, at `950bb1d` | Now, at `94874ce` |
+|---|---|---|
+| `case1_eq_refused.npk` | `NITPICK-TYPE-034` inside `<derived-1>` | **compiles, runs, exit 0** |
+| `probe05b_derive_eq_refused.npk` | `NITPICK-TYPE-034` | **compiles, runs, exit 0** |
+| `case2_ord_ignores_payload.npk` | exit **221** — `Equal`, `Equal`, `Less` | exit **121** — `Less`, `Equal`, `Less` |
+| `case3_hash_and_clone.npk` | exit 107 | exit 107, unchanged |
+
+**A derive that compiles is not a derive that is right, so the quiet half was
+checked separately.** `case1` only asserts that `#[derive(Eq)]` *builds*; it
+never compares anything. A scratch program over the same declaration confirmed
+the derived `eq` **distinguishes payloads**: `Literal(7).eq(Literal(9))` is
+false, `Literal(7).eq(Literal(7))` is true, and `Literal(7).eq(Year4)` is
+false. Without that check this decision would have rested on the same kind of
+green O-N10 was originally about — a derive that is accepted and wrong.
+
+**`case2`'s header contradicts itself, and the contradiction pointed the wrong
+way.** Its line 3 says *"When O-N10 closes, the expected exit becomes 321 —
+`Less`, `Equal`, `Less`"*. Those words encode as **121**, not 321: the file's
+own legend is `1=Less 2=Equal 3=Greater` and the digits are `ab`, `aa`, `ac`.
+The measured value is 121 — exactly what the words predict and not what the
+number predicts. **So the committed prediction of the fix was itself wrong by
+one digit, and a reader comparing 121 against 321 would have concluded the fix
+was broken.** The number was a transcription slip on 2026-09-03; the words
+were right.
+
+**The decision.** *The four files' `expect-` headers are corrected to the
+measured values in this commit, each with a dated note of what it said before
+— never a silent edit. `case1_eq_refused.npk` and
+`probe05b_derive_eq_refused.npk` change from `expect-error` to `expect-exit`,
+and both stop being defect reproductions and become regression cases, which is
+what their own headers said would happen when O-N10 closed.*
+
+*Alternatives declined:*
+
+- **Leave the headers and note the change in the record only.** A committed
+  `expect-error: NITPICK-TYPE-034` on a file that compiles is a lie the 0.0.2
+  harness will read as a plan. The headers are machine-facing.
+- **Delete the two defect files now that the defect is gone.** They are the
+  regression cases; deleting them is how the bug comes back.
+
+### TM-112 — `main` without `failsafe` is refused, and the arm counts are FOUR and SIX
+**2026-09-04. Measured**, against pinned compiler `94874ce`, which carries the
+compiler's **DEF-5** (cycle 1.5.1b step 1b). **O-N11 is discharged.**
+
+**The ask was granted in full, including the part that was a stretch.** O-N11
+asked for a refusal naming D-013 and the file, *and* — because `reach_settle`
+had just computed the set at the line where it returned early — for the
+diagnostic to **list the arms the absent handler would owe**. It does:
+
+> `NITPICK-REACH-003 …:30:1: `main` without `failsafe` (D-013): an executable
+> supplies exactly one handler, the trap route calls it by name, and this
+> program's would have to name every error that can reach it — 4 identities:
+> Unreachable, HeapOom, HeapBadRequest, WildLeak — with `(*)` beneath them but
+> not in for them (D-179)`
+
+**The counts, measured rather than relayed.** A board carried **six** for
+`case1`, from the compiler session's message. It is **four**.
+
+| File | Identities owed | Which |
+|---|---:|---|
+| `case1_no_failsafe.npk` | **4** | `Unreachable`, `HeapOom`, `HeapBadRequest`, `WildLeak` |
+| `case3_arm_contract_evaded.npk` | **6** | the four, plus `probe11_arms_lib.EProbeZone` and `IntOverflow` |
+
+`case1` has no import, no arithmetic and no allocation, so its bill is exactly
+S-4b's unconditional floor — which is `probe11d_floor_only.npk`'s measured
+result, arrived at independently. **The six was real and belonged to the other
+file**, which imports the raiser and subtracts. This is a small thing recorded
+at length because it is the third time in this subcycle a number was carried
+between documents and attached to the wrong subject.
+
+**S-4b is confirmed, not amended.** The floor it states, measured in 0.0.0 from
+the *positive* direction by `probe11d_floor_only.npk`, is now confirmed from
+the *negative* direction by a compiler that itemises the bill in a refusal.
+Two independent instruments, same four names.
+
+**The control still holds, and it is what makes REACH-003 the right check.**
+An ordinary library module with neither `main` nor `failsafe`
+(`tests/probe/support/probe11_arms_lib.npk`) is still accepted at exit 0. The
+refusal is asked only of a root that declares `main`, which is precisely the
+join O-N11 said `npkc` was failing to make.
+
+**What does NOT change.** Cycle 0.0.3's harness must still not read `npkc`
+exit 0 as "well-formed", and still gains its extra selfcheck case. That
+constraint was *surfaced* by O-N11 but does not depend on it: `npkc` exit 0 is
+not a claim about the IR, which is why the `llc` leg exists in the recipe at
+all. Removing the leg because this defect is fixed would be the wrong lesson.
+
+**The decision.** *Both transcripts are re-recorded in this commit as a Part A
+(the re-recording at `94874ce`) above a Part B (the 2026-09-03 original, kept
+verbatim), so the pair is readable as a before and after rather than as a
+replacement.*
+
+*Alternatives declined:*
+
+- **Overwrite the transcripts with the new run.** A transcript claiming to be
+  verbatim must show where it was touched. The defect reproduction is the
+  evidence O-N11 was real, and it is not re-creatable at this pin.
+- **Write the four/six counts into `SAFETY.md` §2's table.** S-4b already says
+  the totals column is generated at cycle 0.1 from measurement, and these are
+  two probe programs rather than the library. Nothing is guessed into it here.

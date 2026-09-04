@@ -1,6 +1,26 @@
-// expect-exit: 221
-// NOT A PROBE. This file compiles and runs, and its ANSWER is the defect.
-// When O-N10 closes, the expected exit becomes 321 -- `Less`, `Equal`, `Less`.
+// expect-exit: 121
+//
+// CORRECTED 2026-09-04 AT THE RE-PIN (TM-111). Two lines changed and both are
+// recorded rather than silently edited:
+//
+//   WAS: `expect-exit: 221`  -- the defect's answer at pin `950bb1d`:
+//        `Equal`, `Equal`, `Less`, i.e. `Literal(7).cmp(Literal(9))` = Equal.
+//   NOW: `expect-exit: 121`  -- measured at pin `94874ce`, which carries the
+//        compiler's D-250: `Less`, `Equal`, `Less`. O-N10 IS DISCHARGED.
+//
+//   WAS: "When O-N10 closes, the expected exit becomes 321 -- `Less`, `Equal`,
+//        `Less`." THAT NUMBER WAS WRONG WHEN IT WAS WRITTEN. The words are
+//        right and the digits are not: by this file's own legend below,
+//        `Less, Equal, Less` encodes as 121. A reader comparing the measured
+//        121 against the predicted 321 would have concluded the fix was
+//        broken. It is not; the prediction was mistyped.
+//
+// Obtained by running the four-step recipe of `meta/roadmap/0.0/0.0.0.md` §2
+// against the pinned toolchain.
+//
+// This file is no longer a defect reproduction. It is the REGRESSION CASE for
+// D-250, and its value is that it fails loudly if a payload-blind `cmp` ever
+// comes back.
 //
 // CASE 2 — the quiet half, and the serious one. `#[derive(Ord)]` on a payload
 // enum is ACCEPTED, and the `cmp` it writes compares TAGS ONLY.

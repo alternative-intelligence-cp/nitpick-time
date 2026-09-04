@@ -1,4 +1,16 @@
-// expect-error: NITPICK-TYPE-034
+// expect-exit: 0
+//
+// CORRECTED 2026-09-04 AT THE RE-PIN (TM-111). This header read
+// `expect-error: NITPICK-TYPE-034` from 2026-09-03 until now, and that was
+// true of pin `950bb1d`. O-N10 was fixed as the compiler's D-250 (cycle
+// 1.5.1b step 3b) and at pin `94874ce` this file COMPILES, links and runs at
+// exit 0. It is no longer a defect reproduction; it is a regression case,
+// which is what the note below always said it would become.
+//
+// Obtained by running the four-step recipe of `meta/roadmap/0.0/0.0.0.md` §2
+// against the pinned toolchain. The derive was additionally checked for
+// CORRECTNESS rather than for compiling -- see TM-111 -- because a derived
+// `eq` that builds and answers wrongly is the same class of defect O-N10 was.
 //
 // CASE 1 — the loud half. `#[derive(Eq)]` on an enum with a payload emits a
 // derived module that does not compile. The diagnostic points at `<derived-1>`,

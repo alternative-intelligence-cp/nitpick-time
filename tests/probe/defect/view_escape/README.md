@@ -1,4 +1,17 @@
-# O-N9 — a `uint8[]` view escapes its owning frame, silently
+# O-N9 — a `uint8[]` view escapes its owning frame, silently — **FIXED**
+
+> **DISCHARGED 2026-09-04 (TM-110), on this workbench's own measurement against
+> pin `94874ce`.** Cases 3, 4 and 5 are now **refused `NITPICK-BORROW-001`**,
+> exactly as "What is being asked" below asks; case 6 still compiles and runs
+> at exit 0. **These six files are no longer a defect reproduction — they are
+> the regression case**, and the verdict table below is the BEFORE column.
+> Part A of [`TRANSCRIPT.txt`](TRANSCRIPT.txt) is the after.
+>
+> **The six cases are no longer the whole story.** DEF-3 does not merely refuse
+> more; it distinguishes ROOTS, and every case here roots at a local, so this
+> directory cannot show the distinction. `probe10`, `probe10b`, `probe10c` and
+> `probe09b` are the four files that can. Read TM-110 before planning
+> `src/fmt/`.
 
 **D-004's escape rule is enforced for `@`-borrows and not for slice views.**
 Found by cycle 0.0.0 on 2026-09-03, against the pinned toolchain (compiler
@@ -16,7 +29,11 @@ defect — record it, stop, and raise it.*
 Six files. Cases 1 and 2 are **controls**: they are the rule working. Cases 3,
 4 and 5 are the same programs with a `uint8[]` where the `@`-borrow was.
 
-| # | File | What it returns out of the owning frame | `npkc` | runs |
+**The table is the BEFORE column, at pin `950bb1d`.** At `94874ce` every row
+marked "exit 0" in the `npkc` column is now `refused NITPICK-BORROW-001`,
+except case 6, which is unchanged.
+
+| # | File | What it returns out of the owning frame | `npkc` (before) | runs |
 |---|---|---|---|---|
 | 1 | `case1_borrow_returned.npk` | `@x`, a local `int64` | **refused** `NITPICK-BORROW-001` | — |
 | 2 | `case2_borrow_in_struct.npk` | `Keeper{ p: @x }` | **refused** `NITPICK-BORROW-001` | — |
@@ -109,18 +126,29 @@ is the code the design already called for.
 
 **And the house rule is CONSERVATIVE, not the constraint — read `SAFETY.md`
 S-22 and TM-109 before planning against it.** This was accepted as the
-compiler's **DEF-3** (its cycle 1.5.1b step 2, proposed as its D-249), and the
-fix distinguishes two shapes the one-sentence rule conflates. A returned view of
-a **local** — every case in this directory — is refused; a returned view of a
-**temporary**, `string_bytes(string_concat(a, b))`, is refused too and must have
-its intermediate bound, which also fixes the separate leak that intermediate has
-today; but a returned view whose borrows are all rooted at a **parameter** stays
-legal, and is legal today, because a parameter's target lives in the caller or
-older. The refusal is `NITPICK-BORROW-001` — the code a returned `@`-borrow
-already gets — and DEF-3 adds **no new diagnostic code**. So a later cycle that
-finds `src/fmt/` wanting to return a view of its own parameter is meeting this
-repository's belt, not the language, and the question is whether to loosen S-22
-by decision.
+compiler's **DEF-3** (its cycle 1.5.1b step 2, its D-249), which has now
+LANDED. The fix distinguishes shapes the one-sentence rule conflates, and the
+distinctions were **measured** on 2026-09-04 rather than predicted:
+
+| Shape, returned out of its frame | Measured at `94874ce` | Evidence |
+|---|---|---|
+| a view of a **local** — every case here | refused `NITPICK-BORROW-001` | cases 3, 4, 5 |
+| a view of a **temporary** | refused **`NITPICK-BORROW-012`** | `probe10b` |
+| a view of a **`move` parameter** | refused `NITPICK-BORROW-001` | `probe10c` |
+| a view rooted at a plain **parameter** | **legal** | `probe10` §2, §3 |
+| a view rooted at a **pointer-shaped binding** | **legal** | `probe10` §1, `probe09b` |
+
+**The rule keys on the ROOT'S SHAPE, not on parameterhood** (TM-110). So a
+later cycle that finds `src/fmt/` wanting to return a view of its own
+parameter, or of a `wild` block it allocated, is meeting this repository's
+belt and not the language, and the question is whether to loosen S-22 by
+decision.
+
+~~DEF-3 adds **no new diagnostic code**.~~ **FALSE, corrected 2026-09-04.** It
+adds `NITPICK-BORROW-012` (`BORROW_VIEW_OF_TEMPORARY`). The claim came from
+DEF-3's own plan, which its step 2 overtook: every other refusal is shaped like
+"as if `@` had been written at that argument" and so is `BORROW-001`, but `@`
+of a temporary cannot be spelled, so that shape needed a code of its own.
 
 **What is not being done:** no `string_slice` copy is being inserted to dodge
 the escape, no API is changing shape, and nothing in `src/` is being arranged
@@ -130,7 +158,8 @@ is a different decision and it needs a different reason.
 ## What is being asked
 
 - `NITPICK-BORROW-001` at cases 3, 4 and 5, exactly as it fires at cases 1
-  and 2.
+  and 2. — **GRANTED, and verified here 2026-09-04.** All three now refuse with
+  that code and that message.
 
 Nothing in the language changes; `TYPE_REFERENCE.md` §9.2.1 already states the
 rule this would enforce.

@@ -18,7 +18,7 @@ costs a library that does calendar arithmetic.
 | Reachability is **import-scoped** | 1.4.8's `nsys` note | Module decomposition decides what a consumer's `failsafe` owes. §2. |
 | Plain integer `+ - *` **traps** on overflow | D-210 | Every arithmetic path states its range and checks it **before** the trap fires. §4. |
 | `/` and `%` by zero trap; signed `MIN / -1` traps | D-007, D-142 | The calendar algorithms divide constantly; every divisor is a nonzero literal or a proven value. §4. |
-| Array, slice and buffer indexing is bounds-checked and traps | D-070 | A zone-table index out of range is a *crash*, not a wrong offset. §4. |
+| Indexing **a type that carries a length** is bounds-checked and traps | D-070 | a slice `T[]`, a fixed array `T[N]` and a `simd<T, N>` lane trap; **a bare pointer does not** — and `Vec<T>.items` and `Bytes`' `buffer` body are both reached as one. §4, S-17b. |
 | Owning values are **move-only** | TYPE-046 | No binding-to-binding copies of a `string`. **Every value in a table has no owning field.** §5. |
 | Borrows are second class | D-004 | A view of the zone table cannot be returned or stored. §5. |
 | A successful `exit 0` with live `wild` allocations **traps** | D-151 | Every `wild` byte is paired on every path. §5. |
@@ -143,7 +143,9 @@ each of which the obvious implementation gets wrong:**
 
 **And the check must not stop at `npkc`.** A program with `main` and **no**
 `failsafe` is accepted by `npkc` at exit 0 and refused only by `llc`
-(`../OPEN_QUESTIONS.md` O-N11, provisional), so a conformance test that compiles
+(`../OPEN_QUESTIONS.md` O-N11, accepted as the compiler's DEF-5 and refused as
+`NITPICK-REACH-003` from its cycle 1.5.1b — but not in the pinned toolchain, so
+this constraint stands), so a conformance test that compiles
 to `.ll` and reads the exit code would pass a program with no handler at all.
 It runs the full four steps, or asserts `grep -c '^define i32 @npk_failsafe'` is
 1. This is a constraint on cycle 0.0.3's harness and is recorded in its
@@ -267,6 +269,86 @@ and the accessor is where the bound is checked. Callers do not index raw
 storage. This makes the bound one obligation to discharge in cycle 1.5 rather
 than several hundred.
 
+**Rule S-17b (TM-108) — the bounds check attaches to the TYPE, and neither of
+this library's two containers carries one.** Until this rule, S-17 read as
+tidiness laid on top of a language guarantee. It is not tidiness: for `Vec<T>`
+and for `Bytes` the accessor is the *only* bounds check that exists.
+
+D-070's guarantee attaches to types that carry a length — its own title is
+"`T[]` is a slice: bounds live in the array type, **not the pointer type**",
+and its body says the slice is "where out-of-bounds detection actually comes
+from, and it is why pointers do not need to carry it". Read in the compiler's
+emitter rather than in a summary: `ExprIndexExpr` in
+`src/backend/ir/ir_expr.npk` switches on the indexed object's type kind and has
+exactly four branches.
+
+| Indexed type | Carries a length | Out-of-range index |
+|---|---|---|
+| slice `T[]` | yes — `{ptr, i64 len}` | **traps**, `OutOfBounds` |
+| fixed array `T[N]` | yes — in the type | **traps**, `OutOfBounds` |
+| `simd<T, N>` lane | yes — the lane count | **traps**, `OutOfBounds` |
+| bare pointer `T->` | **no** | **reads**, silently |
+
+The first three each call `emit_bounds_guard`; the pointer branch emits a
+`getelementptr` and nothing else. And **a qualifier is not part of the type** —
+`parse_type.npk`'s second header fact is that `wild`, `wildx`, `fixed` and the
+borrow markers live on the declaration, not on the type node — so
+`wild T->:items` is a bare pointer to the emitter, and takes the fourth row.
+
+**`buffer` has no branch in that switch at all**, which is worth stating
+because the sentence this rule replaces named it. A `buffer` is the managed
+owning byte cell (compiler `TYPE_REFERENCE.md` §23, D-200); its `.ptr` member
+is a `uint8->`, and §23's own example indexes it as `buf.ptr[0i64]` — *"byte
+reads index the ptr"*. So a `buffer` is indexed **through the fourth row**.
+There is no slice view of a `buffer` to reach for instead: `buffer_bytes`, a
+borrow of the body, is listed under §23's *"deliberately NOT landed"*, to be
+added by decision when a consumer exists.
+
+**What that means table by table, which is the part that changes work here:**
+
+- **The generated zone tables still trap** — but for a reason the old sentence
+  did not give. S-19 makes them `fixed` module state, so they are `T[N]`, the
+  second row. The old row's zone-table example was the one case it happened to
+  get right, and it got it right by accident.
+- **`Vec<T>` does not trap.** B-12 gives it `wild T->:items`, so `Layout`'s
+  `Vec<FmtPart>` (`FORMAT_MODEL.md` §3) and every grown zone collection index a
+  bare pointer. An out-of-range read is **a wrong value**, not a crash.
+- **`Bytes` does not trap either**, and this is the wider blast radius: B-12
+  makes it "an owning byte sink over `buffer`", and **every formatter writes
+  into one**.
+
+**What follows:**
+
+- **S-17's accessor pair is load-bearing, and it now covers `src/core/` as
+  well as the zone tables.** Every read and write of a `Vec` or a `Bytes` goes
+  through its accessor, which checks against `count`/`len`, and a tree check
+  fails on any `.items[` outside `src/core/vec.npk` or any `.ptr[` outside
+  `src/core/bytes.npk`. That check belongs on cycle 0.0.3's list beside
+  `check_layering`.
+- **Signedness is half the check.** `count` is `int64`; an index derived from a
+  narrower signed field can be negative, `i < count` accepts it, and the read
+  goes backwards off the block. Every accessor checks `0 <= i` as well as
+  `i < count`.
+- **An unchecked index is a WRONG ANSWER, not a crash**, which inverts the
+  failure mode §1 advertises. In a date library that is a wrong offset for one
+  zone, or a formatted field taken from an unrelated heap word — silent, and
+  reachable from caller-controlled bytes once `src/fmt/` parses.
+- **`VERIFICATION.md`'s `Vec<T>` `at`/`set` row** (index `< count`, by contract
+  and by Z3) stops being a restatement of a language guarantee and becomes the
+  obligation that discharges this rule.
+
+**And the nuance that makes this a claim about *this* library.** There is **no
+compiler-prelude `Vec<T>` at all.** No `struct:Vec` exists anywhere in the
+compiler's tree; `lib/nvec.npk` is D-200's small-vector tier over
+`simd<flt64, N>` and not a container. The shared shape is a **convention** each
+library adopts from the compiler's `List<T>` — `src/frontend/list.npk`, whose
+`items` is `wild T->` and is commented *"WILD, DELIBERATELY"* — which is
+exactly what B-12 records when it says the shape is the compiler's and the type
+is ours. So a sibling library that later spells its `Vec` differently, with a
+managed body or a slice field, gets a **different safety property with no
+diagnostic anywhere**. Read that library's own declaration; do not carry this
+rule across.
+
 ---
 
 ## 5. Resources
@@ -307,6 +389,64 @@ returning, and holds nothing across a call.
 
 **Rule S-21.** `ntime` spawns no processes, installs no signal handler, starts
 no thread, and blocks on nothing.
+
+**Rule S-22 (TM-109) — a view is a parameter, never a return value; and this
+rule is a BELT, deliberately stricter than the language will be.** §1's borrow
+row promises this rule here, and here it is, in both halves.
+
+**The rule.** No function in `src/` returns a `uint8[]`, a `cstring`, or a
+struct containing one. A parser takes a `uint8[]` and returns a value and an
+offset — which is what `FORMAT_MODEL.md` already specifies, so the rule costs
+this library nothing. `check_no_view_returns` on cycle 0.0.3's harness list is
+what makes it enforced rather than remembered.
+
+**Why it is written as a belt.** O-N9 measured that D-004's escape rule is
+today **unenforced for slice views**: `string_bytes` on a local `string`
+returns a `uint8[]` out of its owning frame at exit 0, and reading it reads
+freed memory, while the identical program with an `@`-borrow is refused
+`NITPICK-BORROW-001`. So the rule is the safe thing to write today. The author
+ruled O-N9 **blocking** (`../OPEN_QUESTIONS.md` Q-5), so `src/fmt/` and probes
+09 and 10 wait for the compiler regardless.
+
+**And it is stricter than the constraint, which matters when `src/fmt/` is
+planned.** The rule was written with no way to tell two shapes apart, and the
+compiler's fix — DEF-3, its cycle 1.5.1b step 2, proposed as its D-249 —
+distinguishes them:
+
+| Shape | After DEF-3 |
+|---|---|
+| a view of a **local**, returned — `string_bytes(local)` | **refused** |
+| a view of a **temporary**, returned — `string_bytes(string_concat(a, b))` | **refused**; bind the intermediate first |
+| a view whose borrows are all rooted at a **parameter**, returned | **legal**, and legal today |
+
+The third row is not a concession; it is the pattern the compiler is built out
+of, and the escape analysis already has it — `borrows_only_param_rooted`
+(`src/frontend/analysis/escape.npk`) takes a second look before refusing,
+because a parameter's target lives in the caller or older and each frame proves
+its own hop. What DEF-3 changes is that a view-maker's result becomes a borrow
+**rooted where its viewed argument is rooted**, as if `@` had been written at
+that argument, so the existing rules apply to it unchanged.
+
+**The refusal is `NITPICK-BORROW-001`**, the code a returned `@`-borrow already
+gets (`BORROW_RETURNED`, `src/frontend/analysis/analysis_codes.npk`). DEF-3
+introduces **no new diagnostic code**; a plan that waits for one is waiting for
+nothing.
+
+**The temporary row is doubly wrong today, and one edit fixes both halves.**
+The inner `string_concat` result is an unbound temporary passed as an argument,
+and nothing frees it — the compiler's D-183 debt, proposed as its D-246 and
+scheduled in the same 1.5.1b. Binding the intermediate gives the view a named
+owner *and* gives the temporary a place, so:
+
+```nitpick
+string:joined = string_concat(a, b);   // bind it: the view has an owner,
+uint8[]:v = string_bytes(joined);      // and the temporary is no longer one
+```
+
+**So: keep the rule, and do not mistake it for the constraint.** A later cycle
+that finds `src/fmt/` wanting to return a view of one of its own parameters is
+meeting the belt, not the language, and the question to ask is whether to
+loosen S-22 — a decision — rather than whether the compiler will allow it.
 
 ---
 

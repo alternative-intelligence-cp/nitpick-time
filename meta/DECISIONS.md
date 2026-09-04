@@ -813,3 +813,176 @@ guessed into the table in the meantime.
   and the safe direction. Raising it would be asking for a less conservative
   analysis of trap reachability in a language whose whole proposition is that
   a trap is accounted for.
+
+---
+
+# The fourth batch — corrections the record forced
+
+*Not measurements. Each of these is a sentence this repository had already
+written, re-read against the compiler's source and found to promise more than
+the language does.*
+
+### TM-108 — the bounds check attaches to the type, so `Vec<T>` and `Bytes` are unchecked
+**2026-09-03. Read out of the compiler's source** at commit `950bb1d`, against
+the compiler's D-070. Nothing was compiled for this decision; it is a
+documentation defect, not a measurement.
+
+**What was written.** `SAFETY.md` §1 carried the row *"Array, slice and buffer
+indexing is bounds-checked and traps | D-070 | A zone-table index out of range
+is a crash, not a wrong offset."*
+
+**The sentence was not false. It was narrow, and it was read as broad** — and
+that distinction is the whole reason this decision exists rather than a one-line
+fix. Taken literally it makes a true claim about arrays and slices, two of the
+kinds the emitter actually guards. What it does is invite a reader to conclude
+that *indexing* is checked in this language, and then to index a `Vec` or a
+`Bytes` on the strength of it.
+
+**What is true.** The compiler's `ExprIndexExpr` lowering
+(`src/backend/ir/ir_expr.npk`) switches on the indexed object's type kind:
+`TY_SLICE`, `TY_ARRAY` and `TY_SIMD` each call `emit_bounds_guard`;
+`TY_POINTER` emits a `getelementptr` and nothing else; and there is **no
+`TY_BUFFER` branch**. D-070 says so itself — its title is "`T[]` is a slice:
+bounds live in the array type, **not the pointer type**", and its body gives the
+slice as "where out-of-bounds detection actually comes from, and it is why
+pointers do not need to carry it". `parse_type.npk`'s second header fact closes
+it: qualifiers are not part of the type, so `wild T->:items` is a bare pointer
+to the emitter.
+
+**Three specific consequences, none of which the old row would have suggested:**
+
+1. **`simd<T, N>` is guarded and nobody here knew it.** The row named three
+   things and omitted one of the kinds that actually traps.
+2. **`buffer` is named by the old row but reached by the pointer route.**
+   `TYPE_REFERENCE.md` §23's own example is `buf.ptr[0i64]` — *"byte reads
+   index the ptr"* — and `.ptr` is a `uint8->`. There is no slice view to reach
+   instead: `buffer_bytes` sits under §23's "deliberately NOT landed".
+3. **`Bytes`, not just `Vec`, is in the blast radius.** `BUILD.md` B-12 makes
+   `Bytes` an owning byte sink over `buffer`, and every formatter writes into
+   one. The library's two containers are both unchecked, and the specification
+   said the opposite.
+
+**The zone table, which is what the old row's example was about, still traps** —
+S-19 makes the generated tables `fixed` module state, so they are `T[N]`. The
+example was right by accident, and being right by accident is why the sentence
+survived.
+
+**The decision.** *The bounds check is a property of the indexed type, not of
+indexing. `SAFETY.md` **S-17b** states the four kinds with a row each, says how
+a `buffer` is reached, and records that `Vec<T>` and `Bytes` are unchecked; S-17's
+accessor pair is promoted from tidiness to the library's only bounds check and
+extended to `src/core/`; and the tree check that no `.items[` appears outside
+`src/core/vec.npk` and no `.ptr[` outside `src/core/bytes.npk` goes on cycle
+0.0.3's list.* Every accessor checks `0 <= i` as well as `i < count`, because an
+index derived from a narrower signed field can be negative and `i < count`
+accepts it.
+
+**And the part that does not generalise.** There is **no compiler-prelude
+`Vec<T>`**: no `struct:Vec` exists in the compiler's tree, and `lib/nvec.npk` is
+D-200's small-vector tier over `simd<flt64, N>`, not a container. The shared
+shape is a convention each library adopts from `List<T>`
+(`src/frontend/list.npk`, `items` declared `wild T->` and commented "WILD,
+DELIBERATELY"), which is what B-12 already says. So **this rule is a claim about
+`ntime`'s `Vec` and `Bytes` and nothing else** — a sibling library that gives its
+`Vec` a managed body or a slice field gets a different safety property, silently,
+and a reader who carries S-17b across will be wrong with no diagnostic to tell
+them.
+
+*Alternatives declined:*
+
+- **Correct the row and move on.** That is what the rule forbids, and it is how
+  the sentence lasted this long. The row was cited in four repositories in the
+  direction opposite to D-070's own title, and `check_refs.py` passed all four,
+  because a wrong citation still resolves.
+- **Call the old sentence false.** It is not, and calling it false invites a
+  reader to distrust the rest of §1's table — which is otherwise sound. The
+  useful diagnosis is "true about three named types, read as a general
+  guarantee it never made", because that is the mistake that will recur.
+- **Give `Vec<T>` a slice field so the language checks it.** It would work, and
+  it would abandon B-12's shape — the compiler's `List<T>`, exercised across
+  twenty-two families — to buy a check the accessor pair already owes. It would
+  also make `Vec` unable to own its block.
+- **Rely on cycle 1.5's `prove` obligations.** `VERIFICATION.md` P-5's `prove`
+  is a comment until the compiler's 1.5 and a static obligation afterwards; it
+  says nothing about what happens at run time to a caller who violated the
+  precondition. Same argument as S-15b's.
+
+---
+
+### TM-109 — "a view is a parameter, never a return value" is a belt, and it is stricter than the language will be
+**2026-09-03. Read out of the compiler's source and its written cycle 1.5.1b
+plan** at commit `950bb1d`. Nothing was compiled for this decision.
+
+**What was written.** This repository answered O-N9 with the house rule *"a
+view is a parameter, never a return value"*, recorded in
+`OPEN_QUESTIONS.md`'s Q-5 and in `tests/probe/defect/view_escape/README.md`,
+and the author's ruling kept it as a belt rather than as the guarantee.
+
+**Why it needs a decision rather than a note.** The rule is *one* sentence
+covering *two* shapes, and it was written that way because at the time there
+was no way to tell them apart — O-N9's six cases all root at a local. The
+compiler's fix distinguishes them, so a later cycle reading the house rule
+would take a strictness this library chose for a constraint the language
+imposed, and would plan `src/fmt/` around a limit that is not there.
+
+**What the compiler's fix actually does.** DEF-3 is the second commit of the
+compiler's cycle 1.5.1b, proposed as its D-249: builtins gain a `Views` column
+naming which argument's storage a result aliases (`string_bytes` its first,
+`string_from_bytes` its pointer argument), and the escape analysis treats such
+a call as a borrow **rooted where that argument is rooted** — as if `@` had
+been written at the argument. Three consequences, each verified in the
+compiler's own source rather than in a summary of it:
+
+1. **A view of a local, returned, is refused.** As `string_bytes(local)` is
+   today at exit 0 with no diagnostic.
+2. **A view of a temporary, returned, is refused** — bind the intermediate
+   first. And that same bind fixes a second, independent bug: the inner
+   `string_concat` result is an unbound temporary passed as an argument and
+   nothing frees it, the compiler's D-183 debt proposed as its D-246 and
+   scheduled in the same subcycle.
+3. **A view whose borrows are all rooted at a parameter, returned, stays
+   legal** — and is legal *today*. `borrows_only_param_rooted`
+   (`src/frontend/analysis/escape.npk`) is an existing second look taken before
+   refusing, on the reasoning that a parameter's target lives in the caller or
+   older, so each frame proves its own hop. It is the constructor pattern the
+   compiler is built out of.
+
+**The refusal is `NITPICK-BORROW-001`** — `BORROW_RETURNED` in
+`src/frontend/analysis/analysis_codes.npk`, the same code a returned
+`@`-borrow already gets. **DEF-3 adds no new diagnostic code**; its own plan
+says `check_codes_tested` needs nothing new. This is recorded explicitly
+because a plan that waits for a new code is waiting for nothing.
+
+**The decision.** *`SAFETY.md` **S-22** carries the house rule, in the place
+§1's borrow row already promised it, together with the statement that it is
+deliberately stricter than the language will be and a three-row table of the
+shapes DEF-3 distinguishes.* `meta/roadmap/0.4/README.md` — the cycle that
+writes `src/fmt/` — carries the same warning where its planner will meet it. A
+later cycle that finds `src/fmt/` wanting to return a view of its own parameter
+is meeting the belt, and the question is whether to loosen S-22 by decision,
+not whether the compiler permits it.
+
+**What is deliberately NOT claimed.** Whether a view over a **locally allocated
+`wild` block** may be returned — `string_from_bytes(buf, n)` where `buf` came
+from `alloc` in this frame — is **not settled by anything on file**, and this
+decision does not settle it. The compiler's plan lists
+`string_from_bytes(local.ptr, local.len)` among the *new refusals*, and its
+`wild_provenance` carve-out (`escape.npk`) belongs to the store rule (D-223,
+`NITPICK-BORROW-011`) rather than to the return rule. So it is an open question
+for the compiler, raised in `OPEN_QUESTIONS.md` under O-N9, and S-22 forbids it
+meanwhile — which costs nothing, because no design in this repository returns
+one.
+
+*Alternatives declined:*
+
+- **Write the loosening into S-22 now.** DEF-3 has not landed and this
+  repository is pinned to a compiler that does not have it. A specification
+  that describes an unlanded fix is a specification that is wrong for as long
+  as the fix slips.
+- **Drop the house rule once DEF-3 lands.** The rule costs this library
+  nothing — `FORMAT_MODEL.md` already has parsers return a value and an offset
+  — and `check_no_view_returns` is a cheaper thing to keep than an escape
+  analysis is to re-verify at every re-pin.
+- **Say only "the rule is conservative" without the table.** That is the
+  sentence a later reader cannot act on. The three shapes are the content; the
+  adjective is not.

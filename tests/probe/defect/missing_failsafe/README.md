@@ -1,8 +1,18 @@
 # A program with `main` and no `failsafe` compiles at exit 0
 
-**Provisionally O-N11** — the number is proposed, not allocated; `O-N` numbers
-belong to the workbench registry (`nitpick-libs/meta/OPEN_QUESTIONS.md`) and
-collide across repositories, so the orchestrator confirms it.
+**O-N11** — allocated by the workbench registry, and **accepted by the compiler
+as its DEF-5**, committed at cycle 1.5.1b step 1b.
+
+**The landing diagnostic is already known: `NITPICK-REACH-003`**, reported at
+`main` rather than at the file, naming D-013 and **listing every identity the
+absent handler would owe**, with the count. A root with neither `main` nor
+`failsafe` stays silent — a library checked alone has nothing to settle against,
+which is exactly what `../../support/probe11_arms_lib.npk` demonstrates below.
+
+**The two transcripts here are NOT re-recorded until the re-pin.** They record
+today's behaviour — `npkc` exit 0, `llc` exit 1 — which is the *before* half of
+a before-and-after the compiler asked for. Re-recording them against the current
+pin would destroy it, and the current pin does not have DEF-5 in any case.
 
 Found by cycle 0.0.0's probe 11 on 2026-09-03, against the pinned toolchain
 (compiler commit `950bb1d`, LLVM 20.1.2). Every command and every exit code is

@@ -107,6 +107,21 @@ Contrast O-N4, in the sibling directory: there, no correct code avoids the
 cost, so the library stopped rather than reshape itself. Here the correct code
 is the code the design already called for.
 
+**And the house rule is CONSERVATIVE, not the constraint — read `SAFETY.md`
+S-22 and TM-109 before planning against it.** This was accepted as the
+compiler's **DEF-3** (its cycle 1.5.1b step 2, proposed as its D-249), and the
+fix distinguishes two shapes the one-sentence rule conflates. A returned view of
+a **local** — every case in this directory — is refused; a returned view of a
+**temporary**, `string_bytes(string_concat(a, b))`, is refused too and must have
+its intermediate bound, which also fixes the separate leak that intermediate has
+today; but a returned view whose borrows are all rooted at a **parameter** stays
+legal, and is legal today, because a parameter's target lives in the caller or
+older. The refusal is `NITPICK-BORROW-001` — the code a returned `@`-borrow
+already gets — and DEF-3 adds **no new diagnostic code**. So a later cycle that
+finds `src/fmt/` wanting to return a view of its own parameter is meeting this
+repository's belt, not the language, and the question is whether to loosen S-22
+by decision.
+
 **What is not being done:** no `string_slice` copy is being inserted to dodge
 the escape, no API is changing shape, and nothing in `src/` is being arranged
 around the defect. If the disposition ever becomes "reshape the library", that

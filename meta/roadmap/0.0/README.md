@@ -61,7 +61,7 @@ TM-030. All settled. **Nothing in this cycle is blocked on a question.**
 - [x] `probe/probe11_failsafe_arms.npk` — a program importing a module that declares one `error:`, whose `failsafe` names exactly the arms REACH-002 requires; and a negative twin that omits one and **must not compile**. **Both answers are the good ones**: nine arms compile and run, and the omission is `NITPICK-REACH-002`, so TM-017's budget is a constraint
 - [x] `probe/probe11c_import_arm_cost.npk`, `probe11d_floor_only.npk`, `probe11e_unused_import_refused.npk`, `probe11f_declared_unraised.npk` — **added at 0.0.0.** The two-file answer above would have been true and misleading: the reachable set is computed over **every module in the graph**, so an import charges a consumer for its *arithmetic* too — four arms from a module that declares no error at all, measured against 11d's floor. **TM-107**, `SAFETY.md` S-4b/S-4c and three constraints on S-6's generator
 - [x] `probe/support/` — the three modules probe 11 imports, kept apart so each refusal changes one variable. Not probes: no `main`, no `failsafe`, and `tests/probe/*.npk` must not glob them, exactly as `defect/` must not be globbed
-- [x] `probe/defect/missing_failsafe/` — **the subcycle's fourth stop.** A program with `main` and no `failsafe` compiles at `npkc` exit 0; `llc` refuses it a long way from the cause. `reach_settle` returns early on it, so the whole REACH-002 contract is discharged by deleting the handler. **O-N11**, provisional. Blocks nothing here
+- [x] `probe/defect/missing_failsafe/` — **the subcycle's fourth stop.** A program with `main` and no `failsafe` compiles at `npkc` exit 0; `llc` refuses it a long way from the cause. `reach_settle` returns early on it, so the whole REACH-002 contract is discharged by deleting the handler. **O-N11**, allocated and accepted as the compiler's DEF-5 (1.5.1b step 1b; the diagnostic is `NITPICK-REACH-003` at `main`, listing the identities owed). Blocks nothing here; the two transcripts are re-recorded at the re-pin
 - [ ] a verdict line per probe recorded in `0.0.0.md`, with the exact diagnostic where one was refused
 - [ ] every design consequence written into `meta/specs/` **and** `meta/DECISIONS.md` before 0.0.1 starts
 
@@ -80,6 +80,17 @@ TM-030. All settled. **Nothing in this cycle is blocked on a question.**
 - [ ] the `program` stage, at -O0 and again under `opt -O2`, same exit required (B-3)
 - [ ] `// expect-exit:` and `// stress: N` honoured
 - [ ] the `repro` check: two builds from different working directories, byte-identical IR (B-4) — **doubly important here**, because the generated zone tables will be the largest source file in the tree
+- [ ] **the nine probes carrying the pre-TM-106 leak comment reworded.** Each
+      says `// D-151: exit 0 additionally asserts that nothing leaked.`, which
+      is not what D-151 proves: it watches `wild` allocations only, and a
+      managed body is outside it entirely (TM-106). The wording to use is
+      `tests/probe/README.md`'s. **Take the list from the command, not from the
+      probes you compiled** —
+      `git grep -l 'additionally asserts that nothing leaked' -- '*.npk'` —
+      because `probe04_big_fixed_table.npk` is the one probe nobody compiles
+      (O-N4's 281 s / 30.9 GiB case), so it drops out of any list built from
+      what a session ran, and it was missed exactly once for that reason.
+      `probe06` and `probe11` are correctly not among the nine
 - [ ] one real test program green
 
 ### 0.0.3 — the harness, part 2
@@ -94,6 +105,11 @@ TM-030. All settled. **Nothing in this cycle is blocked on a question.**
 - [ ] **`selfcheck.py` gains an eighth case**: a program whose `failsafe` has been deleted must be caught. It is this library's own "green and wrong" shape, and `TESTING.md` V-14's seven do not cover it
 - [ ] `check_failsafe_arms` / the S-6 generator built to TM-107's three constraints: it counts `fail`/`?!`/`!!!` **sites** and never `error:` declarations; it includes the **system** arms the imported subgraph's arithmetic arms; and it asserts "no more" **itself**, because a superset of the required arms compiles and no build would catch an overstated table
 - [ ] `tests/probe/support/` and `tests/probe/defect/` **excluded from the probe glob**, each with the reason written next to it — neither holds programs
+- [ ] **`check_raw_index`** — no `.items[` outside `src/core/vec.npk` and no
+      `.ptr[` outside `src/core/bytes.npk`. `Vec<T>.items` and `Bytes`' buffer
+      body are **bare pointers**, which the language does not bounds-check
+      (TM-108, `SAFETY.md` S-17b), so the accessor pair is the only bound there
+      is and this check is what keeps it that way
 - [ ] `check_purity` and `check_host_isolation` **written now and dormant** — they go live at 0.3 when `src/host/` exists, and writing them now means 0.3 turns them on rather than inventing them
 
 ### 0.0.4 — `src/core/`
@@ -104,6 +120,7 @@ TM-030. All settled. **Nothing in this cycle is blocked on a question.**
 - [ ] `put_int` correct at `int64` **minimum**, where negation overflows — the case every hand-written decimal writer gets wrong
 - [ ] `Bytes` growth amortised linear, proven by a test that appends a million bytes and bounds the reallocation count
 - [ ] every accessor's bounds obligation written as a comment in the `requires`/`ensures` syntax it will take (`specs/VERIFICATION.md` P-1), with a property test standing in
+- [ ] **and the bound is CODE in every accessor, not only a comment** (TM-108, `SAFETY.md` S-17b): `Vec<T>.items` and `Bytes`' buffer body are bare pointers, which the language does not bounds-check, so `vec_at`/`vec_set` and every `Bytes` accessor check **`0 <= i` as well as `i < count`** — an index derived from a narrower signed field can be negative, `i < count` accepts it, and the read goes backwards off the block. The negative case gets its own test
 - [ ] the suite's programs exit 0, which asserts that **no `wild` allocation is live** at exit — `Vec<T>`'s block is `wild` (P-23), so an unpaired `vec_free` on any path is a trap rather than a pass (D-151)
 - [ ] and, because that is the whole of what D-151 covers, a **memory assertion for the managed half**: a `Vec<string>` whose block is freed and whose elements are not retains its elements and **still exits 0** (TM-106, measured at 125 MiB over 2 000 000 elements). Until the instrument below exists, each owning-`T` container test runs a second time under a `ulimit -v` cap sized to fail if the elements are orphaned — the form TM-106 itself used, where the orphaning form gives `HeapOom` (exit 92) and the correct form exit 0
 - [ ] **the hook for the real gate.** The compiler's cycle 1.5.1b step 0 builds `NPK_HEAP_STATS`, an allocator-level instrument reporting `allocated`, `peak_live` and `count` for **managed** memory, plus a `cost` harness stage. Run on this repository's own two container probes it reported **`peak_live` 41 321 bytes against 400 101 320**. At the re-pin, this checklist item becomes a **`peak_live` assertion** with a stated bound per test, and the `ulimit -v` cap above is retired to a belt. Write the tests now so the bound is the only thing that has to be added

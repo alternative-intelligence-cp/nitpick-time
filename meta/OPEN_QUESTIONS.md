@@ -165,7 +165,7 @@ resolves elsewhere.
 **It costs `ntime` nothing and blocks nothing** — the house rule is already
 `mod:` = basename. Raised alongside O-N4; nothing here is shaped around it.
 
-### O-N9 — D-004's escape rule is unenforced for slice views — **NOT BLOCKING**
+### O-N9 — D-004's escape rule is unenforced for slice views — ~~**NOT BLOCKING**~~ **BLOCKING, by the author's ruling on Q-5**
 **Measured at cycle 0.0.0, 2026-09-03.** `string_bytes` on a local `string`
 yields a `uint8[]` that is **returned out of its owning frame with no
 diagnostic**, and reading it afterwards reads freed memory — the runtime's own
@@ -181,12 +181,45 @@ already says *"a slice is a second-class borrow (D-004): it passes down the
 call stack and never up"*.
 
 **Consequence for `ntime`:** every parser in `src/fmt/` takes a `uint8[]`, so
-the library is in the blast radius. It is **not blocking**, because the house
+the library is in the blast radius. ~~It is **not blocking**, because the house
 rule *a view is a parameter, never a return value* is compliance with the
 documented rule rather than a workaround for its absence, and it costs nothing:
-a parser returns a value and an offset. Its disposition is **Q-5**, and
-`check_no_view_returns` — **proposed** for cycle 0.0.3's harness list, not yet
-on it — is what would make the rule enforced rather than remembered.
+a parser returns a value and an offset.~~ **The author ruled it BLOCKING at
+Q-5**, so `src/fmt/` and probes 09 and 10 wait; the paragraph above is left
+standing because a recommendation decided against is the most useful kind to be
+able to re-read. `check_no_view_returns` — **proposed** for cycle 0.0.3's
+harness list, not yet on it — is what would make the rule enforced rather than
+remembered.
+
+**ACCEPTED as the compiler's DEF-3**, the second commit of its cycle 1.5.1b,
+proposed there as its **D-249**: builtins gain a `Views` column naming which
+argument's storage a result aliases, and the escape analysis treats such a call
+as a borrow **rooted where that argument is rooted**, as if `@` had been written
+at the argument.
+
+**The fix distinguishes two shapes the house rule conflates, and `src/fmt/`
+planning turns on it** — the full statement is `SAFETY.md` **S-22** and
+**TM-109**, and this is the summary:
+
+| Shape | After DEF-3 |
+|---|---|
+| a view of a **local**, returned — `string_bytes(local)` | **refused** |
+| a view of a **temporary**, returned — `string_bytes(string_concat(a, b))` | **refused**; bind the intermediate, which also fixes the D-246 leak it has today |
+| a view whose borrows are all rooted at a **parameter**, returned | **legal**, and legal today (`borrows_only_param_rooted`) |
+
+So the house rule is **conservative, not the truth**: it was written with no way
+to tell those apart. The refusal is `NITPICK-BORROW-001`, the code a returned
+`@`-borrow already gets; **DEF-3 introduces no new diagnostic code**, so nothing
+here is waiting for one.
+
+**One sub-question this leaves open, and it is the compiler's to answer.**
+Whether a view over a **locally allocated `wild` block** may be returned —
+`string_from_bytes(buf, n)` where `buf` came from `alloc` in this frame — is not
+settled by anything on file. DEF-3's own test list puts
+`string_from_bytes(local.ptr, local.len)` among the *new refusals*, and the
+`wild_provenance` carve-out it cites belongs to the store rule (D-223,
+`NITPICK-BORROW-011`) rather than to the return rule. S-22 forbids it meanwhile,
+which costs nothing because no design here returns one.
 
 ### O-N10 — the derives on a payload enum: `Eq` will not compile, `Ord` is silently wrong — **NOT BLOCKING**
 **Measured at cycle 0.0.0, 2026-09-03**, by probe 05. On
@@ -222,9 +255,15 @@ never two `Layout`s. So it is raised rather than blocking, and what the cycle
 that builds `src/fmt/` must carry is the **second** half: `#[derive(Ord)]
 enum:FmtPart` would compile and be wrong.
 
-**The id is provisional.** `O-N` numbers are the workbench registry's and are
-assigned there; O-N10 is this repository's expectation of the next free one and
-the orchestrator may renumber it when it registers the defect.
+**The id is allocated and the defect is accepted.** `O-N` numbers are the
+workbench registry's and are assigned there; the registry allocated **O-N10**,
+and the compiler session accepted it as its **DEF-4** at this repository's
+commit `eb8d6b4`. It was then **widened after their own measurement and ratified
+as the compiler's D-250**, landing as step 3b of its cycle 1.5.1b: the fault is
+not confined to payload enums — a derived `Eq`/`Ord` over a **struct with a
+derived-struct field** fails the same way inside `<derived-1>` — so the step
+covers named types in structs and enums alike, and an owning payload will refuse
+the derive **by name** rather than silently generate.
 
 ### O-N11 — a program with `main` and no `failsafe` compiles at exit 0 — **NOT BLOCKING**
 **Measured at cycle 0.0.0, 2026-09-03**, by probe 11 while establishing the arm
@@ -268,7 +307,18 @@ caught by `llc` in the next step of the same recipe. What it costs is that
 case for a program whose `failsafe` has been deleted. Full statement in
 [`../tests/probe/defect/missing_failsafe/README.md`](../tests/probe/defect/missing_failsafe/README.md).
 
-**The id is provisional**, on the same terms as O-N10 above.
+**The id is allocated and the defect is accepted**, on the same terms as O-N10
+above: the registry allocated **O-N11** and the compiler accepted it as its
+**DEF-5**, committed at cycle 1.5.1b step 1b. **The ask was granted in full, and
+the landing diagnostic is already known:** `NITPICK-REACH-003`, reported at
+`main` rather than at the file, naming D-013 and **listing every identity the
+absent handler would owe**, counted. A root with neither `main` nor `failsafe`
+stays silent, because a library checked alone has nothing to settle against.
+What is still owed here is the re-recording of
+[`../tests/probe/defect/missing_failsafe/`](../tests/probe/defect/missing_failsafe/README.md)'s
+transcripts at the re-pin, where an `npkc` refusal replaces today's `llc`
+failure — deliberately not done before then, because today's transcript is the
+before-half of a before-and-after.
 
 **A note on the numbering.** O-N5 … O-N7 do not appear here. `O-N` ids are the
 **workbench registry's**, not this repository's, because a gap in the compiler

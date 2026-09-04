@@ -91,3 +91,19 @@ documented exceptions and a test that counts them.
   the round-trip test needs an exception list at all. Keep the list at two.
 - **`in` is a keyword** and a parser wants it for its input constantly; `src` is
   the reserved spelling.
+- **S-22's "a view is a parameter, never a return value" is a BELT, not the
+  language's constraint** (TM-109). This is the cycle that meets it: every
+  parser here takes a `uint8[]`. The rule is stricter than what the compiler
+  will enforce once its DEF-3 lands — a returned view of a **local** or of a
+  **temporary** is refused, but a returned view whose borrows are all rooted at
+  a **parameter** is legal, and is legal today. So if a helper here genuinely
+  wants to return a view of its own parameter, that is a request to loosen S-22
+  **by decision**, not a compiler limit to design around. The refusal is
+  `NITPICK-BORROW-001`; DEF-3 adds no new code, so there is no new diagnostic to
+  wait for. And a view of a temporary — `string_bytes(string_concat(a, b))` — is
+  doubly wrong today, because the intermediate also leaks; binding it fixes both.
+- **`Bytes` and `Vec<T>` are indexed WITHOUT a bounds check** (TM-108, S-17b).
+  Every formatter in this cycle writes into a `Bytes`, and `Layout` holds a
+  `Vec<FmtPart>`; both are bare pointers to the emitter, so an out-of-range
+  index is a wrong byte rather than a trap. Go through the accessors, which is
+  where the only bound is, and never write `.ptr[` or `.items[` here.

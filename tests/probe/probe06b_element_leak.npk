@@ -1,0 +1,101 @@
+// expect-exit: 0
+// NOT A PROBE IN THE ORDINARY SENSE. This file exits 0 and that IS the
+// finding: it leaks 2 000 000 string bodies and the language's own leak gate
+// does not notice.
+//
+// PROBE 06b — TM-106's LEAKING HALF, made reproducible.
+//
+// ASKS: freeing a `Vec<string>`'s block without dropping its elements -- what
+// does it cost, and does `exit 0` catch it?
+//
+// MATTERS BECAUSE `0.0.4.md` P-23 says "every `Vec` has a `vec_free` and every
+// scope that made one calls it, or `exit 0` traps under D-151". That is true
+// of the BLOCK and says nothing about the ELEMENTS: D-151 watches `wild`
+// allocations and a `string`'s body is MANAGED. So the gate is unfalsifiable
+// for a managed body, and this file is the demonstration.
+//
+// WHY IT EXISTS AS A COMMITTED FILE. Cycle 0.0.0 measured this pair on
+// 2026-09-03 in scratch and committed only the NUMBERS, into probe 06's header
+// and four documents. When the re-pin came the numbers had to be re-measured
+// and there was nothing to re-run -- the files were gone. A number whose
+// program is not committed is a claim, not evidence
+// (`../../../PLAYBOOK.md` §6). This file and `probe06c_element_drop.npk` are
+// that pair, restored, so the next re-pin costs one command.
+//
+// ITS TWIN IS `probe06c_element_drop.npk`, which differs in ONE LINE: it calls
+// `free_names` before `vec_free`. Read them side by side; the diff is the
+// finding.
+//
+// RUN IT AS: /usr/bin/time -f "%e s  %M KiB" <binary>
+// AND AS:    ( ulimit -v 65536 ; <binary> ) ; echo $?
+// because a peak-RSS number is arguable and an exit code is not.
+mod:probe06b_element_leak;
+
+// `BUILD.md` B-12's shape, as probe 06 has it.
+struct:Vec<T> = {
+    wild T->:items;
+    int64:count;
+    int64:cap;
+};
+
+func:vec_init<T> = Vec<T>(int64:cap) never fails {
+    int64:n = cap;
+    if (n < 1i64) { n = 1i64; }
+    wild int8->:mem = alloc(n * #size_of<T>());
+    pass Vec{ items: mem =>! wild T->, count: 0i64, cap: n };
+};
+
+func:vec_reserve<T> = NIL(Vec<T>->:v, int64:need) never fails {
+    int64:want = v.count + need;
+    if (want <= v.cap) { pass NIL; }
+    int64:nc = v.cap;
+    while (nc < want) { nc = nc * 2i64; }
+    wild int8->:bigger = ralloc(v.items =>! wild int8->, nc * #size_of<T>());
+    v.items = bigger =>! wild T->;
+    v.cap = nc;
+    pass NIL;
+};
+
+func:vec_push<T> = NIL(Vec<T>->:v, move T:x) never fails {
+    drop vec_reserve(v, 1i64);
+    v.items[v.count] = move(x);
+    v.count = v.count + 1i64;
+    pass NIL;
+};
+
+// Frees the BLOCK, and only the block. The elements are orphaned.
+func:vec_free<T> = NIL(Vec<T>->:v) never fails {
+    dalloc(v.items =>! wild int8->);
+    v.count = 0i64;
+    v.cap = 0i64;
+    pass NIL;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    int64:i = 0i64;
+    while (i < 2000000i64) {
+        Vec<string>:b = raw vec_init::<string>(1i64);
+        // 20 + 15 = 35 bytes, allocated on the managed heap every iteration.
+        drop vec_push(@b, string_concat("Australia/Lord_Howe_", "Europe/Kyiv_xyz"));
+        // THE LEAK: the block goes back, the 35-byte body does not.
+        drop vec_free(@b);
+        i = i + 1i64;
+    }
+    // D-151 asserts no `wild` allocation is live -- and every `wild` block WAS
+    // paired, so this exits 0. Two million managed bodies are still live and
+    // the gate is silent about all of them. That is TM-106.
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

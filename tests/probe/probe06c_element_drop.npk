@@ -1,0 +1,109 @@
+// expect-exit: 0
+//
+// PROBE 06c — TM-106's REMEDY HALF, made reproducible.
+//
+// ASKS: the same 2 000 000 iterations as `probe06b_element_leak.npk`, with the
+// elements moved out before the block is freed -- what does it cost?
+//
+// MATTERS BECAUSE the fix is ORDINARY CODE and not a language gap: move each
+// element into a local whose scope ends at the bottom of the loop body, and
+// the string dies there. `free_names` below is probe 06's own, verbatim. What
+// makes it worth a committed file is that BOTH halves exit 0, so the exit code
+// cannot tell them apart -- only the memory can.
+//
+// WHY IT EXISTS AS A COMMITTED FILE. Cycle 0.0.0 measured this pair on
+// 2026-09-03 in scratch and committed only the NUMBERS. At the re-pin there
+// was nothing to re-run. A number whose program is not committed is a claim,
+// not evidence (`../../../PLAYBOOK.md` §6).
+//
+// ITS TWIN IS `probe06b_element_leak.npk`, which differs in ONE LINE: it does
+// not call `free_names`. Read them side by side; the diff is the finding.
+//
+// RUN IT AS: /usr/bin/time -f "%e s  %M KiB" <binary>
+// AND AS:    ( ulimit -v 65536 ; <binary> ) ; echo $?
+// because a peak-RSS number is arguable and an exit code is not.
+mod:probe06c_element_drop;
+
+// `BUILD.md` B-12's shape, as probe 06 has it.
+struct:Vec<T> = {
+    wild T->:items;
+    int64:count;
+    int64:cap;
+};
+
+func:vec_init<T> = Vec<T>(int64:cap) never fails {
+    int64:n = cap;
+    if (n < 1i64) { n = 1i64; }
+    wild int8->:mem = alloc(n * #size_of<T>());
+    pass Vec{ items: mem =>! wild T->, count: 0i64, cap: n };
+};
+
+func:vec_reserve<T> = NIL(Vec<T>->:v, int64:need) never fails {
+    int64:want = v.count + need;
+    if (want <= v.cap) { pass NIL; }
+    int64:nc = v.cap;
+    while (nc < want) { nc = nc * 2i64; }
+    wild int8->:bigger = ralloc(v.items =>! wild int8->, nc * #size_of<T>());
+    v.items = bigger =>! wild T->;
+    v.cap = nc;
+    pass NIL;
+};
+
+func:vec_push<T> = NIL(Vec<T>->:v, move T:x) never fails {
+    drop vec_reserve(v, 1i64);
+    v.items[v.count] = move(x);
+    v.count = v.count + 1i64;
+    pass NIL;
+};
+
+// Frees the BLOCK, and only the block -- identical to `probe06b`'s.
+func:vec_free<T> = NIL(Vec<T>->:v) never fails {
+    dalloc(v.items =>! wild int8->);
+    v.count = 0i64;
+    v.cap = 0i64;
+    pass NIL;
+};
+
+// THE OBLIGATION, DISCHARGED. Probe 06's `free_names`, verbatim: each element
+// is moved into a local whose scope ends at the bottom of the loop body, and
+// the string dies there.
+func:free_names = NIL(Vec<string>->:v) never fails {
+    int64:i = 0i64;
+    while (i < v.count) {
+        string:owned = move(v.items[i]);
+        discard(string_byte_length(owned));
+        i = i + 1i64;
+    }
+    v.count = 0i64;
+    drop vec_free(v);
+    pass NIL;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    int64:i = 0i64;
+    while (i < 2000000i64) {
+        Vec<string>:b = raw vec_init::<string>(1i64);
+        // 20 + 15 = 35 bytes, allocated on the managed heap every iteration.
+        drop vec_push(@b, string_concat("Australia/Lord_Howe_", "Europe/Kyiv_xyz"));
+        // THE REMEDY, and the whole diff against `probe06b`: `free_names`
+        // drops each element and then frees the block.
+        drop free_names(@b);
+        i = i + 1i64;
+    }
+    // Exits 0 exactly as `probe06b` does. The exit code is the same; the
+    // memory is not. That equality is the point of the pair.
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

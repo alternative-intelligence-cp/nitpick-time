@@ -1,0 +1,78 @@
+// expect-exit: 0
+//
+// PROBE 09b — a view of an `environ()` entry, RETURNED.
+//
+// ASKS the edge probe 09 could not ask inside one function: may a view whose
+// root is the environment block travel UP out of the frame that made it?
+//
+// THIS IS THE ONE THE ANSWER WAS NOT KNOWN FOR. Two readings were in
+// circulation when this probe was written, and they disagree:
+//
+//   (a) "a view whose root is a POINTER-SHAPED binding -- a wild pointer, a
+//       slice, a cstring -- is the pointee's borrow rather than a frame
+//       borrow, so it stays legal";
+//   (b) "the live predicate is `borrows_only_param_rooted`, rooted at a
+//       PARAMETER, so a view not rooted at a parameter cannot be returned."
+//
+// Under (a) this file compiles; under (b) it is refused `NITPICK-BORROW-001`.
+// It is not argued here. It is compiled, and §"THE RESULT" in
+// `defect/view_escape/TRANSCRIPT.txt` records what came back.
+//
+// WHY IT MATTERS BEYOND THE PROBE: `host_system_zone` reads `$TZ` and must
+// give the zone name to a caller. If a view of the environment cannot travel
+// up, the name must be COPIED out (`to_string`, or a `Bytes` append) and the
+// copy is an owning value the caller drops -- a different signature, a
+// different allocation story, and an entry in `HOST.md`. The library's shape
+// depends on this answer, so it is measured before `src/host/` is written.
+mod:probe09b_environ_view_returned;
+
+// The whole question, in one function: the view's root is `e.ptr`, a member of
+// a `cstring` -- POINTER-SHAPED. The bytes live in the kernel's mapping and
+// outlive every frame in the program.
+func:tz_entry = string(cstring[]:env) never fails {
+    int64:j = 0i64;
+    while (j < env.len) {
+        cstring:e = env[j];
+        if (e.len >= 3i64) {
+            string:entry = string_from_bytes(e.ptr, e.len);
+            uint8[]:b = string_bytes(entry);
+            if (b[0i64] == 84u8) {                      // 'T'
+                if (b[1i64] == 90u8) {                  // 'Z'
+                    if (b[2i64] == 61u8) {              // '='
+                        // The view travels UP, out of this frame.
+                        pass string_from_bytes(e.ptr, e.len);
+                    }
+                }
+            }
+        }
+        j = j + 1i64;
+    }
+    pass "";
+};
+
+func:main = int32(cstring[]:_~argv) {
+    cstring[]:env = environ();
+    string:hit = raw tz_entry(env);
+    if (string_byte_length(hit) != 14i64)               { exit 10i32; }
+    uint8[]:hb = string_bytes(hit);
+    // Read it AFTER the frame that made it returned -- the bytes must still be
+    // the kernel's, not the 0xAA free-poison a dead frame would leave.
+    if (hb[0i64] != 84u8)                               { exit 11i32; }   // 'T'
+    if (hb[3i64] != 69u8)                               { exit 12i32; }   // 'E'
+    if (hb[13i64] != 118u8)                             { exit 13i32; }   // 'v'
+    if (hb[0i64] == 170u8)                              { exit 14i32; }   // 0xAA
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

@@ -1,0 +1,47 @@
+// expect-error: NITPICK-BORROW-001
+//
+// PROBE 10c — a view of a `move` PARAMETER, returned. THE SECOND NEGATIVE
+// TWIN, and the one that shows "parameter" is not the whole of the rule.
+//
+// ASKS: probe 10 §2 returns a view of a plain `string:s` parameter and that is
+// legal, because a plain parameter's storage lives in the caller or older. Is
+// a `move` parameter the same?
+//
+// MATTERS BECAUSE it is not, and the difference is invisible in the
+// signature's shape. A `move` parameter is CONSUMED at the call and dropped at
+// THIS frame's exit -- it is the callee's own -- so a view of it travels up
+// into storage this frame just freed, exactly as a view of a local would. The
+// compiler's `root_is_param` carries the carve-out explicitly, and its comment
+// records that `@` of a `move` parameter had the same hole before DEF-3.
+//
+// FOR `src/fmt/`: `vec_push<T>(Vec<T>->:v, move T:x)` already takes a `move`
+// parameter (probe 06), so this is not a hypothetical shape for this library.
+// Any future helper that takes `move string:s` and hands back a view of it is
+// this file, and the compiler refuses it.
+mod:probe10c_view_of_move_param_refused;
+
+// The contrast is probe 10's `view_of_param`, which is this function with the
+// `move` removed, and which compiles.
+func:view_of_move_param = uint8[](move string:s) never fails {
+    pass string_bytes(s);
+};
+
+func:main = int32(cstring[]:_~argv) {
+    string:owned = string_concat("2026-", "09-04");
+    uint8[]:v = raw view_of_move_param(move(owned));
+    if (v.len != 10i64) { exit 20i32; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

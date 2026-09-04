@@ -1,0 +1,177 @@
+// expect-exit: 0
+// PRECONDITION: run with `TZ=Europe/Kyiv` exported. The probe exits 30 if it
+// is not, so a missing precondition names itself instead of passing quietly.
+//
+// PROBE 09 — `environ()` and a `KEY=VALUE` split.
+//
+// ASKS: `environ()` read, an entry located by prefix, the value taken as a
+// slice, and the borrow rules exercised -- passed down (legal), returned and
+// stored (the two edges, in the refusal twins beside this file).
+//
+// MATTERS BECAUSE `host_system_zone`'s first discovery step reads `$TZ`
+// (`HOST.md`), and because the environment block is the kernel's and never
+// freed -- `BUILTIN_REFERENCE.md`'s `environ` row says the array "is its own
+// page mapping outside the releasable heap and is never freed", and the
+// entries' bytes "are the kernel's, on the stack". That is a LIFETIME, and a
+// lifetime is the kind of claim a probe should confirm rather than assume,
+// because the whole borrow question below turns on it.
+//
+// HELD UNTIL 2026-09-04. This probe and probe 10 were the two the author's
+// ruling on O-N9 held back: both are O-N9's own measurement, and measuring
+// them against a compiler without DEF-3 would have pinned the defect rather
+// than the language. DEF-3 landed at the compiler's 1.5.1b step 2 and this
+// repository is pinned to `94874ce`, which carries it.
+mod:probe09_environ_split;
+
+// ---------------------------------------------------------------------------
+// The shape the library is allowed to write: the view goes DOWN.
+// ---------------------------------------------------------------------------
+
+// Returns an INDEX, never the view. Every scanner step in `src/fmt/` is this
+// shape.
+func:find_byte = int64(uint8[]:src, uint8:want) never fails {
+    int64:i = 0i64;
+    while (i < src.len) {
+        if (src[i] == want) { pass i; }
+        i = i + 1i64;
+    }
+    pass -1i64;
+};
+
+// Does `src` begin with `lit`? Both are views, both go down.
+func:starts_with = bool(uint8[]:src, uint8[]:lit) never fails {
+    if (lit.len > src.len) { pass false; }
+    int64:i = 0i64;
+    while (i < lit.len) {
+        if (src[i] != lit[i]) { pass false; }
+        i = i + 1i64;
+    }
+    pass true;
+};
+
+// Counts bytes in a half-open window. The window is expressed as two integers
+// rather than as a sub-slice, which is the point: an offset pair travels where
+// a view does not.
+func:count_in = int64(uint8[]:src, int64:lo, int64:hi) never fails {
+    int64:i = lo;
+    int64:n = 0i64;
+    while (i < hi) {
+        if (i >= src.len) { pass n; }
+        n = n + 1i64;
+        i = i + 1i64;
+    }
+    pass n;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    cstring[]:env = environ();
+
+    // ---- 1. the block is there, and it is not empty -----------------------
+    if (env.len <= 0i64)                                { exit 10i32; }
+
+    // ---- 2. EVERY entry is `KEY=VALUE` with a non-empty KEY ---------------
+    //
+    // A property of the block itself, needing no particular variable to be
+    // set, so it is the part of this probe that cannot be made vacuous by the
+    // environment it runs in.
+    int64:k = 0i64;
+    int64:checked = 0i64;
+    while (k < env.len) {
+        cstring:e = env[k];
+        if (e.len <= 0i64)                              { exit 11i32; }
+        // A view of the kernel's bytes. `e.ptr` is POINTER-SHAPED, so this
+        // view aliases the pointee rather than this frame -- see probe 10.
+        string:entry = string_from_bytes(e.ptr, e.len);
+        uint8[]:eb = string_bytes(entry);
+        if (eb.len != e.len)                            { exit 12i32; }
+        int64:eq = raw find_byte(eb, 61u8);             // '='
+        if (eq < 0i64)                                  { exit 13i32; }
+        if (eq == 0i64)                                 { exit 14i32; }
+        // The kernel NUL-terminates each entry OUTSIDE the measured length:
+        // `cstring.len` is the byte count without the terminator, so no `=`
+        // hunt can run off the end and no interior NUL precedes it.
+        if (raw count_in(eb, 0i64, eq) != eq)           { exit 15i32; }
+        checked = checked + 1i64;
+        k = k + 1i64;
+    }
+    if (checked != env.len)                             { exit 16i32; }
+
+    // ---- 3. locate `TZ` by prefix, and split it ---------------------------
+    //
+    // This is `host_system_zone`'s first step, written the way the library
+    // will write it.
+    string:want = "TZ=";
+    uint8[]:wb = string_bytes(want);
+
+    int64:found = -1i64;
+    int64:vlo = -1i64;
+    int64:vhi = -1i64;
+    int64:j = 0i64;
+    while (j < env.len) {
+        cstring:e2 = env[j];
+        string:entry2 = string_from_bytes(e2.ptr, e2.len);
+        uint8[]:b2 = string_bytes(entry2);
+        if (raw starts_with(b2, wb)) {
+            found = j;
+            vlo = wb.len;
+            vhi = b2.len;
+            j = env.len;
+        }
+        else { j = j + 1i64; }
+    }
+    if (found < 0i64)                                   { exit 30i32; }
+
+    // `TZ=Europe/Kyiv` -- the value is 11 bytes, and the split is an OFFSET
+    // PAIR into an entry the caller still holds, not a returned slice.
+    if ((vhi - vlo) != 11i64)                           { exit 31i32; }
+
+    cstring:hit = env[found];
+    string:hs = string_from_bytes(hit.ptr, hit.len);
+    uint8[]:hb = string_bytes(hs);
+    if (hb[vlo] != 69u8)                                { exit 32i32; }   // 'E'
+    if (hb[vlo + 1i64] != 117u8)                        { exit 33i32; }   // 'u'
+    if (hb[vhi - 1i64] != 118u8)                        { exit 34i32; }   // 'v'
+    if (raw find_byte(hb, 47u8) != (vlo + 6i64))        { exit 35i32; }   // '/'
+
+    // ---- 4. the block is STABLE: a second read gives the same bytes -------
+    //
+    // The lifetime claim, made observable. If the entries' storage were
+    // reclaimed or rewritten between calls, this is where it would show.
+    cstring[]:env2 = environ();
+    if (env2.len != env.len)                            { exit 40i32; }
+    cstring:hit2 = env2[found];
+    if (hit2.len != hit.len)                            { exit 41i32; }
+    string:hs2 = string_from_bytes(hit2.ptr, hit2.len);
+    uint8[]:hb2 = string_bytes(hs2);
+    int64:m = 0i64;
+    while (m < hb2.len) {
+        if (hb2[m] != hb[m])                            { exit 42i32; }
+        m = m + 1i64;
+    }
+
+    // ---- 5. the pointers are the SAME, not a copy -------------------------
+    //
+    // Two `environ()` calls hand back the same storage. This is what makes
+    // the entries' bytes safe to view without copying -- and it is the fact
+    // `host_system_zone` will rest on.
+    if (!(hit2.ptr == hit.ptr))                         { exit 43i32; }
+
+    // D-151: exit 0 asserts no `wild` allocation is live. This probe makes
+    // none -- every string here is a VIEW of the kernel's bytes, and
+    // `string_from_bytes` allocates nothing (TM-106: exit 0 says nothing
+    // about a managed body, but there is no managed body here either).
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

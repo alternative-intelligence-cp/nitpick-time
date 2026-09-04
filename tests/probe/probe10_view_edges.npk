@@ -1,0 +1,195 @@
+// expect-exit: 0
+//
+// PROBE 10 — `string_bytes` / `string_from_bytes` at the borrow edges.
+//
+// ASKS: `string_bytes(s)` into a scanner, the slice's `.len` and `.ptr`, a
+// `string_from_bytes` view built in `wild` context, and the four edges the
+// escape analysis governs.
+//
+// MATTERS BECAUSE every parser in `src/fmt/` takes a `uint8[]` and every
+// formatter produces a `string` through `Bytes`, and D-186 made `string_slice`
+// an owned copy for exactly the use-after-free this probe maps.
+//
+// HELD UNTIL 2026-09-04, with probe 09, by the author's ruling that O-N9 was
+// BLOCKING. This probe IS O-N9's own measurement: measuring it against a
+// compiler without DEF-3 would have pinned the defect rather than the
+// language. DEF-3 landed at the compiler's 1.5.1b step 2 (its D-249) and this
+// repository is pinned to `94874ce`, which carries it.
+//
+// ==========================================================================
+// WHAT THIS FILE IS FOR: SEPARATING TWO ROOTS THAT LOOK ALIKE
+// ==========================================================================
+//
+// DEF-3 refuses a returned view of a LOCAL and permits a returned view whose
+// root is POINTER-SHAPED. `probe09b` showed a pointer-shaped root travelling
+// up -- but its `cstring` came out of a `cstring[]` PARAMETER, so that file
+// alone cannot tell the pointer-shaped rule from the parameter-rooted rule.
+// Both readings predict it compiles.
+//
+// SECTION 1 BELOW IS THE DISCRIMINATOR. `blk` is a `wild int8->` from
+// `alloc`, a LOCAL, and no parameter appears anywhere in its root chain. A
+// parameter-rooted rule refuses it; a pointer-shaped rule permits it. There is
+// nothing else in the function for the analysis to key on.
+//
+// The frame-storage contrast is `defect/view_escape/case3_view_returned.npk`:
+// the same `pass` of a view, rooted at a local `string` instead, refused
+// `NITPICK-BORROW-001`. The two files differ in the ROOT and in nothing else,
+// which is what makes either of them evidence.
+mod:probe10_view_edges;
+
+// ---------------------------------------------------------------------------
+// 1. THE DISCRIMINATOR — a view of an ALLOC'd block, returned.
+// ---------------------------------------------------------------------------
+//
+// No parameter is in scope that the view could be rooted at: `blk` is made
+// here, from `alloc`. The block outlives the frame because the manual regime
+// says so -- `wild` memory lives until `dalloc`, and D-151 makes forgetting it
+// a trap rather than a leak. That is precisely the lifetime the pointer-shaped
+// carve-out rests on.
+func:make_view = string(int64:n) never fails {
+    wild int8->:blk = alloc(n);
+    int64:i = 0i64;
+    while (i < n) {
+        <-(#ptr_add<int8>(blk, i)) = (65i64 + i) =>! int8;   // 'A', 'B', ...
+        i = i + 1i64;
+    }
+    pass string_from_bytes(blk, n);
+};
+
+// The pairing half, so `exit 0` means something under D-151. The view is
+// handed back its own storage to release -- `.ptr` of a view string IS the
+// block, which is the whole reason the view was safe to return.
+func:drop_view = NIL(string:v) never fails {
+    dalloc(v.ptr =>! wild int8->);
+    pass NIL;
+};
+
+// ---------------------------------------------------------------------------
+// 2. A PARAMETER-ROOTED view, returned — the other permitted root.
+// ---------------------------------------------------------------------------
+//
+// `s`'s storage lives in the CALLER or older, so a view of it may travel up
+// one frame exactly as `@param` may. This is the rule DEF-3 states in
+// `escape.npk`'s D-249 comment, and it is what makes the compiler's own
+// `Lexer{ text: string_from_bytes(text.ptr, text.len), ... }` legal.
+func:view_of_param = uint8[](string:s) never fails {
+    pass string_bytes(s);
+};
+
+// ---------------------------------------------------------------------------
+// 3. A STRUCT LITERAL is rooted where its FIELD VALUES are.
+// ---------------------------------------------------------------------------
+//
+// One of the three refinements DEF-3's own whole-tree sweep added, and it is
+// in none of `defect/view_escape/`'s six cases. `case4_view_in_struct.npk` is
+// the refused half of this pair -- the same literal, rooted at a local.
+struct:Scan = {
+    uint8[]:src;
+    int64:at;
+};
+
+func:scan_of_param = Scan(string:s) never fails {
+    pass Scan{ src: string_bytes(s), at: 0i64 };
+};
+
+// ---------------------------------------------------------------------------
+// 4. A view over `#ptr_add` LOOKS THROUGH to the pointer.
+// ---------------------------------------------------------------------------
+//
+// The second of the three refinements. `#ptr_add` is not a view-maker; it
+// carries what its operand carries, so the root here is `blk` -- pointer-
+// shaped -- and not the arithmetic.
+func:tail_view = string(wild int8->:blk, int64:n, int64:from) never fails {
+    pass string_from_bytes(#ptr_add<int8>(blk, from), n - from);
+};
+
+// ---------------------------------------------------------------------------
+// 5. The view goes DOWN — legal under D-004 and always was.
+// ---------------------------------------------------------------------------
+
+func:count_upper = int64(uint8[]:src) never fails {
+    int64:i = 0i64;
+    int64:n = 0i64;
+    while (i < src.len) {
+        if (src[i] >= 65u8) {
+            if (src[i] <= 90u8) { n = n + 1i64; }
+        }
+        i = i + 1i64;
+    }
+    pass n;
+};
+
+// ---------------------------------------------------------------------------
+// 6. A `for` over a RANGE cannot carry a borrow, whatever its bound reads.
+// ---------------------------------------------------------------------------
+//
+// The third refinement. `src.len` reads the view; the loop variable is an
+// `int64` and carries nothing, so the range bound reading a borrow does not
+// make the iteration one.
+func:sum_bytes = int64(uint8[]:src) never fails {
+    int64:acc = 0i64;
+    for (int64:i in 0i64...src.len) { acc = acc + (src[i] => int64); }
+    pass acc;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    // ---- 1. the discriminator ---------------------------------------------
+    string:v = raw make_view(6i64);
+    if (string_byte_length(v) != 6i64)                  { exit 10i32; }
+    uint8[]:vb = string_bytes(v);
+    // The bytes are the ones written, NOT the runtime's 0xAA free-poison --
+    // which is what a dangling view would read (D-183, and case 5's exit 170).
+    if (vb[0i64] != 65u8)                               { exit 11i32; }   // 'A'
+    if (vb[5i64] != 70u8)                               { exit 12i32; }   // 'F'
+    if (vb[0i64] == 170u8)                              { exit 13i32; }   // 0xAA
+    if (raw count_upper(vb) != 6i64)                    { exit 14i32; }
+
+    // ---- 4. the `#ptr_add` view, over the same live block -----------------
+    string:t = raw tail_view(v.ptr =>! wild int8->, 6i64, 4i64);
+    if (string_byte_length(t) != 2i64)                  { exit 15i32; }
+    uint8[]:tb = string_bytes(t);
+    if (tb[0i64] != 69u8)                               { exit 16i32; }   // 'E'
+    if (tb[1i64] != 70u8)                               { exit 17i32; }   // 'F'
+
+    // Pair the block. D-151: without this, `exit 0` traps `WildLeak` -- and
+    // that trap is what makes this probe's exit 0 an assertion rather than a
+    // formality.
+    drop drop_view(v);
+
+    // ---- 2. the parameter-rooted view -------------------------------------
+    string:s = string_concat("2026-", "09-04");
+    uint8[]:pb = raw view_of_param(s);
+    if (pb.len != 10i64)                                { exit 20i32; }
+    if (pb[0i64] != 50u8)                               { exit 21i32; }   // '2'
+    if (pb[9i64] != 52u8)                               { exit 22i32; }   // '4'
+
+    // ---- 3. the struct literal --------------------------------------------
+    Scan:sc = raw scan_of_param(s);
+    if (sc.at != 0i64)                                  { exit 23i32; }
+    if (sc.src.len != 10i64)                            { exit 24i32; }
+    if (sc.src[0i64] != 50u8)                           { exit 25i32; }
+
+    // ---- 5 and 6 ----------------------------------------------------------
+    if (raw count_upper(pb) != 0i64)                    { exit 26i32; }
+    // '2'+'0'+'2'+'6'+'-'+'0'+'9'+'-'+'0'+'4' = 50+48+50+54+45+48+57+45+48+52
+    if (raw sum_bytes(pb) != 497i64)                    { exit 27i32; }
+
+    // `s` is still alive here, which is why every read above was of live
+    // storage. It drops at this scope's exit, after the last use.
+    if (string_byte_length(s) != 10i64)                 { exit 28i32; }
+
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

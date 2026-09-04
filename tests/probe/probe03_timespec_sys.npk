@@ -1,0 +1,163 @@
+// expect-exit: 0
+//
+// PROBE 03 — a `timespec` in a `buffer`, handed to `clock_gettime` through `sys`.
+//
+// ASKS: can the 16-byte two-`int64` `struct timespec` be laid out in a
+// `buffer`, written and read through `#ptr_add<int64>`, and passed to
+// `sys(228, clock_id, ptr)` as a pointer? Do both fields come back sane? Is
+// the field ORDER what the layout assumes? And does a bad clock id come back
+// as a forwarded errno rather than a trap?
+//
+// DEPENDS ON THE ANSWER: HOST.md §2. Every function in `src/host/` is this
+// exact shape (H-4), CLOCK_REALTIME is 0 and CLOCK_BOOTTIME is 7 (H-4's
+// table), `host_now_utc` forwards the kernel's errno verbatim and therefore
+// declares no error and costs no `failsafe` arm (H-7, SAFETY.md S-5), and
+// H-4 says in as many words that "a cycle-0.0 probe asserts the 16 bytes and
+// the field offsets rather than trusting this paragraph". This is that probe.
+//
+// A NEGATIVE VERDICT COSTS `src/host/`'s whole implementation strategy, and
+// HOST.md §2 would be rewritten against whatever does work.
+//
+// HOW THE FIELD ORDER IS PROVEN, rather than assumed. Reading two int64s back
+// and finding both "sane" proves nothing: if the layout were nanoseconds-first
+// the probe would still see two numbers. So the discriminator is their RANGES,
+// which do not overlap. `tv_nsec` is by definition under 1 000 000 000, and a
+// `CLOCK_REALTIME` `tv_sec` on any machine whose clock is set is above
+// 1 600 000 000. Slot 0 must fail the nanosecond test and slot 1 must fail the
+// seconds test, and the probe asserts both directions.
+//
+// THE ONE ENVIRONMENTAL ASSUMPTION is that the machine's clock is set to
+// something in this century. Exit code 30 says it is not -- that is H-8's
+// case, and H-8 requires `host_now_utc` to range-check the reading for exactly
+// this reason.
+mod:probe03_timespec_sys;
+
+error:EClock;
+
+fixed int64:SYS_CLOCK_GETTIME = 228i64;
+fixed int64:CLOCK_REALTIME    = 0i64;
+fixed int64:CLOCK_BOOTTIME    = 7i64;
+
+// The window the seconds field must fall in: 2020-09-13 to 2100-01-01. Wide
+// enough that the probe does not expire, narrow enough that a nanosecond
+// value (< 1e9, i.e. 1970-01-12) cannot possibly land inside it.
+fixed int64:SECS_FLOOR = 1600000000i64;
+fixed int64:SECS_CEIL  = 4102444800i64;
+fixed int64:NS_PER_SEC = 1000000000i64;
+
+func:main = int32(cstring[]:_~argv) {
+    // ---- the layout, before any syscall touches it --------------------
+
+    // HOST.md §2: `struct timespec { int64 tv_sec; int64 tv_nsec; }`, 16
+    // bytes, align 8. The arithmetic the module rests on is 2 x 8 = 16.
+    if (#size_of<int64>() != 8i64)                      { exit 10i32; }
+
+    buffer:ts = buffer_new(16i64);
+    if (ts.len != 16i64)                                { exit 11i32; }
+    if (ts.cap != 16i64)                                { exit 12i32; }
+
+    // Born zeroed (D-200), which is what makes the "did the kernel write it?"
+    // test below meaningful.
+    if (ts.ptr[0i64] != 0u8)                            { exit 13i32; }
+    if (ts.ptr[15i64] != 0u8)                           { exit 14i32; }
+
+    // The two int64 slots are at byte 0 and byte 8, and they do not overlap:
+    // a sentinel in one is invisible in the other.
+    <-(#ptr_add<int64>(ts.ptr, 0i64)) = 111i64;
+    <-(#ptr_add<int64>(ts.ptr, 1i64)) = 222i64;
+    if ((<-(#ptr_add<int64>(ts.ptr, 0i64))) != 111i64)  { exit 15i32; }
+    if ((<-(#ptr_add<int64>(ts.ptr, 1i64))) != 222i64)  { exit 16i32; }
+
+    // ...and slot 1 really is at byte 8, read a byte at a time. 222 is
+    // 0xDE, and little-endian puts it in the lowest byte of the slot.
+    if (ts.ptr[8i64] != 222u8)                          { exit 17i32; }
+    if (ts.ptr[0i64] != 111u8)                          { exit 18i32; }
+    if (ts.ptr[7i64] != 0u8)                            { exit 19i32; }
+
+    // ---- CLOCK_REALTIME through `sys` ---------------------------------
+
+    int64:rc = sys(SYS_CLOCK_GETTIME, CLOCK_REALTIME, ts.ptr) ?! EClock;
+    if (rc != 0i64)                                     { exit 20i32; }
+
+    int64:secs  = <-(#ptr_add<int64>(ts.ptr, 0i64));
+    int64:nanos = <-(#ptr_add<int64>(ts.ptr, 1i64));
+
+    // The kernel wrote both slots -- neither sentinel survived.
+    if (secs == 111i64)                                 { exit 21i32; }
+    if (nanos == 222i64)                                { exit 22i32; }
+
+    // Field 1 is NANOSECONDS: in range, and therefore NOT a seconds value.
+    if (nanos < 0i64)                                   { exit 23i32; }
+    if (nanos >= NS_PER_SEC)                            { exit 24i32; }
+
+    // Field 0 is SECONDS: above the nanosecond ceiling, so the two fields
+    // cannot have been swapped without this failing.
+    if (secs < NS_PER_SEC)                              { exit 25i32; }
+
+    // ...and inside this century. Failing here means the machine's clock is
+    // unset, which is H-8's case rather than a defect in the probe.
+    if (secs < SECS_FLOOR)                              { exit 30i32; }
+    if (secs > SECS_CEIL)                               { exit 31i32; }
+
+    // ---- read it twice: the clock advances, and does not jump ---------
+
+    buffer:ts2 = buffer_new(16i64);
+    int64:rc2 = sys(SYS_CLOCK_GETTIME, CLOCK_REALTIME, ts2.ptr) ?! EClock;
+    if (rc2 != 0i64)                                    { exit 32i32; }
+    int64:secs2 = <-(#ptr_add<int64>(ts2.ptr, 0i64));
+    int64:nanos2 = <-(#ptr_add<int64>(ts2.ptr, 1i64));
+    if (nanos2 < 0i64)                                  { exit 33i32; }
+    if (nanos2 >= NS_PER_SEC)                           { exit 34i32; }
+    // Two readings microseconds apart: the same second, or the next one.
+    if (secs2 < secs)                                   { exit 35i32; }
+    if ((secs2 - secs) > 2i64)                          { exit 36i32; }
+
+    // ---- CLOCK_BOOTTIME, H-4's other id -------------------------------
+
+    // A different clock and a different timeline: BOOTTIME counts from boot,
+    // so it is small where REALTIME is large. H-6 makes them different types
+    // in the library for this reason, and here it is as a number.
+    buffer:bt = buffer_new(16i64);
+    int64:rc3 = sys(SYS_CLOCK_GETTIME, CLOCK_BOOTTIME, bt.ptr) ?! EClock;
+    if (rc3 != 0i64)                                    { exit 40i32; }
+    int64:bsecs = <-(#ptr_add<int64>(bt.ptr, 0i64));
+    int64:bnanos = <-(#ptr_add<int64>(bt.ptr, 1i64));
+    if (bsecs < 0i64)                                   { exit 41i32; }
+    if (bnanos < 0i64)                                  { exit 42i32; }
+    if (bnanos >= NS_PER_SEC)                           { exit 43i32; }
+    // Uptime is not wall-clock time. A machine up since 1970 is not a thing.
+    if (bsecs >= SECS_FLOOR)                            { exit 44i32; }
+
+    // ---- H-7 and SAFETY.md S-5: a bad clock id is an ERRNO ------------
+
+    // 99 is not a clock. The kernel answers EINVAL (-22), `sys` presents it
+    // as an error in the Result, and nothing traps. That is the whole basis
+    // for `host_now_utc` declaring no error of its own: the errno is a
+    // DYNAMIC operand, so forwarding it costs no `failsafe` arm.
+    buffer:junk = buffer_new(16i64);
+    Result<int64>:bad = sys(SYS_CLOCK_GETTIME, 99i64, junk.ptr);
+    if (!bad.is_error)                                  { exit 50i32; }
+
+    // And the `?|` form gives the caller its own answer without a trap.
+    int64:defaulted = sys(SYS_CLOCK_GETTIME, 99i64, junk.ptr) ?| (0i64 - 7i64);
+    if (defaulted != (0i64 - 7i64))                     { exit 51i32; }
+
+    // D-151: exit 0 additionally asserts that nothing leaked -- every
+    // `buffer` above is reclaimed at scope exit by the managed regime, and
+    // if one were not, this exit would trap instead of succeeding.
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (EClock)         { exit 80i32; },
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

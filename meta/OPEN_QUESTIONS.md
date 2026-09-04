@@ -174,3 +174,29 @@ loud line. Whether CI should ever use `--quick` is a policy question.
 developer iterating on one function, and a CI run that skipped the gate would
 be a CI run that concluded nothing. Decide at cycle 0.0.3 when the harness
 grows the flag.
+
+### O-X6 — `SPAN_MODEL.md` N-20 says three `int128` sites and §5's table names one
+**Found at cycle 0.0.0, 2026-09-03**, while writing N-20b against §5. N-20 says
+the `int128` sites "are exactly three … named above", and the table above it
+marks exactly **one**: `period_add`'s nanosecond step. The year/month step is
+marked `int64` and the day step carries no widening at all. `TESTING.md`'s
+`check_int128_sites` — which cycle 0.2 puts on the harness, and which V-1 calls
+one of the two checks that matter — is specified as *"`int128` at exactly the
+three sites `SPAN_MODEL.md` §5 names"*, so it cannot be written until they are
+named.
+
+**Not settled at 0.0.0, deliberately.** Choosing which three requires designing
+`period_add` and `timestamp_since`, and no cycle has done that yet. A rule
+invented to make a count come out right is worse than an acknowledged gap.
+
+**Recommendation:** at the cycle that designs `period_add` (0.3 by
+`ROADMAP.md`), either enumerate the sites in §5's table — marking each `int128`
+row as such — or drop the count from N-20 and make the **table** the authority,
+with `check_int128_sites` reading it. The second is the better shape: the count
+was written before any code existed, "they are named above" says the
+enumeration was always meant to be authoritative, and a number in a rule is a
+thing that goes stale silently.
+
+**Nothing waits on it.** N-20b binds to every narrowing site in §5's table
+regardless of the count, so the range-check obligation TM-105 creates is
+complete today.

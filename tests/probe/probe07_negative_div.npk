@@ -1,0 +1,166 @@
+// expect-exit: 0
+//
+// PROBE 07 — signed `/` truncates toward zero and `%` takes the DIVIDEND's sign.
+//
+// ASKS, and ASSERTS (P-6): the four answers at negative operands, and then the
+// one place in this library that depends on them.
+//
+// DEPENDS ON THE ANSWER: TM-016 adopts Howard Hinnant's `days_from_civil`
+// AS PUBLISHED, and it is written for C semantics. Its `era` line is
+//
+//     era = (y >= 0 ? y : y - 399) / 400
+//
+// and that `- 399` is a correction for truncation toward zero: it turns a
+// C division into a floor division for negative years, and it is WRONG --
+// off by one era, 146 097 days, four centuries -- if `/` already floored.
+// So the four assertions below are not pedantry about the operators; they
+// are the premise the calendar is built on, and CALENDAR.md's supported
+// range starts at year -9999, where every one of them is live.
+//
+// WHY A PROBE AND NOT A COMMENT. If this were ever otherwise, the calendar
+// would be wrong for NEGATIVE YEARS ONLY. Cycle 0.1's exhaustive sweep would
+// be the first thing to notice -- a long way from the cause, and only if
+// somebody had thought to put negative years in the sweep. The compiler's
+// TYPE_REFERENCE.md §28 says signed `/` is `sdiv` and `%` is `srem`, so the
+// expected verdict is that all four hold; this file makes a change to that a
+// red run in `ntime`'s own suite rather than a wrong date in cycle 0.6.
+//
+// NOT ASKED HERE, deliberately: `MIN / -1` and `x / 0`, both of which TRAP
+// (D-007). A probe that exits 0 cannot also take a trap, and SPAN_MODEL.md
+// §5 already routes every divisor in the library through a checked path.
+mod:probe07_negative_div;
+
+// Hinnant's `days_from_civil`, transcribed as published (TM-016). Written
+// here as one function so the probe tests the ALGORITHM's dependence on the
+// operators and not just the operators. `never fails` is honest: every
+// divisor is a non-zero literal and no intermediate can leave int64 for the
+// year range CALENDAR.md supports.
+func:days_from_civil = int64(int64:y_in, int64:m, int64:d) never fails {
+    int64:y = y_in;
+    if (m <= 2i64) { y = y - 1i64; }
+
+    // THE LINE THIS PROBE EXISTS FOR.
+    int64:shifted = y;
+    if (y < 0i64) { shifted = y - 399i64; }
+    int64:era = shifted / 400i64;
+
+    int64:yoe = y - era * 400i64;                     // [0, 399]
+
+    int64:mshift = 9i64;
+    if (m > 2i64) { mshift = 0i64 - 3i64; }
+    int64:doy = (153i64 * (m + mshift) + 2i64) / 5i64 + d - 1i64;   // [0, 365]
+
+    int64:doe = yoe * 365i64 + yoe / 4i64 - yoe / 100i64 + doy;     // [0, 146096]
+    pass era * 146097i64 + doe - 719468i64;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    // ---- the four assertions the algorithm rests on -------------------
+
+    // Truncation toward zero, NOT floor: -3, never -4.
+    if (((0i64 - 7i64) / 2i64) != (0i64 - 3i64))        { exit 10i32; }
+    // The remainder takes the sign of the DIVIDEND.
+    if (((0i64 - 7i64) % 2i64) != (0i64 - 1i64))        { exit 11i32; }
+    // A negative DIVISOR truncates toward zero too.
+    if ((7i64 / (0i64 - 2i64)) != (0i64 - 3i64))        { exit 12i32; }
+    // ...and leaves the remainder positive, because the dividend is.
+    if ((7i64 % (0i64 - 2i64)) != 1i64)                 { exit 13i32; }
+
+    // Both negative: the quotient is positive, the remainder negative.
+    if (((0i64 - 7i64) / (0i64 - 2i64)) != 3i64)        { exit 14i32; }
+    if (((0i64 - 7i64) % (0i64 - 2i64)) != (0i64 - 1i64)) { exit 15i32; }
+
+    // The exact quotients Hinnant's correction is written around. Under
+    // FLOOR division the first would be -1 and the third -2; under
+    // truncation they are 0 and -1, which is why the `- 399` is there.
+    if (((0i64 - 1i64) / 400i64) != 0i64)               { exit 16i32; }
+    if (((0i64 - 400i64) / 400i64) != (0i64 - 1i64))    { exit 17i32; }
+    if (((0i64 - 401i64) / 400i64) != (0i64 - 1i64))    { exit 18i32; }
+    if (((0i64 - 399i64) / 400i64) != 0i64)             { exit 19i32; }
+
+    // Positive operands agree with both conventions, which is exactly why a
+    // test suite without negative years proves nothing here.
+    if ((7i64 / 2i64) != 3i64)                          { exit 20i32; }
+    if ((7i64 % 2i64) != 1i64)                          { exit 21i32; }
+
+    // ---- and now the algorithm itself ---------------------------------
+    //
+    // Reference values computed from Hinnant's published algorithm. The
+    // first two are the ones everybody checks; the rest are the ones that
+    // catch an era off by one, and they are all at or below year 1.
+
+    if (raw days_from_civil(1970i64, 1i64, 1i64) != 0i64)               { exit 30i32; }
+    if (raw days_from_civil(1969i64, 12i64, 31i64) != (0i64 - 1i64))    { exit 31i32; }
+    if (raw days_from_civil(2000i64, 3i64, 1i64) != 11017i64)           { exit 32i32; }
+
+    // Year 1, year 0 and year -1: three consecutive years straddling the
+    // sign change, one day apart at the boundary. CALENDAR.md numbers years
+    // astronomically, so year 0 exists and is a leap year.
+    if (raw days_from_civil(1i64, 1i64, 1i64) != (0i64 - 719162i64))    { exit 33i32; }
+    if (raw days_from_civil(0i64, 1i64, 1i64) != (0i64 - 719528i64))    { exit 34i32; }
+    if (raw days_from_civil(0i64 - 1i64, 1i64, 1i64) != (0i64 - 719893i64)) { exit 35i32; }
+
+    // 31 December -1 is exactly one day before 1 January 0.
+    if (raw days_from_civil(0i64 - 1i64, 12i64, 31i64) != (0i64 - 719529i64)) { exit 36i32; }
+    if ((raw days_from_civil(0i64, 1i64, 1i64))
+        - (raw days_from_civil(0i64 - 1i64, 12i64, 31i64)) != 1i64)     { exit 37i32; }
+
+    // An era boundary at a negative year: 1 March -400 begins an era.
+    if (raw days_from_civil(0i64 - 400i64, 3i64, 1i64) != (0i64 - 865565i64)) { exit 38i32; }
+
+    // The ends of CALENDAR.md's supported range.
+    if (raw days_from_civil(0i64 - 9999i64, 1i64, 1i64) != (0i64 - 4371587i64)) { exit 39i32; }
+    if (raw days_from_civil(9999i64, 12i64, 31i64) != 2932896i64)       { exit 40i32; }
+
+    // CONSECUTIVE DAYS ACROSS THE SIGN CHANGE. A wrong era shows up here as
+    // a 146 097-day jump and an off-by-one as a repeat -- and both would be
+    // invisible in any test whose years are all positive.
+    int64:d29 = raw days_from_civil(0i64 - 1i64, 12i64, 29i64);
+    int64:d30 = raw days_from_civil(0i64 - 1i64, 12i64, 30i64);
+    int64:d31 = raw days_from_civil(0i64 - 1i64, 12i64, 31i64);
+    int64:j01 = raw days_from_civil(0i64, 1i64, 1i64);
+    int64:j02 = raw days_from_civil(0i64, 1i64, 2i64);
+    if ((d30 - d29) != 1i64)                            { exit 42i32; }
+    if ((d31 - d30) != 1i64)                            { exit 43i32; }
+    if ((j01 - d31) != 1i64)                            { exit 44i32; }
+    if ((j02 - j01) != 1i64)                            { exit 45i32; }
+
+    // Year 0 is a LEAP year -- CALENDAR.md numbers years astronomically, so
+    // year 0 is 1 BC and divisible by 400. February has 29 days, and the
+    // `era` line is what decides that for a year at the sign boundary.
+    if ((raw days_from_civil(0i64, 3i64, 1i64))
+        - (raw days_from_civil(0i64, 2i64, 1i64)) != 29i64)  { exit 46i32; }
+
+    // Year -1 is NOT a leap year (it is 2 BC): February has 28 days.
+    if ((raw days_from_civil(0i64 - 1i64, 3i64, 1i64))
+        - (raw days_from_civil(0i64 - 1i64, 2i64, 1i64)) != 28i64) { exit 47i32; }
+
+    // Year -4 IS a leap year, and it is the first negative one where the
+    // four-year rule and the truncating `yoe / 4` interact.
+    if ((raw days_from_civil(0i64 - 4i64, 3i64, 1i64))
+        - (raw days_from_civil(0i64 - 4i64, 2i64, 1i64)) != 29i64) { exit 48i32; }
+
+    // Year -100 is NOT (divisible by 100, not by 400); year -400 IS.
+    if ((raw days_from_civil(0i64 - 100i64, 3i64, 1i64))
+        - (raw days_from_civil(0i64 - 100i64, 2i64, 1i64)) != 28i64) { exit 49i32; }
+    if ((raw days_from_civil(0i64 - 400i64, 3i64, 1i64))
+        - (raw days_from_civil(0i64 - 400i64, 2i64, 1i64)) != 29i64) { exit 50i32; }
+
+    // D-151: exit 0 additionally asserts that nothing leaked.
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (DivByZero)      { exit 90i32; },
+        (DivOverflow)    { exit 89i32; },
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

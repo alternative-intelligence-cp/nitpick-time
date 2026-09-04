@@ -160,6 +160,46 @@ nanoseconds across a calendar-scale span computes in `int128` and narrows with
 single most likely place for this library to be wrong**, and §5 of
 `SPAN_MODEL.md` is the full statement.
 
+**Rule S-15b (TM-105) — there is no checked narrowing, so the range check
+before a narrowing is library code.** Measured at cycle 0.0.0 by
+`tests/probe/probe02b_narrow_unchecked.npk` and
+`tests/probe/probe02c_narrow_refused.npk`: `=>!` at a value that does not fit
+**truncates silently** — no trap, no diagnostic, exit 0 — and the checked
+spelling `=>` at a narrowing is **refused at compile time**,
+`NITPICK-TYPE-009`. A narrowing is therefore refused where it is written or
+unchecked when it runs, and there is no third spelling.
+
+So: **every narrowing conversion in `ntime` is preceded, on the same path, by a
+runtime range check against the destination type's bounds**, and the failure is
+`ETimeValue`/`Overflow` rather than a trap. This is not belt and braces over a
+language guarantee — S-15's own sentence ("narrows with `=>!` at a point where
+the value is known to fit") is now the *obligation*, and the check is what
+discharges it. `VERIFICATION.md` P-5's `prove` documents the obligation and
+does not replace it: `prove` is a comment until the compiler's 1.5, and a
+static obligation afterwards, while the check answers what happens to a caller
+who violated the precondition.
+
+The shape the rule requires is committed rather than described —
+`tests/probe/probe02_int128.npk`'s `ns_add_checked`:
+
+```nitpick
+func:ns_add_checked = int64(int64:a, int64:b, int64:fallback) never fails {
+    int128:wide = (a => int128) + (b => int128);
+    if (wide > (I64_MAX => int128))                { pass fallback; }
+    if (wide < ((0i64 - I64_MAX - 1i64) => int128)) { pass fallback; }
+    pass (wide =>! int64);
+};
+```
+
+Note the **widenings are spelled `=>`**, and deliberately: the checked cast is
+legal in that direction and using it leaves exactly one `=>!` in the function —
+the dangerous one. A file where every cast is `=>!` hides which is which.
+
+**The failure this rule exists to prevent**, stated once so it is not
+rediscovered: a positive `int128` narrowing to a negative `int64`, because what
+`=>!` discards is everything above the destination's sign bit. In a time
+library that is a future instant reported as long past, with no error anywhere.
+
 **Rule S-16.** Nothing divides by a value it has not proven nonzero on the same
 path. The calendar algorithms divide by literals (4, 100, 400, 146097, 86400,
 1000000000) and nothing else.

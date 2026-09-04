@@ -1,0 +1,48 @@
+// expect-error: NITPICK-TYPE-009
+// expect-error-at: 33:27
+//
+// PROBE 02c — the NEGATIVE TWIN of 02b. A narrowing spelled with the checked
+// cast `=>` is REFUSED AT COMPILE TIME. It is not a runtime check.
+//
+// THIS FILE MUST NOT COMPILE. It is the second half of the answer probe 02
+// went looking for, and together the two halves say something neither says
+// alone: there is NO CHECKED NARROWING in this language. A conversion from
+// `int128` to `int64` is either refused where it is written, or -- with the
+// `=>!` opt-out -- unchecked when it runs (02b measured the truncation).
+//
+// THE DIAGNOSTIC, verbatim, from compiler commit 950bb1d:
+//
+//   NITPICK-TYPE-009 tests/probe/probe02c_narrow_refused.npk:33:27: `int128`
+//   does not fit in `int64`, so this conversion can lose information: the
+//   target is narrower than the source. Write `=>!` to accept that.
+//
+// It is an excellent diagnostic and it says exactly the right thing -- note
+// that it offers `=>!` as the way to proceed, which is correct and is also
+// precisely how a careless author arrives at 02b's silent truncation without
+// ever deciding to.
+//
+// DEPENDS ON THE ANSWER: SAFETY.md S-15b and SPAN_MODEL.md N-20b (TM-105).
+// Because neither spelling checks at run time, the range test at each of
+// SPAN_MODEL.md §5's three `int128` sites is ORDINARY LIBRARY CODE that must
+// be written, and `VERIFICATION.md` P-5's `prove` documents it rather than
+// replacing it.
+mod:probe02c_narrow_refused;
+
+func:main = int32(cstring[]:_~argv) {
+    int128:wide = (1i128 << 100i128) + 7i128;
+    int64:narrowed = wide => int64;
+    exit (narrowed =>! int32);
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

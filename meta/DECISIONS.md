@@ -552,3 +552,88 @@ so the difference is visible: there, the standard requires a *capability* the
 library structurally lacks, and the departure has to be stated. Here the
 standard requires a *syntax*, and syntax is exactly what a compatibility layer
 can absorb.
+
+---
+
+# The third batch — what the cycle 0.0.0 probes measured
+
+Decisions forced by a probe rather than by a discussion. Each names the probe
+that produced it, because the evidence is a file in this tree and a reader
+should be able to re-run it.
+
+### TM-105 — there is no checked narrowing, so every narrowing carries its own range check
+**2026-09-03. Measured by `tests/probe/probe02b_narrow_unchecked.npk` and
+`tests/probe/probe02c_narrow_refused.npk` against compiler commit `950bb1d`.**
+This is cycle 0.0.0's first negative verdict and it changes library code that
+has not been written yet, which is the whole point of running the probes first.
+
+**What was assumed.** `SAFETY.md` S-15 and `TIME_MODEL.md` M-20 say that
+calendar-scale nanosecond arithmetic "computes in `int128` and narrows with
+`=>!` at a point where the value is known to fit", and `VERIFICATION.md` P-5
+calls the `prove` at those sites "the single most valuable proof in the
+library". Both sentences are compatible with two different worlds, and the plan
+did not say which one it was written for: either `=>!` **checks** at run time
+and traps when the value does not fit — in which case `prove` is a belt over a
+brace and a missing range check costs a controlled stop — or it does not, in
+which case the range check is the only thing there is.
+
+**What is true.** It does not check. Two measurements, both committed:
+
+- `=>!` from `int128` to `int64` at a value that does not fit **keeps the low
+  64 bits and discards the rest, in silence** — no trap, no diagnostic, exit 0.
+  Four shapes are pinned, and the third is the one to remember: **a positive
+  `int128` narrows to a negative `int64`**, because what is discarded is
+  everything above the destination's sign bit.
+- The checked spelling `=>` at the same narrowing is **not** a runtime check
+  either. It is refused where it is written, `NITPICK-TYPE-009`: *"`int128`
+  does not fit in `int64`, so this conversion can lose information: the target
+  is narrower than the source. Write `=>!` to accept that."*
+
+So a narrowing conversion in this language is **refused at compile time, or
+unchecked when it runs.** There is no third spelling. And the excellent
+diagnostic above is itself the path a careless author takes to the silent
+truncation: it names `=>!` as the way to proceed, which is correct, and says
+nothing about the range check that must accompany it.
+
+**The decision.** *Every narrowing conversion in `ntime` is preceded, on the
+same path, by a runtime range check against the destination type's bounds, and
+the check returns `ETimeValue`/`Overflow` rather than trapping.* The check is
+**ordinary library code that must be written**. It is not a belt over a
+language guarantee, because there is no language guarantee.
+
+Stated as rules where the code will be written: `SAFETY.md` **S-15b** for the
+arithmetic, and `SPAN_MODEL.md` **N-20b** for the `int128` sites §5 enumerates.
+`tests/probe/probe02_int128.npk`'s `ns_add_checked` is the shape they require,
+and it is committed so the shape is a file rather than a description.
+
+**Why not rely on `prove`.** `VERIFICATION.md` P-5's `prove` is retained and is
+still worth what it was worth — but until the compiler's cycle 1.5 makes
+`prove` real it is a comment, and even afterwards it is a *static* obligation
+discharged by a solver. A discharged proof and a runtime check answer different
+questions: the proof says the narrowing cannot lose for any input the
+precondition admits, and the check says what happens to a caller who violated
+the precondition. A library whose public entry points take `int64` from a
+caller it does not control needs the second regardless of the first.
+
+**Why this is not a compiler defect and nothing is being worked around.**
+`=>!` is *named* for being unchecked and `TYPE_REFERENCE.md` describes it that
+way; the language is behaving as specified and D-210's trap covers plain
+arithmetic, which is the case it was designed for. What was wrong was this
+library's plan, which had read a guarantee into a cast that never offered one.
+Correcting the plan is not a workaround.
+
+*Alternatives declined:*
+
+- **Rely on the trap.** There is none to rely on. This is the assumption the
+  probe was written to test, and it failed.
+- **Rely on `prove` alone.** It is a comment today and a static obligation
+  afterwards; see above.
+- **Forbid `int128` entirely and reshape the arithmetic to fit `int64`.**
+  Nanoseconds across the ±9999-year range are 6.3 × 10²⁰ and `int64` holds
+  9.2 × 10¹⁸ (`TIME_MODEL.md` §8), so the range does not fit and the
+  reshaping would be a smaller supported range wearing a decision's clothes.
+- **A helper that narrows and returns `Optional<int64>`.** Attractive, and it
+  is what S-15b's rule amounts to in practice — but naming one helper here
+  would settle the API shape of code no cycle has designed yet. The rule
+  constrains every site; which function realises it is `src/`'s business, and
+  0.0.4 decides it with `Vec<T>` and the other primitives.

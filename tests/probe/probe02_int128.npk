@@ -1,0 +1,161 @@
+// expect-exit: 0
+//
+// PROBE 02 — `int128` arithmetic, comparison, and a narrowing `=>!` that FITS.
+//
+// Its twins ask the other half -- what a narrowing that does NOT fit does --
+// and the answer is that there are TWO other halves, which is why there are
+// two of them. `probe02b_narrow_unchecked.npk` measures `=>!` at a value that
+// does not fit: it TRUNCATES, in silence, with no trap. And
+// `probe02c_narrow_refused.npk` measures the checked spelling `=>` at the same
+// narrowing: refused at COMPILE time, NITPICK-TYPE-009. Separate files, since a
+// file that must not compile cannot also exit 0, and exit 0 is how every
+// assertion here is made (D-151 makes it mean "and nothing leaked" as well).
+//
+// THE VERDICT THOSE TWO PRODUCED IS NEGATIVE and it is recorded as TM-105,
+// with SAFETY.md S-15b and SPAN_MODEL.md N-20b written against it: there is no
+// checked narrowing in this language, so the range test in `ns_add_checked`
+// below is not belt-and-braces over a trap -- it is the only thing there is.
+//
+// ASKS: does `int128` add and compare correctly at magnitudes past `int64`;
+// does `=>!` down to `int64` give the right value when the value fits; and is
+// `int128` division needed anywhere in this library's design?
+//
+// DEPENDS ON THE ANSWER: SPAN_MODEL.md rule N-20 says the `int128` sites are
+// "exactly three ... named above" and makes a whole-tree check assert that
+// `int128` appears nowhere else in `src/`. (§5's table in fact marks ONE --
+// `period_add`'s nanosecond step; the count and the enumeration disagree, and
+// that is O-X6, recorded rather than guessed at. It changes nothing here: this
+// probe is about what a narrowing DOES, at however many sites there turn out
+// to be.) VERIFICATION.md P-5 calls the narrowing at those sites "the
+// single most valuable proof in the library". That claim is only true if the
+// narrowing is a BELT: if `=>!` silently truncated instead of trapping, the
+// proof would be the only thing standing between a caller and a wrong answer,
+// and every one of the three sites would need an explicit range check written
+// before it. The twin settles which world we are in.
+//
+// ALSO RECORDED: this probe uses no `int128` DIVISION, on purpose, and the
+// library's design needs none. That is worth writing down rather than leaving
+// implicit -- `i128` division is not inline, it goes through the floor's
+// hand-written `__divti3`/`__modti3` family, so a casual `/` on a wide value
+// would quietly add a libcall to a library whose whole posture is TM-027,
+// no dependencies. The three named sites add, compare and narrow. Nothing
+// divides.
+mod:probe02_int128;
+
+// int64's bounds, spelled once. `0i64 - ...` rather than a unary minus so
+// that the minimum is built by subtraction and not by negating a literal
+// that does not exist on the positive side.
+fixed int64:I64_MAX = 9223372036854775807i64;
+
+// SPAN_MODEL.md §5's nanosecond step, in the shape the library will use it:
+// two int64 nanosecond counts summed in int128, checked against int64's
+// range, and narrowed. This is the function the specification describes and
+// the probe's job is to prove it can be written at all.
+func:ns_add_checked = int64(int64:a, int64:b, int64:fallback) never fails {
+    int128:wide = (a => int128) + (b => int128);
+    if (wide > (I64_MAX => int128))                { pass fallback; }
+    if (wide < ((0i64 - I64_MAX - 1i64) => int128)) { pass fallback; }
+    pass (wide =>! int64);
+};
+
+func:main = int32(cstring[]:_~argv) {
+    // ---- magnitudes past int64 ----------------------------------------
+
+    // 2^100 + 7 -- about 1.27e30, some eleven orders past int64's ceiling.
+    int128:x = (1i128 << 100i128) + 7i128;
+    if (x <= 0i128)                                     { exit 10i32; }
+
+    // It really is that big: shifted back down, the low bits survive.
+    if (((x >> 100i128) =>! int64) != 1i64)             { exit 11i32; }
+    if (((x - (1i128 << 100i128)) =>! int64) != 7i64)   { exit 12i32; }
+
+    // Addition at width, with no wrap: two values each larger than int64's
+    // maximum sum to a third that is larger still.
+    int128:big = 1i128 << 100i128;
+    int128:sum = big + big;
+    if (sum != (1i128 << 101i128))                      { exit 13i32; }
+    if (sum <= big)                                     { exit 14i32; }
+
+    // ---- comparison, including across zero ----------------------------
+
+    int128:neg = 0i128 - big;
+    if (neg >= 0i128)                                   { exit 15i32; }
+    if (neg >= big)                                     { exit 16i32; }
+    if (!(neg < 0i128))                                 { exit 17i32; }
+    if ((neg + big) != 0i128)                           { exit 18i32; }
+
+    // A widened int64 compares against a native int128 literal correctly --
+    // the conversion is a sign extension, not a bit copy. If it were not,
+    // a negative nanosecond count would become enormous and positive, and
+    // every range check in SPAN_MODEL.md §5 would pass when it should fail.
+    int64:small_neg = 0i64 - 5i64;
+    if ((small_neg => int128) != (0i128 - 5i128))       { exit 19i32; }
+    if ((small_neg => int128) >= 0i128)                 { exit 20i32; }
+
+    // int64's own bounds survive the round trip through int128.
+    if (((I64_MAX => int128) =>! int64) != I64_MAX)     { exit 21i32; }
+    int64:i64_min = 0i64 - I64_MAX - 1i64;
+    if (((i64_min => int128) =>! int64) != i64_min)     { exit 22i32; }
+
+    // And the widened bounds are strictly inside int128's range, which is
+    // what makes the checked pattern above sound: the sum of two int64s
+    // cannot itself overflow int128.
+    if (((I64_MAX => int128) + (I64_MAX => int128)) <= (I64_MAX => int128)) { exit 23i32; }
+
+    // ---- the narrowing that FITS --------------------------------------
+
+    // 2^62, comfortably inside int64.
+    int128:fits = 1i128 << 62i128;
+    if ((fits =>! int64) != 4611686018427387904i64)     { exit 24i32; }
+
+    // Exactly int64's maximum -- the last value that fits, and the one an
+    // off-by-one in the compiler's range check would get wrong.
+    if ((((1i128 << 63i128) - 1i128) =>! int64) != I64_MAX) { exit 25i32; }
+
+    // Exactly int64's minimum -- the other end, and asymmetric.
+    if (((0i128 - (1i128 << 63i128)) =>! int64) != i64_min) { exit 26i32; }
+
+    // ---- SPAN_MODEL.md §5's nanosecond step, end to end ---------------
+
+    // A sum that fits: 4e18 + 4e18 = 8e18, under int64's 9.22e18 ceiling.
+    if (raw ns_add_checked(4000000000000000000i64, 4000000000000000000i64, 0i64)
+        != 8000000000000000000i64)                      { exit 30i32; }
+
+    // A sum that does not: 9e18 + 9e18 = 1.8e19. The int128 intermediate is
+    // EXACT, the check sees it, and the fallback is taken -- so the library
+    // can answer `ETimeValue`/`Overflow` instead of trapping or wrapping.
+    if (raw ns_add_checked(9000000000000000000i64, 9000000000000000000i64, 0i64 - 1i64)
+        != (0i64 - 1i64))                               { exit 31i32; }
+
+    // The boundary, from both sides. MAX-1 plus 1 fits; MAX plus 1 does not.
+    if (raw ns_add_checked(I64_MAX - 1i64, 1i64, 0i64) != I64_MAX)  { exit 32i32; }
+    if (raw ns_add_checked(I64_MAX, 1i64, 0i64 - 1i64) != (0i64 - 1i64)) { exit 33i32; }
+
+    // And symmetrically at the negative end, where int64's range is one
+    // wider than at the positive end.
+    if (raw ns_add_checked(i64_min + 1i64, 0i64 - 1i64, 0i64) != i64_min) { exit 34i32; }
+    if (raw ns_add_checked(i64_min, 0i64 - 1i64, 0i64 - 1i64) != (0i64 - 1i64)) { exit 35i32; }
+
+    // A negative sum that fits, so the sign survives the whole round trip.
+    if (raw ns_add_checked(0i64 - 4000000000000000000i64,
+                           0i64 - 4000000000000000000i64, 0i64)
+        != (0i64 - 8000000000000000000i64))             { exit 36i32; }
+
+    // D-151: exit 0 additionally asserts that nothing leaked.
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (DivByZero)      { exit 90i32; },
+        (DivOverflow)    { exit 89i32; },
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

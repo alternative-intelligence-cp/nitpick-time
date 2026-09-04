@@ -1,0 +1,203 @@
+// expect-exit: 0
+//
+// PROBE 08 — `readlink` through `sys`, with the RETURNED LENGTH as the authority.
+//
+// ASKS all four of HOST.md H-15's facts at once, because each is a place a
+// careless implementation is wrong and only one of them is obvious:
+//
+//   1. `readlink` is syscall 89 (`readlinkat` is 267);
+//   2. the buffer is NTIME_PATH_MAX = 4096 bytes;
+//   3. the kernel does NOT NUL-terminate the result, and the returned length
+//      is the only thing that says where it ends;
+//   4. a TRUNCATED result is indistinguishable from a complete one -- the
+//      kernel returns the buffer size and says nothing -- so a result whose
+//      length equals the buffer size must be treated as NOT FOUND rather than
+//      as a shorter name.
+//
+// DEPENDS ON THE ANSWER: `host_system_zone`'s second discovery step is
+// entirely this call (H-13.2), and H-14 says the file's CONTENT is never
+// read -- only the link target, whose tail after `zoneinfo/` is the zone name.
+//
+// WHAT IS PROVEN VS. WHAT IS OBSERVED. `/etc/localtime` is a symlink on
+// essentially every Linux distribution but that is a property of the machine,
+// not of the language, so the probe does not depend on it: `/proc/self/exe` is
+// a symlink whenever /proc is mounted and carries the four facts above, while
+// `/etc/localtime` is exercised on WHICHEVER arm it takes and both arms are
+// asserted. H-13's step 3 exists precisely because step 2 can decline.
+//
+// The zone NAME is never compared against a literal. This machine's is not
+// every machine's, and a probe that hardcoded one would be a probe that only
+// passes here.
+mod:probe08_readlink;
+
+error:EPath;
+
+fixed int64:SYS_READLINK   = 89i64;
+fixed int64:NTIME_PATH_MAX = 4096i64;
+fixed uint8:SENTINEL       = 170u8;      // 0xAA, a byte no path contains
+
+// Fill a buffer with the sentinel, so that "the kernel did not write here"
+// is a testable statement rather than an assumption about zeroed memory.
+func:paint = NIL(buffer->:b) never fails {
+    int64:i = 0i64;
+    while (i < b.len) {
+        <-(#ptr_add<uint8>(b.ptr, i)) = SENTINEL;
+        i = i + 1i64;
+    }
+    pass NIL;
+};
+
+// Does `hay[0 .. hlen)` contain `needle[0 .. nlen)`, and if so where does the
+// match END? Returns -1 for no match. Written the dull way on purpose: the
+// point of the probe is the syscall, not the search.
+func:find_after = int64(buffer->:hay, int64:hlen, uint8[]:needle) never fails {
+    int64:nlen = needle.len;
+    if (nlen <= 0i64)   { pass 0i64; }
+    if (hlen < nlen)    { pass (0i64 - 1i64); }
+    int64:start = 0i64;
+    while (start <= (hlen - nlen)) {
+        int64:k = 0i64;
+        bool:same = true;
+        while (k < nlen) {
+            if (hay.ptr[start + k] != needle[k]) { same = false; k = nlen; }
+            else { k = k + 1i64; }
+        }
+        if (same) { pass (start + nlen); }
+        start = start + 1i64;
+    }
+    pass (0i64 - 1i64);
+};
+
+func:main = int32(cstring[]:_~argv) {
+    // ---- fact 1 and 3, on a link that is always there -----------------
+
+    cstring:selfexe = to_cstring("/proc/self/exe") ?! EPath;
+    buffer:b1 = buffer_new(NTIME_PATH_MAX);
+    if (b1.len != 4096i64)                              { exit 10i32; }
+    discard(raw paint(@b1));
+    if (b1.ptr[0i64] != SENTINEL)                       { exit 11i32; }
+
+    // Syscall 89. If this were `readlinkat` the argument shape would be
+    // wrong and the call would fail rather than answer.
+    int64:n1 = sys(SYS_READLINK, selfexe.ptr, b1.ptr, NTIME_PATH_MAX) ?! EPath;
+    if (n1 <= 0i64)                                     { exit 12i32; }
+    if (n1 >= NTIME_PATH_MAX)                           { exit 13i32; }
+
+    // FACT 3: the byte AT the returned length is untouched. The kernel wrote
+    // exactly `n1` bytes and terminated nothing; a reader that looked for a
+    // NUL would run off the end of the answer and into whatever was there.
+    if (b1.ptr[n1] != SENTINEL)                         { exit 14i32; }
+    if (b1.ptr[n1 + 1i64] != SENTINEL)                  { exit 15i32; }
+
+    // ...and there is no NUL INSIDE the result either, so "find the NUL"
+    // does not accidentally work.
+    int64:i = 0i64;
+    while (i < n1) {
+        if (b1.ptr[i] == 0u8)                           { exit 16i32; }
+        if (b1.ptr[i] == SENTINEL)                      { exit 17i32; }
+        i = i + 1i64;
+    }
+
+    // An absolute path, as every link target here is.
+    if (b1.ptr[0i64] != 47u8)                           { exit 18i32; }
+
+    // ---- fact 4: truncation is SILENT ---------------------------------
+
+    // The same link into an 8-byte buffer. The kernel fills it, returns 8,
+    // and reports nothing: the result is a PREFIX of the real target and
+    // there is no way to tell from the answer alone. H-15's rule -- treat
+    // `n == bufsiz` as not-found -- exists because of exactly this, and this
+    // is the assertion that makes it a measured fact rather than folklore.
+    buffer:small = buffer_new(8i64);
+    discard(raw paint(@small));
+    int64:n2 = sys(SYS_READLINK, selfexe.ptr, small.ptr, 8i64) ?! EPath;
+    if (n2 != 8i64)                                     { exit 20i32; }
+    // No error, no signal, no NUL -- and the bytes match the real target's
+    // first eight, which is what makes the truncation undetectable.
+    int64:j = 0i64;
+    while (j < 8i64) {
+        if (small.ptr[j] != b1.ptr[j])                  { exit 21i32; }
+        j = j + 1i64;
+    }
+
+    // ---- the not-a-symlink arm (H-14, and H-13's step 3) --------------
+
+    // A regular file is EINVAL. `sys` presents it as an error in the Result,
+    // nothing traps, and `host_system_zone` moves on to step 3 -- which is
+    // the whole reason step 3 exists.
+    cstring:regular = to_cstring("/proc/self/cmdline") ?! EPath;
+    buffer:b2 = buffer_new(NTIME_PATH_MAX);
+    Result<int64>:notlink = sys(SYS_READLINK, regular.ptr, b2.ptr, NTIME_PATH_MAX);
+    if (!notlink.is_error)                              { exit 30i32; }
+
+    // A path that does not exist is an error too, and the library treats it
+    // the same way: step 2 did not answer.
+    cstring:absent = to_cstring("/nonexistent/npk_probe08_no_such_path") ?! EPath;
+    Result<int64>:missing = sys(SYS_READLINK, absent.ptr, b2.ptr, NTIME_PATH_MAX);
+    if (!missing.is_error)                              { exit 31i32; }
+
+    // ---- `/etc/localtime`, on whichever arm it takes ------------------
+
+    cstring:lt = to_cstring("/etc/localtime") ?! EPath;
+    buffer:b3 = buffer_new(NTIME_PATH_MAX);
+    discard(raw paint(@b3));
+    Result<int64>:rlt = sys(SYS_READLINK, lt.ptr, b3.ptr, NTIME_PATH_MAX);
+
+    if (!rlt.is_error) {
+        // THE SYMLINK ARM -- H-13's step 2 answers.
+        int64:n3 = rlt.value;
+        if (n3 <= 0i64)                                 { exit 40i32; }
+        if (n3 >= NTIME_PATH_MAX)                       { exit 41i32; }
+        if (b3.ptr[n3] != SENTINEL)                     { exit 42i32; }
+
+        // The tail after `zoneinfo/` is the zone name. Its CONTENT is this
+        // machine's business; that there IS one, that it is non-empty and
+        // that it holds no NUL is the library's.
+        int64:after = raw find_after(@b3, n3, string_bytes("zoneinfo/"));
+        if (after < 0i64)                               { exit 43i32; }
+        if (after >= n3)                                { exit 44i32; }
+        int64:k = after;
+        while (k < n3) {
+            if (b3.ptr[k] == 0u8)                       { exit 45i32; }
+            k = k + 1i64;
+        }
+        // A zone name is `Region/City`, so the tail carries a separator of
+        // its own -- and the separator is neither the first byte of the tail
+        // nor its last. (`UTC` and `GMT` are the exceptions, and a machine
+        // set to one of those takes the `sep == 0` path below, which is why
+        // the count is checked rather than required.)
+        int64:seps = 0i64;
+        int64:t = after;
+        while (t < n3) {
+            if (b3.ptr[t] == 47u8) {
+                if (t == after)         { exit 46i32; }   // tail starts with `/`
+                if (t == (n3 - 1i64))   { exit 47i32; }   // tail ends with `/`
+                seps = seps + 1i64;
+            }
+            t = t + 1i64;
+        }
+        if (seps > 2i64)                                { exit 48i32; }
+    }
+    else {
+        // THE NOT-A-SYMLINK ARM -- H-14's case, and step 3 is tried. The
+        // probe asserts only that nothing was written and nothing trapped.
+        if (b3.ptr[0i64] != SENTINEL)                   { exit 50i32; }
+    }
+
+    // D-151: exit 0 additionally asserts that nothing leaked.
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (EPath)          { exit 80i32; },
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

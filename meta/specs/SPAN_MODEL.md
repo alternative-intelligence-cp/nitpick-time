@@ -195,6 +195,33 @@ and a whole-tree check asserts that `int128` appears nowhere else in `src/`.
 A wide type used casually is a wide type nobody reasons about; used at three
 named sites it is three obligations.
 
+**Rule N-20b (TM-105) — the range check at each of those sites is mandatory
+library code, because the language provides no checked narrowing.** Measured at
+cycle 0.0.0: `=>!` at a value that does not fit **truncates silently** (no trap,
+no diagnostic, exit 0), and `=>` at a narrowing is **refused at compile time**,
+`NITPICK-TYPE-009`. Every site in §5's table that narrows — the `int128` ones
+above all, but the `int64`→`int32` year step equally — carries an explicit
+runtime range test against the destination's bounds **before** the `=>!`, on the
+same path, failing `ETimeValue`/`Overflow`. Nothing after the cast can tell that
+anything happened, which is why the test cannot live there.
+
+`VERIFICATION.md` P-5's `prove` documents the obligation; it does not discharge
+it at run time. `SAFETY.md` S-15b states the rule for the whole library and
+carries the shape, which is committed as `ns_add_checked` in
+`tests/probe/probe02_int128.npk`.
+
+**A defect in this section's own text, found while writing N-20b and not
+guessed at.** N-20 says the `int128` sites "are exactly three … named above",
+and §5's table marks **one** — `period_add`'s nanosecond step. The year/month
+step is marked `int64` and the day step carries no widening at all. So the count
+and the enumeration disagree, and `TESTING.md`'s `check_int128_sites`, which
+0.2 puts on the harness, cannot be written against "the three sites §5 names"
+until they are named. Recorded as **O-X6** with a recommendation rather than
+settled here: choosing which three requires designing `period_add` and
+`timestamp_since`, which no cycle has done yet, and a rule invented to make a
+count come out right is worse than an acknowledged gap. **N-20b binds to every
+narrowing site in the table regardless of the count**, so nothing waits on it.
+
 ---
 
 ## 6. Open items

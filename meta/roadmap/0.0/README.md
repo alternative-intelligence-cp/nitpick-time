@@ -45,14 +45,16 @@ TM-030. All settled. **Nothing in this cycle is blocked on a question.**
 
 ### 0.0.0 — the probes
 - [x] `probe/probe01_derive_ord.npk` — a two-field struct with `#[derive(Ord, Eq)]`; assert the comparison follows **declaration order** (the fact `Timestamp` depends on, TM-011)
-- [ ] `probe/probe02_int128.npk` — `int128` add, compare, and a narrowing `=>!` to `int64`; assert the value and assert the trap on a value that does not fit
-- [ ] `probe/probe03_timespec_sys.npk` — a 16-byte `timespec` in a `buffer`, `clock_gettime(CLOCK_REALTIME)` through `sys`, both fields read back; assert `#size_of` and the offsets
+- [x] `probe/probe02_int128.npk` — `int128` add, compare, and a narrowing `=>!` to `int64`; assert the value and ~~assert the trap on a value that does not fit~~ — **there is no trap.** The clause was written against an assumption the probe falsified; the trap half became `probe02b` and `probe02c` below, and the consequence is TM-105
+- [x] `probe/probe02b_narrow_unchecked.npk` — **added at 0.0.0, when probe 02's twin came back the other way.** `=>!` at an `int128` that does not fit `int64`: it truncates silently, in four shapes, one of them a positive value narrowing to a negative one
+- [x] `probe/probe02c_narrow_refused.npk` — the negative twin: the checked `=>` at the same narrowing is refused at compile time, `NITPICK-TYPE-009`. Together the two say there is **no checked narrowing** in the language, which is what TM-105 is about
+- [x] `probe/probe03_timespec_sys.npk` — a 16-byte `timespec` in a `buffer`, `clock_gettime(CLOCK_REALTIME)` through `sys`, both fields read back; assert `#size_of` and the offsets
 - [x] `probe/probe04_big_fixed_table.npk` — a `fixed` module-state array of ~30 000 structs; assert it is read-only memory, costs no startup work, and that the emitted IR does not initialise it at run time
 - [x] `probe/probe04b_emission_shape.npk` — **added at 0.0.0's verification.** The same declaration at 300 rows, with the IR, `readelf` and segment evidence committed verbatim in `probe04b_emission_shape.txt`. Probe 04 costs 281 s and 30.9 GiB under O-N4, so its emission-shape answer was a one-time observation nobody could re-derive; the form is a property of the lowering and not of the size, so 300 rows evidences it for 0.16 s
 - [ ] `probe/probe05_payload_enum.npk` — a tagged enum with payloads, destructured in a `pick`, stored in a `Vec`
 - [ ] `probe/probe06_generic_vec.npk` — `Vec<T>` with `move T:v`, at both a scalar `T` and an owning one; and an inherent `impl:<T>:Vec<T>` with a mutating `Vec<T>->:self` receiver
-- [ ] `probe/probe07_negative_div.npk` — the floor-division and modulus behaviour the calendar algorithms need at **negative** operands; assert against hand-computed values, because C-style truncation and mathematical floor differ here and Hinnant's algorithm assumes one of them
-- [ ] `probe/probe08_readlink.npk` — `readlink` through `sys` into a `buffer`, with a non-NUL-terminated result and the returned length as the authority
+- [x] `probe/probe07_negative_div.npk` — the floor-division and modulus behaviour the calendar algorithms need at **negative** operands; assert against hand-computed values, because C-style truncation and mathematical floor differ here and Hinnant's algorithm assumes one of them
+- [x] `probe/probe08_readlink.npk` — `readlink` through `sys` into a `buffer`, with a non-NUL-terminated result and the returned length as the authority
 - [ ] `probe/probe09_environ.npk` — `environ()` read, a `KEY=VALUE` entry located and split, with the borrow rules exercised
 - [ ] `probe/probe10_string_bytes.npk` — `string_bytes` into a scanner and `string_from_bytes` back, at every borrow edge
 - [ ] `probe/probe11_failsafe_arms.npk` — a program importing a module that declares one `error:`, whose `failsafe` names exactly the arms REACH-002 requires; and a negative twin that omits one and **must not compile**

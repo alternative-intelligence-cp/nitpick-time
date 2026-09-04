@@ -1,0 +1,99 @@
+// expect-exit: 0
+//
+// PROBE 02b — a narrowing `=>!` that does NOT fit TRUNCATES. It does not trap.
+//
+// THIS IS THE SUBCYCLE'S FIRST NEGATIVE VERDICT and it is the reason probe 02
+// was worth writing. The question was: at SPAN_MODEL.md §5's three `int128`
+// sites, is `=>!` a BELT over the `prove` -- something that stops the program
+// if the proof is ever wrong -- or is it the opt-out it is named for?
+//
+// MEASURED, against compiler commit 950bb1d: it is the opt-out. `=>!` from
+// `int128` to `int64` keeps the low 64 bits and discards the rest, in silence,
+// with no trap and no diagnostic. Its twin `probe02c_narrow_refused.npk` shows
+// the other half: the CHECKED spelling `=>` is not a runtime check either --
+// it is refused at COMPILE time, NITPICK-TYPE-009, because the target is
+// narrower than the source.
+//
+//     There is therefore NO CHECKED NARROWING in the language. A narrowing
+//     is either refused where it is written or unchecked when it runs.
+//
+// WHAT IT COSTS THIS LIBRARY. `VERIFICATION.md` P-5's `prove` is not a belt
+// and braces; it is the ONLY thing between a caller and a silently wrong
+// answer, and until the compiler's 1.5 makes `prove` real it is a comment. So
+// every one of the three sites carries an EXPLICIT RUNTIME RANGE CHECK before
+// its `=>!`, and that is now a rule rather than a habit -- TM-105, with
+// SAFETY.md S-15b and SPAN_MODEL.md N-20b written against it. Probe 02's
+// `ns_add_checked` is the shape they require.
+//
+// THE THIRD CASE BELOW IS THE ONE TO REMEMBER. A POSITIVE `int128` can narrow
+// to a NEGATIVE `int64`, because the discarded part is everything above the
+// sign bit. In a time library that is a positive span becoming a negative one:
+// an event that has not happened yet reported as long past, with no error
+// anywhere. It is exactly the failure this library exists not to have.
+mod:probe02b_narrow_unchecked;
+
+fixed int64:I64_MAX = 9223372036854775807i64;
+
+func:main = int32(cstring[]:_~argv) {
+    // ---- case 1: the high bits are simply discarded -------------------
+
+    // 2^100 + 7. Every bit above 63 is thrown away, and 7 is what is left.
+    int128:x = (1i128 << 100i128) + 7i128;
+    if (x <= (I64_MAX => int128))                       { exit 10i32; }
+    int64:n1 = x =>! int64;
+    if (n1 != 7i64)                                     { exit 11i32; }
+
+    // ---- case 2: just past the ceiling, and it wraps ------------------
+
+    // int64's maximum plus one, in int128 where it is perfectly ordinary.
+    int128:over = (I64_MAX => int128) + 1i128;
+    if (over <= 0i128)                                  { exit 12i32; }
+    // Narrowed, it is int64's MINIMUM -- the classic wrap, one step past the
+    // top landing at the bottom.
+    int64:n2 = over =>! int64;
+    if (n2 != (0i64 - I64_MAX - 1i64))                  { exit 13i32; }
+    if (n2 >= 0i64)                                     { exit 14i32; }
+
+    // ---- case 3: a POSITIVE value narrowing to a NEGATIVE one ---------
+
+    // 2^100 + 2^63. Its low 64 bits are 0x8000_0000_0000_0000, which read as
+    // int64 is the minimum. The source is unambiguously positive.
+    int128:pos = (1i128 << 100i128) + (1i128 << 63i128);
+    if (pos <= 0i128)                                   { exit 15i32; }
+    int64:n3 = pos =>! int64;
+    if (n3 >= 0i64)                                     { exit 16i32; }
+    if (n3 != (0i64 - I64_MAX - 1i64))                  { exit 17i32; }
+
+    // ---- case 4: and the sign can go the other way too ----------------
+
+    // A negative int128 whose low 64 bits are a small positive number.
+    int128:negsrc = 0i128 - (1i128 << 100i128) + 5i128;
+    if (negsrc >= 0i128)                                { exit 18i32; }
+    int64:n4 = negsrc =>! int64;
+    if (n4 != 5i64)                                     { exit 19i32; }
+    if (n4 <= 0i64)                                     { exit 20i32; }
+
+    // ---- and the check that MUST be written instead -------------------
+
+    // The whole point: the range test is the library's, done before the cast,
+    // because nothing after the cast can tell that anything happened.
+    if (!((x > (I64_MAX => int128))))                   { exit 21i32; }
+
+    // D-151: exit 0 additionally asserts that nothing leaked.
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (DivByZero)      { exit 90i32; },
+        (DivOverflow)    { exit 89i32; },
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

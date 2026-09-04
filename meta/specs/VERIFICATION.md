@@ -107,19 +107,48 @@ pub func:timestamp_add = Timestamp(Timestamp:t, Duration:d)
 of comparison being correct, of formatting being correct, and of every
 arithmetic result being canonical — one fact that a dozen other proofs lean on.
 
-**Rule P-5 — the three `int128` sites** (`SPAN_MODEL.md` §5, N-20) each carry
-a `prove` that the narrowing `=>!` cannot lose:
+**Rule P-5 — the `int128` sites** (`SPAN_MODEL.md` §5, N-20, N-20b) each carry
+a `prove` that the narrowing `=>!` cannot lose, **beside** the runtime range
+check S-15b makes mandatory — not instead of it:
 
 ```nitpick
 // period_add, the nanosecond step
-int128:total = (a =>! int128) + (b =>! int128);
-prove(total >= -9223372036854775808i128 && total <= 9223372036854775807i128);
-int64:ns = total =>! int64;
+fixed int128:I64_MAX = 9223372036854775807i128;
+fixed int128:I64_MIN = (0i128 - 9223372036854775807i128) - 1i128;
+
+int128:total = (a => int128) + (b => int128);       // WIDENING: the checked cast
+if (total > I64_MAX) { fail ETimeValue; }           // S-15b: the check is ours
+if (total < I64_MIN) { fail ETimeValue; }           // with Overflow as S-3's detail
+prove(total >= I64_MIN && total <= I64_MAX);
+int64:ns = total =>! int64;                          // the ONE unchecked cast
 ```
 
-This is the single most valuable proof in the library: it is exactly the place
-a silent wrong answer would live, and it is exactly the shape Z3 discharges
-without effort.
+Three things in that sample are corrections made at cycle 0.0.0 by
+`tests/probe/probe02_int128.npk` and its three twins, and each was wrong in a
+way that reads as fine:
+
+- **The widenings are `=>`, not `=>!`.** The checked cast is legal in the
+  widening direction, and spelling it leaves exactly **one** `=>!` in the
+  function — the dangerous one. Writing all three the same way hides which is
+  which, and this document is where a reader learns the idiom.
+- **`int64`'s minimum cannot be spelled as a literal**, in any width. This
+  sample previously wrote `-9223372036854775808i128`, which is refused
+  `NITPICK-LEX-004`: *"this literal is outside the 64-bit literal envelope
+  (D-148); a type's outermost values are constructed arithmetically, not
+  spelled"* — and then `NITPICK-PARSE-002`, because the refused token leaves
+  no expression. The **maximum** is fine, so a bound pair written by symmetry
+  from a working upper bound is exactly what stops compiling.
+  `tests/probe/probe02d_wide_literal_refused.npk` pins it.
+- **The `prove` does not stand alone.** `=>!` does not check at run time and
+  `=>` at a narrowing is refused at compile time (TM-105), so a `prove` that is
+  a comment until the compiler's cycle 1.5 would be the *only* thing between a
+  caller and a silently wrong answer. The runtime check goes in first; the
+  `prove` records why it can never fire on a caller who kept the precondition.
+
+This remains the single most valuable proof in the library: it is exactly the
+place a silent wrong answer would live, and it is exactly the shape Z3
+discharges without effort. What changed is that it is a proof about code that
+checks, rather than a proof standing in for the check.
 
 ---
 

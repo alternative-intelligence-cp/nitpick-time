@@ -1,0 +1,67 @@
+// expect-error: NITPICK-LEX-004
+// expect-error-at: 51:18
+//
+// PROBE 02d — `int64`'s MINIMUM CANNOT BE SPELLED AS A LITERAL, in any width.
+//
+// THE THIRD TWIN, and the one that was not planned. It exists because writing
+// SPAN_MODEL.md N-20b's range check sent somebody to VERIFICATION.md P-5's
+// code sample, which said:
+//
+//     prove(total >= -9223372036854775808i128 && total <= 9223372036854775807i128);
+//
+// and that line DOES NOT COMPILE. The specification was teaching a shape the
+// compiler refuses, in the one document whose whole subject is the checks this
+// library's correctness rests on.
+//
+// ASKS: is `9223372036854775808` -- the magnitude of `int64`'s minimum --
+// spellable as a literal when the destination is `int128`, which has room for
+// it four times over?
+//
+// MEASURED, against compiler commit 950bb1d: NO. The envelope is a property of
+// the LITERAL and not of its destination type:
+//
+//   NITPICK-LEX-004 …:51:18: this literal is outside the 64-bit literal
+//   envelope (D-148); a type's outermost values are constructed
+//   arithmetically, not spelled
+//   NITPICK-PARSE-002 …:51:18: expected an expression
+//
+// Two codes, because the lexer having refused the token leaves the parser with
+// no expression where one was required. D-237's rule -- the set of codes
+// reported must EQUAL the set expected -- makes that worth stating: a harness
+// entry for this file expects BOTH.
+//
+// THE ASYMMETRY IS THE POINT. `9223372036854775807i128` (the MAXIMUM) is fine,
+// because it is inside the envelope; only the minimum's magnitude is one too
+// large. So a range check written by symmetry from a working upper bound is
+// exactly the code that stops compiling, and the fix is arithmetic:
+//
+//     int128:LO = (0i128 - 9223372036854775807i128) - 1i128;
+//
+// which `tests/probe/probe02_int128.npk` verifies is the right value, at width,
+// in both signs. Its `int64` form -- `0i64 - I64_MAX - 1i64` -- is the same
+// idiom and is why probe 02 was written that way rather than by accident.
+//
+// DEPENDS ON THE ANSWER: VERIFICATION.md P-5, corrected in the same commit as
+// this file (TM-105). Every range check that N-20b makes mandatory tests
+// against int64's bounds, so every one of them needs the lower bound, and
+// spelling it is the first thing anybody tries.
+mod:probe02d_wide_literal_refused;
+
+func:main = int32(cstring[]:_~argv) {
+    int128:lo = -9223372036854775808i128;
+    if (lo >= 0i128) { exit 10i32; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

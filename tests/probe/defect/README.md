@@ -1,14 +1,24 @@
-# A compiler defect, reproduced
+# Compiler defects, reproduced
+
+Nothing in this directory is a workaround and nothing in it is a probe. Each
+one is the reproduction the ecosystem's rule requires: *never work around a
+compiler defect — record it, stop, and raise it.* When a defect is closed its
+reproduction becomes the regression case that proves it, and its document
+records what the behaviour used to be.
+
+| What | Where | Blocking? |
+|---|---|---|
+| **O-N4** — `npkc` is quadratic in the size of one declaration | this file, and `big_fixed_array_cost.npk` | **yes**, for cycles 0.0.5 and 0.5 |
+| **O-N8** — a `mod:`/basename mismatch merges a sibling file at exit 0 | the foot of this file | no |
+| **O-N9** — a `uint8[]` view escapes its owning frame | [`view_escape/`](view_escape/README.md) | no — a conformance rule, subject to Q-5 |
+
+---
+
+## O-N4 — quadratic in one declaration
 
 **`npkc`'s compile time and memory are quadratic in the size of a single
 declaration.** Found by cycle 0.0.0's probe 04 on 2026-09-03, against the
 pinned toolchain (compiler commit `950bb1d`, LLVM 20.1.2).
-
-Nothing in this directory is a workaround and nothing in it is a probe. It is
-the reproduction the ecosystem's rule requires: *never work around a compiler
-defect — record it, stop, and raise it.* When the defect is closed,
-`big_fixed_array_cost.npk` becomes the regression case that proves it and this
-file records what the numbers used to be.
 
 ---
 
@@ -239,7 +249,7 @@ with what `ntime` does in the meantime.
 
 ---
 
-## A second defect, met by accident
+## O-N8 — a second defect, met by accident
 
 Not committed as files, because it needs two source files with *deliberately*
 wrong names and the harness would trip over them from 0.0.2. Six lines
@@ -289,4 +299,5 @@ So the resolver knows the rule and says so well; it just does not apply it when
 the name it was given happens to resolve to a different file. **It costs `ntime`
 nothing** — the house rule is already `mod:` = basename — so it is raised
 alongside O-N4 rather than blocking anything, and nothing in this library is
-shaped around it.
+shaped around it. Registered as **O-N8** in
+[`../../../meta/OPEN_QUESTIONS.md`](../../../meta/OPEN_QUESTIONS.md).

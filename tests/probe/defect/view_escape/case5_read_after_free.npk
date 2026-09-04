@@ -1,0 +1,69 @@
+// expect-exit: 170
+// NOT A PROBE, and NOT AN ASSERTION ON 170 -- see below.
+// When O-N9 closes, this file's expectation becomes
+//     expect-error: NITPICK-BORROW-001
+//
+// CASE 5 — WHAT THE CALLER ACTUALLY READS. The dangling half, demonstrated
+// rather than argued.
+//
+// Case 3 shows the view escaping. This one dereferences it afterwards and
+// EXITS WITH THE BYTE IT READ, so the observation is a number rather than a
+// claim. Measured against compiler commit 950bb1d:
+//
+//     exit 170
+//
+// 170 is 0xAA, and 0xAA is not a coincidence -- it is the RUNTIME'S OWN
+// FREE-POISON. `runtime/npkrt.ll`'s free path stores `i8 -86` into every byte
+// of a freed payload, with the reason in a comment beside it (D-183, added at
+// the compiler's cycle 1.2.3):
+//
+//     "0xAA in every freed byte makes the very first stale read produce loud
+//      deterministic garbage instead: stage 2's one-in-242k-lines corruption
+//      becomes visible at every site, every run."
+//
+// So this is not "the bytes might be stale". The block was freed, the runtime
+// wrote its poison over it, and the caller read the poison back through a
+// bounds-checked index that passed. Deterministic across runs -- four
+// consecutive runs of an earlier form of this case gave the same answer.
+//
+// WHY THE EXPECTATION IS NOT AN ASSERTION ON THE VALUE. 0xAA is a debug
+// instrument in the runtime and the compiler is free to change it; a file that
+// went red when it did would be a false alarm about the wrong thing. The
+// property this reproduction claims is "the caller reads memory whose owner is
+// dead", and the value is EVIDENCE for it, recorded here and in TRANSCRIPT.txt
+// with the runtime line that produced it. What must stay red is the COMPILE:
+// when the escape is refused, this file stops compiling, and that is the
+// regression signal.
+//
+// THE SHAPE OF THE FAILURE IN A REAL LIBRARY. Every parser in `src/fmt/` takes
+// a `uint8[]`. A helper that returns "the tail after the separator" is one
+// `pass` away from this, the length is right so every bound check passes, and
+// what comes back is 0xAA bytes -- which parse as no digit, no separator and
+// no month name, so the failure surfaces as ETimeParse on valid input rather
+// than as a crash. That is the argument for `check_no_view_returns` being a
+// harness check rather than a thing to remember.
+mod:case5_read_after_free;
+
+func:esc = uint8[]() never fails {
+    string:s = string_concat("abcd", "efgh");
+    pass string_bytes(s);
+};
+
+func:main = int32(cstring[]:_~argv) {
+    uint8[]:v = raw esc();
+    if (v.len != 8i64) { exit 200i32; }        // 200: the length did not survive
+    exit ((v[0i64] => int64) =>! int32);       // what the dead pointer reads
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

@@ -1,0 +1,93 @@
+O-N9 — D-004's escape rule is enforced for `@`-borrows and not for slice views.
+The transcript, verbatim, with every command's exit code.
+
+  compiler commit   950bb1d  (the pinned toolchain the board names)
+  LLVM              20.1.2
+  taken             2026-09-03, cycle 0.0.0, stream s2
+  cwd               the `nitpick-time` tree root
+
+$NPKC and $NPKRT are the pinned toolchain's; $NITPICK is the compiler checkout,
+read-only from here. Regenerate by running each command below in order — there
+is no script to trust, because the point of this file is that a reader can
+re-run it by hand and get the same thing.
+
+Read `README.md` beside this file for what it means. In one line: cases 1 and 2
+are refused, cases 3, 4 and 5 are the same programs with a `uint8[]` in place of
+the `@`-borrow and they compile, and case 5 exits with the byte its dangling
+view read — 170, which is the runtime's own free-poison.
+
+================================================================================
+
+=== 1. THE RULE, ENFORCED: a borrow returned ===============================
+
+$ "$NPKC" tests/probe/defect/view_escape/case1_borrow_returned.npk -o /tmp/npk_ve/p.ll
+NITPICK-BORROW-001 tests/probe/defect/view_escape/case1_borrow_returned.npk:15:10: a borrow cannot travel up: it is valid only for the frame it was taken in, and this returns it out of that frame (D-004 rule 2)
+exit 1
+
+=== 2. THE RULE, ENFORCED: a borrow inside a returned struct literal =======
+
+$ "$NPKC" tests/probe/defect/view_escape/case2_borrow_in_struct.npk -o /tmp/npk_ve/p.ll
+NITPICK-BORROW-001 tests/probe/defect/view_escape/case2_borrow_in_struct.npk:17:10: a borrow cannot travel up: it is valid only for the frame it was taken in, and this returns it out of that frame (D-004 rule 2)
+exit 1
+
+=== 3. THE SAME RULE, NOT ENFORCED: a slice view returned ==================
+
+$ "$NPKC" tests/probe/defect/view_escape/case3_view_returned.npk -o /tmp/npk_ve/p.ll
+exit 0
+$ llc -O0 -filetype=obj -relocation-model=static /tmp/npk_ve/p.ll -o /tmp/npk_ve/p.o
+exit 0
+$ ld.lld -static /tmp/npk_ve/p.o "$NPKRT" -o /tmp/npk_ve/p
+exit 0
+$ /tmp/npk_ve/p
+exit 0
+
+=== 4. NOT ENFORCED THROUGH A STRUCT LITERAL EITHER -- case 2's twin =======
+
+$ "$NPKC" tests/probe/defect/view_escape/case4_view_in_struct.npk -o /tmp/npk_ve/p.ll
+exit 0
+$ llc -O0 -filetype=obj -relocation-model=static /tmp/npk_ve/p.ll -o /tmp/npk_ve/p.o
+exit 0
+$ ld.lld -static /tmp/npk_ve/p.o "$NPKRT" -o /tmp/npk_ve/p
+exit 0
+$ /tmp/npk_ve/p
+exit 0
+
+=== 5. WHAT THE CALLER READS AFTERWARDS ====================================
+
+$ "$NPKC" tests/probe/defect/view_escape/case5_read_after_free.npk -o /tmp/npk_ve/p.ll
+exit 0
+$ llc -O0 -filetype=obj -relocation-model=static /tmp/npk_ve/p.ll -o /tmp/npk_ve/p.o
+exit 0
+$ ld.lld -static /tmp/npk_ve/p.o "$NPKRT" -o /tmp/npk_ve/p
+exit 0
+$ /tmp/npk_ve/p
+exit 170
+
+    ...and again, three more times, because a use-after-free that
+    reproduces is worth more than one that might not:
+    run 1 -> exit 170
+    run 2 -> exit 170
+    run 3 -> exit 170
+
+=== 6. THE LEGAL SHAPE -- a view passed DOWN ==============================
+
+$ "$NPKC" tests/probe/defect/view_escape/case6_view_param_legal.npk -o /tmp/npk_ve/p.ll
+exit 0
+$ llc -O0 -filetype=obj -relocation-model=static /tmp/npk_ve/p.ll -o /tmp/npk_ve/p.o
+exit 0
+$ ld.lld -static /tmp/npk_ve/p.o "$NPKRT" -o /tmp/npk_ve/p
+exit 0
+$ /tmp/npk_ve/p
+exit 0
+
+=== the poison byte, in the runtime that wrote it ==========================
+
+$ grep -n 'store i8 -86' "$NITPICK"/runtime/npkrt.ll
+4388:  store i8 -86, ptr %pp
+exit 0
+
+$ sed -n '4376,4378p' "$NITPICK"/runtime/npkrt.ll
+  ; for, one layer down. 0xAA in every freed byte makes the very first stale
+  ; read produce loud deterministic garbage instead: stage 2's one-in-242k-
+  ; lines corruption becomes visible at every site, every run. Cost: a short
+exit 0

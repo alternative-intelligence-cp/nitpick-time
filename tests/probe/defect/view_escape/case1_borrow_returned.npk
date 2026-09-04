@@ -1,0 +1,31 @@
+// expect-error: NITPICK-BORROW-001
+//
+// CASE 1 — THE RULE, ENFORCED. Returning `@local` is refused.
+//
+// This file is a CONTROL, not a defect. It is here because case 3 does the
+// same thing with a slice and is accepted, and one without the other is a
+// question about design rather than a report about enforcement.
+//
+// D-004 rule 2: "A borrow may not appear in the value of `pass`, `fail`, or
+// `return`."
+mod:case1_borrow_returned;
+
+func:esc = int64->() never fails {
+    int64:x = 7i64;
+    pass @x;
+};
+
+func:main = int32(cstring[]:_~argv) { exit 0i32; };
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

@@ -1,0 +1,48 @@
+// expect-exit: 0
+// NOT A PROBE. This file compiles and runs, and that IS the defect.
+// When O-N9 closes, this file's expectation becomes
+//     expect-error: NITPICK-BORROW-001
+// and it stops being a defect reproduction and becomes a regression case.
+//
+// CASE 3 — THE SAME RULE, NOT ENFORCED, FOR A SLICE.
+//
+// `string_bytes(s)` on a LOCAL `string` yields a `uint8[]` that is returned out
+// of the frame that owns the storage. Case 1 is this file with `@x` and is
+// refused. This one is accepted, and the program runs to exit 0.
+//
+// THE COMPILER'S OWN SPECIFICATION SAYS IT SHOULD NOT BE. `TYPE_REFERENCE.md`
+// §9.2.1, on `T[]`:
+//
+//     "A slice is a second-class borrow (D-004): it passes down the call stack
+//      and never up, cannot outlive the storage it views, and cannot cross a
+//      thread spawn or an `await`."
+//
+// So this is not a question about what the language should do. The rule is
+// written, it is enforced for `@`-borrows, and it is not enforced here.
+mod:case3_view_returned;
+
+func:esc = uint8[]() never fails {
+    string:s = string_concat("abcd", "efgh");
+    pass string_bytes(s);              // `s` dies at this frame's exit
+};
+
+func:main = int32(cstring[]:_~argv) {
+    uint8[]:v = raw esc();
+    // The LENGTH survives -- a slice is { ptr, len } and only the pointer is
+    // dead, which is what makes the failure quiet: every bound check passes.
+    if (v.len != 8i64) { exit 20i32; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

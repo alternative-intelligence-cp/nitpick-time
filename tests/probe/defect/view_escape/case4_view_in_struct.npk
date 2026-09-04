@@ -1,0 +1,46 @@
+// expect-exit: 0
+// NOT A PROBE. This file compiles and runs, and that IS the defect.
+// When O-N9 closes, this file's expectation becomes
+//     expect-error: NITPICK-BORROW-001
+//
+// CASE 4 — THE MINIMAL PAIR WITH CASE 2, and the clearest statement of the gap.
+//
+// Case 2 and this file are the same program. The only difference is the type of
+// the field the struct literal carries:
+//
+//     case 2:  struct:Keeper = { int64->:p; };   pass Keeper{ p: @x };
+//              -> NITPICK-BORROW-001, refused
+//
+//     case 4:  struct:Holder = { uint8[]:view; }; pass Holder{ view: ... };
+//              -> accepted, npkc exit 0, runs
+//
+// Both fields hold an address into the returning frame. `type_holds_pointer`
+// in the compiler's escape analysis answers TRUE for both `TY_POINTER` and
+// `TY_SLICE`, so the type table is not where this is lost.
+mod:case4_view_in_struct;
+
+struct:Holder = { uint8[]:view; };
+
+func:esc = Holder() never fails {
+    string:s = string_concat("abcd", "efgh");
+    pass Holder{ view: string_bytes(s) };
+};
+
+func:main = int32(cstring[]:_~argv) {
+    Holder:h = raw esc();
+    if (h.view.len != 8i64) { exit 20i32; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

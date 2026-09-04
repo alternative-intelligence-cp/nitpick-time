@@ -1,0 +1,33 @@
+// expect-error: NITPICK-BORROW-001
+//
+// CASE 2 — THE RULE, ENFORCED THROUGH A STRUCT LITERAL.
+//
+// The second control, and the one that matters most, because case 4 is this
+// file with `uint8[]` in place of `int64->` and case 4 compiles.
+//
+// The compiler's own escape walk says why this is refused, in a comment beside
+// the code that does it: "A literal CONTAINS a borrow if any field value does,
+// which is what makes `pass Holder{ inner: @x };` a rule-2 break."
+mod:case2_borrow_in_struct;
+
+struct:Keeper = { int64->:p; };
+
+func:esc = Keeper() never fails {
+    int64:x = 7i64;
+    pass Keeper{ p: @x };
+};
+
+func:main = int32(cstring[]:_~argv) { exit 0i32; };
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

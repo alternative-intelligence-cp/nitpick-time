@@ -108,6 +108,75 @@ would be the same workaround wearing a decision's clothes.
 probes themselves are unaffected — the defect is a resource cost, not a
 semantics change.
 
+### Q-5 — is O-N9 a block for `ntime`, or a conformance rule plus a raised defect?
+**Asked 2026-09-03, cycle 0.0.0.** O-N9 lets a `uint8[]` view escape its owning
+frame with no diagnostic, and **every parser in `src/fmt/` takes a `uint8[]`**.
+W-11 forbids reshaping a library to dodge a compiler defect, so the question is
+whether adopting "a view is a parameter, never a return value" is a reshaping.
+
+**Our recommendation: a conformance rule, not a block.** That sentence is not a
+workaround — it is compliance with a rule the compiler's own
+`TYPE_REFERENCE.md` §9.2.1 already states and enforces for `@`-borrows, and it
+costs this library **nothing**: a parser returns a value and an offset, never a
+slice of its input, which is what `FORMAT_MODEL.md` already specifies.
+`tests/probe/defect/view_escape/case6_view_param_legal.npk` is the shape, and
+it is the shape the design already called for. Contrast O-N4, where no correct
+code avoids the cost and the subcycle therefore stopped.
+
+**If it is a conformance rule**, three things follow and none of them waits:
+raise O-N9 (done), add the rule to `SAFETY.md`, and put
+`check_no_view_returns` on cycle 0.0.3's harness list so it is enforced rather
+than remembered.
+
+**What is deliberately NOT assumed while this is open.** Probes 09 and 10 — the
+borrow-edge probes, which are what found this — are **held**, because their
+shape is exactly what a "block" answer would change.
+### O-N8 — `npkc` merges a sibling file when a root file's `mod:` name mismatches
+**Met by accident at cycle 0.0.0, 2026-09-03**, while staging probe 04 under
+the wrong filename, and it is why a one-second compile appeared to take three
+hundred. A root file whose `mod:` name differs from its basename is accepted
+when a *sibling* file carries that basename: `npkc` compiles the sibling too,
+merges both into one module, emits IR with two `define i32 @main`, and **exits
+0**. `llc` then refuses the IR, a long way from the cause. Delete the sibling
+and the diagnostic is exemplary — `NITPICK-RESOLVE-005` names the rule and even
+anticipates the self-header case — so the resolver knows the rule and does not
+apply it when the name resolves to a different file. The six-line reproduction
+is at the foot of [`../tests/probe/defect/README.md`](../tests/probe/defect/README.md).
+
+**Ask:** apply the basename rule regardless of whether the named module
+resolves elsewhere.
+
+**It costs `ntime` nothing and blocks nothing** — the house rule is already
+`mod:` = basename. Raised alongside O-N4; nothing here is shaped around it.
+
+### O-N9 — D-004's escape rule is unenforced for slice views — **NOT BLOCKING**
+**Measured at cycle 0.0.0, 2026-09-03.** `string_bytes` on a local `string`
+yields a `uint8[]` that is **returned out of its owning frame with no
+diagnostic**, and reading it afterwards reads freed memory — the runtime's own
+`0xAA` free-poison, deterministically. The identical program with an
+`@`-borrow, and the identical program with the borrow inside a returned struct
+literal, are both refused `NITPICK-BORROW-001`. The six cases, the contrast and
+the transcript with every exit code are in
+[`../tests/probe/defect/view_escape/README.md`](../tests/probe/defect/view_escape/README.md).
+
+**Ask:** `NITPICK-BORROW-001` for a returned slice, exactly as for a returned
+`@`-borrow. Nothing in the language changes — `TYPE_REFERENCE.md` §9.2.1
+already says *"a slice is a second-class borrow (D-004): it passes down the
+call stack and never up"*.
+
+**Consequence for `ntime`:** every parser in `src/fmt/` takes a `uint8[]`, so
+the library is in the blast radius. It is **not blocking**, because the house
+rule *a view is a parameter, never a return value* is compliance with the
+documented rule rather than a workaround for its absence, and it costs nothing:
+a parser returns a value and an offset. Its disposition is **Q-5**, and
+`check_no_view_returns` — **proposed** for cycle 0.0.3's harness list, not yet
+on it — is what would make the rule enforced rather than remembered.
+
+**A note on the numbering.** O-N5 … O-N7 do not appear here. `O-N` ids are the
+**workbench registry's**, not this repository's, because a gap in the compiler
+is raised once for the whole ecosystem and the per-repository numbers would
+collide (`../PLAYBOOK.md` §7). O-N1 … O-N4 happen to coincide; from here the
+registry's number is used as given.
 ---
 
 ## O-x — ours

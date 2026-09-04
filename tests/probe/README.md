@@ -25,9 +25,19 @@ entries from cycle 0.0.2.
   over an owning container therefore asserts its memory too — a `ulimit -v` cap
   today, a `peak_live` bound from the compiler's `NPK_HEAP_STATS` after the
   1.5.1b re-pin.
-  Several probes here still carry the older one-line comment *"exit 0
-  additionally asserts that nothing leaked"*. Each is locally harmless — none of
-  those files allocates a managed container — and each is due the wording above.
+  **Nine** probes here still carry the older one-line comment *"exit 0
+  additionally asserts that nothing leaked"* — **01, 02, 02b, 03, 04, 04b, 05,
+  07 and 08**. Each is locally harmless — none of those files allocates a
+  managed container — and each is due the wording above; the rewording is
+  deferred to **0.0.2**, when the harness picks this directory up and every
+  probe is re-run anyway. **Take the list from the command, not from the probes
+  you compiled:** `git grep -l 'additionally asserts that nothing leaked' --
+  '*.npk'`. `probe04_big_fixed_table.npk` was missed once for exactly that
+  reason — it is the one probe here that is never compiled (it is O-N4's 281 s /
+  30.9 GiB case), so it drops out of any list built from what a session ran,
+  while remaining a first-class probe row in the table below. `probe06` and
+  `probe11` are correctly not among the nine: both were written with the `wild`
+  wording already.
 - **A probe that pins a fact the specification already states asserts the
   expected answer** (P-6) rather than printing what it found, so a change to
   that answer is a red run.

@@ -1,0 +1,58 @@
+// expect-exit: 221
+// NOT A PROBE. This file compiles and runs, and its ANSWER is the defect.
+// When O-N10 closes, the expected exit becomes 321 -- `Less`, `Equal`, `Less`.
+//
+// CASE 2 — the quiet half, and the serious one. `#[derive(Ord)]` on a payload
+// enum is ACCEPTED, and the `cmp` it writes compares TAGS ONLY.
+//
+// The exit code is three digits, one per comparison, 1=Less 2=Equal 3=Greater:
+//
+//   digit 1   Literal(7).cmp(Literal(9))   MEASURED 2 = Equal   SHOULD BE Less
+//   digit 2   Literal(7).cmp(Literal(7))   MEASURED 2 = Equal   correct
+//   digit 3   Literal(7).cmp(Year4)        MEASURED 1 = Less    correct
+//
+// So two values that differ report `Equal`, and nothing anywhere says so. A
+// sort over such an enum is unstable in the worst way -- it believes it has
+// grouped equal keys -- and a binary search over it finds the wrong element.
+//
+// `#[derive(Eq)]` on the same declaration is REFUSED (case 1), so the two
+// halves are not consistent with each other either: the trait that would say
+// "these are different" will not compile, and the trait that ranks them says
+// they are the same.
+mod:case2_ord_ignores_payload;
+
+error:E9;
+
+#[derive(Ord)]
+enum:Part = { Literal(uint16); Year4; };
+
+func:code = int32(Ordering:o) never fails {
+    int32:r = 0i32;
+    pick (o) {
+        (Ordering.Less)    { r = 1i32; },
+        (Ordering.Equal)   { r = 2i32; },
+        (Ordering.Greater) { r = 3i32; }
+    }
+    pass r;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    Part:a = Part.Literal(7u16);
+    Part:b = Part.Literal(9u16);
+    Part:c = Part.Year4;
+    int32:ab = raw code(a.cmp(b) ?! E9);
+    int32:aa = raw code(a.cmp(a) ?! E9);
+    int32:ac = raw code(a.cmp(c) ?! E9);
+    exit ((ab * 100i32) + (aa * 10i32) + ac);
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (E9) { exit 80i32; },
+        (HeapBadRequest) { exit 91i32; }, (HeapOom) { exit 92i32; },
+        (IntOverflow) { exit 93i32; },    (OutOfBounds) { exit 94i32; },
+        (Unreachable) { exit 95i32; },    (WildLeak) { exit 96i32; },
+        (*) { exit 99i32; }
+    }
+    exit 9i32;
+};

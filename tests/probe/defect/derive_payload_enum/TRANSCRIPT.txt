@@ -1,0 +1,68 @@
+O-N10 — `#[derive(Eq)]` on a payload enum does not compile, and `#[derive(Ord)]`
+on the same declaration compiles and ignores the payload.
+The transcript, verbatim, with every command's exit code.
+
+  compiler commit   950bb1d  (the pinned toolchain the board names)
+  LLVM              20.1.2
+  taken             2026-09-03, cycle 0.0.0, stream s2
+  cwd               the `nitpick-time` tree root
+
+$NPKC and $NPKRT are the pinned toolchain's; $NITPICK is the compiler checkout,
+read-only from here. Read `README.md` beside this file for what it means.
+
+Section 4's isolation is generated from a template into /tmp rather than from a
+committed file, because eight near-identical files would be eight things to
+keep in step; the template is in `README.md` and the answers are below.
+
+Section 5's `exit 1` is grep's "no lines matched", which is the result being
+reported: nothing in the compiler's tree derives anything on a payload enum.
+
+================================================================================
+
+=== 1. derive(Eq) on a PAYLOAD enum -- refused, in code the user cannot see ===
+
+$ "$NPKC" tests/probe/defect/derive_payload_enum/case1_eq_refused.npk -o /tmp/npk_dv/p.ll
+NITPICK-TYPE-034 <derived-1>:2:73: `Part` has no built-in `==`: derive or implement `Eq` and compare with `a.eq(b)`
+exit 1
+
+=== 2. derive(Ord) on the same enum -- accepted, and the cmp is TAG-ONLY ======
+
+$ "$NPKC" tests/probe/defect/derive_payload_enum/case2_ord_ignores_payload.npk -o /tmp/npk_dv/p.ll
+exit 0
+$ llc -O0 -filetype=obj -relocation-model=static /tmp/npk_dv/p.ll -o /tmp/npk_dv/p.o
+exit 0
+$ ld.lld -static /tmp/npk_dv/p.o "$NPKRT" -o /tmp/npk_dv/p
+exit 0
+$ /tmp/npk_dv/p
+exit 221
+
+    digits are Literal(7)vsLiteral(9), self, Literal(7)vsYear4;
+    1=Less 2=Equal 3=Greater.  221 means the first is EQUAL and should be LESS.
+
+=== 3. Hash loses the payload; Clone keeps it =================================
+
+$ "$NPKC" tests/probe/defect/derive_payload_enum/case3_hash_and_clone.npk -o /tmp/npk_dv/p.ll
+exit 0
+$ llc -O0 -filetype=obj -relocation-model=static /tmp/npk_dv/p.ll -o /tmp/npk_dv/p.o
+exit 0
+$ ld.lld -static /tmp/npk_dv/p.o "$NPKRT" -o /tmp/npk_dv/p
+exit 0
+$ /tmp/npk_dv/p
+exit 107
+
+=== 4. the isolation: it is the PAYLOAD, and it is Eq alone ===================
+
+payload enum, derive(Eq)               exit 1   NITPICK-TYPE-034 <derived-1>:2:73: `Part` has no built-in `==`: derive or implement `Eq` and compare with `a.eq(b)`
+payloadless enum, derive(Eq)           exit 0
+payload enum, derive(Ord)              exit 0
+payload enum, derive(PartialOrd)       exit 0
+payload enum, derive(Hash)             exit 0
+payload enum, derive(Clone)            exit 0
+payload enum, derive(ToString)         exit 0
+payload enum, derive(Debug)            exit 0
+
+=== 5. and no test in the compiler's own tree covers it =======================
+
+$ grep -rn -A4 '#\[derive' --include='*.npk' "$NITPICK" | grep -A4 'enum:' | grep -cE '[A-Za-z_]+\([A-Za-z0-9_]+\);'
+0
+exit 1   (0 matches: every derived enum in that tree is payload-less)

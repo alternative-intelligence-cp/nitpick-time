@@ -11,6 +11,7 @@ records what the behaviour used to be.
 | **O-N4** — `npkc` is quadratic in the size of one declaration | this file, and `big_fixed_array_cost.npk` | **yes**, for cycles 0.0.5 and 0.5 |
 | **O-N8** — a `mod:`/basename mismatch merges a sibling file at exit 0 | the foot of this file | no |
 | **O-N9** — a `uint8[]` view escapes its owning frame | [`view_escape/`](view_escape/README.md) | no — a conformance rule, subject to Q-5 |
+| **O-N10** — `derive(Eq)` on a payload enum will not compile; `derive(Ord)` is silently wrong | [`derive_payload_enum/`](derive_payload_enum/README.md) | no — one type exposed, no rule needs it |
 
 ---
 

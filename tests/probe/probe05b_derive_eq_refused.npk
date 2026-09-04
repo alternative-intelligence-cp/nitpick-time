@@ -1,0 +1,65 @@
+// expect-error: NITPICK-TYPE-034
+//
+// PROBE 05b — `#[derive(Eq)]` ON A PAYLOAD ENUM DOES NOT COMPILE.
+//
+// THIS FILE MUST NOT COMPILE, and what makes it worth committing is WHERE the
+// diagnostic points: not at this file at all, but at `<derived-1>` -- the
+// synthetic module the derive expansion writes. The user cannot open it, cannot
+// fix it, and has written nothing wrong.
+//
+// THE DIAGNOSTIC, verbatim, from compiler commit 950bb1d:
+//
+//   NITPICK-TYPE-034 <derived-1>:2:73: `Part` has no built-in `==`: derive or
+//   implement `Eq` and compare with `a.eq(b)`
+//
+// Read it twice. The derived `Eq` implementation is being told to derive `Eq`.
+// The expansion compares two `Part` VALUES with `==` instead of comparing the
+// tags and then the payloads, so the code the derive writes needs the trait the
+// derive is writing.
+//
+// ISOLATED: it is the PAYLOAD that does it, and it is `Eq` alone.
+//
+//   #[derive(Eq)]  enum { Literal(uint16); Year4; }   -> TYPE-034, refused
+//   #[derive(Eq)]  enum { Year4; Month2; }            -> compiles
+//   #[derive(Eq)]  struct { int64:a; uint16:b; }      -> compiles
+//   no derive,     enum { Literal(uint16); Year4; }   -> compiles
+//   the other six derives on the payload enum         -> all compile
+//
+// AND THE ONE THAT COMPILES IS WORSE. `#[derive(Ord)]` on this same enum is
+// accepted and its `cmp` IGNORES THE PAYLOAD: `Literal(7).cmp(Literal(9))`
+// answers `Equal`. A refusal is a bad afternoon; a silent `Equal` between two
+// different values is a wrong answer nobody looks for. Both halves are O-N10,
+// reproduced with their transcripts under `defect/derive_payload_enum/`.
+//
+// WHY IT IS UNTESTED TERRITORY RATHER THAN A REGRESSION: no file anywhere in
+// the compiler's own tree derives ANY trait on an enum with a payload. The
+// derive tests cover `enum:Season`, `enum:Tag` and `enum:Level`, all
+// payload-less, and `struct:Box<T>`.
+//
+// DEPENDS ON THE ANSWER: `FmtPart.Literal(uint16)` is the only payload-carrying
+// variant in this library's whole specification set, so `ntime`'s exposure is
+// one type and no rule requires either derive on it today. It is a constraint
+// to record rather than a blocker -- and the constraint that matters is the
+// second one, because `Ord` compiles.
+mod:probe05b_derive_eq_refused;
+
+#[derive(Eq)]
+enum:Part = {
+    Literal(uint16);
+    Year4;
+};
+
+func:main = int32(cstring[]:_~argv) { exit 0i32; };
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

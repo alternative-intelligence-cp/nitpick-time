@@ -172,6 +172,44 @@ a parser returns a value and an offset. Its disposition is **Q-5**, and
 `check_no_view_returns` — **proposed** for cycle 0.0.3's harness list, not yet
 on it — is what would make the rule enforced rather than remembered.
 
+### O-N10 — the derives on a payload enum: `Eq` will not compile, `Ord` is silently wrong — **NOT BLOCKING**
+**Measured at cycle 0.0.0, 2026-09-03**, by probe 05. On
+`enum:Part = { Literal(uint16); Year4; }`:
+
+- `#[derive(Eq)]` emits a derived module that **does not compile** —
+  `NITPICK-TYPE-034` inside `<derived-1>`, saying `Part` has no built-in `==`.
+  The derived `Eq` is being told to derive `Eq`, and the file it points at is
+  synthetic, so there is nothing for a user to open or fix.
+- `#[derive(Ord)]` on the same declaration is **accepted**, and its `cmp`
+  compares tags only: `Literal(7).cmp(Literal(9))` answers **`Equal`**.
+
+The second is the serious one. A refusal is a bad afternoon; two different
+values reporting `Equal` is a wrong answer nobody looks for, and a sort or a
+binary search over such an enum is quietly incorrect. `Hash` likewise hashes
+the tag alone; `Clone` is **correct** and keeps the payload. The reproduction,
+the isolation and the transcript with every exit code are in
+[`../tests/probe/defect/derive_payload_enum/README.md`](../tests/probe/defect/derive_payload_enum/README.md).
+
+**It is untested territory, not a regression:** no file anywhere in the
+compiler's tree derives any trait on an enum with a payload. Its derive tests
+cover three payload-less enums and three structs.
+
+**Ask:** `Eq` to emit an implementation that compiles, and `Ord`/`PartialOrd`
+to compare the payload after the tag — plus a test in the compiler's own tree
+that derives on a payload enum, since the gap is coverage.
+
+**Consequence for `ntime`: one type, and nothing today.**
+`FmtPart.Literal(uint16)` (`FORMAT_MODEL.md` F-4) is the only payload-carrying
+variant in the whole specification set, and no rule requires `Eq` or `Ord` on
+it — `TESTING.md`'s round trips compare formatted strings and parsed values,
+never two `Layout`s. So it is raised rather than blocking, and what the cycle
+that builds `src/fmt/` must carry is the **second** half: `#[derive(Ord)]
+enum:FmtPart` would compile and be wrong.
+
+**The id is provisional.** `O-N` numbers are the workbench registry's and are
+assigned there; O-N10 is this repository's expectation of the next free one and
+the orchestrator may renumber it when it registers the defect.
+
 **A note on the numbering.** O-N5 … O-N7 do not appear here. `O-N` ids are the
 **workbench registry's**, not this repository's, because a gap in the compiler
 is raised once for the whole ecosystem and the per-repository numbers would

@@ -1,0 +1,55 @@
+// expect-exit: 107
+// NOT A PROBE. The answer is the measurement.
+//
+// CASE 3 — the same question of the other two derives that could lose a
+// payload, so the report says which of them do and which do not.
+//
+// Two digits, from `(same_hash * 100) + payload_after_clone`:
+//
+//   1xx   `Literal(7).hash()` == `Literal(9).hash()`  -- the hash is the TAG's
+//   x07   `Literal(7).clone()` still carries 7        -- Clone is CORRECT
+//
+// A hash colliding is legal in isolation and is recorded rather than asked
+// about: it matters only because `Eq` will not compile on the same type, so
+// nothing can be keyed on one of these enums by any route.
+//
+// `Clone` being right is the reason this case exists. Without it the report
+// would say "the derives lose payloads", which is false, and a reader would
+// stop trusting the one that works.
+mod:case3_hash_and_clone;
+
+error:E9;
+
+#[derive(Hash, Clone)]
+enum:Part = { Literal(uint16); Year4; };
+
+func:payload = int32(Part:p) never fails {
+    int32:r = 0i32;
+    pick (p) {
+        (Part.Literal(k)) { r = k => int32; },
+        (Part.Year4)      { r = 0i32 - 1i32; }
+    }
+    pass r;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    Part:a = Part.Literal(7u16);
+    Part:b = Part.Literal(9u16);
+    uint64:ha = a.hash() ?! E9;
+    uint64:hb = b.hash() ?! E9;
+    int32:same_hash = 0i32;
+    if (ha == hb) { same_hash = 1i32; }
+    Part:c = a.clone() ?! E9;
+    exit ((same_hash * 100i32) + (raw payload(c)));
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (E9) { exit 80i32; },
+        (HeapBadRequest) { exit 91i32; }, (HeapOom) { exit 92i32; },
+        (IntOverflow) { exit 93i32; },    (OutOfBounds) { exit 94i32; },
+        (Unreachable) { exit 95i32; },    (WildLeak) { exit 96i32; },
+        (*) { exit 99i32; }
+    }
+    exit 9i32;
+};

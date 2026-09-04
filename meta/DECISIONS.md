@@ -637,3 +637,80 @@ Correcting the plan is not a workaround.
   would settle the API shape of code no cycle has designed yet. The rule
   constrains every site; which function realises it is `src/`'s business, and
   0.0.4 decides it with `Vec<T>` and the other primitives.
+
+### TM-106 — a `Vec<T>` over an owning `T` is emptied before its block is freed, and `exit 0` will not tell you otherwise
+**2026-09-03. Measured by `tests/probe/probe06_generic_vec.npk`** against
+compiler commit `950bb1d`.
+
+**What was assumed.** `SAFETY.md` S-18 says growable storage is `Vec<T>`,
+"whose block is `wild` and whose lifetime is its owner's scope; every `wild`
+byte is released on every path, so `exit 0` never trips D-151". Cycle 0.0.4's
+P-23 puts it more strongly: "every `Vec` has a `vec_free` and every scope that
+made one calls it, **or `exit 0` traps under D-151**".
+
+Both sentences are true of the **block**. Neither is true of the **elements**,
+and the "so" in the first one is doing work it cannot do.
+
+**What is true.** D-151 watches `wild` allocations. A `string`'s body is
+**managed**, so a `Vec<string>` whose block is freed and whose elements are not
+is a leak that **exits 0**. Measured at 2 000 000 iterations of {init, push one
+35-byte string, free}:
+
+| | peak RSS | exit |
+|---|---:|---|
+| block freed, elements orphaned | 125 184 KiB | **0** |
+| elements moved out first, then the block freed | 0 KiB | 0 |
+
+and, because a peak-RSS figure is arguable and an exit code is not, the same
+pair under `ulimit -v 65536` — a 64 MiB address space:
+
+| | exit |
+|---|---|
+| block freed, elements orphaned | **92 — `HeapOom`** |
+| elements moved out first | **0** |
+
+**The decision.** *Every `Vec<T>` instantiated at an owning `T` is emptied
+before its block is freed, by moving each element into a scope that ends.* The
+shape is ordinary code and is committed as `free_names` in probe 06:
+
+```nitpick
+int64:i = 0i64;
+while (i < v.count) {
+    string:owned = move(v.items[i]);   // dies at the bottom of this iteration
+    i = i + 1i64;
+}
+v.count = 0i64;
+```
+
+**This is not a compiler defect and nothing is worked around.** A generic
+`vec_free<T>` cannot do it: moving an element out needs a destination of type
+`T`, and a generic function has no scope in which a bare `T` may simply die.
+The language is behaving exactly as specified; what was wrong was this
+library's reading of what `exit 0` proves.
+
+**Three entries in cycle 0.0.4's API table silently carry this obligation** —
+`vec_free`, `vec_clear` and `vec_truncate` all discard elements, and all three
+of their stated postconditions speak only of `count`, `cap` and `items`. Each
+needs an element-drop path for an owning `T`, or a stated restriction to
+non-owning ones. `SAFETY.md` **S-18b** is the rule; 0.0.4 is where it is built.
+
+**And the general lesson, which is bigger than `Vec`:** *`exit 0` proves no
+`wild` allocation is live. It proves nothing about managed bodies.* Every
+"the leak test exits 0, so nothing leaked" claim in this plan is a claim about
+`wild` only, and a suite that tests owning containers needs a memory assertion
+that D-151 does not provide — cycle 0.0.3's business.
+
+*Alternatives declined:*
+
+- **Make `Vec<T>`'s block managed rather than `wild`.** That changes B-12's
+  shape away from the compiler's `List<T>`, which was chosen because it has
+  been exercised across twenty-two families, and it would trade a stated
+  obligation for an implicit one.
+- **Restrict `Vec<T>` to non-owning `T`.** `Layout` holds `Vec<FmtPart>` (non-
+  owning) but the zone name pool and any future string collection want the
+  owning case, and forbidding it would push every such site back to a
+  hand-written array — the ninety hand-written doubling sites D-209 exists to
+  remove.
+- **Say nothing and rely on review.** The measurement above is what review
+  would have to catch, twice: once for the missing drop and once for the exit-0
+  reasoning that hides it.

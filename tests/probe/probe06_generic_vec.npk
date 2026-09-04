@@ -1,0 +1,205 @@
+// expect-exit: 0
+//
+// PROBE 06 — a generic `Vec<T>` with `move`, at a scalar `T` and an owning one.
+//
+// ASKS: does the container TM-005 and `BUILD.md` B-12 specify compile and work
+// -- a generic struct over a `wild T->` block, `move T:x` into it, `#size_of<T>`
+// arithmetic for the growth, and `ralloc` doubling -- at BOTH a scalar element
+// type and one that owns heap memory?
+//
+// DEPENDS ON THE ANSWER: `Vec<T>` is the library's ONE container (B-13: no hash
+// map, no second sequence), `Layout` stores `Vec<FmtPart>`, and cycle 0.0.4 is
+// the subcycle that builds it. Its API table is `0.0.4.md` §2.
+//
+// THE SHAPE IS THE COMPILER'S OWN `List<T>` (src/frontend/list.npk, D-209),
+// deliberately: B-12 says ours is that shape "because that shape is right and
+// has been exercised across twenty-two families", and ours because a library
+// must not import a compiler's internals. So this probe is not asking whether
+// the shape works in general -- it is asking whether it works when WE write it,
+// which is a different question only in that a typo makes it a different one.
+//
+// ==========================================================================
+// WHAT THIS PROBE FOUND, AND IT WAS NOT WHAT IT WAS LOOKING FOR
+// ==========================================================================
+//
+// FREEING THE BLOCK DOES NOT DROP THE ELEMENTS, AND `exit 0` DOES NOT NOTICE.
+//
+// `0.0.4.md` P-23 says "every `Vec` has a `vec_free` and every scope that made
+// one calls it, or `exit 0` traps under D-151". That is true of the BLOCK and
+// says nothing about the ELEMENTS: D-151 watches `wild` allocations, and a
+// `string`'s body is managed, so a `Vec<string>` whose block is freed and whose
+// elements are not is a leak that exits 0.
+//
+// Measured, 2 000 000 iterations of {init, push one 35-byte string, free}:
+//
+//   block freed, elements orphaned      125 184 KiB peak RSS   exit 0
+//   elements moved out first, then free           0 KiB        exit 0
+//
+// and, because a peak-RSS number is arguable and an exit code is not, the same
+// pair under `ulimit -v 65536` (a 64 MiB address space):
+//
+//   block freed, elements orphaned      exit 92   -- HeapOom, the runtime's arm
+//   elements moved out first            exit 0
+//
+// THE FIX IS ORDINARY CODE and it is in `free_names` below: move each element
+// into a scoped local, which drops at the end of its iteration. It is not a
+// language gap. What it is, is an obligation that three entries in `0.0.4.md`
+// §2's API table silently carry -- `vec_free`, `vec_clear` and `vec_truncate`
+// all discard elements, and all three of their stated postconditions talk only
+// about `count`, `cap` and `items`. TM-106 and `SAFETY.md` S-18b are written
+// against that.
+//
+// NOT ASKED HERE: an inherent `impl:<T>:Vec<T>` with a mutating receiver. §4
+// listed it as a fallback to measure beside the free-function form, and
+// `0.0.4.md` §2 has since settled the API as free functions -- `vec_init<T>`,
+// `vec_push<T>` and the rest -- following the compiler's `list.npk`. A probe
+// for a form the design does not use would pin a fact nothing depends on. The
+// call syntax the free-function form needs IS pinned here, because it is not
+// guessable: an explicit generic argument is a TURBOFISH, `vec_init::<int64>(2)`,
+// and `vec_init<int64>(2)` is `NITPICK-PARSE-002`.
+mod:probe06_generic_vec;
+
+// `BUILD.md` B-12's shape, verbatim.
+struct:Vec<T> = {
+    wild T->:items;
+    int64:count;
+    int64:cap;
+};
+
+// A capacity of zero would make the doubling below a no-op forever, so the
+// floor is one -- the compiler's `list_init` makes the same choice for the
+// same reason.
+func:vec_init<T> = Vec<T>(int64:cap) never fails {
+    int64:n = cap;
+    if (n < 1i64) { n = 1i64; }
+    wild int8->:mem = alloc(n * #size_of<T>());
+    pass Vec{ items: mem =>! wild T->, count: 0i64, cap: n };
+};
+
+// Room for `need` MORE elements. Doubling in a LOOP, not once: one doubling of
+// a capacity-2 vector does not hold a bulk append of ten.
+func:vec_reserve<T> = NIL(Vec<T>->:v, int64:need) never fails {
+    int64:want = v.count + need;
+    if (want <= v.cap) { pass NIL; }
+    int64:nc = v.cap;
+    while (nc < want) { nc = nc * 2i64; }
+    wild int8->:bigger = ralloc(v.items =>! wild int8->, nc * #size_of<T>());
+    v.items = bigger =>! wild T->;
+    v.cap = nc;
+    pass NIL;
+};
+
+// `move T:x` -- the parameter is CONSUMING (D-208), which is what an owning
+// element needs and what a scalar one is indifferent to. This is the line the
+// probe exists for: the same generic function, at `int64` and at `string`.
+func:vec_push<T> = NIL(Vec<T>->:v, move T:x) never fails {
+    drop vec_reserve(v, 1i64);
+    v.items[v.count] = move(x);
+    v.count = v.count + 1i64;
+    pass NIL;
+};
+
+// Frees the BLOCK. Read the header: for an owning `T` the caller must have
+// emptied it first, and nothing here can do that generically -- moving an
+// element out needs a destination of type `T`, and a generic function has no
+// scope in which a `T` may simply die.
+func:vec_free<T> = NIL(Vec<T>->:v) never fails {
+    dalloc(v.items =>! wild int8->);
+    v.count = 0i64;
+    v.cap = 0i64;
+    pass NIL;
+};
+
+// THE OBLIGATION, DISCHARGED, at the one element type this probe owns. Each
+// element is moved into a local whose scope ends at the bottom of the loop
+// body, and the string dies there. Measured above: this is the difference
+// between 125 MiB and nothing.
+func:free_names = NIL(Vec<string>->:v) never fails {
+    int64:i = 0i64;
+    while (i < v.count) {
+        string:owned = move(v.items[i]);
+        discard(string_byte_length(owned));
+        i = i + 1i64;
+    }
+    v.count = 0i64;
+    drop vec_free(v);
+    pass NIL;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    // ---- a scalar T ---------------------------------------------------
+
+    // Two, so that the third push must grow the block and `ralloc` is on the
+    // measured path rather than a branch nothing took.
+    Vec<int64>:a = raw vec_init::<int64>(2i64);
+    if (a.cap != 2i64)                                  { exit 10i32; }
+    if (a.count != 0i64)                                { exit 11i32; }
+
+    drop vec_push(@a, 10i64);
+    drop vec_push(@a, 20i64);
+    if (a.cap != 2i64)                                  { exit 12i32; }
+    drop vec_push(@a, 30i64);
+    if (a.count != 3i64)                                { exit 13i32; }
+    if (a.cap < 3i64)                                   { exit 14i32; }
+
+    // The elements survived the reallocation, in order.
+    if (a.items[0i64] != 10i64)                         { exit 15i32; }
+    if (a.items[1i64] != 20i64)                         { exit 16i32; }
+    if (a.items[2i64] != 30i64)                         { exit 17i32; }
+
+    // The growth arithmetic is `#size_of<T>()`'s, and for `int64` that is 8.
+    if (#size_of<int64>() != 8i64)                      { exit 18i32; }
+
+    drop vec_free(@a);
+    if (a.cap != 0i64)                                  { exit 19i32; }
+
+    // ---- an OWNING T --------------------------------------------------
+
+    // `string_concat` allocates, so each element owns a heap body. A
+    // binding-to-binding copy of one is refused (TYPE-046); `move T:x` is how
+    // it gets in, and this is the instantiation that proves the parameter
+    // qualifier does its job.
+    Vec<string>:b = raw vec_init::<string>(1i64);
+    drop vec_push(@b, string_concat("Europe/", "Kyiv"));
+    drop vec_push(@b, string_concat("America/", "Lima"));
+    drop vec_push(@b, string_concat("Australia/", "Perth"));
+    if (b.count != 3i64)                                { exit 20i32; }
+    if (b.cap < 3i64)                                   { exit 21i32; }
+
+    // Read back through the block: the bodies survived two reallocations, and
+    // `ralloc` moved the 16-byte string headers without disturbing what they
+    // point at.
+    if (string_byte_length(b.items[0i64]) != 11i64)     { exit 22i32; }
+    if (string_byte_length(b.items[1i64]) != 12i64)     { exit 23i32; }
+    if (string_byte_length(b.items[2i64]) != 15i64)     { exit 24i32; }
+
+    // A `string` is a 24-byte header -- MEASURED, not assumed; the first
+    // draft of this line said 16, reasoning from a slice's `{ ptr, len }`,
+    // and a `string` carries a third word. It is here because the block
+    // arithmetic is `n * #size_of<T>()` and a wrong element size is an
+    // overlapping write that no bound check catches.
+    if (#size_of<string>() != 24i64)                    { exit 25i32; }
+
+    // Empty it properly, then free the block. Swapping these two lines is the
+    // leak the header measures.
+    drop free_names(@b);
+    if (b.count != 0i64)                                { exit 26i32; }
+    if (b.cap != 0i64)                                  { exit 27i32; }
+
+    // D-151: exit 0 additionally asserts that no `wild` allocation is live.
+    // It does NOT assert that no managed body leaked -- see the header.
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

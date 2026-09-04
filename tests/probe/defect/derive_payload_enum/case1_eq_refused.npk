@@ -1,0 +1,24 @@
+// expect-error: NITPICK-TYPE-034
+//
+// CASE 1 — the loud half. `#[derive(Eq)]` on an enum with a payload emits a
+// derived module that does not compile. The diagnostic points at `<derived-1>`,
+// which the user cannot open.
+//
+//   NITPICK-TYPE-034 <derived-1>:2:73: `Part` has no built-in `==`: derive or
+//   implement `Eq` and compare with `a.eq(b)`
+mod:case1_eq_refused;
+
+#[derive(Eq)]
+enum:Part = { Literal(uint16); Year4; };
+
+func:main = int32(cstring[]:_~argv) { exit 0i32; };
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; }, (HeapOom) { exit 92i32; },
+        (IntOverflow) { exit 93i32; },    (OutOfBounds) { exit 94i32; },
+        (Unreachable) { exit 95i32; },    (WildLeak) { exit 96i32; },
+        (*) { exit 99i32; }
+    }
+    exit 9i32;
+};

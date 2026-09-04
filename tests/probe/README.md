@@ -36,13 +36,18 @@ entries from cycle 0.0.2.
 | `probe03_timespec_sys.npk` | a 16-byte `timespec` through `sys`, and the field order | `HOST.md` §2, H-4, H-7, H-8; `SAFETY.md` S-5 |
 | `probe04_big_fixed_table.npk` | is a large `fixed` table read-only data with no startup cost? | TM-007, `ZONE_MODEL.md` Z-7/Z-8, `SAFETY.md` S-19 |
 | `probe04b_emission_shape.npk` | the same, at 300 rows, so the answer stays re-derivable | the same rules |
+| `probe05_payload_enum.npk` | a payload enum in a `pick` and in a `Vec` | `FORMAT_MODEL.md` F-4, `SAFETY.md` S-3 |
+| `probe05b_derive_eq_refused.npk` | *(must not compile)* `#[derive(Eq)]` on a payload enum | O-N10 |
+| `probe06_generic_vec.npk` | a generic `Vec<T>` with `move`, at a scalar `T` and an owning one | TM-005, TM-106, `BUILD.md` B-12, `SAFETY.md` S-18b |
 | `probe07_negative_div.npk` | does signed `/` truncate toward zero and `%` take the dividend's sign? | TM-016, `CALENDAR.md`'s negative years |
 | `probe08_readlink.npk` | `readlink` through `sys`, with the returned length as the authority | `HOST.md` H-13, H-14, H-15 |
 
-Probes 05, 06, 09, 10 and 11 are planned in `0.0.0.md` §4. **09 and 10 are held,
-not merely unwritten**: they are the borrow-edge probes, and the view-escape
-defect this subcycle found may change their shape. `defect/` carries its
-reproduction.
+Probes 09, 10 and 11 are planned in `0.0.0.md` §4 and not yet written. **09 and
+10 are held, not merely unwritten**: they are the borrow-edge probes, and the
+view-escape defect this subcycle found may change their shape. **11 was not
+reached** — probe 05 turned up the subcycle's third compiler defect and the
+stream stopped there rather than working past it. `defect/` carries both
+reproductions.
 
 ### Why 02 has three twins
 
@@ -63,6 +68,17 @@ to be two different ways of not compiling:
   be spelled**: `NITPICK-LEX-004`, because the literal envelope is 64-bit and
   the minimum's magnitude is one too large. The maximum is fine, so the bound
   pair a reader writes by symmetry is exactly what fails.
+
+### Why 05 has a `b`
+
+Probe 05's plan asked for `#[derive(Eq, Debug)]` on the payload enum. `Debug`
+is fine; **`Eq` does not compile**, and the diagnostic lands in `<derived-1>` —
+a synthetic module the user cannot open. Worse, `#[derive(Ord)]` on the same
+declaration *does* compile and its `cmp` ignores the payload. So 05 derives the
+five that are correct, 05b pins the refusal with its exact diagnostic, and the
+silent half — which is the dangerous one — is reproduced in
+`defect/derive_payload_enum/`. That is **O-N10**, and it is why this subcycle
+stopped for the third time.
 
 ### Why 04 has a `b`
 

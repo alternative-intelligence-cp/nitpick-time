@@ -219,6 +219,27 @@ Growable storage is the library's own `Vec<T>` (`BUILD.md` §5), whose block is
 `wild` and whose lifetime is its owner's scope; every `wild` byte is released
 on every path, so `exit 0` never trips D-151.
 
+**Rule S-18b (TM-106) — a `Vec<T>` over an owning `T` is emptied before its
+block is freed, and `exit 0` does not check it.** D-151 watches `wild`
+allocations; a `string`'s body is **managed**. So a `Vec<string>` whose block is
+freed and whose elements are not is a leak that exits 0 — measured at cycle
+0.0.0, 125 MiB retained over 2 000 000 elements, and `HeapOom` under a 64 MiB
+address-space cap while the corrected form finishes clean. Each element is moved
+into a scope that ends:
+
+```nitpick
+while (i < v.count) {
+    string:owned = move(v.items[i]);   // dies at the bottom of this iteration
+    i = i + 1i64;
+}
+```
+
+A generic `vec_free<T>` cannot do this, so it is the **owner's** obligation at
+each instantiation: moving an element out needs a destination of type `T`, and
+a generic function has no scope in which a bare `T` may simply die. S-18's "so
+`exit 0` never trips D-151" is therefore a statement about the block alone —
+correct, and not the whole obligation.
+
 **Rule S-19.** The generated zone tables are `fixed` module state — read-only
 memory, no initialisation at startup, nothing to leak, and nothing to race.
 

@@ -1,0 +1,186 @@
+// expect-exit: 0
+//
+// PROBE 05 — a payload enum, destructured in a `pick` and stored in a `Vec`.
+//
+// ASKS: does `FORMAT_MODEL.md`'s `FmtPart` shape work -- a tagged enum with one
+// payload-carrying variant among thirty payload-less ones, constructed, matched
+// with the payload bound, and stored in and read back from a `Vec<T>`?
+//
+// DEPENDS ON THE ANSWER: `FmtPart`, `ValueFault`, `ZoneFault`, `ParseExpect`,
+// `Weekday` and `Month` are all enums, `Layout` is `{ Vec<FmtPart>:parts;
+// Bytes:pool; }` (F-4), and `SAFETY.md` S-3's whole error budget rests on rich
+// enum values carrying the detail three error identities cannot.
+//
+// THE ANSWER IS YES FOR EVERYTHING ABOVE. Three things it costs, all of which a
+// first attempt gets wrong, and one of which is a compiler defect:
+//
+// 1. A `pick` ARM'S VARIANT MUST BE QUALIFIED. `(Part.Year4)`, never `(Year4)`
+//    -- the bare form is `NITPICK-RESOLVE-002`, "cannot find `Year4` in this
+//    scope". A `failsafe`'s bare `(HeapOom)` is not the counter-example it
+//    looks like: those are the prelude's, in scope unqualified everywhere.
+//
+// 2. AN OWNING PAYLOAD CANNOT BE BOUND BY A LENDING `pick`. Binding one is
+//    `NITPICK-TYPE-046` -- the binding would be a COPY of a value that owns
+//    heap storage -- and the legal forms are `pick (move(v))`, which hands the
+//    payload to the arm, or binding nothing and reading through the selector.
+//    It does not bite `ntime` TODAY: `FmtPart.Literal(uint16)` is the ONLY
+//    payload-carrying variant in the whole specification set and `uint16` owns
+//    nothing. It is pinned here because the day somebody adds `Literal(string)`
+//    to a formatter is the day it matters, and the diagnostic arrives at the
+//    `pick` rather than at the declaration.
+//
+// 3. `#[derive(Eq)]` ON A PAYLOAD ENUM DOES NOT COMPILE, and `#[derive(Ord)]`
+//    COMPILES AND IS WRONG. That is O-N10, reproduced under
+//    `defect/derive_payload_enum/`. This probe therefore derives the five that
+//    are correct and pins the sixth's refusal in `probe05b_derive_eq_refused.npk`.
+//    `Clone` is verified here to KEEP the payload, because it is the derive
+//    whose silent failure would be worst and it turns out to be right.
+mod:probe05_payload_enum;
+
+error:E9;
+
+// `FmtPart`'s shape in miniature: one payload-carrying variant among several
+// payload-less ones, which is exactly the geometry F-4 specifies.
+#[derive(Clone, Debug, Hash, ToString)]
+enum:Part = {
+    Literal(uint16);        // index into the layout's own text pool
+    Year4;
+    Month2;
+    Day2;
+};
+
+// `Vec<T>` as `BUILD.md` B-12 specifies it, at `T = Part`. Probe 06 is the
+// probe for the container; here it is the thing `Layout` needs it to hold.
+struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };
+
+func:vec_init<T> = Vec<T>(int64:cap) never fails {
+    int64:n = cap;
+    if (n < 1i64) { n = 1i64; }
+    wild int8->:mem = alloc(n * #size_of<T>());
+    pass Vec{ items: mem =>! wild T->, count: 0i64, cap: n };
+};
+
+func:vec_push<T> = NIL(Vec<T>->:v, move T:x) never fails {
+    if (v.count >= v.cap) {
+        int64:nc = v.cap * 2i64;
+        wild int8->:bigger = ralloc(v.items =>! wild int8->, nc * #size_of<T>());
+        v.items = bigger =>! wild T->;
+        v.cap = nc;
+    }
+    v.items[v.count] = move(x);
+    v.count = v.count + 1i64;
+    pass NIL;
+};
+
+func:vec_free<T> = NIL(Vec<T>->:v) never fails {
+    dalloc(v.items =>! wild int8->);
+    v.count = 0i64;
+    v.cap = 0i64;
+    pass NIL;
+};
+
+// The formatter's inner loop, in one function: a part in, a number out. This is
+// the shape `src/fmt/` will have and the reason the payload must be readable.
+func:width_of = int64(Part:p) never fails {
+    int64:w = 0i64;
+    pick (p) {
+        (Part.Literal(ix)) { w = 1000i64 + (ix => int64); },
+        (Part.Year4)       { w = 4i64; },
+        (Part.Month2)      { w = 2i64; },
+        (Part.Day2)        { w = 2i64; }
+    }
+    pass w;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    // ---- construction and matching ------------------------------------
+
+    Part:y = Part.Year4;
+    Part:m = Part.Month2;
+    Part:l = Part.Literal(7u16);
+
+    if ((raw width_of(y)) != 4i64)                      { exit 10i32; }
+    if ((raw width_of(m)) != 2i64)                      { exit 11i32; }
+    // The payload came through the arm, and it is the value that went in.
+    if ((raw width_of(l)) != 1007i64)                   { exit 12i32; }
+
+    // A different payload takes the same arm and yields a different answer,
+    // which is what distinguishes "the payload was read" from "the arm ran".
+    if ((raw width_of(Part.Literal(0u16))) != 1000i64)  { exit 13i32; }
+    if ((raw width_of(Part.Literal(65535u16))) != 66535i64) { exit 14i32; }
+
+    // ---- the tag is a number, and only through the unchecked cast -----
+
+    // `=>!` reads the tag; `=>` is refused. Declaration order sets the tags,
+    // so `Literal` is 0 and `Day2` is 3 -- a fact `check_no_format_string`
+    // and any table indexed by part would rest on.
+    if ((y =>! int32) != 1i32)                          { exit 15i32; }
+    if ((l =>! int32) != 0i32)                          { exit 16i32; }
+    if ((Part.Day2 =>! int32) != 3i32)                  { exit 17i32; }
+
+    // ---- Clone keeps the payload --------------------------------------
+
+    // The derive whose silent failure would be worst, checked rather than
+    // assumed: O-N10 shows `Ord` and `Hash` discard the payload on this very
+    // shape, so "the derives handle payloads" is not a safe generalisation
+    // from one of them.
+    Part:c = l.clone() ?! E9;
+    if ((raw width_of(c)) != 1007i64)                   { exit 18i32; }
+
+    // ---- stored in a Vec and read back --------------------------------
+
+    // `Layout` is `Vec<FmtPart>`, so this is the operation the formatter
+    // performs once per part per call.
+    Vec<Part>:parts = raw vec_init::<Part>(2i64);
+    drop vec_push(@parts, Part.Year4);
+    drop vec_push(@parts, Part.Literal(3u16));
+    drop vec_push(@parts, Part.Month2);
+    drop vec_push(@parts, Part.Literal(4u16));
+    drop vec_push(@parts, Part.Day2);
+    if (parts.count != 5i64)                            { exit 20i32; }
+    if (parts.cap < 5i64)                               { exit 21i32; }
+
+    // Read every one back through the block, after two reallocations, and
+    // total the widths: 4 + 1003 + 2 + 1004 + 2.
+    int64:total = 0i64;
+    int64:i = 0i64;
+    while (i < parts.count) {
+        total = total + (raw width_of(parts.items[i]));
+        i = i + 1i64;
+    }
+    if (total != 2015i64)                               { exit 22i32; }
+
+    // Order survived, and the payloads did not shuffle between slots.
+    if ((raw width_of(parts.items[1i64])) != 1003i64)   { exit 23i32; }
+    if ((raw width_of(parts.items[3i64])) != 1004i64)   { exit 24i32; }
+
+    // A payload enum is a tag plus its widest payload, and `Vec`'s block
+    // arithmetic is `#size_of<T>()` -- MEASURED, because a wrong element size
+    // is an overlapping write no bound check catches. It is EIGHT here, not
+    // the six a tag-plus-`uint16` would suggest and not the four the first
+    // draft of this line guessed: the payload aligns, so a `uint16` payload
+    // costs the same as an `int32` one would. `ZONE_MODEL.md`-style row
+    // arithmetic over an enum should measure rather than add up its fields.
+    if (#size_of<Part>() != 8i64)                       { exit 25i32; }
+
+    drop vec_free(@parts);
+
+    // D-151: exit 0 additionally asserts that nothing leaked. `Part` owns
+    // nothing, so freeing the block is the whole obligation here -- which is
+    // NOT true of `Vec<string>`; probe 06's header has that measurement.
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (E9)             { exit 80i32; },
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

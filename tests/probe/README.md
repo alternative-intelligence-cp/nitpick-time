@@ -17,7 +17,17 @@ entries from cycle 0.0.2.
   probe that has served its purpose has not stopped being evidence.
 - **Every probe exits 0 on success** and a distinct positive code per assertion
   it fails, so a failure names itself. `exit 0` additionally asserts, through
-  D-151, that nothing leaked.
+  D-151, that **no `wild` allocation is live at exit** — a statement about
+  coverage rather than a proof of cleanliness. **D-151 watches `wild` only**, so
+  a probe that allocates nothing `wild` cannot trip it on any exit path, and a
+  **managed** body is outside it entirely: probe 06's `Vec<string>` orphaned two
+  million element bodies, retained 125 MiB and **exited 0** (TM-106). A probe
+  over an owning container therefore asserts its memory too — a `ulimit -v` cap
+  today, a `peak_live` bound from the compiler's `NPK_HEAP_STATS` after the
+  1.5.1b re-pin.
+  Several probes here still carry the older one-line comment *"exit 0
+  additionally asserts that nothing leaked"*. Each is locally harmless — none of
+  those files allocates a managed container — and each is due the wording above.
 - **A probe that pins a fact the specification already states asserts the
   expected answer** (P-6) rather than printing what it found, so a change to
   that answer is a red run.
@@ -41,13 +51,18 @@ entries from cycle 0.0.2.
 | `probe06_generic_vec.npk` | a generic `Vec<T>` with `move`, at a scalar `T` and an owning one | TM-005, TM-106, `BUILD.md` B-12, `SAFETY.md` S-18b |
 | `probe07_negative_div.npk` | does signed `/` truncate toward zero and `%` take the dividend's sign? | TM-016, `CALENDAR.md`'s negative years |
 | `probe08_readlink.npk` | `readlink` through `sys`, with the returned length as the authority | `HOST.md` H-13, H-14, H-15 |
+| `probe11_failsafe_arms.npk` | the `failsafe` arm contract: an import that declares and raises one `error:` | TM-017, TM-107, `SAFETY.md` S-2/S-4/S-4b/S-4c/S-6 |
+| `probe11b_arm_omitted_refused.npk` | *(must not compile)* the same, minus one arm | the same rules — the negative half TM-017 rests on |
+| `probe11c_import_arm_cost.npk` | *(must not compile)* what an imported module's **arithmetic** costs a consumer | TM-107, `SAFETY.md` S-4b |
+| `probe11d_floor_only.npk` | the **unconditional floor**: nothing imported, nothing computed | TM-107 — the control the other three are measured against |
+| `probe11e_unused_import_refused.npk` | *(must not compile)* is the arm owed by the import, or by the call? | TM-107, `SAFETY.md` S-4c |
+| `probe11f_declared_unraised.npk` | does a `pub error:` **declaration** cost an arm, or does the first `fail`? | TM-107, `SAFETY.md` S-6 |
 
-Probes 09, 10 and 11 are planned in `0.0.0.md` §4 and not yet written. **09 and
-10 are held, not merely unwritten**: they are the borrow-edge probes, and the
-view-escape defect this subcycle found may change their shape. **11 was not
-reached** — probe 05 turned up the subcycle's third compiler defect and the
-stream stopped there rather than working past it. `defect/` carries both
-reproductions.
+Probes 09 and 10 are planned in `0.0.0.md` §4 and **held, not merely
+unwritten**: they are the borrow-edge probes, and the author ruled O-N9
+BLOCKING (Q-5), so they wait for the compiler's cycle 1.5.1b rather than being
+written against a rule that is about to change. `defect/` carries the
+reproductions of every defect this subcycle found.
 
 ### Why 02 has three twins
 
@@ -102,10 +117,46 @@ entries: `probe04_big_fixed_table.npk` cannot be one of them while O-N4 is open.
 It needs an exclusion with the reason written next to it, and `04b` is what the
 suite runs in its place.
 
+### Why 11 is six files
+
+Probe 11's plan asked for two programs: one whose `failsafe` names the arms
+REACH-002 requires, and its twin omitting one. Those are `probe11` and
+`probe11b`, and they answer the question that was asked — **a missing arm is a
+compile error**, so TM-017's budget is a constraint and not a convention.
+
+The other four exist because the two-file answer would have been *true and
+misleading*. Writing them turned up a bigger fact than the one being checked:
+the arm set is computed over **every module in the program graph**, so an import
+charges a consumer for its **arithmetic** as well as its error identities.
+
+- **11d** imports nothing and computes nothing. It compiles and runs with four
+  arms, which pins the unconditional floor. It is the **control**: 11c's
+  `failsafe` is 11d's, character for character.
+- **11c** imports a module that divides, indexes and adds and declares **no
+  error at all**, with 11d's `failsafe`. Refused, four times, for `DivByZero`,
+  `DivOverflow`, `IntOverflow` and `OutOfBounds`. Those four arms are the
+  import's, and `SAFETY.md` §2's table said nothing about them until TM-107.
+- **11e** imports the raiser and never calls it. Still refused — the arm is
+  owed by the **import**, not by the call.
+- **11f** imports an identity that is **declared and never raised**. Compiles.
+  So the charge is levied by a `fail`/`?!`/`!!!` **site**, and a generator that
+  counts `error:` declarations would overstate every bill.
+
+The whole family costs about 0.6 s. `probe11_arm_contract.txt` beside them holds
+every command and every exit code verbatim, on the same principle as `04b`'s.
+
+## `support/`
+
+Modules that probes **import**. Not probes: no `main`, no `failsafe`, and
+`tests/probe/*.npk` does not glob them. See
+[`support/README.md`](support/README.md). Only probe 11 uses them, because it is
+the only probe whose question is about importing.
+
 ## `defect/`
 
 Not probes. Reproductions of compiler defects that cycle 0.0.0 found and that
 this library must not work around — see
 [`defect/README.md`](defect/README.md). Each is deleted only when its defect is
 closed. The O-N4 reproduction there costs about **6 seconds and 580 MiB**;
-`probe04_big_fixed_table.npk` costs 281 seconds and 30.9 GiB.
+`probe04_big_fixed_table.npk` costs 281 seconds and 30.9 GiB. The
+`missing_failsafe/` reproduction costs a tenth of a second.

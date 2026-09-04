@@ -1,0 +1,111 @@
+// expect-exit: 0
+//
+// PROBE 11 — the `failsafe` arm contract, the POSITIVE half.
+//
+// ASKS: a program importing a module that declares one `error:` and raises it,
+// whose `failsafe` names exactly the arms REACH-002 requires -- does it
+// compile, and does it run?
+//
+// DEPENDS ON THE ANSWER: everything in `SAFETY.md` §2. TM-017's budget of
+// three error identities is a HARD CEILING only if a missing arm is a compile
+// error; if it is not, the budget is a convention, and S-2's "MAJOR version"
+// rule (TM-013), COMPAT.md §6 and the whole S-4 decomposition table are
+// promises the compiler does not keep. `check_failsafe_arms` in cycle 0.0.3 is
+// built on this mechanism, so this file is what proves the mechanism is real
+// before a check is written against it. The negative half is 11b.
+//
+// THE ANSWER IS YES on both halves -- and the arm set is LARGER than
+// `SAFETY.md` §2's table says, which is this probe's real finding:
+//
+//   the four unconditional floor arms                      probe 11d proves
+//     Unreachable, HeapOom, HeapBadRequest, WildLeak        these are the floor
+//   + EProbeZone                                            the import's identity
+//   + DivByZero, DivOverflow, IntOverflow, OutOfBounds      the import's ARITHMETIC
+//
+// The last line is the one no specification in this ecosystem mentioned. The
+// reachability walk runs over EVERY module in the program graph except the
+// prelude (`src/driver/pipeline.npk`, the `rc0` loop), so the `%` in an
+// imported leap-year test and the `[m - 1i64]` in an imported month table arm
+// `DivByZero`, `DivOverflow`, `IntOverflow` and `OutOfBounds` IN THE
+// IMPORTING PROGRAM -- even when the importing program's own text contains no
+// division, no index and no arithmetic at all. Probe 11c is that measurement
+// on its own, with the floor of 11d underneath it.
+//
+// AND THE ARM IS OWED BY THE IMPORT, NOT BY THE CALL: probe 11e imports
+// `probe11_arms_lib` and never calls the function that fails, and is still
+// refused for the missing arm. `SAFETY.md` S-4's table is per-MODULE, which
+// is what it says, and now measured rather than assumed.
+//
+// WHAT DOES **NOT** COST AN ARM, measured here by construction: a `pub error:`
+// DECLARATION. `probe11_arms_lib` would arm nothing if its `fail EProbeZone;`
+// sites were deleted -- the reachable set is computed from `fail`, `?!` and
+// `!!!` SITES (reach.npk's header says so and the walk does it). A library may
+// therefore declare an identity it does not yet raise at no cost to consumers,
+// and the cost arrives with the first `fail`.
+mod:probe11_failsafe_arms;
+
+use "./support/probe11_arms_lib.npk".*;
+use "./support/probe11_calc_lib.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    // ---- the imported error identity, both ways out --------------------
+
+    // The success path, through the `?|` fallback so nothing reaches failsafe.
+    int64:utc = zone_offset_strict(0i64) ?| (0i64 - 1i64);
+    if (utc != 0i64) { exit 20i32; }
+    int64:one = zone_offset_strict(1i64) ?| (0i64 - 1i64);
+    if (one != 3600i64) { exit 21i32; }
+    int64:half = zone_offset_strict(2i64) ?| (0i64 - 1i64);
+    if (half != 19800i64) { exit 22i32; }
+
+    // The failure path. It is caught here rather than allowed to travel, but
+    // the arm is owed either way -- the walk is syntactic and knows nothing
+    // about `?|`.
+    Result<int64>:low = zone_offset_strict(0i64 - 1i64);
+    if (!low.is_error) { exit 23i32; }
+    Result<int64>:high = zone_offset_strict(9i64);
+    if (!high.is_error) { exit 24i32; }
+    int64:defaulted = zone_offset_strict(9i64) ?| (0i64 - 7i64);
+    if (defaulted != (0i64 - 7i64)) { exit 25i32; }
+
+    // ---- the imported arithmetic, so the arm set is not hypothetical ----
+
+    if (!(raw is_leap(2000i64))) { exit 30i32; }
+    if (raw is_leap(1900i64)) { exit 31i32; }
+    if (!(raw is_leap(1996i64))) { exit 32i32; }
+    if (raw is_leap(1997i64)) { exit 33i32; }
+
+    // 1 March in a common year is day 60; the index into MONTH_START is what
+    // arms `OutOfBounds` in this program.
+    if (raw day_of_year(1997i64, 3i64, 1i64) != 60i64) { exit 34i32; }
+    if (raw day_of_year(2000i64, 3i64, 1i64) != 61i64) { exit 35i32; }
+    if (raw day_of_year(2000i64, 12i64, 31i64) != 366i64) { exit 36i32; }
+    if (raw weeks_in(365i64) != 52i64) { exit 37i32; }
+
+    // ---- D-151: exit 0 additionally asserts no live `wild` allocation ----
+    // and NOTHING MORE than that (TM-106). This file allocates nothing, so
+    // the statement is about coverage: there is no `wild` byte here to leak,
+    // and no managed body either.
+    exit 0i32;
+};
+
+// THE CONTRACT. Nine named arms and the wildcard. Removing any ONE of the nine
+// is a compile error; probe 11b removes `EProbeZone` and 11c removes the four
+// arithmetic ones. `(*)` is present because exhaustiveness (`NITPICK-PICK-003`)
+// wants it and it discharges none of the nine (`NITPICK-REACH-002`) -- two
+// rules, two diagnostics, and the wildcard answers only the first.
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (DivByZero)      { exit 90i32; },
+        (DivOverflow)    { exit 89i32; },
+        (EProbeZone)     { exit 88i32; },
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

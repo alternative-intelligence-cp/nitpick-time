@@ -1,0 +1,14 @@
+// NOT A PROBE. A support module for probe 11f -- no `main`, no `failsafe`,
+// never compiled on its own. See `README.md` beside it.
+//
+// The whole file is one line of content: a public error identity that is
+// DECLARED AND NEVER RAISED. There is no `fail`, no `?!` and no `!!!` in it,
+// and there is no arithmetic either, so if importing it costs a consumer
+// anything at all, the declaration is what cost it. Probe 11f is the reader.
+mod:probe11_silent_lib;
+
+pub error:EProbeSilent;
+
+pub func:silent_count = int64() never fails {
+    pass 1i64;
+};

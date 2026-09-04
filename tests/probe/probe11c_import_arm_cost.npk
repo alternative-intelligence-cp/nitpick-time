@@ -1,0 +1,68 @@
+// expect-error: NITPICK-REACH-002
+//
+// PROBE 11c — WHAT AN IMPORT COSTS A CONSUMER'S `failsafe` WHEN THE IMPORTED
+// MODULE DECLARES NO ERROR AT ALL. THIS FILE MUST NOT COMPILE.
+//
+// ASKS: `SAFETY.md` S-4's table says a program importing only `ntime/cal.npk`
+// "owes one arm". Is that the whole bill?
+//
+// THE SHAPE OF THE MEASUREMENT. This program's OWN text contains no division,
+// no remainder, no index, and no plain-integer `+ - *` -- check it; every
+// operand below is a literal and every operator a comparison. Its `failsafe`
+// therefore names exactly the four arms `probe11d_floor_only.npk` proves are
+// the unconditional floor, and 11d compiles and runs at exit 0 with precisely
+// this `pick`. The ONLY difference between that file and this one is the
+// `use` line and the four calls. So every arm the compiler asks for below is
+// an arm THE IMPORT ADDED.
+//
+// THE ANSWER: four more, and none of them is an error identity.
+//
+//     DivByZero, DivOverflow    -- `probe11_calc_lib`'s three `%` and one `/`
+//     IntOverflow               -- its `+` and `-`
+//     OutOfBounds               -- its `MONTH_START[m - 1i64]`
+//
+// The reachability walk runs over every module in the graph but the prelude
+// (`src/driver/pipeline.npk`'s `rc0` loop), and the system-arm conditions are
+// set by ANY module's text, not by the root's. A consumer of `ntime/cal.npk`
+// therefore owes `DivByZero`, `DivOverflow`, `IntOverflow` and `OutOfBounds`
+// no matter what it does itself -- `cal` divides by 4, 100, 400, 146097,
+// 86400 and 1000000000, indexes the month tables, and adds.
+//
+// WHY IT MATTERS RATHER THAN BEING A CURIOSITY. `SAFETY.md` §2's table is
+// published to consumers as the bill for importing each module, and S-6 has a
+// conformance test generate it. A table that lists identities alone
+// understates every row, and the understatement is not uniform: the pure
+// `core` module adds nothing, `cal` adds four, and a consumer that reads the
+// table, writes the arms it lists and expects to compile does not.
+//
+// It is NOT a defect and nothing is worked around. reach.npk's own header
+// states the direction: "Over-approximation is the safe direction: the walk
+// may require an arm the backend's emitted guards never fire, never the
+// reverse." Every divisor in `cal` is a nonzero literal and every index is
+// bounds-checked by S-17's accessor pair, so the arms this file is asked for
+// are ones a correct `ntime` can never enter. They are still arms the consumer
+// must write, and that is a fact about the API, not about the arithmetic.
+mod:probe11c_import_arm_cost;
+
+use "./support/probe11_calc_lib.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    // Four calls, no operators but comparison, no literals combined.
+    if (!(raw is_leap(2000i64))) { exit 30i32; }
+    if (raw is_leap(1900i64)) { exit 31i32; }
+    if (raw day_of_year(1997i64, 3i64, 1i64) != 60i64) { exit 34i32; }
+    if (raw weeks_in(365i64) != 52i64) { exit 37i32; }
+    exit 0i32;
+};
+
+// EXACTLY `probe11d_floor_only.npk`'s `failsafe`, which compiles there.
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

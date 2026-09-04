@@ -1,0 +1,134 @@
+Every command below was run from the repository root against the pinned
+toolchain. Every exit code is printed. Regenerate with the commands as
+they appear -- nothing here is summarised.
+
+$ sha256sum "$NPKC" "$NPKRT"
+fbb7d022e6a98ebcc9bc138aa01305310249eff54ddbf1aa0fc307aa52f8419f  /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/950bb1d/npkc
+869c490de641380c574c9785d191414eea29c3cd5af6e84196ee2ffcb168b658  /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/950bb1d/npkrt.o
+exit=0
+
+$ llvm-config --version
+20.1.2
+exit=0
+
+================================================================
+  case1_no_failsafe
+================================================================
+
+$ "$NPKC" tests/probe/defect/missing_failsafe/case1_no_failsafe.npk -o /tmp/case1_no_failsafe.ll
+exit=0
+
+$ grep -c '^define i32 @main' /tmp/case1_no_failsafe.ll
+1
+exit=0
+
+$ grep -c 'call i32 @npk_failsafe' /tmp/case1_no_failsafe.ll
+7
+exit=0
+
+$ grep -c '^define i32 @npk_failsafe' /tmp/case1_no_failsafe.ll
+0
+exit=1
+
+$ grep -n 'call i32 @npk_failsafe' /tmp/case1_no_failsafe.ll | head -1
+4036:  %t75 = call i32 @npk_failsafe(i32 -4102)
+exit=0
+
+$ llc -O0 -filetype=obj -relocation-model=static /tmp/case1_no_failsafe.ll -o /tmp/case1_no_failsafe.o
+llc: error: llc: /tmp/case1_no_failsafe.ll:4036:19: error: use of undefined value '@npk_failsafe'
+  %t75 = call i32 @npk_failsafe(i32 -4102)
+                  ^
+exit=1
+
+================================================================
+  case2_failsafe_present
+================================================================
+
+$ "$NPKC" tests/probe/defect/missing_failsafe/case2_failsafe_present.npk -o /tmp/case2_failsafe_present.ll
+exit=0
+
+$ grep -c '^define i32 @main' /tmp/case2_failsafe_present.ll
+1
+exit=0
+
+$ grep -c 'call i32 @npk_failsafe' /tmp/case2_failsafe_present.ll
+7
+exit=0
+
+$ grep -c '^define i32 @npk_failsafe' /tmp/case2_failsafe_present.ll
+1
+exit=0
+
+$ grep -n 'call i32 @npk_failsafe' /tmp/case2_failsafe_present.ll | head -1
+4036:  %t75 = call i32 @npk_failsafe(i32 -4102)
+exit=0
+
+$ llc -O0 -filetype=obj -relocation-model=static /tmp/case2_failsafe_present.ll -o /tmp/case2_failsafe_present.o
+exit=0
+
+$ ld.lld -static /tmp/case2_failsafe_present.o "$NPKRT" -o /tmp/case2_failsafe_present
+exit=0
+
+$ /tmp/case2_failsafe_present
+exit=0
+
+================================================================
+  case3_arm_contract_evaded
+================================================================
+
+$ "$NPKC" tests/probe/defect/missing_failsafe/case3_arm_contract_evaded.npk -o /tmp/case3_arm_contract_evaded.ll
+exit=0
+
+$ grep -c '^define i32 @main' /tmp/case3_arm_contract_evaded.ll
+1
+exit=0
+
+$ grep -c 'call i32 @npk_failsafe' /tmp/case3_arm_contract_evaded.ll
+7
+exit=0
+
+$ grep -c '^define i32 @npk_failsafe' /tmp/case3_arm_contract_evaded.ll
+0
+exit=1
+
+$ grep -n 'call i32 @npk_failsafe' /tmp/case3_arm_contract_evaded.ll | head -1
+4036:  %t75 = call i32 @npk_failsafe(i32 -4102)
+exit=0
+
+$ llc -O0 -filetype=obj -relocation-model=static /tmp/case3_arm_contract_evaded.ll -o /tmp/case3_arm_contract_evaded.o
+llc: error: llc: /tmp/case3_arm_contract_evaded.ll:4036:19: error: use of undefined value '@npk_failsafe'
+  %t75 = call i32 @npk_failsafe(i32 -4102)
+                  ^
+exit=1
+
+================================================================
+  THE CONTROL: an ordinary LIBRARY module, neither main nor failsafe.
+  It emits the same seven calls to an undefined @npk_failsafe and no
+  @main -- so the undefined symbol is NOT the defect; the missing check
+  on a root that declares main is.
+================================================================
+
+$ "$NPKC" tests/probe/support/probe11_arms_lib.npk -o /tmp/armslib.ll
+exit=0
+
+$ grep -c '^define i32 @main' /tmp/armslib.ll
+0
+exit=1
+
+$ grep -c 'call i32 @npk_failsafe' /tmp/armslib.ll
+7
+exit=0
+
+$ grep -c '^define i32 @npk_failsafe' /tmp/armslib.ll
+0
+exit=1
+
+================================================================
+  THE CONTRAST: case 3's program WITH a failsafe that omits one arm is
+  refused. Delete the failsafe entirely and the same program compiles.
+================================================================
+
+$ "$NPKC" tests/probe/probe11b_arm_omitted_refused.npk -o /tmp/p11b.ll
+NITPICK-REACH-002 tests/probe/probe11b_arm_omitted_refused.npk:60:5: `failsafe` does not name `probe11_arms_lib.EProbeZone`, which can reach it (D-179): add the arm — `(*)` counts for nothing here, so a new failure mode is always acknowledged before the program compiles again
+exit=1
+

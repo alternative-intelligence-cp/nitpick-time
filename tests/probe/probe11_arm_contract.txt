@@ -1,0 +1,100 @@
+PROBE 11 — the `failsafe` arm contract. THE TRANSCRIPT, VERBATIM.
+
+Every command below was run from the repository root on 2026-09-03 against the
+pinned toolchain (compiler commit 950bb1d, LLVM 20.1.2), and EVERY ONE CARRIES
+ITS EXIT CODE. That is not decoration: a file that fails to compile stops early
+and is the fastest row in any timing table, and this subcycle has twice drawn a
+wrong conclusion from a timing with no exit code beside it.
+
+The six files and what each one isolates:
+
+  11d  floor_only            imports nothing, computes nothing   -> compiles, runs, exit 0
+  11   failsafe_arms         both support modules, nine arms     -> compiles, runs, exit 0
+  11b  arm_omitted_refused   11 minus the `(EProbeZone)` line    -> REACH-002, npkc exit 1
+  11c  import_arm_cost       an import that divides and indexes,
+                             a floor-only failsafe               -> REACH-002 x4, npkc exit 1
+  11e  unused_import_refused imports the raiser, never calls it  -> REACH-002, npkc exit 1
+  11f  declared_unraised     imports a DECLARED, never-raised
+                             identity, floor-only failsafe       -> compiles, runs, exit 0
+
+11d is the control that makes 11c a measurement: 11c's `failsafe` is 11d's,
+character for character, and 11d compiles with it. So the four arms 11c is
+asked for are four arms THE IMPORT ADDED.
+
+================================================================
+
+$ sha256sum "$NPKC" "$NPKRT"
+fbb7d022e6a98ebcc9bc138aa01305310249eff54ddbf1aa0fc307aa52f8419f  /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/950bb1d/npkc
+869c490de641380c574c9785d191414eea29c3cd5af6e84196ee2ffcb168b658  /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/950bb1d/npkrt.o
+exit=0
+
+$ llvm-config --version
+20.1.2
+exit=0
+
+$ ld.lld --version
+Ubuntu LLD 20.1.2 (compatible with GNU linkers)
+exit=0
+
+--- 1. THE CONTROL: the unconditional floor, nothing imported ---
+
+$ "$NPKC" tests/probe/probe11d_floor_only.npk -o /tmp/probe11d_floor_only.ll
+exit=0   [npkc wall 0.10s, peak 23360 KiB]
+$ llc -O0 -filetype=obj -relocation-model=static /tmp/probe11d_floor_only.ll -o /tmp/probe11d_floor_only.o
+exit=0
+$ ld.lld -static /tmp/probe11d_floor_only.o "$NPKRT" -o /tmp/probe11d_floor_only
+exit=0
+$ /tmp/probe11d_floor_only
+exit=0
+
+--- 2. THE POSITIVE HALF: nine arms, both support modules imported ---
+
+$ "$NPKC" tests/probe/probe11_failsafe_arms.npk -o /tmp/probe11_failsafe_arms.ll
+exit=0   [npkc wall 0.11s, peak 24896 KiB]
+$ llc -O0 -filetype=obj -relocation-model=static /tmp/probe11_failsafe_arms.ll -o /tmp/probe11_failsafe_arms.o
+exit=0
+$ ld.lld -static /tmp/probe11_failsafe_arms.o "$NPKRT" -o /tmp/probe11_failsafe_arms
+exit=0
+$ /tmp/probe11_failsafe_arms
+exit=0
+
+--- 3. THE NEGATIVE TWIN: one arm deleted. MUST NOT COMPILE ---
+
+$ "$NPKC" tests/probe/probe11b_arm_omitted_refused.npk -o /tmp/probe11b_arm_omitted_refused.ll
+NITPICK-REACH-002 tests/probe/probe11b_arm_omitted_refused.npk:60:5: `failsafe` does not name `probe11_arms_lib.EProbeZone`, which can reach it (D-179): add the arm — `(*)` counts for nothing here, so a new failure mode is always acknowledged before the program compiles again
+exit=1   [npkc wall 0.07s, peak 15872 KiB]
+
+--- 4. WHAT AN IMPORT'S ARITHMETIC COSTS. MUST NOT COMPILE ---
+
+$ "$NPKC" tests/probe/probe11c_import_arm_cost.npk -o /tmp/probe11c_import_arm_cost.ll
+NITPICK-REACH-002 tests/probe/probe11c_import_arm_cost.npk:60:5: `failsafe` does not name `DivByZero`, which can reach it (D-179): add the arm — `(*)` counts for nothing here, so a new failure mode is always acknowledged before the program compiles again
+NITPICK-REACH-002 tests/probe/probe11c_import_arm_cost.npk:60:5: `failsafe` does not name `DivOverflow`, which can reach it (D-179): add the arm — `(*)` counts for nothing here, so a new failure mode is always acknowledged before the program compiles again
+NITPICK-REACH-002 tests/probe/probe11c_import_arm_cost.npk:60:5: `failsafe` does not name `IntOverflow`, which can reach it (D-179): add the arm — `(*)` counts for nothing here, so a new failure mode is always acknowledged before the program compiles again
+NITPICK-REACH-002 tests/probe/probe11c_import_arm_cost.npk:60:5: `failsafe` does not name `OutOfBounds`, which can reach it (D-179): add the arm — `(*)` counts for nothing here, so a new failure mode is always acknowledged before the program compiles again
+exit=1   [npkc wall 0.07s, peak 15104 KiB]
+
+--- 5. IMPORTED BUT NEVER CALLED. MUST NOT COMPILE ---
+
+$ "$NPKC" tests/probe/probe11e_unused_import_refused.npk -o /tmp/probe11e_unused_import_refused.ll
+NITPICK-REACH-002 tests/probe/probe11e_unused_import_refused.npk:41:5: `failsafe` does not name `probe11_arms_lib.EProbeZone`, which can reach it (D-179): add the arm — `(*)` counts for nothing here, so a new failure mode is always acknowledged before the program compiles again
+exit=1   [npkc wall 0.07s, peak 14720 KiB]
+
+--- 6. DECLARED AND NEVER RAISED: costs nothing ---
+
+$ "$NPKC" tests/probe/probe11f_declared_unraised.npk -o /tmp/probe11f_declared_unraised.ll
+exit=0   [npkc wall 0.10s, peak 23360 KiB]
+$ llc -O0 -filetype=obj -relocation-model=static /tmp/probe11f_declared_unraised.ll -o /tmp/probe11f_declared_unraised.o
+exit=0
+$ ld.lld -static /tmp/probe11f_declared_unraised.o "$NPKRT" -o /tmp/probe11f_declared_unraised
+exit=0
+$ /tmp/probe11f_declared_unraised
+exit=0
+
+--- 7. WHAT HAPPENS WITH NO `failsafe` AT ALL ---
+
+Measured, and it is a compiler defect rather than a probe verdict:
+a root file declaring `main` and no `failsafe` is accepted by npkc at
+exit 0 and refused by llc. The reproduction, the control and the
+contrast are in tests/probe/defect/missing_failsafe/, with their own
+transcript. Nothing about it is summarised here.
+

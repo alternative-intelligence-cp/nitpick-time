@@ -1,0 +1,46 @@
+// NOT A PROBE. A support module for probe 11 -- no `main`, no `failsafe`,
+// never compiled on its own. See `README.md` beside it.
+//
+// This is `ntime/cal.npk` in miniature, and the point of it is the ARITHMETIC
+// rather than the answers: a leap-year test that takes `%` three times, a
+// month table that is INDEXED, and ordinary `+ - *` on `int64`. It declares
+// NO error identity at all, so every arm it costs a consumer is a SYSTEM arm
+// the consumer's own text never asked for.
+//
+// `SAFETY.md` S-4's table says a program importing only `cal` "owes one arm".
+// Probe 11c measures what that sentence leaves out.
+mod:probe11_calc_lib;
+
+// Cumulative days before the start of each month, in a common year. A `fixed`
+// module-level table, indexed by month - 1 -- which is where `OutOfBounds`
+// enters the importing program's arm set.
+pub fixed int64[12]:MONTH_START = [
+    0i64, 31i64, 59i64, 90i64, 120i64, 151i64,
+    181i64, 212i64, 243i64, 273i64, 304i64, 334i64
+];
+
+// Three `%` operations. Each one is a `DivByZero`/`DivOverflow` site to the
+// reachability walk, which does not know that every divisor here is a nonzero
+// literal -- and the over-approximation is deliberate on the compiler's side
+// (reach.npk's header: "the walk may require an arm the backend's emitted
+// guards never fire, never the reverse").
+pub func:is_leap = bool(int64:y) never fails {
+    if ((y % 4i64) != 0i64) { pass false; }
+    if ((y % 100i64) != 0i64) { pass true; }
+    pass ((y % 400i64) == 0i64);
+};
+
+// An index, a subtraction, and two additions.
+pub func:day_of_year = int64(int64:y, int64:m, int64:d) never fails {
+    int64:base = MONTH_START[m - 1i64];
+    int64:n = base + d;
+    if (m > 2i64) {
+        if (raw is_leap(y)) { n = n + 1i64; }
+    }
+    pass n;
+};
+
+// A `/`, so the division pair is armed by more than the remainder operator.
+pub func:weeks_in = int64(int64:days) never fails {
+    pass days / 7i64;
+};

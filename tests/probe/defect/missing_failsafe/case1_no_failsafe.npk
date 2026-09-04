@@ -1,0 +1,32 @@
+// THE DEFECT, MINIMAL. Four lines of content: a `mod:` header and a `main`.
+// There is no `failsafe`, no import, no arithmetic, no allocation.
+//
+// D-013 (the compiler's own `meta/specs/DECISIONS.md`): "Exactly one
+// `failsafe` per program, supplied by the executable ... It is required only
+// for executables and must be provided by the end user."
+//
+// `npkc` EXITS 0 on this file. `llc` is what refuses it, at a generated line
+// number, naming an internal symbol, saying nothing about `failsafe`, nothing
+// about D-013 and nothing about this file:
+//
+//     llc: error: /tmp/case1_no_failsafe.ll:4036:19:
+//       error: use of undefined value '@npk_failsafe'
+//
+// STATE THE DEFECT CAREFULLY, because the obvious phrasing is wrong. "npkc
+// emits calls to an undefined `@npk_failsafe`" is TRUE of this file and also
+// true of every ordinary library module -- `support/probe11_arms_lib.npk`,
+// which has neither `main` nor `failsafe`, emits the same seven calls, and
+// that is harmless because nobody links a library module on its own. The
+// transcript beside this file measures both.
+//
+// The defect is narrower and it is a MISSING CHECK: `npkc` does not require a
+// root file that declares `main` to declare `failsafe`. It holds both facts
+// already -- it emits `define i32 @main` for this file and not for a library
+// module, and `reach_settle` in `src/frontend/analysis/reach.npk` tests
+// `if (x.failsafe_decl == 0i32) { pass NIL; }` and returns early on exactly
+// this case. It never joins them into a diagnostic.
+mod:case1_no_failsafe;
+
+func:main = int32(cstring[]:_~argv) {
+    exit 0i32;
+};

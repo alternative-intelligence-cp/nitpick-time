@@ -12,6 +12,7 @@ records what the behaviour used to be.
 | **O-N8** — a `mod:`/basename mismatch merges a sibling file at exit 0 | the foot of this file | no |
 | **O-N9** — a `uint8[]` view escapes its owning frame | [`view_escape/`](view_escape/README.md) | no — a conformance rule, subject to Q-5 |
 | **O-N10** — `derive(Eq)` on a payload enum will not compile; `derive(Ord)` is silently wrong | [`derive_payload_enum/`](derive_payload_enum/README.md) | no — one type exposed, no rule needs it |
+| **O-N11** *(provisional)* — a program with `main` and no `failsafe` compiles at exit 0 | [`missing_failsafe/`](missing_failsafe/README.md) | no — but it constrains cycle 0.0.3's harness |
 
 ---
 

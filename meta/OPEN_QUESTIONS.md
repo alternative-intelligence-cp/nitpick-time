@@ -108,8 +108,24 @@ would be the same workaround wearing a decision's clothes.
 probes themselves are unaffected — the defect is a resource cost, not a
 semantics change.
 
-### Q-5 — is O-N9 a block for `ntime`, or a conformance rule plus a raised defect?
-**Asked 2026-09-03, cycle 0.0.0.** O-N9 lets a `uint8[]` view escape its owning
+### ~~Q-5 — is O-N9 a block for `ntime`, or a conformance rule plus a raised defect?~~ — **ANSWERED 2026-09-03: A BLOCK**
+**The author ruled it BLOCKING, against the recommendation recorded below.**
+The recommendation is left standing rather than rewritten, because a question
+answered against its own recommendation is the most useful kind to be able to
+re-read. The ruling reached this repository through the workbench board as its
+question 8; the corresponding compiler work is **DEF-3**, the second of cycle
+1.5.1b's five commits, where the borrow walk learns that a view-maker's result
+borrows its operand.
+
+**What follows here, and it is all that follows.** `src/fmt/` work waits, and
+**probes 09 and 10 stay held** — they are not merely unwritten. The house rule
+*"a view is a parameter, never a return value"* is kept as a **belt**, not as
+the guarantee: it goes into `SAFETY.md` and onto 0.0.3's `check_no_view_returns`
+list exactly as the recommendation proposed, but it no longer stands in for the
+compiler's enforcement, which is what the ruling turned on. Nothing else in the
+cycle changes: 0.0.1 through 0.0.4 carry no `uint8[]` parser.
+
+**The recommendation as it was made, 2026-09-03, cycle 0.0.0.** O-N9 lets a `uint8[]` view escape its owning
 frame with no diagnostic, and **every parser in `src/fmt/` takes a `uint8[]`**.
 W-11 forbids reshaping a library to dodge a compiler defect, so the question is
 whether adopting "a view is a parameter, never a return value" is a reshaping.
@@ -209,6 +225,50 @@ enum:FmtPart` would compile and be wrong.
 **The id is provisional.** `O-N` numbers are the workbench registry's and are
 assigned there; O-N10 is this repository's expectation of the next free one and
 the orchestrator may renumber it when it registers the defect.
+
+### O-N11 — a program with `main` and no `failsafe` compiles at exit 0 — **NOT BLOCKING**
+**Measured at cycle 0.0.0, 2026-09-03**, by probe 11 while establishing the arm
+contract. `npkc` does not require a root file that declares `main` to declare
+`failsafe`. A four-line program with neither import nor arithmetic is accepted
+at **exit 0**; `llc` then refuses the IR with `use of undefined value
+'@npk_failsafe'` at a generated line, naming an internal symbol and neither
+`failsafe`, D-013, nor the user's file.
+
+The rule exists and is settled — the compiler's **D-013**, "Exactly one
+`failsafe` per program, supplied by the executable … It is required only for
+executables and must be provided by the end user."
+
+**The defect is a missing check, not the undefined symbol.** An ordinary
+library module emits the same seven calls to an undefined `@npk_failsafe` and
+that is harmless, because it emits no `@main` and nobody links it alone. `npkc`
+holds both halves already: it emits `define i32 @main` for the program and not
+for the library module, and `reach_settle` tests `if (x.failsafe_decl == 0i32)
+{ pass NIL; }` and returns early on exactly this case. It never joins them.
+
+**Why it matters here.** That early return is the whole REACH-002 contract.
+A program that imports a module raising `EProbeZone`, calls the raiser, and has
+no `failsafe` compiles at exit 0 with no diagnostic; the same program *with* a
+`failsafe` omitting that one arm is refused `NITPICK-REACH-002`. So TM-017's
+budget, `SAFETY.md` §2's arm table and TM-013's major-version rule are enforced
+against a program that has a handler and asked of nothing that has none.
+
+**Ask:** refuse a root declaring `main` and no `failsafe`, naming D-013 and the
+file — and, since `reach_settle` has just computed it at the point it currently
+returns early, **list the arms the absent handler would owe**. Close kin to the
+compiler's own outstanding item that D-014's injected `ensures result > 0` on
+`failsafe` and its non-empty-body check "both currently exist nowhere"; one
+pass over the root's declarations answers all three.
+
+**Consequence for `ntime`: nothing blocked, one harness constraint.** Every
+program this library ships or tests has a `failsafe`, and a missing one is
+caught by `llc` in the next step of the same recipe. What it costs is that
+**`npkc` exit 0 does not mean a program is well-formed**, so cycle 0.0.3's
+`program` stage runs all four steps rather than stopping at `.ll`, or asserts
+`grep -c '^define i32 @npk_failsafe'` is 1 — and `selfcheck.py` gains an eighth
+case for a program whose `failsafe` has been deleted. Full statement in
+[`../tests/probe/defect/missing_failsafe/README.md`](../tests/probe/defect/missing_failsafe/README.md).
+
+**The id is provisional**, on the same terms as O-N10 above.
 
 **A note on the numbering.** O-N5 … O-N7 do not appear here. `O-N` ids are the
 **workbench registry's**, not this repository's, because a gap in the compiler

@@ -1,0 +1,72 @@
+// expect-error: NITPICK-REACH-002
+//
+// PROBE 11b — the `failsafe` arm contract, the NEGATIVE half. THIS FILE MUST
+// NOT COMPILE.
+//
+// It is `probe11_failsafe_arms.npk` with ONE line deleted: the `(EProbeZone)`
+// arm. Everything else -- the imports, `main`, the other nine lines of the
+// `pick`, including the `(*)` wildcard -- is character-for-character the
+// positive twin's, so the refusal below is attributable to that one line and
+// to nothing else.
+//
+// ASKS: is a missing arm a COMPILE ERROR, or merely a convention?
+//
+// THE ANSWER: it is a compile error, `NITPICK-REACH-002`, and `(*)` does not
+// discharge it. The diagnostic is quoted verbatim in
+// `probe11_arm_contract.txt` beside this file.
+//
+// WHAT WOULD HAVE FOLLOWED FROM THE OTHER ANSWER, written down because the
+// whole point of a negative probe is that it could have gone the other way:
+// if this file compiled, TM-017's budget of three would be a house style
+// rather than a constraint, `SAFETY.md` §2's per-import arm table would be a
+// description of good manners, TM-013's rule that a fourth identity is a MAJOR
+// version would have no compiler behind it, and `COMPAT.md` §6 would need
+// rewriting. None of that is so.
+mod:probe11b_arm_omitted_refused;
+
+use "./support/probe11_arms_lib.npk".*;
+use "./support/probe11_calc_lib.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    int64:utc = zone_offset_strict(0i64) ?| (0i64 - 1i64);
+    if (utc != 0i64) { exit 20i32; }
+    int64:one = zone_offset_strict(1i64) ?| (0i64 - 1i64);
+    if (one != 3600i64) { exit 21i32; }
+    int64:half = zone_offset_strict(2i64) ?| (0i64 - 1i64);
+    if (half != 19800i64) { exit 22i32; }
+
+    Result<int64>:low = zone_offset_strict(0i64 - 1i64);
+    if (!low.is_error) { exit 23i32; }
+    Result<int64>:high = zone_offset_strict(9i64);
+    if (!high.is_error) { exit 24i32; }
+    int64:defaulted = zone_offset_strict(9i64) ?| (0i64 - 7i64);
+    if (defaulted != (0i64 - 7i64)) { exit 25i32; }
+
+    if (!(raw is_leap(2000i64))) { exit 30i32; }
+    if (raw is_leap(1900i64)) { exit 31i32; }
+    if (!(raw is_leap(1996i64))) { exit 32i32; }
+    if (raw is_leap(1997i64)) { exit 33i32; }
+
+    if (raw day_of_year(1997i64, 3i64, 1i64) != 60i64) { exit 34i32; }
+    if (raw day_of_year(2000i64, 3i64, 1i64) != 61i64) { exit 35i32; }
+    if (raw day_of_year(2000i64, 12i64, 31i64) != 366i64) { exit 36i32; }
+    if (raw weeks_in(365i64) != 52i64) { exit 37i32; }
+
+    exit 0i32;
+};
+
+// EIGHT arms and the wildcard. `(EProbeZone)` is the one that is gone.
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (DivByZero)      { exit 90i32; },
+        (DivOverflow)    { exit 89i32; },
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

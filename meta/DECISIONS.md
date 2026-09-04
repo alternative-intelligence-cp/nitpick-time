@@ -714,3 +714,102 @@ that D-151 does not provide — cycle 0.0.3's business.
 - **Say nothing and rely on review.** The measurement above is what review
   would have to catch, twice: once for the missing drop and once for the exit-0
   reasoning that hides it.
+
+---
+
+### TM-107 — an import's arm bill is its `fail` SITES plus its ARITHMETIC, and it is charged per module rather than per call
+**2026-09-03. Measured by `tests/probe/probe11_failsafe_arms.npk` and its five
+twins** against compiler commit `950bb1d`. The transcript with every exit code
+is `tests/probe/probe11_arm_contract.txt`.
+
+**What was assumed.** `SAFETY.md` S-4 publishes a table of what a consumer's
+`failsafe` owes per imported module, and every cell in it is a count of **error
+identities** — "nothing", "one arm", "two arms", "three arms". S-6 has a
+conformance test generate that table and assert a program compiles "with
+exactly the documented arms and no more".
+
+**What is true.** The arm set REACH-002 requires is computed over **every
+module in the program graph except the prelude** (`src/driver/pipeline.npk`'s
+`rc0` loop), and it has two parts, only one of which is an identity:
+
+1. **Identities**, from `fail`, `?!` and `!!!` **sites**. A `pub error:`
+   declaration with no site arms nothing — probe 11f imports one and compiles
+   with a floor-only `failsafe`. The charge arrives with the first `fail`.
+2. **System arms**, from the *machinery any module's text contains*:
+   `DivByZero` and `DivOverflow` wherever `/` or `%` appears, `IntOverflow`
+   wherever plain-integer `+ - *` does, `OutOfBounds` wherever an index does —
+   on top of the unconditional floor of `Unreachable`, `HeapOom`,
+   `HeapBadRequest` and `WildLeak`, which probe 11d pins by compiling and
+   running with exactly those four and nothing else.
+
+**The measurement.** `probe11c_import_arm_cost.npk` contains no division, no
+remainder, no index and no plain-integer arithmetic of its own; its `failsafe`
+is `probe11d_floor_only.npk`'s, character for character, and 11d compiles and
+runs at exit 0 with it. The only difference between the two files is one `use`
+line and four calls. `npkc` exit 1, four diagnostics:
+
+```
+NITPICK-REACH-002 …: `failsafe` does not name `DivByZero`,   which can reach it (D-179)…
+NITPICK-REACH-002 …: `failsafe` does not name `DivOverflow`, which can reach it (D-179)…
+NITPICK-REACH-002 …: `failsafe` does not name `IntOverflow`, which can reach it (D-179)…
+NITPICK-REACH-002 …: `failsafe` does not name `OutOfBounds`, which can reach it (D-179)…
+```
+
+**Four arms, from a module that declares no error at all.** `cal` divides by 4,
+100, 400, 146097, 86400 and 1000000000, indexes the month tables, and adds, so
+a consumer that imports it owes all four however pure its own text is.
+
+**And the charge is levied by the IMPORT, not by the call.**
+`probe11e_unused_import_refused.npk` imports the module that raises
+`EProbeZone`, calls only its infallible half, and is still refused for the
+missing arm. Module boundaries are the only granularity available; avoiding the
+failing *function* buys nothing.
+
+**The decision.** *`SAFETY.md` S-4's table states the **total** arm set per
+import — identities and system arms together — and S-6's generator derives it
+from `fail`/`?!`/`!!!` sites and from the arithmetic present in the imported
+subgraph, never from `error:` declarations.* The table is published to
+consumers as the bill; a bill that lists only identities understates every row
+that imports arithmetic, and understates them unevenly — pure `core` adds
+nothing, `cal` adds four.
+
+**This is not a compiler defect and nothing is worked around.** `reach.npk`'s
+own header states the direction: *"Over-approximation is the safe direction:
+the walk may require an arm the backend's emitted guards never fire, never the
+reverse."* Every divisor in `cal` is a nonzero literal (S-16) and every index
+goes through S-17's checked accessor pair, so these are arms a correct `ntime`
+can never enter. They are still arms the consumer must write, which makes them
+a fact about the API rather than about the arithmetic.
+
+**Two smaller facts the same probes pin**, both of which a generator would
+otherwise get wrong:
+
+- **A superset of the required arms is accepted.** `probe07_negative_div.npk`
+  names `(OutOfBounds)` and contains no index expression, and compiles and runs
+  at exit 0. So S-6's "and no more" cannot be enforced by the compiler; it is
+  the harness's assertion, and without it a published table that overstates
+  would never be caught by a build.
+- **Both arm spellings work.** The bare `(EProbeZone)` satisfies the walk under
+  a `use "…".*`, and the diagnostic recommends the qualified
+  `probe11_arms_lib.EProbeZone`, which the walk matches by name pair with no
+  resolution and no import at all.
+
+**What is NOT yet measured, and where it lands.** These are `ntime`'s real
+modules' numbers, and `src/` does not exist yet. S-4's table therefore carries
+the *rule* now and its arithmetic column is filled at cycle 0.1, when `cal` is
+written and the totals can be generated rather than predicted. Nothing is
+guessed into the table in the meantime.
+
+*Alternatives declined:*
+
+- **Publish identities only and mention the system arms in prose.** The table
+  is the thing a consumer copies; a caveat beside it is a caveat they compile
+  without. The four arms are not optional and belong in the cell.
+- **Restructure `cal` to avoid arming the system family.** It cannot be done —
+  a calendar divides — and it would be a library contorted around a diagnostic
+  rather than around a requirement.
+- **Treat the over-approximation as a compiler defect and raise it.** It is the
+  compiler's stated and deliberate design, written into `reach.npk`'s header,
+  and the safe direction. Raising it would be asking for a less conservative
+  analysis of trap reachability in a language whose whole proposition is that
+  a trap is accounted for.

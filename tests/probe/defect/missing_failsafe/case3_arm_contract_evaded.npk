@@ -1,0 +1,33 @@
+// WHY THIS DEFECT MATTERS TO `ntime` RATHER THAN BEING A TIDINESS COMPLAINT.
+//
+// This file imports `probe11_arms_lib`, which declares `pub error:EProbeZone;`
+// and raises it, and CALLS the function that raises it. It has no `failsafe`.
+//
+// `tests/probe/probe11b_arm_omitted_refused.npk` is the same program WITH a
+// `failsafe` that omits the one arm, and it is refused --
+// `NITPICK-REACH-002 ... does not name `probe11_arms_lib.EProbeZone``. That
+// refusal is the whole mechanism behind TM-017's error budget, `SAFETY.md`
+// §2's per-import arm table and TM-013's rule that a fourth identity is a
+// MAJOR version.
+//
+// THIS FILE COMPILES AT EXIT 0 WITH NO DIAGNOSTIC AT ALL. `reach_settle`
+// (`src/frontend/analysis/reach.npk`) computes the reachable set, then returns
+// early at `if (x.failsafe_decl == 0i32) { pass NIL; }` -- so a program with no
+// handler is asked for no arms. The contract is discharged by deleting the
+// thing that owes it.
+//
+// The consumer cannot SHIP the result: `llc` refuses the IR. But the message
+// they get is `use of undefined value '@npk_failsafe'` at a generated line, and
+// the true cause -- "you have no `failsafe`, and here are the nine arms it
+// owes" -- is never printed by anything.
+mod:case3_arm_contract_evaded;
+
+use "../../support/probe11_arms_lib.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    int64:utc = zone_offset_strict(0i64) ?| (0i64 - 1i64);
+    if (utc != 0i64) { exit 20i32; }
+    Result<int64>:bad = zone_offset_strict(9i64);
+    if (!bad.is_error) { exit 21i32; }
+    exit 0i32;
+};

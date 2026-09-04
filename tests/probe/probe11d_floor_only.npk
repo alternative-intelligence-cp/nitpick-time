@@ -1,0 +1,36 @@
+// expect-exit: 0
+//
+// PROBE 11d — THE NEGATIVE CONTROL for 11, 11b, 11c and 11e: what does a
+// program owe when it imports nothing and computes nothing?
+//
+// ASKS: the UNCONDITIONAL FLOOR of `failsafe`'s arm set. This file imports no
+// module, declares no error, divides nothing, indexes nothing, and performs no
+// plain-integer `+ - *`. Its `failsafe` names four arms and the wildcard.
+//
+// ASSERTS (P-6) by compiling at all: the floor is exactly
+// `Unreachable`, `HeapOom`, `HeapBadRequest`, `WildLeak` -- the four
+// `reach_settle` adds with no condition attached, because allocation and the
+// exit-time checks are in every program.
+//
+// WHY IT EXISTS. Without it, 11c's diagnostic list is an assertion rather than
+// a measurement: a reader cannot tell whether `DivByZero` appeared BECAUSE the
+// imported module divides, or because it was always there. This file is the
+// before to 11c's after, and it costs a tenth of a second.
+mod:probe11d_floor_only;
+
+func:main = int32(cstring[]:_~argv) {
+    // Nothing. Not even arithmetic -- a single `i + 1i64` here would arm
+    // `IntOverflow` and this file would no longer be the floor.
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

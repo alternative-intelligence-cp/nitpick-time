@@ -97,7 +97,9 @@ TM-030. All settled. **Nothing in this cycle is blocked on a question.**
 - [ ] `put_int` correct at `int64` **minimum**, where negation overflows — the case every hand-written decimal writer gets wrong
 - [ ] `Bytes` growth amortised linear, proven by a test that appends a million bytes and bounds the reallocation count
 - [ ] every accessor's bounds obligation written as a comment in the `requires`/`ensures` syntax it will take (`specs/VERIFICATION.md` P-1), with a property test standing in
-- [ ] the suite's programs exit 0, so a missing `free` on any path is a trap rather than a pass (D-151)
+- [ ] the suite's programs exit 0, which asserts that **no `wild` allocation is live** at exit — `Vec<T>`'s block is `wild` (P-23), so an unpaired `vec_free` on any path is a trap rather than a pass (D-151)
+- [ ] and, because that is the whole of what D-151 covers, a **memory assertion for the managed half**: a `Vec<string>` whose block is freed and whose elements are not retains its elements and **still exits 0** (TM-106, measured at 125 MiB over 2 000 000 elements). Until the instrument below exists, each owning-`T` container test runs a second time under a `ulimit -v` cap sized to fail if the elements are orphaned — the form TM-106 itself used, where the orphaning form gives `HeapOom` (exit 92) and the correct form exit 0
+- [ ] **the hook for the real gate.** The compiler's cycle 1.5.1b step 0 builds `NPK_HEAP_STATS`, an allocator-level instrument reporting `allocated`, `peak_live` and `count` for **managed** memory, plus a `cost` harness stage. Run on this repository's own two container probes it reported **`peak_live` 41 321 bytes against 400 101 320**. At the re-pin, this checklist item becomes a **`peak_live` assertion** with a stated bound per test, and the `ulimit -v` cap above is retired to a belt. Write the tests now so the bound is the only thing that has to be added
 
 ### 0.0.5 — the tzdb size spike
 - [ ] `tools/gen_tzdb.py` far enough to read the pinned tzdata release's TZif files and emit the four tables from `ZONE_MODEL.md` §3

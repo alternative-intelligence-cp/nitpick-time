@@ -1,0 +1,35 @@
+// NOT A PROBE. A support module for probe 11 -- it has no `main` and no
+// `failsafe` and is never compiled on its own. See `README.md` beside it.
+//
+// This is `SAFETY.md` S-4's `ntime/zone.npk` in miniature: ONE public error
+// identity, and a function that raises it. Nothing else, and deliberately
+// nothing else -- no division, no remainder, no indexing, and no plain-integer
+// `+ - *` anywhere in the file, so that the ONLY thing importing this module
+// can add to a consumer's arm set is `EProbeZone` itself. Probe 11c is the
+// twin that carries the arithmetic, and keeping the two apart is what makes
+// each measurement a measurement instead of a mixture.
+mod:probe11_arms_lib;
+
+// The identity. A DECLARATION ALONE ARMS NOTHING -- the reachable set is
+// computed from `fail`, `?!` and `!!!` SITES, not from declarations. The
+// `fail` below is what puts this name in every importing program's set.
+pub error:EProbeZone;
+
+// The raiser. `zone_id` is a made-up index into a made-up table; what matters
+// is that two paths out of this function are `fail EProbeZone` and the rest
+// `pass`. Comparisons only -- see the header.
+pub func:zone_offset_strict = int64(int64:zone_id) {
+    if (zone_id < 0i64) { fail EProbeZone; }
+    if (zone_id > 2i64) { fail EProbeZone; }
+    if (zone_id == 0i64) { pass 0i64; }
+    if (zone_id == 1i64) { pass 3600i64; }
+    pass 19800i64;
+};
+
+// A SECOND public function, infallible, so that probe 11e can import this
+// module and call something from it without touching the raiser. It is the
+// difference between "the consumer never calls the failing function" and
+// "the consumer never calls anything", and 11e needs the first of those.
+pub func:zone_count = int64() never fails {
+    pass 3i64;
+};

@@ -1,0 +1,49 @@
+// expect-error: NITPICK-REACH-002
+//
+// PROBE 11e — IS THE ARM OWED BY THE IMPORT, OR BY THE CALL? THIS FILE MUST
+// NOT COMPILE.
+//
+// ASKS: `SAFETY.md` S-4's table is stated per MODULE -- "a consumer importing
+// only this owes N arms". A reader could reasonably take that as shorthand for
+// "a consumer that calls the failing functions owes N arms". This file settles
+// which it is.
+//
+// It imports `probe11_arms_lib` and calls `zone_count()`, which is
+// `never fails`. It NEVER CALLS `zone_offset_strict`, the only function in
+// that module that can raise `EProbeZone`, and there is no other reference to
+// the identity anywhere in this program.
+//
+// THE ANSWER: the arm is owed by the IMPORT. `NITPICK-REACH-002` for
+// `probe11_arms_lib.EProbeZone`, from a program that cannot reach it.
+//
+// This is the conservative direction and it is the compiler's stated design
+// (reach.npk walks declarations, not a call graph), but it has a consequence
+// for this library's shape that is worth writing down: `SAFETY.md` S-4's
+// decomposition is doing MORE work than its table suggests. Splitting `zone`
+// out of `cal` does not merely save arms for a consumer that avoids zone
+// LOOKUPS -- it saves them for a consumer that imports `zone` and uses only
+// its infallible half, which would otherwise pay for a failure it cannot
+// reach. Module boundaries are the only granularity available; function-level
+// avoidance buys nothing.
+mod:probe11e_unused_import_refused;
+
+use "./support/probe11_arms_lib.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    // The infallible half, and nothing else.
+    if (raw zone_count() != 3i64) { exit 20i32; }
+    exit 0i32;
+};
+
+// The floor and nothing more -- `probe11d_floor_only.npk`'s `failsafe`, which
+// compiles there.
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

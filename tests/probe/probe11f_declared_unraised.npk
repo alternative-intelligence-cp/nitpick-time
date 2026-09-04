@@ -1,0 +1,50 @@
+// expect-exit: 0
+//
+// PROBE 11f — DOES A `pub error:` DECLARATION COST AN ARM, OR DOES THE FIRST
+// `fail` COST IT?
+//
+// ASKS: `probe11_silent_lib` declares `pub error:EProbeSilent;` and never
+// raises it. This program imports that module, calls its one function, and its
+// `failsafe` names ONLY the four floor arms `probe11d_floor_only.npk` proves
+// are unconditional. `EProbeSilent` is nowhere in this file.
+//
+// THE ANSWER: it compiles and runs at exit 0. **A declaration arms nothing.**
+// The reachable set is computed from `fail`, `?!` and `!!!` SITES
+// (`src/frontend/analysis/reach.npk`'s header says so and its walk does it),
+// and a `pub error:` with no site is invisible to a consumer.
+//
+// THE CONTRAST that makes this a measurement: `probe11e_unused_import_refused.npk`
+// imports `probe11_arms_lib`, which is the same file plus two `fail` sites in a
+// function this program never calls, and IS refused for the missing arm. So the
+// charge is levied by a `fail` SITE anywhere in the imported module, and by
+// nothing weaker -- not by the declaration, and not only by a reachable call.
+//
+// WHAT IT SETTLES IN THIS REPOSITORY. `SAFETY.md` S-6 has a conformance test
+// generate the per-import arm list. That generator must count **`fail`, `?!`
+// and `!!!` sites**, not `error:` declarations: counting declarations
+// overstates the bill for any module that declares an identity ahead of
+// raising it, and a published table that overstates is one a consumer writes
+// arms against and then cannot compile -- because a superset of the required
+// arms IS accepted (`probe07_negative_div.npk` names `(OutOfBounds)` and
+// contains no index expression, and compiles at exit 0), so the error would
+// not even be loud. It would just be a lie in the documentation.
+mod:probe11f_declared_unraised;
+
+use "./support/probe11_silent_lib.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    if (raw silent_count() != 1i64) { exit 20i32; }
+    exit 0i32;
+};
+
+// The floor, unchanged from `probe11d_floor_only.npk`.
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

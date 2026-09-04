@@ -69,7 +69,7 @@ rule and it is what keeps the budget at three without losing information.
 **Rule S-4 — module decomposition is part of the budget**, because REACH is
 import-scoped:
 
-| Module | Declares | A consumer importing only this owes |
+| Module | Declares | Identity arms a consumer importing only this owes |
 |---|---|---|
 | `ntime/core.npk` | — | nothing |
 | `ntime/cal.npk` | `ETimeValue` | one arm |
@@ -78,8 +78,43 @@ import-scoped:
 | `ntime/fmt.npk` | `ETimeParse` | three arms |
 | `ntime/host.npk` | — (forwards errnos) | one arm |
 
-**A program that only wants calendar arithmetic owes one arm.** That is the
-decomposition working, and it is why `cal` does not import `zone`.
+**A program that only wants calendar arithmetic owes one IDENTITY arm.** That is
+the decomposition working, and it is why `cal` does not import `zone`.
+
+**Rule S-4b (TM-107) — the identity column is not the whole bill, and this table
+is not yet the bill.** Measured at cycle 0.0.0 by
+`tests/probe/probe11c_import_arm_cost.npk`: the reachable set is computed over
+**every module in the program graph but the prelude**, and the *system* arms are
+armed by the machinery any module's text contains — `DivByZero` and
+`DivOverflow` by `/` or `%`, `IntOverflow` by plain-integer `+ - *`,
+`OutOfBounds` by an index — on top of an unconditional floor of `Unreachable`,
+`HeapOom`, `HeapBadRequest` and `WildLeak`.
+
+A miniature of `cal` that declares **no error at all** cost an importing program
+whose own text contains no arithmetic **four extra arms**, and the twin that
+imports nothing compiles with the four floor arms alone
+(`tests/probe/probe11d_floor_only.npk`). `cal` divides by 4, 100, 400, 146097,
+86400 and 1000000000 (S-16), indexes the month and zone tables (S-17), and adds,
+so **a consumer that imports `ntime/cal.npk` owes `DivByZero`, `DivOverflow`,
+`IntOverflow` and `OutOfBounds` however pure its own code is** — arms a correct
+`ntime` can never enter, since every divisor is a nonzero literal and every index
+is checked, and arms it must write anyway.
+
+That is the compiler's deliberate direction rather than a defect
+(`reach.npk`: *"Over-approximation is the safe direction"*), so what changes is
+this document, not the library. **The totals column is generated at cycle 0.1**,
+when `src/cal/` exists and the numbers can be measured instead of predicted;
+nothing is guessed into it here.
+
+**Rule S-4c (TM-107) — the arm is owed by the IMPORT, not by the call.**
+`tests/probe/probe11e_unused_import_refused.npk` imports the module that raises
+the identity, calls only its infallible half, and is still refused. And
+`tests/probe/probe11f_declared_unraised.npk` shows the other end: a `pub error:`
+**declared and never raised** arms nothing, because the set is computed from
+`fail`, `?!` and `!!!` *sites*. So the decomposition in S-4 is doing more work
+than its table suggests — splitting `zone` from `cal` saves arms even for a
+consumer that touches only `zone`'s infallible half — and module boundaries are
+the only granularity that exists. Avoiding a failing *function* buys nothing.
 
 **Rule S-5.** Kernel errnos are **forwarded verbatim** (`fail r.err`), exactly
 as `lib/nsys.npk` does. A forwarded errno is a dynamic operand and does not
@@ -90,6 +125,29 @@ generated into the documentation and checked by a conformance test that builds
 a program importing each public module and asserts its `failsafe` compiles with
 exactly the documented arms and no more. An out-of-date arm list is the kind of
 document that goes stale silently, so it is derived, not written.
+
+**Three constraints on that generator, all measured at cycle 0.0.0 (TM-107) and
+each of which the obvious implementation gets wrong:**
+
+1. **It counts `fail`, `?!` and `!!!` sites, never `error:` declarations.** A
+   declared, unraised identity costs a consumer nothing, so counting
+   declarations overstates the bill for any module that declares ahead of
+   raising.
+2. **It includes the system arms the imported subgraph's arithmetic arms**
+   (S-4b), or every row that imports `cal` is short by four.
+3. **"and no more" is the harness's assertion, not the compiler's.** A superset
+   of the required arms compiles: `tests/probe/probe07_negative_div.npk` names
+   `(OutOfBounds)`, contains no index expression, and exits 0. So a published
+   table that *over*states would never be caught by a build, which is precisely
+   why this rule exists.
+
+**And the check must not stop at `npkc`.** A program with `main` and **no**
+`failsafe` is accepted by `npkc` at exit 0 and refused only by `llc`
+(`../OPEN_QUESTIONS.md` O-N11, provisional), so a conformance test that compiles
+to `.ll` and reads the exit code would pass a program with no handler at all.
+It runs the full four steps, or asserts `grep -c '^define i32 @npk_failsafe'` is
+1. This is a constraint on cycle 0.0.3's harness and is recorded in its
+checklist.
 
 ---
 

@@ -1482,3 +1482,292 @@ that being resolved, and the resolution is a marker, not a wrapper script.
 - **Widen the check to accept `Europe/Kiev` as an alias.** The probe is not
   about zone naming; it is about `environ()`. An alias would be a second thing
   the file quietly tolerates.
+
+---
+
+## The harness batch — cycle 0.0.2, measured against pin `0dfddac`
+
+Five decisions, all produced by building the runner `BUILD.md` describes and
+finding where the description and the compiler disagree. Four of the five
+correct something this repository had already written down.
+
+### TM-117 — there is no separate compilation, so a program links with the runtime and nothing else
+**2026-09-05. Measured** at pin `0dfddac`. **Corrects `meta/roadmap/0.0/0.0.2.md`
+P-16 and its §2 pipeline diagram.**
+
+**What was written.** 0.0.2's plan drew the last step of the pipeline as
+`ld.lld(p.o, ntime.o, npkrt.o)`, and P-16 said *"one build of the library per
+run, reused by every program: the library compiles once to an object; each test
+program compiles and links against it. A per-test rebuild is the difference
+between a two-minute suite and a forty-minute one."*
+
+**What `npkc` actually does.** Its usage line is
+`npkc <root.npk> [-o out.ll] [--obligations DIR] [--elide …] [--extra-picky=…]`
+— one root in, one `.ll` out, and **no flag that emits a translation unit
+separately**. It compiles the whole module graph the root reaches, the prelude
+included, into that one file. Measured on the smallest pair in this tree:
+
+    npkc tests/probe/support/probe11_arms_lib.npk   ->  608 `define`s
+    npkc tests/probe/probe11_failsafe_arms.npk      ->  613 `define`s
+
+and 608 of the 613 are the SAME names, including the library's own
+`npk.probe11_arms_lib.zone_count` and `npk.probe11_arms_lib.zone_offset_strict`.
+So the importing program's object already contains everything the imported
+module's object contains.
+
+**The link the plan drew is an error, and it was run rather than argued:**
+
+    ld.lld -static p11.o npkrt.o           -> exit 0
+    ld.lld -static p11.o armslib.o npkrt.o -> exit 1, 121 lines of diagnostic,
+        first: duplicate symbol: npk.prelude.int8:ToString.to_string
+
+**The decision.** *A `program`-stage test links its own object with `npkrt.o`
+and nothing else. The library is still built exactly once per run — emitted,
+optimised, assembled and symbol-scanned — but as a **check in its own right**
+rather than as an input to anything, and `build/ntime.o` is never linked into a
+test.*
+
+**P-16's reason survives its remedy, so the cost is measured instead of
+avoided.** Every program re-emits the prelude, and at 0.0.2's twenty-seven units
+the suite takes **65 s**, about 2.6 s per program with both legs (the two
+2 000 000-iteration container probes and the 30 000-row table probe are 4.0–4.3 s
+each). `run.py` prints the per-unit and total wall time on every run, so the day
+this becomes a problem it is a number rather than a feeling. **The remedy, if
+one is ever needed, belongs to `npkc` and not to this harness** — a library
+that reshaped its module graph to dodge a compiler limitation is exactly what
+`CLAUDE.md`'s "never work around a compiler defect" forbids, and this is a
+missing feature rather than a defect.
+
+*Alternatives declined:*
+
+- **Link the library object anyway and pass `--allow-multiple-definition`.**
+  It links, and it silently picks one of two copies of every prelude function.
+  A suite whose correctness depends on which copy the linker chose is worse
+  than a slow one.
+- **Give each test its own module graph that excludes the library.** That is
+  what already happens; the point of the entry was to test the library.
+- **Wait for `npkg`.** O-N1/O-B1 are not on the compiler's 1.5 or 1.6 map, and
+  a harness that cannot run until they land is not a harness.
+
+### TM-118 — the runtime allowlist is derived from `npkrt.o`, not from `npkrt.ll`, and the scan cannot see a syscall
+**2026-09-05. Measured** at pin `0dfddac`. **Corrects `BUILD.md` B-2 and
+`meta/roadmap/0.0/0.0.2.md` P-14.**
+
+**What was written.** Both said the undefined-symbol scan's allowlist is *"every
+`define` in `runtime/npkrt.ll` plus `main`"*.
+
+**That set is wrong in both directions.** Read at the compiler's `0dfddac`
+against the `npkrt.o` this workbench actually links:
+
+| | count |
+|---|---:|
+| `define`s in `runtime/npkrt.ll` | 166 |
+| global defined symbols in `npkrt.o` | 111 |
+| in the `.ll`, **not** global in the `.o` | **56** |
+| global in the `.o`, **not** a `define` in the `.ll` | **2** |
+
+The 56 are `internal` linkage — `npk_heap_init`, `npk_small_alloc`,
+`npk_udivmod128` and 53 more — so they become local symbols the linker will not
+resolve for anybody. **An allowlist holding them excuses a reference that then
+fails at link**, which turns a build error into a link error a long way from its
+cause. The 2 are `_start` and `npk_clone_raw`, which come from `module asm`
+blocks (there are 28 in the file) and are invisible to any scan of `define`
+lines; **an allowlist missing them fails a reference that would have linked.**
+
+**And "plus `main`" is not enough either.** `src/lib.npk`'s object legitimately
+references `@npk_failsafe`: `npkc` emits the prelude's trap paths into every
+root, and the handler is the *program's* to supply. The first run of this scan
+failed the library build on exactly that.
+
+**The decision.** *The allowlist is derived from `$NPKRT`'s own ELF symbol
+table, in two halves and both derived: what the runtime **provides** (its global
+defined symbols) union what the runtime itself **requires** of the program (its
+own undefined symbols, which are `main` and `npk_failsafe`). 113 symbols at this
+pin. Nothing is written down, so nothing goes stale, and the list cannot
+disagree with what the linker will accept because it is read from the artefact
+the linker is given.*
+
+**AND WHAT THE SCAN CANNOT SEE, STATED SO IT IS NOT CITED AS SOMETHING IT IS
+NOT.** `npk_sys6` is the runtime's own generic syscall trampoline and is
+therefore **in the allowlist by construction**, so a module that issues a raw
+syscall and one that does not have **identical undefined sets**. This is
+`nitpick-regex`'s RX-120 — measured there as a symbol diff coming out empty, 29
+symbols each way — and it reproduces here: an `ntime` program's undefined set is
+**29** symbols and `npk_sys6` is one of them whether or not anything calls it.
+**A green symbol scan is not a purity result.** B-2's claim is "no C, ever", and
+that is the whole of what it supports; `check_purity` (`TESTING.md` §2,
+`SAFETY.md` S-10) is a **source-level** ban list over `src/` outside `src/host/`
+and is the only thing that answers "did this module touch the kernel". It is
+cycle 0.0.3's.
+
+**The scan has been seen to fail.** Commissioned by hand at 0.0.2 against an
+`npkc` wrapper that renamed one call target in the emitted IR: the run went red
+at the library build and again at the program, naming
+`ntime_c_helper_that_does_not_exist`, exit 1. The transcript is in
+`meta/roadmap/0.0/0.0.2.md`.
+
+*Alternatives declined:*
+
+- **Read `runtime/npkrt.ll` and filter out `internal`.** It would give the
+  right 111 and still miss the two `module asm` symbols, and it makes this
+  harness depend on a path inside the **compiler's** repository — which B-10
+  forbids for source and which the toolchain pin deliberately does not provide.
+- **Write the list down and check it in.** P-14's own argument against itself:
+  a written list goes stale the first time the floor gains a symbol, and the
+  floor gained two between what the `.ll` shows and what the object provides.
+- **Spawn `llvm-readelf` or `nm`.** A fourth tool outside the `[toolchain]`
+  pin, whose text output nothing checks, under a rule that is law. P-13 already
+  declined it and was right.
+- **Claim the scan covers purity, since a syscall is rare.** It is exactly the
+  claim RX-120 was raised to stop.
+
+### TM-119 — a `program`-stage entry dispatches on the file's own header, which is a deliberate divergence from `npkg`'s `kind`
+**2026-09-05. Settles O-X7.**
+
+**The measurement, re-taken here rather than carried.** `tests/probe/*.npk` —
+the plain non-recursive glob a `path` entry selects — is **26** files: **19**
+carrying `// expect-exit:`, **7** carrying `// expect-error:`, none carrying
+both, none carrying neither. The seven are `probe02c_narrow_refused`,
+`probe02d_wide_literal_refused`, `probe10b_view_of_temporary_refused`,
+`probe10c_view_of_move_param_refused`, `probe11b_arm_omitted_refused`,
+`probe11c_import_arm_cost` and `probe11e_unused_import_refused`. A `[[test]]`
+selects by **directory** and `kind` is per entry, so one entry cannot be true
+about both halves.
+
+**The decision.** *Within a `program`-stage entry the runner dispatches per
+file, on the file's own header:*
+
+- ***`expect-error:` present*** *— a refusal member. `npkc` must fail, and the
+  **set** of codes it reports must **equal** the set the header names (B-7,
+  D-237). Never assembled, never linked, never run.*
+- ***`expect-exit:` present*** *— a run member. Emitted, scanned, assembled,
+  linked and run at -O0, then again through `opt -O2` (B-3).*
+- ***both*** *— a failure; they say contradictory things.*
+- ***neither*** *— a failure and **not a skip**. It is the state the three*
+  `missing_failsafe` *cases were in for two days (TM-115).*
+
+**This is an extension of a mechanism the compiler's runner already has**, not
+a new one: it already applies per-file membership rules inside a stage (*"a
+`resolve`/`check` file with no `expect-error` is a fixture another file imports
+and is skipped; a `compile`/`program` file some other file in its suite imports
+is skipped"*). Ours differs in refusing rather than skipping, because a skip is
+how a suite reports green while checking nothing.
+
+**The cost, stated because it is the argument against.** `BUILD.md` §3 opens by
+saying the harness mirrors the compiler's stage vocabulary *"so the eventual
+move to `npkg` is a change of runner and not of suite"*, and this is a
+divergence from that. It is written into `BUILD.md` §3 as **B-4c** so the day
+`npkg` can build a library (O-N1, O-B1) the migration is a known item rather
+than a discovery: either `npkg` grows the same rule, or the seven files move to
+a directory of their own.
+
+**It found something on its first run.** `probe02d_wide_literal_refused.npk`
+reports **two** codes, `NITPICK-LEX-004` and `NITPICK-PARSE-002`; its prose said
+in as many words that *"a harness entry for this file expects BOTH"* and its
+header named only the first. The file that exists to state D-237's rule was the
+file that broke it. Corrected in this commit.
+
+*Alternatives declined:*
+
+- **Move the seven into `tests/probe/refused/`.** It fits the schema exactly
+  and needs no divergence — and it churns paths that `0.0.0.md`,
+  `tests/probe/README.md`, `nitpick.toml` and several decisions cite by name,
+  to buy conformance with a tool that cannot build this library and is not
+  scheduled to. If `npkg` ever declines to grow the rule, this is the fallback
+  and it stays cheap.
+- **A second `[[test]]` entry with a `files` key.** The schema has no such key
+  and `npkg` refuses a key the schema lacks, so the manifest would stop being
+  a manifest.
+- **Let the `probe` entry cover the nineteen and leave the seven to no
+  entry.** Seven files no check owns, which is TM-115's failure exactly.
+
+### TM-120 — a test states its environment in its header, and the harness constructs that environment rather than inheriting one
+**2026-09-05. Measured** at pin `0dfddac`. **Extends `BUILD.md` B-5's marker
+grammar** and discharges the half of TM-116 that TM-116 could not.
+
+**The gap.** `probe09_environ_split` and `probe09b_environ_view_returned` need
+`TZ=Europe/Kyiv`. TM-116 gave them dedicated exit codes so an unmet precondition
+names itself — **30** absent, **39** present and wrong — and said plainly that
+this *"is not something a runner can honour: B-5's marker grammar has `// argv:`
+and no way to state an environment variable"*. Run bare, both are a red run the
+harness cannot avoid.
+
+**The decision, in two halves.**
+
+*First: the marker.* **`// env: NAME=VALUE`**, one variable per line,
+repeatable, in the header block. It joins `expect-exit`, `expect-error`,
+`expect-error-at`, `expect-golden`, `stress` and `argv`. **A marker and not a
+wrapper script**: the expectation belongs in the file with the test, which is
+B-5's whole principle, and a wrapper is a second place for a test's truth to
+live.
+
+*Second, and it is the half nobody asked for: the environment is **constructed**,
+never inherited.* A test program's environment is a fixed base plus its own
+markers and **nothing from the harness's own environment**. Without this the
+marker would be pointless: `probe09` exits 39 under `TZ=UTC`, so a developer
+with `TZ` set in their shell and CI without it would get different verdicts from
+the same tree — a suite whose answer depends on who ran it, which is what D-076
+and B-4 exist to prevent.
+
+**The base is NON-EMPTY, and that is measured rather than chosen.** Built with a
+genuinely empty environment, `probe09_environ_split` exits **10** — its own
+`env.len <= 0`, a substantive code meaning *`environ()` returned nothing*. That
+is TM-116's failure through a second door: an unmet precondition arriving as a
+verdict about the language. The probes were written against a shell environment,
+which is never empty. The base is therefore one inert declared variable,
+`NTIME_HARNESS=1`, which keeps `environ()` non-trivial and is identical on every
+machine because it is declared here rather than inherited.
+
+*Alternatives declined:*
+
+- **A wrapper script, or an `env` key in `nitpick.toml`.** Both put a test's
+  expectation somewhere other than the test. The manifest's `[[test]]` entries
+  are per **directory**; these two probes want different environments from
+  their twenty-four neighbours.
+- **Inherit the environment and add the markers on top.** It is one line
+  shorter and it makes every `environ()`-reading test's verdict a property of
+  the operator's shell.
+- **Empty base, and change probe09's exit 10 to a precondition code.** Exit 10
+  is a real assertion about the language — *does `environ()` return the
+  entries* — and rewriting a probe's assertion to suit the runner is the tail
+  wagging the dog. A probe is never deleted (0.0.0 P-5) and its verdicts are a
+  regression suite.
+- **Pass `TZ` through from the harness's own environment when set.** The same
+  defect, with an extra branch.
+
+### TM-121 — the marker block is contiguous from line 1, and a marker-shaped line below it is a failure
+**2026-09-05. Found by building the reader.**
+
+**The hazard, and it is already in this tree.**
+`tests/probe/defect/view_escape/case4_view_in_struct.npk:9` and
+`case5_read_after_free.npk:15` each carry, in **prose**, the line
+
+    // expect-error: NITPICK-BORROW-001".
+
+— a wrapped continuation of a quoted sentence, at column zero, byte-identical to
+a real marker but for the trailing `".`. Cycle 0.0.1's reader scanned the whole
+leading comment for anything starting `// expect-`, so it would have read both
+as markers.
+
+**The decision.** *The marker block is the maximal run of marker lines starting
+at **line 1**; it ends at the first line that is not one. The grammar is exact —
+`//`, one space, a known key, a colon — so `//      expect-error: …` (six
+spaces, the prose at `case3_view_returned.npk:17`) is not a marker and never
+was. **A marker-shaped line below the block is reported and fails**, naming the
+file and line.*
+
+**Why a failure rather than a silent skip.** The line that matters is not the
+prose already here; it is the `// stress: 40` somebody adds at line 20 of a file
+next year, believing it took effect. That is a silent no-op, and a silent no-op
+in an expectation is this repository's defining failure mode. The two prose
+lines were indented by two spaces in this commit, which costs nothing and buys
+a check that cannot be fooled.
+
+*Alternatives declined:*
+
+- **Accept markers anywhere in the leading comment.** It is what 0.0.1 did, and
+  it makes the two prose lines above into expectations nobody wrote.
+- **Warn instead of failing.** A warning in a green run is read by nobody.
+- **Require the block to be the whole leading comment.** Every file here puts
+  documentation under its markers, and that documentation is the most valuable
+  thing in the directory.

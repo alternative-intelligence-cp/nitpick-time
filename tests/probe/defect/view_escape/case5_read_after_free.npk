@@ -12,7 +12,7 @@
 // is now a REGRESSION CASE, and the poison read is history.
 //
 // The original note: "When O-N9 closes, this file's expectation becomes
-// expect-error: NITPICK-BORROW-001".
+//   expect-error: NITPICK-BORROW-001".
 //
 // CASE 5 — WHAT THE CALLER ACTUALLY READS. The dangling half, demonstrated
 // rather than argued.

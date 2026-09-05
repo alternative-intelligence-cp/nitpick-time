@@ -142,9 +142,13 @@ func:main = int32(cstring[]:_~argv) {
     int64:defaulted = sys(SYS_CLOCK_GETTIME, 99i64, junk.ptr) ?| (0i64 - 7i64);
     if (defaulted != (0i64 - 7i64))                     { exit 51i32; }
 
-    // D-151: exit 0 additionally asserts that nothing leaked -- every
-    // `buffer` above is reclaimed at scope exit by the managed regime, and
-    // if one were not, this exit would trap instead of succeeding.
+    // D-151: exit 0 additionally asserts that no `wild` allocation is
+    // live at exit -- a statement about coverage, not a proof of
+    // cleanliness. D-151 watches `wild` only; a MANAGED body is outside
+    // it entirely (TM-106, tests/probe/README.md).
+    // Every `buffer` above is reclaimed at scope exit by the MANAGED
+    // regime, which is precisely the half D-151 does not watch: if one
+    // were not reclaimed, this exit would still succeed.
     exit 0i32;
 };
 

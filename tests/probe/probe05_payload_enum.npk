@@ -165,9 +165,13 @@ func:main = int32(cstring[]:_~argv) {
 
     drop vec_free(@parts);
 
-    // D-151: exit 0 additionally asserts that nothing leaked. `Part` owns
-    // nothing, so freeing the block is the whole obligation here -- which is
-    // NOT true of `Vec<string>`; probe 06's header has that measurement.
+    // D-151: exit 0 additionally asserts that no `wild` allocation is
+    // live at exit -- a statement about coverage, not a proof of
+    // cleanliness. D-151 watches `wild` only; a MANAGED body is outside
+    // it entirely (TM-106, tests/probe/README.md).
+    // `Part` owns nothing, so freeing the block is the whole obligation
+    // here -- which is NOT true of `Vec<string>`; probe 06's header has
+    // that measurement.
     exit 0i32;
 };
 

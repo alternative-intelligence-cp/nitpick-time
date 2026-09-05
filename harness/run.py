@@ -1,218 +1,67 @@
 #!/usr/bin/env python3
-"""ntime's build-and-test runner -- THE 0.0.1 FLOOR, NOT THE HARNESS.
+"""ntime's build-and-test runner. Cycle 0.0.2.
 
-READ THIS BEFORE TRUSTING A GREEN RUN FROM THIS FILE.
+THIS REPLACED THE 0.0.1 FLOOR; IT DID NOT GROW OUT OF IT. The floor was four
+hardcoded checks with no manifest reader, no stage dispatch and no way to be
+pointed at anything. Two things came across because they had earned it:
+`check_expect_headers`, which states its denominator and partitions the tree so
+nothing falls between buckets (TM-115), and the rule that every `npkc` exit 0 is
+paired with the artefact it should have produced.
 
-This is not `harness/run.py` as `meta/specs/TESTING.md` describes it. There is
-no manifest reader, no module-graph walk, no stage dispatch, no `--only`, no
-self-check. Those are cycles 0.0.2 and 0.0.3, and this file is REPLACED by
-them, not extended into them.
+WHAT A GREEN RUN HERE IS, AND IS NOT.
 
-WHY IT EXISTS AT ALL, AND WHY IT IS NOT AN `exit 0` STUB. Cycle 0.0.1's step 4
-puts CI in place, and CI has to run something. The obvious something is a stub
-that exits 0 -- and a suite that reports green while checking nothing is the
-single failure this library's testing plan is built to prevent (`BUILD.md` B-8,
-`TESTING.md` V-14, and the manifest's own comment about an entry naming an
-empty directory). So this floor checks exactly what cycle 0.0.1 created, and
-nothing else:
+  IT IS: the manifest read and schema-checked; the three tools held to the pin's
+  exact patch release; the library emitted, optimised, assembled and scanned;
+  the IR proved identical from two working directories; every tracked `.npk`
+  owned by an expectation or a named exemption; and every test file held to its
+  own header at -O0 and again under `opt -O2`.
 
-  1. the toolchain is present and pinned  -- $NPKC, $NPKRT, LLVM's exact patch
-  2. every `.npk` under `src/` compiles   -- the `parse` floor; P-7's whole
-                                             reason for placing a module in
-                                             every directory
-  3. the conformance consumer runs        -- all four steps, judged on the
-                                             RUN's exit code
-  4. every tracked `.npk` is covered      -- by an `expect-` header or by a
-                                             NAMED exemption, with the
-                                             denominator printed (TM-115)
+  IT IS NOT evidence that the RUNNER can fail. `harness/selfcheck.py` is cycle
+  0.0.3 (`TESTING.md` V-14/V-15), and until it exists the only things here that
+  have been seen to go red on purpose are the three commissioned by hand at
+  0.0.2 and recorded in `meta/roadmap/0.0/0.0.2.md`: the undefined-symbol scan,
+  the toolchain pin, and `repro`.
 
-AND THE THIRD ONE IS THE POINT. `npkc` exiting 0 does not mean a program is
-well-formed: a root with `main` and no `failsafe` was accepted at exit 0 until
-the compiler's DEF-5 landed (`meta/OPEN_QUESTIONS.md` O-N11, TM-112), and a
-stage that stops at the `.ll` would have passed it. So step 3 emits, assembles,
-links AND RUNS, and it is the run that is judged.
+  IT IS NOT a purity result. The undefined-symbol scan CANNOT SEE A SYSCALL --
+  `npk_sys6` is the runtime's own and is in the allowlist by construction. See
+  `harness/elf.py`. `check_purity` is a source-level check and it is 0.0.3's.
 
-WHAT A GREEN RUN HERE IS NOT EVIDENCE OF. Not this library's behaviour -- there
-is none yet; `src/` is six placeholders and an empty umbrella. Not that the
-runner can FAIL: the self-check is 0.0.3, and until it exists nothing here has
-been seen to go red on purpose.
+STAGE ORDER, and each line is a reason:
+
+  1  manifest          nothing else can start; every path and flag comes from it
+  2  toolchain         a wrong `llc` makes every later result meaningless
+  3  tree sweep        cheap, and it is the check that finds files no test owns
+  4  library           one build per run, and it is a check in its own right
+  5  repro             before the suite, because it builds the library again
+  6  suite             the `[[test]]` entries, in manifest order
 """
 
 import os
-import subprocess
 import sys
+import time
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import build as build_mod                                        # noqa: E402
+import elf                                                       # noqa: E402
+import manifest as manifest_mod                                  # noqa: E402
+import repro as repro_mod                                        # noqa: E402
+import stages                                                    # noqa: E402
+import toolchain                                                 # noqa: E402
 
 # The repository root, derived from THIS FILE rather than from the working
 # directory, so `python3 harness/run.py` and `python3 /abs/path/run.py` mean the
-# same run. B-4 wants two builds from different working directories to agree;
-# a runner that resolved its own tree by `os.getcwd()` could not honour that.
+# same run. B-4 wants two builds from different working directories to agree; a
+# runner that resolved its own tree by `os.getcwd()` could not honour that.
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# `nitpick.toml` [toolchain] llvm. Exact patch release, because a patch release
-# can change instruction selection (D-204: the toolchain is a build input).
-LLVM_VERSION = "20.1.2"
-
-# `nitpick.toml` [toolchain] llc-flags / lld-flags. Rule B-1: no tool ever runs
-# at its own defaults -- `llc` defaults to -O2 and would optimise a build the
-# manifest declined.
-LLC_FLAGS = ["-O0", "-filetype=obj", "-relocation-model=static"]
-LLD_FLAGS = ["-static"]
-
-failures = []
-
-
-def say(line):
-    sys.stdout.write(line + "\n")
-    sys.stdout.flush()
-
-
-def run(argv, cwd=None):
-    """Run argv with NO shell and NO pipeline, and return (status, output).
-
-    Deliberately not `subprocess.check_output(...)` through a pipe: capturing a
-    status through a pipeline is how a measurement session here once recorded
-    thirty programs as `exit=0` when two of them had refused and written
-    nothing. The status returned below is the process's own.
-    """
-    p = subprocess.run(argv, cwd=cwd or ROOT, stdout=subprocess.PIPE,
-                       stderr=subprocess.STDOUT)
-    return p.returncode, p.stdout.decode("utf-8", "replace")
-
-
-def fail(what, detail):
-    failures.append(what)
-    say("  FAIL  %s" % what)
-    for line in detail.rstrip().splitlines():
-        say("        %s" % line)
-
-
-# ---------------------------------------------------------------------------
-# 1. the toolchain
-# ---------------------------------------------------------------------------
-
-def check_toolchain():
-    say("[1/4] toolchain")
-    npkc = os.environ.get("NPKC")
-    npkrt = os.environ.get("NPKRT")
-    if not npkc or not os.path.isfile(npkc):
-        fail("$NPKC", "not set, or not a file: %r" % npkc)
-        return None, None
-    if not npkrt or not os.path.isfile(npkrt):
-        fail("$NPKRT", "not set, or not a file: %r" % npkrt)
-        return None, None
-
-    st, out = run(["llvm-config", "--version"])
-    have = out.strip()
-    if st != 0:
-        fail("llvm-config", out)
-    elif have != LLVM_VERSION:
-        # An assertion, not a report. The whole reason the manifest names three
-        # digits is that a different patch release fails HERE rather than
-        # silently producing different code.
-        fail("LLVM version",
-             "have %s; nitpick.toml pins %s exactly" % (have, LLVM_VERSION))
-    else:
-        say("  ok    llvm-config --version == %s" % have)
-        say("  ok    NPKC   %s" % npkc)
-        say("  ok    NPKRT  %s" % npkrt)
-    return npkc, npkrt
-
-
-# ---------------------------------------------------------------------------
-# 2. every .npk under src/ compiles
-# ---------------------------------------------------------------------------
-
-def sources():
-    found = []
-    for dirpath, _dirs, names in os.walk(os.path.join(ROOT, "src")):
-        for n in sorted(names):
-            if n.endswith(".npk"):
-                found.append(os.path.relpath(os.path.join(dirpath, n), ROOT))
-    return sorted(found)
-
-
-def check_sources(npkc, out_dir):
-    """The `parse` floor.
-
-    THE DENOMINATOR IS PRINTED. A sweep that matches nothing and a sweep that
-    ran over nothing print the same thing unless the count is stated, so the
-    count is stated -- and it is asserted against a floor, because `src/` is
-    known to hold an umbrella plus one placeholder per directory (P-7).
-    """
-    files = sources()
-    say("[2/4] src/ compiles -- %d file(s)" % len(files))
-    if len(files) < 7:
-        fail("src/ inventory",
-             "found %d .npk under src/; expected at least 7 (lib.npk plus one "
-             "placeholder per directory, 0.0.1 P-7). A directory whose module "
-             "was deleted rather than replaced is invisible to this sweep, "
-             "which is the reason the floor is asserted." % len(files))
-        return
-    for rel in files:
-        ll = os.path.join(out_dir, os.path.basename(rel)[:-4] + ".ll")
-        st, out = run([npkc, rel, "-o", ll])
-        if st != 0:
-            fail(rel, out)
-        elif not os.path.isfile(ll):
-            # `npkc` exit 0 paired with the artefact it should have produced.
-            # A status that disagrees with an artefact is the tell.
-            fail(rel, "npkc exited 0 and wrote no .ll")
-        else:
-            say("  ok    %-32s %8d B of IR" % (rel, os.path.getsize(ll)))
-
-
-# ---------------------------------------------------------------------------
-# 3. the conformance consumer, all four steps
-# ---------------------------------------------------------------------------
-
-def check_conformance(npkc, npkrt, out_dir):
-    rel = os.path.join("tests", "conformance", "import.npk")
-    say("[3/4] %s -- emit, assemble, link, RUN" % rel)
-    if not os.path.isfile(os.path.join(ROOT, rel)):
-        fail(rel, "missing")
-        return
-    ll = os.path.join(out_dir, "import.ll")
-    obj = os.path.join(out_dir, "import.o")
-    exe = os.path.join(out_dir, "import")
-
-    st, out = run([npkc, rel, "-o", ll])
-    if st != 0 or not os.path.isfile(ll):
-        fail(rel + " (npkc)", out or "exit 0 and no .ll")
-        return
-    # O-N11 / TM-112: the cheap guard against a program with no handler. It is
-    # redundant now that `npkc` refuses one -- and it is kept, because it is
-    # what catches the NEXT stage that stops at the `.ll`.
-    with open(ll, "r", encoding="utf-8", errors="replace") as fh:
-        text = fh.read()
-    if text.count("\ndefine i32 @npk_failsafe") < 1:
-        fail(rel + " (failsafe)", "the emitted IR defines no @npk_failsafe")
-        return
-
-    st, out = run(["llc"] + LLC_FLAGS + [ll, "-o", obj])
-    if st != 0:
-        fail(rel + " (llc)", out)
-        return
-    st, out = run(["ld.lld"] + LLD_FLAGS + [obj, npkrt, "-o", exe])
-    if st != 0:
-        fail(rel + " (ld.lld)", out)
-        return
-    st, out = run([exe])
-    if st != 0:
-        fail(rel + " (run)", "exit %d; the file's header expects 0\n%s" % (st, out))
-        return
-    say("  ok    ran and exited 0")
-
-
-# ---------------------------------------------------------------------------
-# 4. every tracked .npk is covered by an expectation, or is exempt WITH A REASON
-# ---------------------------------------------------------------------------
-
-# THE EXEMPTION LIST IS THE DENOMINATOR'S OTHER HALF (TM-115). A sweep that
-# reports "no violations" and a sweep that opened nothing print the same line,
+# THE EXEMPTION LIST IS THE DENOMINATOR'S OTHER HALF (TM-115, V-1c). A sweep
+# reporting "no violations" and a sweep that opened nothing print the same line,
 # so this check states how many files it opened, and every file it opened is
-# either covered or named here with the reason it is not. A name here that no
-# longer exists is itself a failure -- that is the second list, and "every hole
-# was found by a check that diffs two lists, and none by a test".
+# either covered or named here with the reason it is not. The list is diffed in
+# BOTH directions: a name here that no longer exists is itself a failure,
+# because an exemption that outlives its file silently excuses the next file
+# with that name.
 EXPECT_EXEMPT = {
     "tests/probe/support/probe11_arms_lib.npk":
         "a library module probe 11 imports: no `main`, no `failsafe`, never "
@@ -227,11 +76,62 @@ EXPECT_EXEMPT = {
 }
 
 # The directories a `.npk` may not live in and be missed: none. This walk is
-# over the whole tree deliberately, because the file that went uncovered for
-# two days was under `tests/probe/defect/`, which every directory-scoped sweep
-# written so far had left out.
+# over the whole tree deliberately, because the file that went uncovered for two
+# days was under `tests/probe/defect/`, which every directory-scoped sweep
+# written before it had left out.
 WALK_SKIP = {".git", ".internal", "build", "__pycache__"}
 
+
+class Report:
+    """Verdict lines, the failure list, and the counts. One place, so the
+    summary cannot disagree with what was printed."""
+
+    def __init__(self, verdicts_path=None):
+        self.failures = []
+        self.units = 0
+        self.passed = 0
+        self.verdicts = []
+        self.verdicts_path = verdicts_path
+
+    def say(self, line):
+        sys.stdout.write(line + "\n")
+        sys.stdout.flush()
+
+    def fail(self, what, detail):
+        self.failures.append(what)
+        self.say("  FAIL  %s" % what)
+        for line in str(detail).rstrip().splitlines():
+            self.say("        %s" % line)
+
+    def unit(self, name, problems, note=""):
+        """One test unit's verdict. `--verdicts` writes one line per unit."""
+        self.units += 1
+        if problems:
+            self.failures.append(name)
+            self.say("  FAIL  %s" % name)
+            for p in problems:
+                for line in str(p).rstrip().splitlines():
+                    self.say("        %s" % line)
+            self.verdicts.append("FAIL %s" % name)
+        else:
+            self.passed += 1
+            self.say("  ok    %-46s %s" % (name, note))
+            self.verdicts.append("PASS %s%s" % (name,
+                                                (" " + note) if note else ""))
+
+    def write_verdicts(self):
+        if not self.verdicts_path:
+            return
+        with open(self.verdicts_path, "w", encoding="utf-8") as fh:
+            for line in self.verdicts:
+                fh.write(line + "\n")
+        self.say("wrote %d verdict line(s) to %s"
+                 % (len(self.verdicts), self.verdicts_path))
+
+
+# ---------------------------------------------------------------------------
+# 3. the tree sweep -- carried over from the 0.0.1 floor, with the strict reader
+# ---------------------------------------------------------------------------
 
 def all_npk():
     found = []
@@ -239,128 +139,301 @@ def all_npk():
         dirs[:] = sorted(d for d in dirs if d not in WALK_SKIP)
         for n in sorted(names):
             if n.endswith(".npk"):
-                found.append(os.path.relpath(os.path.join(dirpath, n), ROOT))
+                found.append(os.path.relpath(os.path.join(dirpath, n), ROOT)
+                             .replace(os.sep, "/"))
     return sorted(found)
 
 
-def has_expect_header(rel):
-    """An `expect-` marker anywhere in the file's leading comment block.
-
-    Read from the top and stop at the first line that is not a comment and not
-    blank: a marker below `mod:` is not a header, and B-5 puts expectations in
-    the header.
-    """
-    with open(os.path.join(ROOT, rel), "r", encoding="utf-8", errors="replace") as fh:
-        for line in fh:
-            s = line.strip()
-            if s.startswith("// expect-"):
-                return True
-            if s and not s.startswith("//"):
-                return False
-    return False
-
-
-def check_expect_headers():
+def check_expect_headers(rep):
     """Every `.npk` in the tree is in exactly ONE of three buckets.
 
-    THE TREE IS PARTITIONED, AND THE PARTITION IS ASSERTED. Three buckets and
-    nothing between them:
-
-      src/        judged by check 2 -- "it compiles". That IS its expectation,
-                  and it is not spelled with a marker because a library module
-                  has no exit code and no diagnostic to expect.
-      tests/      judged by a marker in its own header (B-5), or named in
-                  EXPECT_EXEMPT with the reason it cannot have one.
-      elsewhere   nothing. A `.npk` outside both is a file no check owns, which
-                  is the state the three `missing_failsafe` cases were in.
+      src/       judged by "it compiles" -- check 4 emits the whole graph the
+                 entry reaches, and a library module has no exit code and no
+                 diagnostic to expect, so it carries no marker.
+      tests/     judged by a marker in its own header (B-5), or named in
+                 EXPECT_EXEMPT with the reason it cannot have one.
+      elsewhere  nothing. A `.npk` outside both is a file no check owns.
 
     The counts are printed whether or not anything is wrong, and they are
-    asserted to sum -- because "swept, no violations" and "swept nothing" are
-    the same line otherwise.
+    asserted to sum -- "swept, no violations" and "swept nothing" are the same
+    line otherwise (TM-115, V-1b).
+
+    THE READER IS `stages.read`, the same one the suite dispatches on. That is
+    the point: the sweep and the dispatch cannot disagree about what a header
+    says, and the sweep reaches files no `[[test]]` entry selects -- every file
+    under `tests/probe/defect/`, which is all of them.
     """
     files = all_npk()
     in_src, in_tests, orphan = [], [], []
     for rel in files:
-        key = rel.replace(os.sep, "/")
-        if key.startswith("src/"):
-            in_src.append(key)
-        elif key.startswith("tests/"):
-            in_tests.append(key)
-        else:
-            orphan.append(key)
+        (in_src if rel.startswith("src/")
+         else in_tests if rel.startswith("tests/")
+         else orphan).append(rel)
 
-    covered, exempt, uncovered = [], [], []
-    for key in in_tests:
-        if key in EXPECT_EXEMPT:
-            exempt.append(key)
-        elif has_expect_header(key):
-            covered.append(key)
-        else:
-            uncovered.append(key)
+    covered, exempt, bad = [], [], []
+    for rel in in_tests:
+        if rel in EXPECT_EXEMPT:
+            exempt.append(rel)
+            continue
+        try:
+            stages.read(ROOT, rel)
+            covered.append(rel)
+        except stages.MarkerError as err:
+            bad.append((rel, err))
 
-    # THE DENOMINATOR, ALWAYS PRINTED, EVEN WHEN NOTHING IS WRONG.
-    say("[4/4] expect- header sweep -- %d .npk in the tree = %d src/ + %d "
-        "tests/ + %d elsewhere" % (len(files), len(in_src), len(in_tests),
-                                   len(orphan)))
-    say("      of the %d under tests/: %d with a header, %d exempt, %d "
-        "uncovered" % (len(in_tests), len(covered), len(exempt),
-                       len(uncovered)))
+    rep.say("[3/6] expect- header sweep -- %d .npk in the tree = %d src/ + %d "
+            "tests/ + %d elsewhere" % (len(files), len(in_src), len(in_tests),
+                                       len(orphan)))
+    rep.say("      of the %d under tests/: %d with a valid header, %d exempt, "
+            "%d rejected" % (len(in_tests), len(covered), len(exempt),
+                             len(bad)))
 
     if not files:
-        fail("expect- sweep", "opened 0 .npk files; a sweep with an empty "
-                              "denominator reports green while checking nothing")
+        rep.fail("expect- sweep", "opened 0 .npk files; a sweep with an empty "
+                                  "denominator reports green while checking "
+                                  "nothing")
         return
     if not in_tests:
-        fail("expect- sweep", "found 0 .npk under tests/; the sweep's whole "
-                              "subject is missing, which is not the same as "
-                              "finding no violations in it")
+        rep.fail("expect- sweep", "found 0 .npk under tests/; the sweep's whole "
+                                  "subject is missing, which is not the same "
+                                  "as finding no violations in it")
         return
+    if len(in_src) + len(in_tests) + len(orphan) != len(files):
+        rep.fail("expect- sweep", "the buckets do not sum to the denominator")
 
     for rel in orphan:
-        fail("unowned .npk: %s" % rel,
-             "a .npk in neither src/ nor tests/ is judged by no check. Put it "
-             "under one, or give this sweep a bucket for it and say why.")
-
-    for rel in uncovered:
-        fail("no expect- header: %s" % rel,
-             "every .npk under tests/ carries an expectation, or is named in "
-             "harness/run.py's EXPECT_EXEMPT with the reason it cannot. A "
-             "defect reproduction's expectation goes stale the day its defect "
-             "is fixed, and this sweep is the check -- so a file outside it is "
-             "the one the check most needed to see (TM-115).")
-
-    stale = [k for k in sorted(EXPECT_EXEMPT) if k not in set(files)]
-    for rel in stale:
-        fail("stale exemption: %s" % rel,
-             "EXPECT_EXEMPT names a file that is not in the tree. An exemption "
-             "that outlives its file is how a later file with the same name "
-             "gets excused without anyone deciding to excuse it.")
+        rep.fail("unowned .npk: %s" % rel,
+                 "a .npk in neither src/ nor tests/ is judged by no check. Put "
+                 "it under one, or give this sweep a bucket for it and say why.")
+    for rel, err in bad:
+        rep.fail("header: %s" % rel, err)
+    for rel in sorted(EXPECT_EXEMPT):
+        if rel not in set(files):
+            rep.fail("stale exemption: %s" % rel,
+                     "EXPECT_EXEMPT names a file that is not in the tree. An "
+                     "exemption that outlives its file is how a later file "
+                     "with the same name gets excused without anyone deciding "
+                     "to excuse it (V-1c).")
 
 
-def main():
-    say("ntime -- the 0.0.1 FLOOR. This is NOT the harness (cycle 0.0.2 is).")
-    say("It checks the toolchain, that src/ compiles, and that the conformance")
-    say("consumer RUNS. It checks nothing about this library's behaviour,")
-    say("because there is none yet, and it has never been seen to fail on")
-    say("purpose -- the self-check is cycle 0.0.3 (TESTING.md V-14).")
-    say("")
+# ---------------------------------------------------------------------------
+# 4. the library
+# ---------------------------------------------------------------------------
 
-    out_dir = os.path.join(ROOT, "build")
-    os.makedirs(out_dir, exist_ok=True)
+def build_library(rep, bld):
+    """One build per run, both legs, scanned. It is a check, not an input.
 
-    npkc, npkrt = check_toolchain()
-    if npkc and npkrt:
-        check_sources(npkc, out_dir)
-        check_conformance(npkc, npkrt, out_dir)
-    check_expect_headers()
+    `npkc` has no separate-compilation mode (TM-117), so nothing links against
+    this object -- every program re-emits the whole graph it reaches. What this
+    step asserts is that the library's entry point emits, survives `opt -O2`,
+    assembles at both optimisation levels, and needs no symbol the runtime does
+    not define.
+    """
+    entry = bld.manifest["build"]["entry"]
+    reached = build_mod.reachable_sources(os.path.join(ROOT, entry))
+    rep.say("[4/6] library -- %s, reaching %d source(s) by `use`"
+            % (entry, len(reached)))
+    ll = os.path.join(bld.out_dir, "ntime.ll")
+    try:
+        bld.emit(entry, ll)
+        rep.say("  ok    npkc            %9d B of IR" % os.path.getsize(ll))
+        obj = os.path.join(bld.out_dir, "ntime.o")
+        bld.assemble(ll, obj)
+        bld.scan(obj)
+        rep.say("  ok    llc + scan      %9d B object, 0 forbidden symbols of "
+                "%d undefined" % (os.path.getsize(obj), len(elf.undefined(obj))))
+        opt_ll = os.path.join(bld.out_dir, "ntime.opt.ll")
+        bld.optimise(ll, opt_ll)
+        opt_obj = os.path.join(bld.out_dir, "ntime.opt.o")
+        bld.assemble(opt_ll, opt_obj, optimised=True)
+        bld.scan(opt_obj)
+        rep.say("  ok    opt -O2 + scan  %9d B object (B-3: the scan is "
+                "repeated on the optimised object)" % os.path.getsize(opt_obj))
+        return True
+    except build_mod.BuildError as err:
+        rep.fail("library build (%s)" % err.step, err.detail)
+        return False
 
-    say("")
-    if failures:
-        say("FLOOR RED -- %d failure(s): %s" % (len(failures), ", ".join(failures)))
+
+# ---------------------------------------------------------------------------
+# 6. the suite
+# ---------------------------------------------------------------------------
+
+def select(entry):
+    """The files a `[[test]]` entry selects: `<path>/*.npk`, non-recursive.
+
+    NOT recursive, and the omission is load-bearing (the manifest says so at
+    length): a plain glob over `tests/probe/` is exactly the twenty-six probe
+    programs and excludes `support/` -- three library modules with no `main` --
+    and `defect/`, whose files are reproductions rather than tests of this
+    library. The schema has no `recursive` key, so writing one is refused by
+    name rather than silently ignored.
+    """
+    d = os.path.join(ROOT, entry["path"])
+    if not os.path.isdir(d):
+        return None
+    return sorted(
+        os.path.join(entry["path"], n).replace(os.sep, "/")
+        for n in os.listdir(d) if n.endswith(".npk"))
+
+
+def run_entry(rep, bld, entry, only):
+    name, stage, path = entry["name"], entry["stage"], entry["path"]
+    files = select(entry)
+    if files is None:
+        rep.fail("[[test]] %s" % name,
+                 "path `%s` is not a directory" % path)
+        return
+    if not files:
+        # The manifest's own comment: an entry naming a directory with nothing
+        # in it is a suite that reports green while checking nothing.
+        rep.fail("[[test]] %s" % name,
+                 "`%s/*.npk` matched 0 files. An entry naming an empty "
+                 "directory is a suite that reports green while checking "
+                 "nothing (B-8)." % path)
+        return
+
+    chosen = [f for f in files if only is None or only in f]
+    refusals = 0
+    runs = 0
+    for rel in chosen:
+        try:
+            e = stages.read(ROOT, rel)
+        except stages.MarkerError as err:
+            rep.unit(rel, [str(err)])
+            continue
+        if e.is_refusal:
+            refusals += 1
+            problems = stages.refusal(bld, rel, e)
+            rep.unit(rel, problems,
+                     "refused %s" % ", ".join(sorted(set(e.errors))))
+        else:
+            runs += 1
+            t0 = time.time()
+            problems = stages.program(bld, rel, e)
+            note = "exit %d, both legs, %.1f s" % (e.exit, time.time() - t0)
+            if e.stress > 1:
+                note += ", stress %d" % e.stress
+            if e.env:
+                note += ", env %s" % " ".join(sorted(e.env))
+            rep.unit(rel, problems, note)
+
+    rep.say("      %s: %d of %d file(s) -- %d run, %d refusal%s"
+            % (name, len(chosen), len(files), runs, refusals,
+               "" if only is None else "  [FILTERED by --only]"))
+
+
+# ---------------------------------------------------------------------------
+
+def main(argv):
+    only, verdicts_path = None, None
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--only" and i + 1 < len(argv):
+            only, i = argv[i + 1], i + 2
+        elif a.startswith("--only="):
+            only, i = a.split("=", 1)[1], i + 1
+        elif a == "--verdicts" and i + 1 < len(argv):
+            verdicts_path, i = argv[i + 1], i + 2
+        elif a.startswith("--verdicts="):
+            verdicts_path, i = a.split("=", 1)[1], i + 1
+        else:
+            sys.stderr.write("run.py: unknown argument %r\n"
+                             "usage: run.py [--only SUBSTRING] "
+                             "[--verdicts PATH]\n" % a)
+            return 2
+        continue
+
+    rep = Report(verdicts_path)
+    t0 = time.time()
+    rep.say("ntime harness -- cycle 0.0.2. The self-check is 0.0.3, so nothing")
+    rep.say("here has been proved able to fail except by hand (V-14, V-15).")
+    if only is not None:
+        rep.say("")
+        rep.say("*** --only %r: THIS RUN CONCLUDES NOTHING. A filtered run is "
+                "for iterating; ***" % only)
+        rep.say("*** nothing is committed on the strength of one.               "
+                "             ***")
+    rep.say("")
+
+    # 1. the manifest
+    try:
+        man = manifest_mod.load(ROOT)
+    except manifest_mod.ManifestError as err:
+        rep.say("[1/6] manifest")
+        rep.fail("nitpick.toml", err)
+        rep.say("")
+        rep.say("RED -- the manifest is where every path and flag comes from "
+                "(P-12); nothing runs without it.")
         return 1
-    say("FLOOR GREEN -- and read the header above for what that does not mean.")
+    rep.say("[1/6] manifest -- %s %s, entry %s, %d [[test]] entr%s"
+            % (man["project"]["name"], man["project"]["version"],
+               man["build"]["entry"], len(man["test"]),
+               "y" if len(man["test"]) == 1 else "ies"))
+
+    # 2. the toolchain
+    rep.say("[2/6] toolchain -- nitpick.toml pins LLVM %s exactly"
+            % man["toolchain"]["llvm"])
+    npkc, npkrt = os.environ.get("NPKC"), os.environ.get("NPKRT")
+    ok_env = True
+    for var, val in (("NPKC", npkc), ("NPKRT", npkrt)):
+        if not val or not os.path.isfile(val):
+            rep.fail("$%s" % var, "not set, or not a file: %r" % val)
+            ok_env = False
+    try:
+        for tool, version, banner in toolchain.check(man):
+            rep.say("  ok    %-8s %-8s %s" % (tool, version, banner))
+    except toolchain.ToolchainError as err:
+        rep.fail("toolchain", err)
+        ok_env = False
+
+    # 3. the tree sweep -- runs even when the toolchain is wrong, because it
+    #    needs no toolchain and its finding is worth having either way.
+    check_expect_headers(rep)
+
+    if not ok_env:
+        rep.say("")
+        rep.say("RED -- the toolchain is a build input (D-204). Nothing was "
+                "built.")
+        rep.write_verdicts()
+        return 1
+
+    bld = build_mod.Build(ROOT, man, npkc, npkrt, os.path.join(ROOT, "build"))
+    rep.say("      allowlist: %d symbol(s), derived from %s (TM-118)"
+            % (len(bld.allowlist), os.path.basename(npkrt)))
+
+    if build_library(rep, bld):
+        # 5. repro
+        roots = [man["build"]["entry"]]
+        rep.say("[5/6] repro -- %d root(s), each built twice from two working "
+                "directories (B-4)" % len(roots))
+        for p in repro_mod.check(bld, roots, say=rep.say):
+            rep.fail("repro", p)
+
+    # 6. the suite
+    rep.say("[6/6] suite")
+    for entry in man["test"]:
+        run_entry(rep, bld, entry, only)
+
+    rep.say("")
+    rep.write_verdicts()
+    elapsed = time.time() - t0
+    if rep.failures:
+        rep.say("RED -- %d unit(s) of %d passed; %d failure(s) in %.1f s: %s"
+                % (rep.passed, rep.units, len(rep.failures), elapsed,
+                   ", ".join(rep.failures)))
+        return 1
+    if only is not None:
+        rep.say("GREEN under --only %r in %.1f s -- %d of the suite's units "
+                "ran." % (only, elapsed, rep.units))
+        rep.say("*** THIS CONCLUDES NOTHING. --only iterates; it never "
+                "concludes. ***")
+        return 0
+    rep.say("GREEN -- %d unit(s), 0 failures, %.1f s. Read this file's header "
+            "for what that does not mean." % (rep.units, elapsed))
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))

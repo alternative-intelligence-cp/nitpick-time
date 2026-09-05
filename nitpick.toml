@@ -61,8 +61,11 @@ lld-flags     = ["-static"]
 # it fails for a reason that is not the library's. `tests/probe/` holds nineteen
 # positive probes and seven that MUST NOT COMPILE, and the schema selects by
 # directory, never by file (the compiler's runner globs `<path>/*.npk`). That
-# is O-X7, and the `probe` entry below is written to be true about the nineteen
-# it can be true about.
+# was O-X7, and it is SETTLED as TM-119: within a `program` entry the runner
+# dispatches on each FILE'S OWN HEADER -- `expect-error:` makes it a refusal
+# member, `expect-exit:` a run member, neither is a failure rather than a skip.
+# `meta/specs/BUILD.md` B-4c carries the rule and the migration cost, since it
+# is a deliberate divergence from `npkg`'s per-entry `kind`.
 
 # THE PROBES. Stage `program`: emitted, scanned, assembled, linked, run at -O0
 # and again through `opt -O2`, the same exit required both times (B-3).
@@ -79,7 +82,7 @@ lld-flags     = ["-static"]
 # is stated rather than left to be rediscovered (0.0.3's checklist asks for
 # exactly this exclusion, with the reason written next to it).
 #
-# THE SEVEN FILES THIS ENTRY IS NOT TRUE ABOUT, named so the gap is greppable
+# THE SEVEN REFUSAL MEMBERS OF THIS ENTRY, named so the split is greppable
 # rather than counted (the count came from the command, not from reading the
 # names -- `probe05b_derive_eq_refused.npk` is called `_refused` and is a
 # POSITIVE regression case since O-N10 was fixed, which is exactly how an
@@ -87,7 +90,9 @@ lld-flags     = ["-static"]
 # probe10b_view_of_temporary_refused, probe10c_view_of_move_param_refused,
 # probe11b_arm_omitted_refused, probe11c_import_arm_cost,
 # probe11e_unused_import_refused. Each carries `// expect-error:` instead of
-# `// expect-exit:`, and 0.0.2 settles how the runner tells them apart (O-X7).
+# `// expect-exit:`, and under TM-119 the runner reads that and holds the file
+# to B-7's equal-sets rule instead of linking it. RE-MEASURED AT 0.0.2 AND
+# CONFIRMED: 26 files, 19 and 7, none with both markers and none with neither.
 [[test]]
 name  = "probe"
 stage = "program"

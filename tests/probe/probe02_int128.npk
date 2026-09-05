@@ -9,7 +9,8 @@
 // `probe02c_narrow_refused.npk` measures the checked spelling `=>` at the same
 // narrowing: refused at COMPILE time, NITPICK-TYPE-009. Separate files, since a
 // file that must not compile cannot also exit 0, and exit 0 is how every
-// assertion here is made (D-151 makes it mean "and nothing leaked" as well).
+// assertion here is made (D-151 additionally makes it mean "and no `wild`
+// allocation is live" -- `wild` only, never a managed body; TM-106).
 //
 // THE VERDICT THOSE TWO PRODUCED IS NEGATIVE and it is recorded as TM-105,
 // with SAFETY.md S-15b and SPAN_MODEL.md N-20b written against it: there is no
@@ -141,7 +142,10 @@ func:main = int32(cstring[]:_~argv) {
                            0i64 - 4000000000000000000i64, 0i64)
         != (0i64 - 8000000000000000000i64))             { exit 36i32; }
 
-    // D-151: exit 0 additionally asserts that nothing leaked.
+    // D-151: exit 0 additionally asserts that no `wild` allocation is
+    // live at exit -- a statement about coverage, not a proof of
+    // cleanliness. D-151 watches `wild` only; a MANAGED body is outside
+    // it entirely (TM-106, tests/probe/README.md).
     exit 0i32;
 };
 

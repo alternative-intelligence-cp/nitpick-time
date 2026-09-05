@@ -493,7 +493,20 @@ complete today.
 
 ---
 
-### O-X7 — one `[[test]]` entry cannot cover `tests/probe/`, because seven of its twenty-six must not compile
+### ~~O-X7 — one `[[test]]` entry cannot cover `tests/probe/`, because seven of its twenty-six must not compile~~ — **SETTLED 2026-09-05, TM-119**
+
+**Settled as recommended: the runner dispatches on the file's own header**,
+and the divergence from `npkg`'s `kind` is written into `BUILD.md` §3 as
+**B-4c** with its migration cost. The counts below were re-measured at 0.0.2
+before the decision was taken and are confirmed: 26 files, 19 `expect-exit:`,
+7 `expect-error:`, none with both, none with neither. The alternative — moving
+the seven to `tests/probe/refused/` — stays cheap and remains the fallback if
+`npkg` ever declines the rule. **The dispatch found something on its first
+run**: `probe02d_wide_literal_refused.npk` reports two codes and its header
+named one, which its own prose had said it should not.
+
+*The question as it stood:*
+
 
 **Raised 2026-09-05 at cycle 0.0.1 step 3**, writing the manifest's first
 `[[test]]` entries.

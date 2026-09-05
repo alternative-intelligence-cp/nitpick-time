@@ -1,4 +1,5 @@
 // expect-exit: 0
+// env: TZ=Europe/Kyiv
 // PRECONDITION: run with `TZ=Europe/Kyiv` exported. The probe exits 30 if
 // `TZ` is ABSENT and 39 if it is PRESENT AND SET TO SOMETHING ELSE, so an
 // unmet precondition names itself instead of arriving as a verdict. Both codes

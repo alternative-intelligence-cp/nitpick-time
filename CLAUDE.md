@@ -7,14 +7,15 @@ Guidance for Claude Code sessions working in this repository.
 `ntime` — a date, time and time-zone library for **Nitpick**, the
 safety-critical systems language at `../../nitpick`.
 
-**Status, after cycle 0.0.1: a skeleton.** `src/` holds `lib.npk`, the empty
-umbrella, and one placeholder module per directory that parses and is
-**replaced, not deleted**, by the cycle named in its header.
+**Status, after cycle 0.0.2: a skeleton with a real harness.** `src/` holds
+`lib.npk`, the empty umbrella, and one placeholder module per directory that
+parses and is **replaced, not deleted**, by the cycle named in its header.
 `tests/conformance/import.npk` imports the umbrella, links and runs.
-`harness/run.py` is a **floor**, not the harness — it checks the toolchain pin,
-that every `.npk` under `src/` compiles, that the consumer RUNS, and that every
-`.npk` under `tests/` is covered by an expectation. **No library code computes
-anything yet**; the first is `src/core/` at 0.0.4.
+`harness/` is now the runner `BUILD.md` describes — a manifest reader, the
+toolchain pin, an ELF symbol scan, the build pipeline, the `program` stage at
+both optimisation levels, and the `repro` check — and it runs 27 units green in
+about 65 s. **No library code computes anything yet**; the first is `src/core/`
+at 0.0.4, and the harness's own self-check is 0.0.3.
 
 ## Before starting a session here
 
@@ -149,24 +150,49 @@ beginning with a digit, is refused: hence `probeNN_topic.npk` and never
 compiler's own bootstrap ladder, and `[dependencies]` resolves to nothing.
 `harness/run.py` is the runner until that changes (TM-003).
 
-**What `harness/run.py` is today, and what it is not.** Cycle 0.0.1 wrote it as
-a **floor**, deliberately not an `exit 0` stub: `python3 harness/run.py` with
-`$NPKC` and `$NPKRT` set checks four things and prints its denominators. It is
-**replaced** by the real runner at 0.0.2/0.0.3 — there is no manifest reader, no
-stage dispatch, and **no self-check, so it has never been proven able to fail**
-except by the four planted failures 0.0.1 ran by hand. Probes are still run
-individually by hand; `meta/roadmap/0.0/0.0.0.md` §2 has the command.
+**What the harness is after 0.0.2.**
 
-**Two probes need `TZ=Europe/Kyiv` exported** (09 and 09b). Without it they
-exit **30**; with the wrong value, **39**. Neither number is a verdict about
-the language — that is the point of them (TM-116).
+```
+$ NPKC=… NPKRT=… python3 harness/run.py [--only SUBSTRING] [--verdicts PATH]
+```
+
+Six modules under `harness/` — `manifest`, `toolchain`, `elf`, `build`,
+`stages`, `repro` — driven by `run.py`. It reads `nitpick.toml` and hardcodes
+nothing; holds `llc`, `opt` and `ld.lld` to the pinned patch release; sweeps
+every `.npk` in the tree and prints the denominator; builds the library; proves
+the IR identical from two working directories; and runs each test file at -O0
+and again under `opt -O2`. `harness/README.md` is the guide.
+
+**Three things it is easy to over-read, so they are written down.**
+
+- **The library object is linked into nothing** (TM-117). There is no separate
+  compilation: `npkc` emits the whole module graph a root reaches, so every
+  program carries the prelude and `ld.lld p.o ntime.o npkrt.o` is a
+  duplicate-symbol error. The library is built because *building it is a check*.
+- **The undefined-symbol scan cannot see a syscall** (TM-118). `npk_sys6` is the
+  runtime's own and is in the allowlist by construction. The scan supports
+  B-2's "no C, ever" and nothing wider; `check_purity` is source-level and is
+  0.0.3's.
+- **The harness has no self-check yet** (`TESTING.md` V-14/V-15, cycle 0.0.3).
+  Three of its checks have been commissioned by hand and seen to go red — the
+  symbol scan, the toolchain pin and `repro` — and that is three checks, not
+  the runner.
+
+**Two probes need `TZ=Europe/Kyiv`** (09 and 09b). They now say so in their own
+headers — `// env: TZ=Europe/Kyiv`, TM-120 — and the harness **constructs** each
+program's environment rather than inheriting yours, so a `TZ` in your shell
+cannot change a verdict. Run by hand without it they exit **30**; with the wrong
+value, **39**. Neither number is a verdict about the language — that is the
+point of them (TM-116).
 
 The compiler binary is the **pinned toolchain** the board names
 (`../BOARD.md`, W-18): `$NPKC` and `$NPKRT` are supplied to every session by the
 orchestrator, or set by hand from `../.internal/toolchain/<commit>/`. Never build the
 compiler from here and never read its `build/` directly — the guard refuses
-the first, and the second is rebuilt under you. LLVM 20.1.2 exactly, pinned;
-`llvm-config --version` to check.
+the first, and the second is rebuilt under you. LLVM 20.1.2 exactly, pinned —
+and the harness asks `llc`, `opt` and `ld.lld` rather than `llvm-config`, which
+ships in a `-dev` package the build never invokes and which can report a
+different installation from the one on `PATH`.
 
 ## Where things go
 

@@ -75,27 +75,34 @@ TM-030. All settled. **Nothing in this cycle is blocked on a question.**
 - [x] `CLAUDE.md` and `CONTRIBUTING.md` re-read against 0.0.0's verdicts and extended (both were written at repository setup; this is the check that they are still true). **`CLAUDE.md`'s `## What this is` section was EMPTY** — its body had drifted under the next heading — and its "Status: planning, no library code exists" was about to become false; both fixed. Both files gained TM-105 … TM-108 and TM-112 as things that *were measured*, and `stack`, the reserved word that costs an hour by failing dozens of lines from where it was written
 
 ### 0.0.2 — the harness, part 1
-- [ ] `harness/run.py`: the manifest reader, the toolchain pin check, the module-graph walk
-- [ ] the build pipeline — `npkc` → `opt` (check leg) → `llc` → the undefined-symbol scan → `ld.lld`
-- [ ] the undefined-symbol scan as a **build step**, not a test (B-2)
-- [ ] the `program` stage, at -O0 and again under `opt -O2`, same exit required (B-3)
-- [ ] `// expect-exit:` and `// stress: N` honoured
-- [ ] the `repro` check: two builds from different working directories, byte-identical IR (B-4) — **doubly important here**, because the generated zone tables will be the largest source file in the tree
-- [ ] **the nine probes carrying the pre-TM-106 leak comment reworded.** Each
-      says `// D-151: exit 0 additionally asserts that nothing leaked.`, which
+- [x] `harness/run.py`: the manifest reader, the toolchain pin check, the module-graph walk — six modules, `manifest.py` (a schema check that refuses an unknown key **by name**, in both directions), `toolchain.py` (asks `llc`/`opt`/`ld.lld`, **not** `llvm-config`, which is a `-dev` package the build never invokes), `elf.py`, `build.py`, `stages.py`, `repro.py`
+- [x] the build pipeline — `npkc` → `opt` (check leg) → `llc` → the undefined-symbol scan → `ld.lld`. **The plan's last step was wrong and it was measured, not argued**: there is no separate compilation, so a program links with `npkrt.o` alone and never with `build/ntime.o` (**TM-117**; the three-object link is `ld.lld` exit 1, 121 lines of `duplicate symbol`)
+- [x] the undefined-symbol scan as a **build step**, not a test (B-2) — **and it has been seen to fail**, naming the symbol, exit 1. Its allowlist is derived from `$NPKRT`'s ELF symbol table and not from `runtime/npkrt.ll`'s `define`s, which is wrong by 56 in one direction and 2 in the other (**TM-118**), and the scan **cannot see a syscall**, which is written down rather than hoped about (RX-120)
+- [x] the `program` stage, at -O0 and again under `opt -O2`, same exit required (B-3)
+- [x] `// expect-exit:` and `// stress: N` honoured — plus `// expect-error:`, `// expect-error-at:`, `// argv:` and the new `// env:`
+- [x] the `repro` check: two builds from different working directories, byte-identical IR (B-4) — **green, and seen to fail** against a deliberately non-deterministic generator, with the deterministic twin green through the same code path as the control
+- [x] **the nine probes carrying the pre-TM-106 leak comment reworded.** Each
+      said `// D-151: exit 0 additionally asserts that nothing leaked.`, which
       is not what D-151 proves: it watches `wild` allocations only, and a
-      managed body is outside it entirely (TM-106). The wording to use is
-      `tests/probe/README.md`'s. **Take the list from the command, not from the
-      probes you compiled** —
-      `git grep -l 'additionally asserts that nothing leaked' -- '*.npk'` —
-      because `probe04_big_fixed_table.npk` is the one probe nobody compiles
-      (O-N4's 281 s / 30.9 GiB case), so it drops out of any list built from
-      what a session ran, and it was missed exactly once for that reason.
-      `probe06` and `probe11` are correctly not among the nine
-- [ ] one real test program green
-- [ ] **O-X7 settled, and it must be**: `tests/probe/*.npk` is 19 files carrying `expect-exit:` and **7** carrying `expect-error:`, and a `[[test]]` selects by directory, never by file. One entry cannot be true about both halves. Recommendation on file: **dispatch on the file's own header**, which B-5 and B-7 already make authoritative, and write the divergence from `npkg`'s `kind` into `BUILD.md` §3. The alternative — move the 7 to `tests/probe/refused/` — fits the schema and churns paths that `0.0.0.md`, `tests/probe/README.md` and several decisions cite by name
-- [ ] **a way to state an environment variable in a test header.** `probe09_environ_split` and `probe09b_environ_view_returned` need `TZ=Europe/Kyiv`; run bare they exit **30**, which is correct and self-announcing (TM-116) and is still a red run the runner cannot avoid. B-5's marker grammar has `// argv:` and nothing for the environment. **A marker, not a wrapper script** — the expectation belongs in the file. Two probes depend on it and more will
-- [ ] **replace `harness/run.py`, do not extend it.** 0.0.1 left a *floor*: four checks, no manifest reader, no stage dispatch, **no self-check**. Two things in it are worth carrying over rather than rewriting — `check_expect_headers`, which states its denominator and partitions the tree (TM-115), and the rule that every `npkc` exit 0 is paired with the artefact it should have produced
+      managed body is outside it entirely (TM-106). The wording used is
+      `tests/probe/README.md`'s. **The list came from the command and not from
+      the probes anybody compiled** —
+      `git grep -l 'additionally asserts that nothing leaked' -- '*.npk'`,
+      **9 files out of 50 tracked `.npk`** — because
+      `probe04_big_fixed_table.npk` is the one probe nobody compiles (O-N4's
+      281 s / 30.9 GiB case), so it drops out of any list built from what a
+      session ran, and it was missed exactly once for that reason. It is in the
+      nine, and it was reworded. `probe06` and `probe11` were **confirmed by
+      reading** to be correctly outside the nine: both already carry the `wild`
+      wording. **A WIDER sweep found a tenth line the exact one could not**:
+      `git grep -n 'nothing leaked' -- '*.npk'` gives **10 lines across the same
+      9 files**, the extra being `probe02_int128.npk:12`, a differently worded
+      copy of the same wrong claim in that file's header prose. It was reworded
+      too. Residual: **0** for both patterns
+- [x] one real test program green — **all 27 units are**: the 19 run members and 7 refusal members of `tests/probe/`, plus `tests/conformance/import.npk`, in **65 s**
+- [x] **O-X7 settled** — **TM-119**, as recommended: dispatch on the file's own header, with the divergence from `npkg`'s `kind` written into `BUILD.md` §3 as **B-4c** together with its migration cost. The counts were **re-measured here before deciding** and confirmed: 26 files, 19 and 7, none with both markers, none with neither. The dispatch found `probe02d_wide_literal_refused.npk` naming one of the **two** codes it reports — in the file whose own prose states D-237's rule
+- [x] **a way to state an environment variable in a test header** — `// env: NAME=VALUE` (**TM-120**), a marker and not a wrapper. **And its unasked-for half:** the run environment is *constructed*, never inherited, or the marker would be pointless — and the declared base is **non-empty**, because under a genuinely empty environment `probe09_environ_split` exits **10**, one of its substantive codes, which is TM-116's defect through a second door
+- [x] **replaced `harness/run.py`, not extended it.** The floor's four hardcoded checks are gone; two things came across because they had earned it — `check_expect_headers` (TM-115), now reading headers through the *same* strict parser the suite dispatches on, and the artefact-pairing rule. The strict parser found two prose lines byte-identical to markers (**TM-121**)
 
 ### 0.0.3 — the harness, part 2
 - [ ] the `parse`, `accept`, `check` and `golden` stages, with the **exact-code** rule (B-7)

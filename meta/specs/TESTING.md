@@ -21,7 +21,7 @@ than sampled. Where that is possible it is the gate, and §3 says where.
 | `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
 | `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
 | `check` | every documented refusal actually refuses, with exactly its code |
-| `program` | the library does what it says, judged by exit code, at -O0 and under `opt -O2` |
+| `program` | the library does what it says, judged by exit code, at -O0 and under `opt -O2`. **Membership is per file, on its own header** (`BUILD.md` B-4c, TM-119): `expect-error:` makes it a refusal member, `expect-exit:` a run member, and neither is a failure rather than a skip |
 | `golden` | formatted output is exactly the bytes it is supposed to be |
 | `sweep` | the exhaustive properties, run in full |
 
@@ -35,7 +35,7 @@ them found something on its first run.
 
 | Check | Diffs |
 |---|---|
-| `check_purity` | `src/` outside `src/host/` against a ban list — `sys(`, `mono_now`, `environ`, `read_file`, `open`, `write`. **`SAFETY.md` S-10, and the most important check in the suite** |
+| `check_purity` | `src/` outside `src/host/` against a ban list — `sys(`, `mono_now`, `environ`, `read_file`, `open`, `write`. **`SAFETY.md` S-10, and the most important check in the suite.** It is also the **only** one that answers the question: the build's undefined-symbol scan cannot see a syscall, because `npk_sys6` is the runtime's own and is in its allowlist by construction (`BUILD.md` B-2c, TM-118, `nitpick-regex`'s RX-120) |
 | `check_host_isolation` | no module outside `src/host/` and `src/lib.npk` names a `host_` symbol |
 | `check_tables_regenerate` | the committed zone tables against a fresh generator run, byte for byte |
 | `check_table_invariants` | every transition slice sorted and strictly increasing; every type index in range; every name-pool offset in range; the zone-name index lexicographically sorted |
@@ -75,6 +75,22 @@ view is not the entry", which is the one question it exists to ask. An unmet
 precondition that arrives as a verdict is worse than a failure, because it is
 believed. `probe09` and `probe09b` now share **30** (the variable is absent)
 and **39** (present and wrong).
+
+**Rule V-1e (TM-120) — a precondition the runner can HONOUR, and an environment
+it constructs.** V-1d gives an unmet precondition a name; it does not stop the
+run being red. The `// env: NAME=VALUE` marker (`BUILD.md` B-5c) states the
+precondition where the test is, and the harness builds each program's
+environment from a **declared base plus that file's markers and nothing else**.
+Inheriting would make every `environ()`-reading test's verdict a property of
+whoever ran it. **The base is deliberately non-empty**: under an empty
+environment `probe09_environ_split` exits 10, a substantive code, so an empty
+base would recreate V-1d's defect at the runner instead of the file.
+
+**Rule V-1f (TM-121) — an expectation that does nothing is worse than none.**
+The marker block is contiguous from line 1 and a marker-shaped line below it
+**fails** rather than being ignored. The case that matters is not the prose
+already in this tree; it is the `// stress: 40` somebody adds mid-file next
+year, believing it took effect.
 
 ---
 

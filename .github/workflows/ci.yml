@@ -44,12 +44,14 @@
 # the `.ll` would have passed a program with no handler.
 #
 # AND WHAT IT IS NOT EVIDENCE OF: that the runner can FAIL. `harness/run.py` is
-# cycle 0.0.1's floor, not the harness; the self-check that proves it fails
-# seven ways is cycle 0.0.3 (`meta/specs/TESTING.md` V-14). Until that exists,
-# a green run here is an unfalsified claim rather than a tested one. The floor
-# was commissioned by hand at 0.0.1 against four planted failures and the
-# transcript is in `meta/roadmap/0.0/0.0.1.md`; that is weaker than V-14 and it
-# is what there is.
+# cycle 0.0.2's runner -- a real one now, but with no self-check of its own; the
+# self-check that proves it fails seven ways is cycle 0.0.3
+# (`meta/specs/TESTING.md` V-14). Until that exists, a green run here is an
+# unfalsified claim rather than a tested one. THREE of its checks were
+# commissioned by hand at 0.0.2 -- the undefined-symbol scan, the toolchain pin
+# and `repro` -- each seen red against a deliberate fault and green again, with
+# the transcripts in `meta/roadmap/0.0/0.0.2.md`; that is three checks rather
+# than the runner, it is weaker than V-14, and it is what there is.
 #
 # NOT PINNED, AND KNOWN: `actions/checkout@v4` and `actions/cache@v4` are moving
 # tags -- the only inputs in this file that are not immutable. A workflow this

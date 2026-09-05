@@ -28,27 +28,38 @@ entries from cycle 0.0.2.
   `/usr/bin/time -f %M` reports `0 KiB` for these static binaries, including
   for `probe11d_floor_only.npk`, so it cannot tell a clean run from a small
   one. `probe06b`/`probe06c` are the committed pair.
-  **Nine** probes here still carry the older one-line comment *"exit 0
-  additionally asserts that nothing leaked"* — **01, 02, 02b, 03, 04, 04b, 05,
-  07 and 08**. Each is locally harmless — none of those files allocates a
-  managed container — and each is due the wording above; the rewording is
-  deferred to **0.0.2**, when the harness picks this directory up and every
-  probe is re-run anyway. **Take the list from the command, not from the probes
-  you compiled:** `git grep -l 'additionally asserts that nothing leaked' --
-  '*.npk'`. `probe04_big_fixed_table.npk` was missed once for exactly that
-  reason — it is the one probe here that is never compiled (it is O-N4's 281 s /
-  30.9 GiB case), so it drops out of any list built from what a session ran,
-  while remaining a first-class probe row in the table below. `probe06` and
-  `probe11` are correctly not among the nine: both were written with the `wild`
-  wording already.
+  **Nine probes here carried the older one-line comment** *"exit 0 additionally
+  asserts that nothing leaked"* — **01, 02, 02b, 03, 04, 04b, 05, 07 and 08** —
+  and **all nine were reworded at 0.0.2**, when the harness picked this
+  directory up and every probe was re-run anyway. Each was locally harmless:
+  none of those files allocates a managed container. **The list came from the
+  command and not from the probes anybody compiled:**
+  `git grep -l 'additionally asserts that nothing leaked' -- '*.npk'`, nine
+  files out of fifty tracked. `probe04_big_fixed_table.npk` had been missed once
+  for exactly that reason — it is the one probe here that is never compiled by
+  hand (it is O-N4's 281 s / 30.9 GiB case), so it drops out of any list built
+  from what a session ran, while remaining a first-class probe row in the table
+  below. `probe06` and `probe11` were **confirmed by reading** to be correctly
+  outside the nine: both were written with the `wild` wording already. **A wider
+  sweep found a tenth line the exact one could not** — `git grep -n 'nothing
+  leaked' -- '*.npk'` gives ten lines across the same nine files, the extra
+  being a differently worded copy in `probe02_int128.npk`'s header prose. Both
+  patterns now match **0**.
 - **A probe that pins a fact the specification already states asserts the
   expected answer** (P-6) rather than printing what it found, so a change to
   that answer is a red run.
 - **A file's `mod:` name equals its basename**, and no identifier may begin
   with a digit — hence `probeNN_topic.npk` and never `NN_topic.npk`.
-- **A probe with a PRECONDITION states it in the header and exits a code no
-  substantive assertion in that file uses** (TM-116, `TESTING.md` V-1d). Two
-  probes here read `$TZ`. Run without it, `probe09b` used to exit **10** — its
+- **A probe with a PRECONDITION states it in the header, as a MARKER the runner
+  honours, and exits a code no substantive assertion in that file uses**
+  (TM-116 and TM-120, `TESTING.md` V-1d/V-1e). Two probes here read `$TZ` and
+  both carry `// env: TZ=Europe/Kyiv`. **The harness constructs each program's
+  environment** from a declared base plus that file's markers and passes nothing
+  of its own through, so these two give the same verdict on a developer's shell
+  as in CI. The base is deliberately **non-empty** (`NTIME_HARNESS=1`): under a
+  genuinely empty environment `probe09_environ_split` exits **10**, one of its
+  own substantive codes, which is TM-116's defect arriving through the runner
+  instead of the file. Two Run without it, `probe09b` used to exit **10** — its
   own *"the returned view is not the entry"*, which is the single question it
   exists to ask — so an unmet precondition and a real finding about the
   language were the same signal. Both files now use **30** for "the variable is

@@ -6,7 +6,7 @@
 // `NITPICK-BORROW-001` at 26:10, and it is now a REGRESSION CASE.
 //
 // The original note: "When O-N9 closes, this file's expectation becomes
-// expect-error: NITPICK-BORROW-001".
+//   expect-error: NITPICK-BORROW-001".
 //
 // CASE 4 — THE MINIMAL PAIR WITH CASE 2, and the clearest statement of the gap.
 //

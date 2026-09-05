@@ -95,7 +95,10 @@ func:main = int32(cstring[]:_~argv) {
     Flip:f_b0_a1 = Flip{ b: 0u32, a: 1i64 };
     pick (f_b0_a2.cmp(f_b0_a1) ?! E9) { (Ordering.Greater) { }, (*) { exit 21i32; } }
 
-    // D-151: exit 0 additionally asserts that nothing leaked.
+    // D-151: exit 0 additionally asserts that no `wild` allocation is
+    // live at exit -- a statement about coverage, not a proof of
+    // cleanliness. D-151 watches `wild` only; a MANAGED body is outside
+    // it entirely (TM-106, tests/probe/README.md).
     exit 0i32;
 };
 

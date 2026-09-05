@@ -1,5 +1,6 @@
 // expect-error: NITPICK-LEX-004
-// expect-error-at: 51:18
+// expect-error: NITPICK-PARSE-002
+// expect-error-at: 63:18
 //
 // PROBE 02d — `int64`'s MINIMUM CANNOT BE SPELLED AS A LITERAL, in any width.
 //
@@ -20,15 +21,26 @@
 // MEASURED, against compiler commit 950bb1d: NO. The envelope is a property of
 // the LITERAL and not of its destination type:
 //
-//   NITPICK-LEX-004 …:51:18: this literal is outside the 64-bit literal
+//   NITPICK-LEX-004 …:63:18: this literal is outside the 64-bit literal
 //   envelope (D-148); a type's outermost values are constructed
 //   arithmetically, not spelled
-//   NITPICK-PARSE-002 …:51:18: expected an expression
+//   NITPICK-PARSE-002 …:63:18: expected an expression
 //
 // Two codes, because the lexer having refused the token leaves the parser with
 // no expression where one was required. D-237's rule -- the set of codes
 // reported must EQUAL the set expected -- makes that worth stating: a harness
 // entry for this file expects BOTH.
+//
+// AND UNTIL 0.0.2 THE HEADER NAMED ONLY ONE OF THEM. The prose above said
+// "expects BOTH" and the machine-readable header carried a single
+// `expect-error:`, so the file that exists to state D-237's rule was the file
+// that broke it. The harness's first run reported `NITPICK-PARSE-002` as
+// "reported and not expected", which is the rule working. The second marker
+// was added then. A POSITION MARKER CITES A LINE IN ITS OWN FILE, so the
+// second marker and this paragraph together moved the refusal down the file
+// and `expect-error-at` had to move with it. The check catches that; the
+// reason is written here so the next person to add a marker to a file that
+// carries a position expects the move rather than debugging it.
 //
 // THE ASYMMETRY IS THE POINT. `9223372036854775807i128` (the MAXIMUM) is fine,
 // because it is inside the envelope; only the minimum's magnitude is one too

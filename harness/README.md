@@ -3,47 +3,70 @@
 Python, because `npkg` cannot build a library yet
 (`../meta/specs/BUILD.md` §1) and zero-dependency governs the artifact, not the
 workbench. It retires into `npkg` the way `bootstrap/harness/` does in the
-compiler repository, with both running side by side and a parity check first.
-
-## What `run.py` is TODAY — a floor, not the harness
-
-Written at cycle **0.0.1** and **replaced**, not extended, by 0.0.2 and 0.0.3.
-There is no manifest reader, no module-graph walk, no stage dispatch, no
-`--only`, and **no self-check**.
-
-It exists in this shape for one reason: 0.0.1 puts CI in place, CI has to run
-something, and the obvious something is a stub that exits 0 — which is a suite
-reporting green while checking nothing, the single failure `TESTING.md` is
-built to prevent. So it checks exactly what cycle 0.0.1 created:
+compiler repository, with both running side by side and a parity check first
+(TM-003).
 
 ```
-$ NPKC=… NPKRT=… python3 harness/run.py
-[1/4] toolchain                 $NPKC, $NPKRT, llvm-config == 20.1.2 exactly
-[2/4] src/ compiles             every .npk under src/, each paired with its .ll
-[3/4] tests/conformance/…       emit, assemble, link, RUN — the run is judged
-[4/4] expect- header sweep      the tree partitioned, the denominator printed
+$ NPKC=… NPKRT=… python3 harness/run.py [--only SUBSTRING] [--verdicts PATH]
 ```
 
-**Read step 3 as the important one.** `npkc` exit 0 is not well-formedness
-(O-N11, TM-112), so the consumer is run rather than compiled, and every `npkc`
-exit 0 elsewhere is paired with the artefact it should have produced.
+## The files
 
-**Read step 4 as the one that was missing.** It states how many files it opened,
-green or red, and it partitions every `.npk` into `src/` (judged by "it
-compiles"), `tests/` (judged by a marker of its own or a named exemption), or
-**unowned — which is a failure** (TM-115, `TESTING.md` V-1b/V-1c).
+| File | What it is |
+|---|---|
+| `manifest.py` | `nitpick.toml`, parsed and **schema-checked in both directions** — an unknown key is named and refused, a required key that is missing is named too. P-12: nothing here hardcodes a path, a flag or a version |
+| `toolchain.py` | asks `llc`, `opt` and `ld.lld` their versions and holds each to `[toolchain] llvm` **exactly**. It asks the three tools it invokes, and not `llvm-config`, which ships in a `-dev` package the build never needs |
+| `elf.py` | the ELF64 symbol table, read with `struct`. The undefined-symbol scan and the runtime allowlist. **Read its header before citing the scan as a guarantee** |
+| `build.py` | the pipeline — `npkc` → `opt` → `llc` → scan → `ld.lld` — every argv built from the manifest's flag lists (B-1) |
+| `stages.py` | the marker grammar, and the `program` and refusal stages |
+| `repro.py` | B-4: two builds of one tree must be the same bytes. Also a command in its own right, with `--between` for `check_tables_regenerate` |
+| `run.py` | the driver: stage order, per-unit verdict lines, the summary and its counts |
+
+## The stage order, and each line is a reason
+
+```
+1  manifest    nothing else can start; every path and flag comes from it
+2  toolchain   a wrong `llc` makes every later result meaningless
+3  tree sweep  cheap, and it is the check that finds files no test owns
+4  library     one build per run, and it is a check in its own right
+5  repro       before the suite, because it builds the library again
+6  suite       the `[[test]]` entries, in manifest order
+```
+
+## Three things worth knowing before you trust a green run
+
+**The library object is linked into nothing** (TM-117). `npkc` takes one root
+and emits the whole module graph it reaches, prelude included, so there is no
+separate compilation and `ld.lld p.o ntime.o npkrt.o` is a duplicate-symbol
+error. Step 4 builds the library because *building it is a check*; every program
+in step 6 carries its own copy of everything. That costs about 2.6 s per program
+and it is printed rather than hidden.
+
+**The undefined-symbol scan cannot see a syscall** (TM-118, RX-120).
+`npk_sys6` is the runtime's own trampoline, so it is in the allowlist by
+construction. The scan supports B-2's claim — no C, ever — and nothing wider.
+`check_purity` is a **source**-level check and is cycle 0.0.3's.
+
+**A `--only` run concludes nothing.** It says so twice, at the top and at the
+bottom, because that is what it is for.
 
 ## What a green run does NOT mean
 
 - **Not that the library works.** There is none yet; `src/` is placeholders.
-- **Not that this runner can fail.** `TESTING.md` V-14's self-check is cycle
-  0.0.3. Until it exists, a green run here is an *unfalsified* claim, not a
-  tested one.
+  The first computation is `src/core/` at 0.0.4.
+- **Not that this runner can fail.** `../meta/specs/TESTING.md` V-14's
+  `selfcheck.py` is cycle **0.0.3**, and V-15 puts it first in every full
+  invocation. Until it exists, a green run is an *unfalsified* claim rather
+  than a tested one.
 
-**It was commissioned by hand at 0.0.1 against seven planted failures** —
-`$NPKC` unset; an unparseable `src/` module; the consumer's `failsafe` deleted;
-a `src/` directory's placeholder deleted; an `expect-` header removed; a stale
-exemption; a `.npk` in neither bucket — and it went red on each and green again
-after. **That transcript is in `../meta/roadmap/0.0/0.0.1.md`'s execution
-record with the exit codes**, and it is weaker than V-14, which is the point of
-saying so here.
+**Three of its checks have been commissioned by hand**, at 0.0.2, each against a
+deliberate fault, each seen red and then green again — the undefined-symbol scan
+(an `npkc` wrapper renaming a call target: red, naming
+`ntime_c_helper_that_does_not_exist`, exit 1), the toolchain pin (a shim
+reporting 20.1.3 for one of the three tools: red, naming which tool, nothing
+built, exit 1), and `repro` (a generator whose rows came out of an unsorted
+`set`: red at the differing byte, exit 1 — with the same generator under
+`sorted()` green through the identical code path, so the red came from the
+non-determinism and not from the mechanism). **The transcripts with their exit
+codes are in `../meta/roadmap/0.0/0.0.2.md`.** That is three checks, not the
+whole runner, and it is weaker than V-14 — which is the point of saying so here.

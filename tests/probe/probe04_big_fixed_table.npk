@@ -30083,7 +30083,10 @@ func:main = int32(cstring[]:argv) {
     }
     if (prev != 15934500000i64)                          { exit 18i32; }
 
-    // D-151: exit 0 additionally asserts that nothing leaked.
+    // D-151: exit 0 additionally asserts that no `wild` allocation is
+    // live at exit -- a statement about coverage, not a proof of
+    // cleanliness. D-151 watches `wild` only; a MANAGED body is outside
+    // it entirely (TM-106, tests/probe/README.md).
     exit 0i32;
 };
 

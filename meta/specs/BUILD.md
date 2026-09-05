@@ -37,13 +37,28 @@ as many words), and the compiler's own harness is Python for the same reason.
 ## 2. The build, step by step
 
 ```
+the library, ONCE per run — a check in its own right, linked into nothing:
 src/lib.npk  (and every module it reaches by `use`)
    → npkc              →  build/ntime.ll         the emitted LLVM IR text
    → opt -O2           →  build/ntime.opt.ll     only on the check leg
    → llc               →  build/ntime.o          at the manifest's flags
    → undefined-symbol scan against the runtime allowlist
-   → ld.lld -static    →  build/<program>        one program object + npkrt.o
+
+each program, its own whole graph:
+tests/…/p.npk
+   → npkc → p.ll → llc → p.o → scan → ld.lld -static (p.o, npkrt.o) → run
+   → npkc → p.ll → opt -O2 → p.opt.ll → llc -O2 → p.opt.o → scan → link → run
 ```
+
+**Rule B-0b (TM-117) — a program links with `npkrt.o` and nothing else.** There
+is **no separate compilation**: `npkc` takes one root and emits the whole module
+graph it reaches, the prelude included, so an importing program's object already
+contains everything the imported module's object contains. Measured at pin
+`0dfddac`, `ld.lld -static p.o ntime.o npkrt.o` is exit 1 with 121 lines of
+`duplicate symbol`. The library is still built exactly once per run — it is the
+first block above — but as a **check**, never as an input. The cost of every
+program carrying the prelude is real and is **measured rather than avoided**:
+the harness prints per-unit and total wall time on every run.
 
 **Rule B-1.** Every tool invocation is built from `nitpick.toml`'s
 `[toolchain]` lists. No tool ever runs at its own defaults — `llc` defaults to
@@ -52,8 +67,30 @@ project a measured 25× on one module.
 
 **Rule B-2.** The undefined-symbol scan is a **build step, not a test**. Every
 object is scanned and the build fails on any undefined symbol outside the
-runtime allowlist derived from `runtime/npkrt.ll`'s own `define`s plus `main`.
-This is what makes "no C, ever" structural rather than a convention.
+runtime allowlist. This is what makes "no C, ever" structural rather than a
+convention.
+
+**Rule B-2b (TM-118) — the allowlist is derived from `$NPKRT`, not from
+`runtime/npkrt.ll`.** This rule said *"`runtime/npkrt.ll`'s own `define`s plus
+`main`"* until 0.0.2, and that set is wrong in **both** directions: 166 `define`s
+against 111 global symbols in the object, with **56** of them `internal` (so an
+allowlist holding them excuses a reference that then fails at link) and **two**
+— `_start` and `npk_clone_raw` — reaching the object from `module asm` blocks a
+`define` scan cannot see. "Plus `main`" was short too: a library object
+legitimately references `@npk_failsafe`, because the prelude's trap paths are
+emitted into every root and the handler is the program's. So both halves are
+derived from the linked artefact's own ELF symbol table: **what the runtime
+provides** (its global defined symbols) ∪ **what the runtime requires of the
+program** (its own undefined symbols). 113 symbols at pin `0dfddac`.
+
+**Rule B-2c (TM-118) — the scan cannot see a syscall, and is not a purity
+result.** `npk_sys6` is the runtime's own syscall trampoline and is in the
+allowlist by construction, so a module that issues a raw syscall has the same
+undefined set as one that does not — measured as `nitpick-regex`'s RX-120 (a
+symbol diff coming out empty, 29 each way) and reproduced here. B-2's claim is
+"no C, ever" and that is the whole of what it supports. **`check_purity`
+(`TESTING.md` §2, `SAFETY.md` S-10) is a source-level check and is the only
+thing that answers "did this module touch the kernel".**
 
 **Rule B-3.** The optimised leg runs on every program, every time: the same
 program re-emitted through `opt -O2` + `llc -O2` must produce the **same exit
@@ -96,6 +133,22 @@ well-formedness**, so the conformance suite is judged on the RUN. `accept` is
 kept in the table because the stage exists upstream, with the note that this
 library does not use it.
 
+**Rule B-4c (TM-119) — inside a `program` entry, the FILE'S OWN HEADER decides
+what kind of test it is. This is a deliberate divergence from `npkg`'s `kind`.**
+A `[[test]]` selects by **directory** and `kind` is per entry, so one entry over
+`tests/probe/` cannot be true about both the 19 files carrying `expect-exit:`
+and the 7 carrying `expect-error:` (O-X7). The runner therefore dispatches per
+file: `expect-error:` present makes it a **refusal** member — `npkc` must fail
+and the *set* of codes must equal the set named (B-7) — and `expect-exit:`
+present makes it a **run** member. **Both markers is a failure; neither is a
+failure and not a skip.** The compiler's own runner already has per-file
+membership rules inside a stage, so this is an extension rather than a new
+mechanism; ours refuses where the compiler's skips, because a skip is how a
+suite reports green while checking nothing. **The migration cost is stated
+here** so the day `npkg` can build a library (O-N1, O-B1) it is a known item:
+either `npkg` grows the same rule, or the seven files move to a directory of
+their own.
+
 **Four further stages exist upstream and are deliberately absent here**, each
 to be added by the cycle that can honour it rather than sit dormant:
 `resolve` (loader refusals), `runtime` (a hand-written `.ll`), `verify`
@@ -108,13 +161,35 @@ that gate is a `ulimit -v` cap today).
 compiler's:
 
 ```
-// expect-exit: 7            the exit a run must produce (0 when absent)
-// expect-error: NITPICK-TYPE-046
+// expect-exit: 7            the exit a run must produce
+// expect-error: NITPICK-TYPE-046      repeatable; the SET must match (B-7)
 // expect-error-at: 14:9
+// env: TZ=Europe/Kyiv       one variable per line, repeatable (TM-120)
 // stress: 40                run it that many times, the SAME answer every time
 // argv: …
 // expect-golden: name       the golden file this test asserts against
 ```
+
+**Rule B-5b (TM-121) — the marker block is contiguous from LINE 1.** It is the
+maximal run of marker lines starting at line 1 and ends at the first line that is
+not one; the grammar is exact — `//`, one space, a known key, a colon. **A
+marker-shaped line below the block is a failure**, named with its file and line,
+because a marker that looks real and does nothing is a silent no-op in an
+expectation. Two files in this tree carry one in prose, which is how the rule
+was found. Indent such a line so it is not marker-shaped.
+
+**Rule B-5c (TM-120) — a test's environment is CONSTRUCTED from `// env:`, never
+inherited.** The harness builds each program's environment from a fixed declared
+base plus that file's own markers, and passes nothing of its own through.
+Otherwise a developer with `TZ` set and CI without it get different verdicts from
+the same tree — `probe09_environ_split` exits 39 under `TZ=UTC` — which is what
+D-076 and B-4 exist to prevent. **The base is non-empty and that is measured**:
+under a genuinely empty environment that probe exits 10, one of its substantive
+codes, which is TM-116's failure through a second door.
+
+**Rule B-5d — `expect-error-at` cites a line in its OWN file**, so adding a
+header line moves it. The check catches that; the caution is written down because
+the fix reads like a mystery otherwise.
 
 **Rule B-6 — assert on codes and exit codes, never on message text.**
 
@@ -272,4 +347,6 @@ output `Bytes`.
 
 - **O-B1 — when `npkg` can build a library.** Gated on O-N1. Neither
   `target = "library"` nor dependency-root population is on the compiler's 1.5
-  or 1.6 map, so this is a request to be made, not a date to wait for.
+  or 1.6 map, so this is a request to be made, not a date to wait for. **Two
+  items ride on it**: B-4c's per-file dispatch, and TM-117's separate
+  compilation — the second is a `npkc` feature rather than an `npkg` one.

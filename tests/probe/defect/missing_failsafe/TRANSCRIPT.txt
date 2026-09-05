@@ -1,39 +1,148 @@
-RE-RECORDED 2026-09-04 AT THE RE-PIN. Read this header before the numbers.
+RE-RECORDED AGAIN 2026-09-05 AT THE 0dfddac RE-PIN. Read this header before
+the numbers. THIS FILE NOW HOLDS THREE RECORDINGS, NEWEST FIRST.
 
 O-N11 was raised by this repository on 2026-09-03 and accepted as the
-compiler's DEF-5. It LANDED at its cycle 1.5.1b step 1b, and this repository
-is now pinned to `94874ce`, which carries it. The defect these three files
-reproduce NO LONGER EXISTS, and this file therefore holds two transcripts:
+compiler's DEF-5. It LANDED at its cycle 1.5.1b step 1b. The defect these
+three files reproduce NO LONGER EXISTS, and they are regression cases now.
 
-  PART A -- the re-recording at `94874ce`, below. What the compiler does now.
-  PART B -- the original at `950bb1d`, kept verbatim and unedited at the
-            bottom. What the compiler did when the defect was raised.
+  PART A  -- 2026-09-05, pin `0dfddac`. WHAT THE COMPILER DOES NOW.
+  PART A0 -- 2026-09-04, pin `94874ce`. The first re-recording, when DEF-5
+             had just landed. Kept because it is the pin every 0.0.0 number
+             was taken against.
+  PART B  -- 2026-09-03, pin `950bb1d`. The original, verbatim and unedited.
+             What the compiler did when the defect was raised.
 
-WHAT CHANGED, IN ONE LINE: an `npkc` REFUSAL now replaces what was an `llc`
-failure. The refusal is `NITPICK-REACH-003`, it lands at `main`, and it LISTS
-the identities the absent handler would owe -- which is the ask this
-repository made, granted in full.
+WHAT PART A ADDS OVER PART A0, WHICH IS ALMOST NOTHING, AND THAT IS THE
+FINDING. Across three compiler pins -- 94874ce, then 1.5.2's three commits to
+0dfddac -- every diagnostic here is CHARACTER-IDENTICAL except for the line
+numbers, and the line numbers moved because THIS COMMIT added `expect-`
+headers to the three files (TM-115), not because the compiler moved. `case1`
+is 30:1 in Part A0 and 62:1 in Part A; `case3` is 27:1 and 58:1. The counts,
+the identity names, the order and the wording are the same text. DEF-5 is
+stable.
 
-TWO NUMBERS THIS DISPATCH WAS TOLD AND DID NOT CARRY IN. A board carried
-"six identities" for `case1`, relayed from the compiler session. It is FOUR.
-`case1` has no import, no arithmetic and no allocation, so its bill is
-S-4b's unconditional floor: Unreachable, HeapOom, HeapBadRequest, WildLeak.
-The six is real but belongs to `case3`, which imports the raiser and
-subtracts -- so it owes `probe11_arms_lib.EProbeZone` and `IntOverflow` on
-top of the floor. Both numbers below were read out of the compiler's own
-output, not predicted; the instrument was commissioned first, and the stale
-`.ll` files from 2026-09-03 were deleted before the run so that no artifact
-of the old pin could be read as current.
+WHY IT WAS RE-RUN AT ALL RATHER THAN CARRIED. A measurement belongs to a pin.
+Part A0 was taken against a compiler this repository no longer uses, and
+"probably unchanged" is the assumption the whole re-pin discipline exists to
+refuse. It cost four commands to find out, and it also caught the two
+`expect-error-at:` line numbers, which WOULD have been wrong had they been
+copied from Part A0.
 
-NOTE ON `case3`'s OWN HEADER: it says the true cause is "you have no
-`failsafe`, and here are the NINE arms it owes". Nine was never measured --
-it is the arm count of `probe11_failsafe_arms.npk`, a different program. The
-measured bill for `case3` is six. The header is left as written, because it
-is what was believed on 2026-09-03; this note is the correction.
+THE COUNTS, AND THE CORRECTION THAT KEEPS BEING NEEDED. `case1` owes FOUR
+identities -- Unreachable, HeapOom, HeapBadRequest, WildLeak -- because it has
+no import, no arithmetic and no allocation, so its bill is `SAFETY.md` S-4b's
+unconditional floor. A board carried SIX for it, relayed from the compiler
+session. The six is real and belongs to `case3`, which imports the raiser: it
+adds `probe11_arms_lib.EProbeZone` and `IntOverflow` to the floor. Both
+numbers below were read out of the compiler's own output at each pin, never
+predicted, and the stale `.ll` files were deleted before every run so that no
+artifact of an older pin could be read as current.
+
+NOTE ON `case3`'s OWN HEADER: the text it kept from 2026-09-03 says the true
+cause is "you have no `failsafe`, and here are the NINE arms it owes". Nine
+was never measured -- it is the arm count of `probe11_failsafe_arms.npk`, a
+different program. The measured bill for `case3` is six. The sentence is left
+as written, because it is what was believed then; this note and the file's own
+new header are the correction.
 
 ================================================================
 ================================================================
-  PART A -- RE-RECORDED 2026-09-04, PIN 94874ce
+  PART A -- RE-RECORDED 2026-09-05, PIN 0dfddac
+================================================================
+================================================================
+
+$ sha256sum "$NPKC" "$NPKRT"
+38e48973eee3a83056a62d515abc68d6bca62d052f3b5e1fbf2ced00101267d9  /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/0dfddac/npkc
+c9ddbcffd32eccc7787bd71c39ebefd25913170a9fae48de32eb53ca68b2239e  /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/0dfddac/npkrt.o
+exit=0
+
+$ llvm-config --version
+20.1.2
+exit=0
+
+$ rm -f .internal/scratch/tr/*.ll   # nothing stale can be read as current
+exit=0
+
+================================================================
+  case1_no_failsafe
+================================================================
+
+$ "$NPKC" tests/probe/defect/missing_failsafe/case1_no_failsafe.npk -o /tmp/case1_no_failsafe.ll
+NITPICK-REACH-003 tests/probe/defect/missing_failsafe/case1_no_failsafe.npk:62:1: `main` without `failsafe` (D-013): an executable supplies exactly one handler, the trap route calls it by name, and this program's would have to name every error that can reach it -- 4 identities: Unreachable, HeapOom, HeapBadRequest, WildLeak -- with `(*)` beneath them but not in for them (D-179)
+exit=1
+
+$ ls /tmp/case1_no_failsafe.ll
+ls: cannot access '/tmp/case1_no_failsafe.ll': No such file or directory
+exit=2
+
+  NO .ll WAS WRITTEN. Unchanged from the 94874ce recording below.
+
+================================================================
+  case2_failsafe_present
+================================================================
+
+$ "$NPKC" tests/probe/defect/missing_failsafe/case2_failsafe_present.npk -o /tmp/case2_failsafe_present.ll
+exit=0
+
+$ grep -c '^define i32 @main' /tmp/case2_failsafe_present.ll
+1
+exit=0
+
+$ grep -c '^define i32 @npk_failsafe' /tmp/case2_failsafe_present.ll
+1
+exit=0
+
+$ llc -O0 -filetype=obj -relocation-model=static /tmp/case2_failsafe_present.ll -o /tmp/case2_failsafe_present.o
+exit=0
+
+$ ld.lld -static /tmp/case2_failsafe_present.o "$NPKRT" -o /tmp/case2_failsafe_present
+exit=0
+
+$ /tmp/case2_failsafe_present
+exit=0
+
+================================================================
+  case3_arm_contract_evaded
+================================================================
+
+$ "$NPKC" tests/probe/defect/missing_failsafe/case3_arm_contract_evaded.npk -o /tmp/case3_arm_contract_evaded.ll
+NITPICK-REACH-003 tests/probe/defect/missing_failsafe/case3_arm_contract_evaded.npk:58:1: `main` without `failsafe` (D-013): an executable supplies exactly one handler, the trap route calls it by name, and this program's would have to name every error that can reach it -- 6 identities: probe11_arms_lib.EProbeZone, Unreachable, HeapOom, HeapBadRequest, WildLeak, IntOverflow -- with `(*)` beneath them but not in for them (D-179)
+exit=1
+
+$ ls /tmp/case3_arm_contract_evaded.ll
+ls: cannot access '/tmp/case3_arm_contract_evaded.ll': No such file or directory
+exit=2
+
+  NO .ll WAS WRITTEN.
+
+================================================================
+  THE CONTROL, UNCHANGED: an ordinary LIBRARY module.
+================================================================
+
+$ "$NPKC" tests/probe/support/probe11_arms_lib.npk -o /tmp/armslib.ll
+exit=0
+
+$ grep -c '^define i32 @main' /tmp/armslib.ll
+0
+exit=1
+
+$ grep -c '^define i32 @npk_failsafe' /tmp/armslib.ll
+0
+exit=1
+
+================================================================
+  THE CONTRAST, UNCHANGED: a failsafe that omits one arm.
+================================================================
+
+$ "$NPKC" tests/probe/probe11b_arm_omitted_refused.npk -o /tmp/p11b.ll
+NITPICK-REACH-002 tests/probe/probe11b_arm_omitted_refused.npk:60:5: `failsafe` does not name `probe11_arms_lib.EProbeZone`, which can reach it (D-179): add the arm — `(*)` counts for nothing here, so a new failure mode is always acknowledged before the program compiles again
+exit=1
+
+
+================================================================
+================================================================
+  PART A0 -- THE FIRST RE-RECORDING, 2026-09-04, PIN 94874ce
+  Kept as taken. The pin every cycle 0.0.0 number belongs to.
 ================================================================
 ================================================================
 

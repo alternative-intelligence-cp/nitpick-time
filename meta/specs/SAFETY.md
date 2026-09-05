@@ -341,13 +341,28 @@ added by decision when a consumer exists.
 compiler-prelude `Vec<T>` at all.** No `struct:Vec` exists anywhere in the
 compiler's tree; `lib/nvec.npk` is D-200's small-vector tier over
 `simd<flt64, N>` and not a container. The shared shape is a **convention** each
-library adopts from the compiler's `List<T>` — `src/frontend/list.npk`, whose
-`items` is `wild T->` and is commented *"WILD, DELIBERATELY"* — which is
-exactly what B-12 records when it says the shape is the compiler's and the type
-is ours. So a sibling library that later spells its `Vec` differently, with a
-managed body or a slice field, gets a **different safety property with no
-diagnostic anywhere**. Read that library's own declaration; do not carry this
-rule across.
+library adopts from the compiler's `List<T>`, which is exactly what B-12
+records when it says the shape is the compiler's and the type is ours. So a
+sibling library that later spells its `Vec` differently, with a managed body or
+a slice field, gets a **different safety property with no diagnostic
+anywhere**. Read that library's own declaration; do not carry this rule across.
+
+**Where `List<T>` is, and the divergence that matters (TM-113, amended
+2026-09-05 against pin `0dfddac`).** It is the compiler's
+`src/prelude/prelude.npk`, a `pub
+struct:List<T>` in the **prelude**; the `src/frontend/list.npk` this paragraph
+used to cite was deleted when D-239 moved it, and the comment it used to quote
+— *"WILD, DELIBERATELY"* — occurs **zero times in the compiler's 607 `.npk`
+files** at that pin. The layout is still ours verbatim, three fields, `wild
+T->:items` first. **The semantics are not, and the gap widened rather than
+closed:** the prelude's `List<T>` is now **compiler-known and OWNING** (D-247),
+so the layout marks it owning and *a generated drop releases its `count`
+elements through `T`'s drop and hands the block back*. `ntime`'s `Vec<T>` is an
+ordinary struct and gets none of that. So the two facts this section rests on
+survive the move and one of them is now stronger: the bounds obligation is
+`ntime`'s (S-17b), **and so is the whole element-lifetime obligation** — which
+is TM-106 measured, and which a reader who reasons from "our `Vec` is the
+compiler's `List`" would now get exactly backwards.
 
 ---
 

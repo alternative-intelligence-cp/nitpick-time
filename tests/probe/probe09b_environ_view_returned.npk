@@ -1,4 +1,21 @@
 // expect-exit: 0
+// PRECONDITION: run with `TZ=Europe/Kyiv` exported. The probe exits 30 if `TZ`
+// is ABSENT and 39 if it is PRESENT AND SET TO SOMETHING ELSE. Both codes are
+// dedicated: no substantive assertion in this file uses either.
+//
+// THIS FILE HAD NO PRECONDITION LINE AND NO PRECONDITION CODE UNTIL 2026-09-05
+// (TM-116), AND THAT WAS THE DEFECT. Run bare it exited 10 -- which is this
+// file's own `string_byte_length(hit) != 14`, a substantive verdict meaning
+// "the returned view is not the entry". So a run with `TZ` unset was
+// indistinguishable from a run in which a view of the environment had failed
+// to survive its frame, which is the single question the probe exists to ask.
+// Measured at pin `0dfddac` before the fix: `TZ` unset gave 10, `TZ=UTC` gave
+// 10, `TZ=Europe/KIEV` gave 13.
+//
+// THE MODEL IS ITS NEIGHBOUR, `probe09_environ_split.npk` -- same author, same
+// afternoon -- which documents its precondition in its header AND exits a
+// dedicated code when it is unmet. The two files now use the same two numbers
+// for the same two conditions, so the pair reads as one instrument.
 //
 // PROBE 09b — a view of an `environ()` entry, RETURNED.
 //
@@ -26,6 +43,29 @@
 // depends on this answer, so it is measured before `src/host/` is written.
 mod:probe09b_environ_view_returned;
 
+// THE PRECONDITION'S OWN SCANNER, kept separate from the experiment and
+// deliberately shaped so it CANNOT answer the experiment's question: it returns
+// an INDEX, never a view, so nothing it produces borrows anything. Checking the
+// precondition with the very function under test would make an unmet
+// precondition and a failed experiment the same event again.
+func:tz_index = int64(cstring[]:env) never fails {
+    int64:j = 0i64;
+    while (j < env.len) {
+        cstring:e = env[j];
+        if (e.len >= 3i64) {
+            string:entry = string_from_bytes(e.ptr, e.len);
+            uint8[]:b = string_bytes(entry);
+            if (b[0i64] == 84u8) {                      // 'T'
+                if (b[1i64] == 90u8) {                  // 'Z'
+                    if (b[2i64] == 61u8) { pass j; }    // '='
+                }
+            }
+        }
+        j = j + 1i64;
+    }
+    pass -1i64;
+};
+
 // The whole question, in one function: the view's root is `e.ptr`, a member of
 // a `cstring` -- POINTER-SHAPED. The bytes live in the kernel's mapping and
 // outlive every frame in the program.
@@ -52,6 +92,29 @@ func:tz_entry = string(cstring[]:env) never fails {
 
 func:main = int32(cstring[]:_~argv) {
     cstring[]:env = environ();
+
+    // ---- THE PRECONDITION, CHECKED BEFORE THE EXPERIMENT ------------------
+    //
+    // Once this passes, a failure at 10..14 below is a statement about the
+    // language and nothing else, which is what those codes were always meant
+    // to be.
+    int64:tzi = raw tz_index(env);
+    if (tzi < 0i64)                                     { exit 30i32; }
+    // Bound first, then viewed: a view of a temporary is refused
+    // (`NITPICK-BORROW-012`, TM-110).
+    string:want_entry = "TZ=Europe/Kyiv";
+    uint8[]:web = string_bytes(want_entry);
+    cstring:pre = env[tzi];
+    string:pres = string_from_bytes(pre.ptr, pre.len);
+    uint8[]:preb = string_bytes(pres);
+    if (preb.len != web.len)                            { exit 39i32; }
+    int64:w = 0i64;
+    while (w < web.len) {
+        if (preb[w] != web[w])                          { exit 39i32; }
+        w = w + 1i64;
+    }
+
+    // ---- THE EXPERIMENT ---------------------------------------------------
     string:hit = raw tz_entry(env);
     if (string_byte_length(hit) != 14i64)               { exit 10i32; }
     uint8[]:hb = string_bytes(hit);

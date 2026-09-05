@@ -1,0 +1,53 @@
+// expect-exit: 0
+//
+// THE CONSUMER. A program that imports `ntime` the way an application will,
+// and does nothing else.
+//
+// WHAT IT ASSERTS, AND IT IS NOT "the library works". It asserts that the
+// PUBLIC SURFACE IS IMPORTABLE. Today the surface is empty, and importing an
+// empty surface is exactly the test: this file goes on compiling as names are
+// added to `src/lib.npk`, and the day it does NOT, the surface changed in a
+// way that breaks every consumer -- which is a MAJOR version by TM-013 and had
+// better be a deliberate act rather than a discovery.
+//
+// THE IMPORT IS A RELATIVE PATH, AND THAT IS A DEFECT WE ARE LIVING WITH
+// (0.0.1 P-9, `BUILD.md` B-16). The shape an application SHOULD write is
+//
+//     use "ntime/lib.npk".*;
+//
+// the dependency-root form. It does not resolve: the loader's dependency-root
+// list (`RootList`) is created empty in the compiler's driver and nothing ever
+// adds to it, so only `./` and `../` paths work. That is `meta/OPEN_QUESTIONS.md`
+// O-N1, and this comment is here so that the day O-N1 closes, the thing to
+// change is greppable -- `git grep -n 'O-N1' tests/` finds it.
+mod:import;
+
+// The umbrella, by relative path. `.*` is right HERE and wrong in
+// `src/lib.npk`: a consumer wants the whole published surface in one line,
+// which is the entire reason the umbrella exists, while the umbrella itself
+// must name every export deliberately (P-8).
+use "../../src/lib.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    // Nothing, on purpose -- and specifically no arithmetic. A single
+    // `i + 1i64` here would arm `IntOverflow` and this file would stop being
+    // a measurement of what THE IMPORT costs (`SAFETY.md` S-4b, TM-107).
+    exit 0i32;
+};
+
+// The four unconditional floor arms and the wildcard, which is
+// `tests/probe/probe11d_floor_only.npk`'s set exactly. That this compiles
+// UNCHANGED is the measurement: importing `ntime`'s umbrella today costs a
+// consumer NOTHING beyond the floor. The number is expected to move as modules
+// gain `error:` declarations and arithmetic -- `SAFETY.md` S-4's totals column
+// is generated at cycle 0.1 -- and this file is where the move will first show.
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

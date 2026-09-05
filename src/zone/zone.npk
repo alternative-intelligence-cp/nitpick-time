@@ -1,0 +1,23 @@
+// The time-zone tables and the offset lookup — the PLACEHOLDER (0.0.1 P-7).
+//
+// EMPTY ON PURPOSE: see `../core/core.npk` for why a placeholder exists at all.
+// It is REPLACED at the cycles below, never deleted.
+//
+// WHAT FILLS IT: the four GENERATED flat tables and the name pool (cycle 0.5),
+// then the transition binary search, the POSIX-rule extrapolation and the four
+// resolution modes (cycle 0.6). Governed by `meta/specs/ZONE_MODEL.md`.
+// WHEN: cycle 0.5 (`meta/roadmap/0.5/README.md`), then 0.6.
+//
+// THE GENERATED FILES BESIDE THIS ONE ARE SOURCE, and `.gitignore` says so
+// explicitly: a build must need only the compiler — never a Python generator,
+// never a network fetch, and never `/usr/share/zoneinfo` (TM-007, TM-027).
+// `tools/gen_tzdb.py` regenerates them and the harness checks the committed
+// tables are byte-identical to what it would emit (`BUILD.md` B-4).
+//
+// WHAT IT MAY IMPORT: `span`, `cal` and `core` (`BUILD.md` B-17). No hash map:
+// the lookup is a binary search over a sorted index (B-13, `ZONE_MODEL.md`
+// Z-9), which at 447 entries beats a hash and has one invariant instead of
+// four.
+//
+// THE ERROR IT DECLARES: `ETimeZone`, the second of the three (TM-017).
+mod:zone;

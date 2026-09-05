@@ -1,3 +1,23 @@
+// expect-exit: 0
+//
+// THE HEADER THIS FILE DID NOT HAVE UNTIL 0.0.1. See
+// `case1_no_failsafe.npk`'s header for why the absence mattered (TM-115).
+//
+// THIS FILE'S EXPECTATION IS THE ONE THAT DID NOT CHANGE, and that is worth a
+// marker of its own rather than a silence. Before the compiler's DEF-5 landed
+// it compiled, linked and ran at exit 0; after, it compiles, links and runs at
+// exit 0. It is the CONTROL that says the new refusal does not misfire: the
+// only difference between this file and `case1_no_failsafe.npk` is the
+// declaration below, and that difference is now the difference between a file
+// `npkc` accepts and a file `npkc` refuses -- where it used to be the
+// difference between a file `llc` accepted and one it refused.
+//
+// Measured at pin `0dfddac`: `npkc` exit 0 with a `.ll` written, one
+// `@main` and one `@npk_failsafe` defined in it, `llc` 0, `ld.lld` 0, run 0.
+// The exit code is paired with the artefact every time, because an exit code
+// on its own is what O-N11 looked like.
+//
+// ==================== AS WRITTEN ON 2026-09-03 ==============================
 // THE CONTRAST, and the reason case 1 is evidence rather than an assertion.
 // Character for character `case1_no_failsafe.npk`, plus a `failsafe` naming
 // the four unconditional floor arms and the wildcard.

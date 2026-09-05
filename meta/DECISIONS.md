@@ -1214,3 +1214,271 @@ replacement.*
 - **Write the four/six counts into `SAFETY.md` §2's table.** S-4b already says
   the totals column is generated at cycle 0.1 from measurement, and these are
   two probe programs rather than the library. Nothing is guessed into it here.
+
+---
+
+### TM-113 — `List<T>` moved into the prelude and became OWNING, so `Vec<T>`'s divergence from it widened
+**2026-09-05. Read out of the compiler's source at the pinned commit
+`0dfddac`**, not out of its working tree, which had already moved on to
+`daa5057`. Nothing was compiled for this decision; it is a documentation
+defect, like TM-108 whose paragraph it corrects.
+
+**What was written.** Four documents and one probe cited `List<T>` as living at
+the compiler's `src/frontend/list.npk`, and three of them quoted a comment on
+its `items` field: *"WILD, DELIBERATELY"*.
+
+**What is true at the pin, with the denominator stated.**
+
+| Claim | Measured | How |
+|---|---|---|
+| `src/frontend/list.npk` exists | **no** | `git cat-file -e 0dfddac:src/frontend/list.npk` → fatal, exit 128 |
+| `List<T>` is in the prelude | **yes** | `pub struct:List<T>` at `src/prelude/prelude.npk:2078` |
+| `list_init<T>` still exists | **yes** | `pub func:list_init<T>` at `src/prelude/prelude.npk:2087`, floor-of-one intact, same reason in its own comment |
+| *"WILD, DELIBERATELY"* appears | **0 times in 607 `.npk`** | `git grep -n 'WILD, DELIBERATELY' 0dfddac -- '*.npk'` → exit 1, 0 lines |
+| `struct:Vec` appears | **0 times in 607 `.npk`** | `git grep -n 'struct:Vec' 0dfddac -- '*.npk'` → exit 1, 0 lines |
+
+So one half of S-17b's nuance — *there is no compiler-prelude `Vec<T>`* — is
+**re-confirmed**, and the other half was resting on a path and a quotation that
+no longer exist. D-239 is the move; the prelude's own comment gives the reason
+(the snapshot could not carry a prelude that declared it until D-205).
+
+**The part that is not bookkeeping, and it is the reason this is a decision
+rather than a find-and-replace.** The prelude's `List<T>` is now
+**compiler-known and OWNING** (the compiler's D-247): the layout marks it
+owning, and *a generated drop releases its `count` elements through `T`'s drop
+and hands the block back*. `ntime`'s `Vec<T>` is an ordinary struct and gets
+none of that. The two types still share a layout — three fields, `wild T->`
+first — and they no longer share a lifetime story at all.
+
+**Which makes S-17b's warning stronger rather than weaker.** It already said a
+sibling library spelling its `Vec` differently gets a different safety property
+with no diagnostic. The same is now true of the *compiler's own* `List<T>`, in
+the opposite direction: a reader reasoning "our `Vec` is the compiler's `List`,
+so its elements are handled" gets TM-106 exactly backwards. `ntime` owns the
+bounds obligation (S-17b) **and** the element-lifetime obligation (TM-106), and
+the second is the one the move made easier to lose.
+
+**The decision.** *`SAFETY.md`'s S-17b nuance paragraph is amended in this
+commit: the dead path and the vanished quotation are removed, the prelude
+location and D-247's ownership are stated, and the measurement above is what
+the paragraph now rests on. `tests/probe/probe06_generic_vec.npk`'s three
+citations (lines 14, 92 and 107 as they stood) are corrected in place, because
+they are comments. `meta/roadmap/0.0/README.md`'s live checklist line is
+corrected.*
+
+**Two sites are deliberately NOT corrected**, and this decision is where a
+grep for the dead path is meant to land:
+
+- **`meta/DECISIONS.md:884`, inside TM-108.** A settled decision's text is
+  never rewritten (`CLAUDE.md`; the compiler's D-085/D-202 pattern). TM-108's
+  reasoning is about a sentence that was *narrow and read as broad*, and its
+  citation was true when it was written.
+- **`meta/roadmap/0.0/0.0.0.md:1350`**, a closed subcycle's execution record.
+  A record says what was known then. Rewriting it would destroy the only
+  evidence of what 0.0.0 actually had in front of it.
+
+*Alternatives declined:*
+
+- **Edit all seven sites and record nothing.** The stale path was found because
+  a sweep was run with its denominator stated; the *quotation* was found only
+  because the sweep was re-run against the compiler at the pin rather than
+  against its working tree. Neither instrument survives as a habit unless the
+  finding is written down.
+- **Amend TM-108 in place.** It is settled. This supersedes the citation, not
+  the decision — TM-108's conclusion (the bounds check attaches to the type) is
+  untouched and is re-confirmed by the `struct:Vec` row above.
+- **Say only "the file moved".** That is the small half. The ownership change
+  is the half that can make a later reader wrong about memory.
+
+---
+
+### TM-114 — `BUILD.md` §3's stage table was incomplete, and its `accept` row is the O-N11 shape
+**2026-09-05. Read out of the compiler's `BUILD_REFERENCE.md` §7.1 at pin
+`0dfddac`**, while writing the manifest's first `[[test]]` entries (0.0.1 step
+3). Found because the subcycle's own step 3 and its own acceptance criterion
+disagreed, and the specification was consulted to settle which was right.
+
+**What was written.** `BUILD.md` §3 presented a seven-row stage table and said
+the harness *"mirrors the compiler's stage vocabulary (`BUILD_REFERENCE.md`
+§7.1)"*. It assigned `tests/conformance/` to the **`accept`** stage, which it
+defined as *"accepted by `tools/check` in silence"*.
+
+**What is true.** The compiler's §7.1 has **eleven** stages, and the one that is
+missing from ours is the **default**: `compile`, held to a `kind` —
+
+> `positive` **compiles, links, runs, and exits with the expected code**;
+> `negative` fails to compile, emitting exactly the expected diagnostics;
+> `diagnostic` compiles, emitting exactly the expected warnings
+
+and its own example entry is, verbatim, `name = "conformance"`,
+`stage = "compile"`, `kind = "positive"`, `path = "tests/conformance"`. Also
+absent from ours: `resolve`, `runtime`, `verify` and `cost`.
+
+**Why this is a defect and not a simplification.** 0.0.1's acceptance criterion
+says `tests/conformance/import.npk` *"compiles, links, runs, exits 0"* — which
+is `compile`/`positive` exactly, and is **strictly more** than `accept`'s
+"accepted in silence". A conformance suite judged by acceptance alone is
+precisely the shape O-N11 walked through: `npkc` accepted a root with `main`
+and no `failsafe` at exit 0, and only the *link* refused it. So the weaker
+reading was not merely less thorough — it was the one this repository already
+has a defect reproduction for, sitting in
+`tests/probe/defect/missing_failsafe/`.
+
+**The decision.** *`BUILD.md` §3's table gains the `compile` row with its three
+kinds and a note that four further stages exist upstream and are not used here
+yet; `tests/conformance/` is `compile`/`positive`, and the `accept` row is kept
+with the reason it is NOT what this library's conformance suite uses. The
+manifest's two entries are written accordingly in this commit, and the
+`conformance` entry carries the O-N11 reason next to it.*
+
+*Alternatives declined:*
+
+- **Use `accept` because §3 said so.** The specification is the authority over
+  the code, not over the compiler it claims to mirror. Where our document
+  disagrees with the thing it says it mirrors, ours is what is wrong.
+- **Copy all eleven rows.** A stage this library has no way to run is a dormant
+  row, and the audit hunts those. The four absent ones are named in a sentence
+  and will be added by the cycle that can honour them.
+- **Leave the plan's word `compile` as the discrepancy and use it silently.**
+  The plan happened to be right, but nobody could have known that from these
+  documents — which is the whole finding.
+
+---
+
+### TM-115 — a sweep states its denominator, and the tree is partitioned so nothing falls between buckets
+**2026-09-05. Measured**, and prompted by a gap that had been open for two days
+in the files least able to afford it.
+
+**The gap.** Three tracked `.npk` carried **no `expect-` marker at all** —
+`tests/probe/defect/missing_failsafe/case1`, `case2` and `case3`. Not a wrong
+expectation: none. The expect-header sweep run at the 2026-09-04 re-pin covered
+**36 of 42** tracked `.npk`; three of the six uncovered are support libraries
+that correctly have none, and these three were the real gap.
+
+**Why those three and not some harmless others.** They are the files whose
+expected behaviour *completely changed* on 2026-09-04, when O-N11 was fixed and
+an `npkc` `NITPICK-REACH-003` refusal replaced an `llc` failure. The general
+finding they produced is that **a defect reproduction's header goes stale the
+day its defect is fixed**, and that the sweep is the check for it. These three
+sat outside the sweep — so the check could not see the files it most needed to.
+
+**And the reason it could not be noticed: a sweep that matches nothing and a
+sweep that ran over nothing print the same thing.** "Swept, no violations" and
+"swept nothing" are byte-identical outputs. The same shape bit this workbench
+at the root, where `grep` honours ignore files and the root `.gitignore` opens
+with `/*/`, so a sweep from there sees none of the library checkouts and reports
+silence.
+
+**The decision.** *`harness/run.py` gains `check_expect_headers`, and it states
+its denominator on every run, green or red. Every `.npk` in the tree is placed
+in exactly one of three buckets and the partition is asserted:*
+
+| Bucket | Judged by | Today |
+|---|---|---:|
+| `src/**` | *"it compiles"* — check 2. A library module has no exit code and no diagnostic to expect | 7 |
+| `tests/**` | a marker in its own header (B-5), or a NAMED entry in `EXPECT_EXEMPT` with its reason | 43 |
+| anywhere else | **nothing — and that is a failure** | 0 |
+
+*The three `missing_failsafe` cases are given their headers in this commit,
+verified against the compiler rather than written from the transcript:
+`case1` `expect-error: NITPICK-REACH-003` at `62:1`, `case3` the same at
+`58:1`, `case2` `expect-exit: 0`. The count moves from 36 of 42 to 40 headered
++ 3 exempt of 43 under `tests/`, and the exemptions are the three
+`tests/probe/support/` modules, each with the reason written beside it.*
+
+**The exemption list is diffed in both directions.** An exemption naming a file
+that is not in the tree is itself a failure — because an exemption that
+outlives its file is how a later file with the same name gets excused without
+anyone deciding to excuse it. That is the second list, and *"every hole was
+found by a check that diffs two lists, and none by a test"*.
+
+**Commissioned, positive and negative**, before it was trusted: green over the
+real tree; red when a header is removed (the exact gap that existed); red on a
+stale exemption; red on a `.npk` in neither bucket.
+
+*Alternatives declined:*
+
+- **Fix the three headers and stop.** That fixes the instance and leaves the
+  instrument blind, which is how the instance happened.
+- **Require a marker on `src/**` too.** A library module has nothing to
+  expect; the check would be satisfied by a marker that means nothing, which is
+  worse than no marker. Its expectation is that it compiles, and check 2 is it.
+- **Exempt `src/**` as a pattern rather than partition the tree.** A pattern
+  exemption silently excuses anything later placed there. The partition makes
+  an unowned file a *finding*, which is the property that was missing.
+- **Defer it to 0.0.3 with the other tree checks.** The deferral is what left
+  the gap open; and the sweep needs no harness, only a denominator.
+
+---
+
+### TM-116 — a probe's precondition gets a dedicated exit code, or it is indistinguishable from a verdict
+**2026-09-05. Measured** at pin `0dfddac`, on both files, across six values of
+`TZ`.
+
+**The defect.** `tests/probe/probe09b_environ_view_returned.npk` needs
+`TZ=Europe/Kyiv` exported. Its header said only `expect-exit: 0`. Run bare it
+exited **10** — which is its own `string_byte_length(hit) != 14`, a substantive
+code from its own map meaning *the returned view is not the entry*. That is the
+single question the probe exists to ask, so an unmet precondition and a real
+failure of the language were the same signal.
+
+**And the file held up as the model had a quieter version of the same defect.**
+`probe09_environ_split.npk` documents its precondition and exits a dedicated
+**30** when `TZ` is absent — which is right, and is why it was the model. But
+`TZ` **present and set to something else** landed on its substantive codes.
+Measured before the fix:
+
+| `TZ` | probe09 | probe09b |
+|---|---:|---:|
+| unset | 30 *(dedicated)* | **10** *(substantive)* |
+| `Europe/Kyiv` | 0 | 0 |
+| `Europe/Kiev` — the old IANA spelling | **0** | **0** |
+| `Europe/KIEV` | **34** *(substantive)* | **13** *(substantive)* |
+| `UTC` | **31** *(substantive)* | **10** *(substantive)* |
+| `America/New_York` | **31** *(substantive)* | **10** *(substantive)* |
+
+**The `Europe/Kiev` row is the sharp one.** Both probes exited **0** under the
+*wrong zone name*, because everything either one checks — an 11-byte value,
+`'E'` at the front, `'u'` next, `'v'` at the end, `'/'` at offset 6, and for 09b
+a 14-byte entry with `'E'` at index 3 and `'v'` at index 13 — is equally true
+of `Kiev` and `Kyiv`. So probe09's assertion was weaker than its name implied,
+and nothing in either file would ever have said so.
+
+*(A claim reached this subcycle that `TZ=Europe/KIEV` still exited 0. It does
+not: probe09 exits **34**, because `'V'` is not `'v'`. The underlying point was
+right and the spelling that demonstrates it is the mixed-case `Europe/Kiev`.
+Recorded because the difference is the whole reason claims get re-run.)*
+
+**The decision.** *A probe with a precondition states it in its header and exits
+a code no substantive assertion in that file uses. Both files now use the same
+two numbers for the same two conditions, so the pair reads as one instrument:*
+
+- **30** — the `TZ=` entry is **absent** from the environment.
+- **39** — it is **present and is not `TZ=Europe/Kyiv`**.
+
+*In `probe09b` the precondition is checked by `tz_index`, a helper that returns
+an INDEX and never a view — deliberately, so that the check cannot be answered
+by the very mechanism under test. In `probe09` the check sits between locating
+`TZ` and the first assertion about it, so 31…35 are now verdicts. Measured
+after the fix: both files give 30 unset, 0 at `Europe/Kyiv`, and 39 at
+`Europe/KIEV`, `Europe/Kiev`, `UTC` and `America/New_York`.*
+
+**What this does not fix, and it is 0.0.2's.** `// expect-exit: 0` plus a prose
+`PRECONDITION:` line is not something a runner can honour: `BUILD.md` B-5's
+marker grammar has `// argv:` and no way to state an environment variable, so
+the harness will run both probes bare and see 30. Two probes now depend on
+that being resolved, and the resolution is a marker, not a wrapper script.
+
+*Alternatives declined:*
+
+- **Give `probe09b` exit 30 only.** It would leave `TZ=UTC` landing on 10 —
+  which is the case that actually occurs, since a machine with `TZ` set to
+  something is far commoner than one with it unset.
+- **Make the probes accept any zone name.** They would then assert nothing
+  about the split, which is what they are for.
+- **Check the precondition with `tz_entry`, the function under test.** It
+  reintroduces the defect in one line: a failed experiment and an unmet
+  precondition become the same event again.
+- **Widen the check to accept `Europe/Kiev` as an alias.** The probe is not
+  about zone naming; it is about `environ()`. An alias would be a second thing
+  the file quietly tolerates.

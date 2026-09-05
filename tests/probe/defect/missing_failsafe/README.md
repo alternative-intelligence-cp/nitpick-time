@@ -1,18 +1,40 @@
-# A program with `main` and no `failsafe` compiles at exit 0
+# A program with `main` and no `failsafe` compiles at exit 0 — **FIXED**
+
+> ## STATUS, 2026-09-05, pin `0dfddac`
+>
+> **THE DEFECT DESCRIBED BELOW NO LONGER EXISTS.** `npkc` refuses both cases at
+> `main`, `NITPICK-REACH-003`, **exit 1, and writes no `.ll` at all** — the
+> refusal moved one step earlier, from `llc` into the frontend. This directory
+> is now a **regression suite**: `case1` and `case3` assert that the refusal
+> happens, `case2` that it does not misfire.
+>
+> | File | `npkc` | Identities the diagnostic lists | Header |
+> |---|---|---:|---|
+> | `case1_no_failsafe.npk` | **exit 1**, no `.ll` | **4** — `Unreachable`, `HeapOom`, `HeapBadRequest`, `WildLeak` | `expect-error: NITPICK-REACH-003` at `62:1` |
+> | `case2_failsafe_present.npk` | exit 0, `.ll` written, links, **runs exit 0** | — | `expect-exit: 0` |
+> | `case3_arm_contract_evaded.npk` | **exit 1**, no `.ll` | **6** — the four, plus `probe11_arms_lib.EProbeZone` and `IntOverflow` | `expect-error: NITPICK-REACH-003` at `58:1` |
+>
+> **Four, not six, for `case1`** (TM-112): it has no import, no arithmetic and
+> no allocation, so its bill is `SAFETY.md` S-4b's unconditional floor. A board
+> carried six; the six is real and belongs to `case3`.
+>
+> **These three files had no `expect-` header at all until 2026-09-05** — not a
+> wrong one, none — so they sat outside the sweep that would have caught their
+> expectations going stale on the very day the defect was fixed. That is
+> **TM-115**, and the sweep now states its denominator.
+>
+> `TRANSCRIPT.txt` holds three recordings, newest first: **Part A** at
+> `0dfddac`, **Part A0** at `94874ce`, **Part B** the 2026-09-03 original,
+> verbatim. Every diagnostic is character-identical across all three except for
+> the line numbers, which moved because the headers were added.
+>
+> **Everything below this box is the report as it was written on 2026-09-03**,
+> when the defect was live. It is kept because it is the evidence O-N11 was
+> real and the argument that got it accepted, and neither is re-creatable at
+> this pin. Read it in the past tense.
 
 **O-N11** — allocated by the workbench registry, and **accepted by the compiler
 as its DEF-5**, committed at cycle 1.5.1b step 1b.
-
-**The landing diagnostic is already known: `NITPICK-REACH-003`**, reported at
-`main` rather than at the file, naming D-013 and **listing every identity the
-absent handler would owe**, with the count. A root with neither `main` nor
-`failsafe` stays silent — a library checked alone has nothing to settle against,
-which is exactly what `../../support/probe11_arms_lib.npk` demonstrates below.
-
-**The two transcripts here are NOT re-recorded until the re-pin.** They record
-today's behaviour — `npkc` exit 0, `llc` exit 1 — which is the *before* half of
-a before-and-after the compiler asked for. Re-recording them against the current
-pin would destroy it, and the current pin does not have DEF-5 in any case.
 
 Found by cycle 0.0.0's probe 11 on 2026-09-03, against the pinned toolchain
 (compiler commit `950bb1d`, LLVM 20.1.2). Every command and every exit code is
@@ -21,7 +43,7 @@ that is not also quoted there.
 
 ---
 
-## What happens
+## What happened, as written on 2026-09-03
 
 `npkc` does not require a root file that declares `main` to declare
 `failsafe`. It accepts one at **exit 0** and emits IR whose trap paths call
@@ -143,11 +165,15 @@ Two things worth having in the same change, offered rather than insisted on:
 
 ## The files
 
-| File | `npkc` | `llc` | What it is for |
+| File | `npkc` **in 2026-09-03** | `llc` **in 2026-09-03** | What it is for |
 |---|---|---|---|
 | `case1_no_failsafe.npk` | **exit 0** | exit 1 | the defect, minimal — `mod:` and `main`, nothing else |
 | `case2_failsafe_present.npk` | exit 0 | exit 0, links, **runs exit 0** | the contrast — `case1` plus a floor `failsafe`, and the only difference between a file that links and one that does not |
 | `case3_arm_contract_evaded.npk` | **exit 0** | exit 1 | why it matters — a program that owes `EProbeZone` and is asked for nothing |
 
-Deleted when the defect closes, at which point `case1` becomes the regression
-test that the refusal happens and `case2` that it does not misfire.
+**Those are the 2026-09-03 columns and they are history; the box at the top of
+this file has the current ones.** The last line of this section used to read
+"Deleted when the defect closes" — **and they are not deleted.** P-5: a probe is
+never deleted, and a defect reproduction whose defect is fixed is the most
+valuable kind of regression case, because it is the one shape nobody would
+think to write from scratch.

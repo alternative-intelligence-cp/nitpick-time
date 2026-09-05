@@ -1,0 +1,21 @@
+// `ntime`'s storage primitives — the PLACEHOLDER (0.0.1 P-7).
+//
+// EMPTY ON PURPOSE, AND NOT EMPTY-AND-ABSENT. An empty directory is invisible
+// to the harness's `parse` sweep (`meta/specs/BUILD.md` §3), and the sweep is
+// what stops the grammar being quietly made partial. This file gives the sweep
+// something to open. It is REPLACED at the cycle below, never deleted.
+//
+// WHAT FILLS IT: `Vec<T>`, `Bytes` and `limits.npk`, per `BUILD.md` §5's rules
+// B-12 and B-13 — one growable sequence, one byte sink, one file of named
+// bounds, and NO second container.
+// WHEN: cycle 0.0.4 (`meta/roadmap/0.0/0.0.4.md`).
+//
+// WHAT IT MAY IMPORT: NOTHING (`BUILD.md` B-17). `core` is the base of the
+// layering and every other module points at it. An import here is a layering
+// violation by construction, and `check_layering` will say so from 0.0.3.
+//
+// THE OBLIGATION THAT ARRIVES WITH THE CODE: `Vec<T>.items` and `Bytes`' body
+// are BARE POINTERS, which this language does not bounds-check (TM-108,
+// `SAFETY.md` S-17b). The accessor pair is the only bound there is, so every
+// accessor checks `0 <= i` as well as `i < count` — in CODE, not in a comment.
+mod:core;

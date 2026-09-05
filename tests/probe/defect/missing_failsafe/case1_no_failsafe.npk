@@ -1,3 +1,35 @@
+// expect-error: NITPICK-REACH-003
+// expect-error-at: 62:1
+//
+// THE HEADER THIS FILE DID NOT HAVE UNTIL 0.0.1, AND THE REASON THAT MATTERED.
+// From 2026-09-03 to 2026-09-05 this file carried no `expect-` marker at all --
+// not a wrong one, none -- so it sat OUTSIDE the sweep that checks a defect
+// reproduction's expectation against the compiler. It is precisely the kind of
+// file that sweep exists for: on 2026-09-04 its expected behaviour changed
+// completely, and no check could have noticed, because the check could not see
+// it. That gap is TM-115, and the sweep now asserts its denominator.
+//
+// WHAT IT IS NOW: A REGRESSION CASE. O-N11 was raised from this directory,
+// accepted as the compiler's DEF-5, and landed at its cycle 1.5.1b step 1b.
+// The defect below NO LONGER EXISTS. `npkc` refuses this file at `main`,
+// naming D-013 and LISTING the identities the absent handler would owe --
+// FOUR of them, which is `SAFETY.md` S-4b's unconditional floor, because this
+// file has no import, no arithmetic and no allocation:
+//
+//     NITPICK-REACH-003 ...: `main` without `failsafe` (D-013): ...
+//       -- 4 identities: Unreachable, HeapOom, HeapBadRequest, WildLeak --
+//
+// A board once carried SIX for this file. Six is real and belongs to `case3`,
+// which imports the raiser. The number here is four, read out of the
+// compiler's own output at pin `0dfddac` and again at `94874ce` before it.
+//
+// AND NO `.ll` IS WRITTEN. The refusal lands one step EARLIER than it used to,
+// which is the whole of what DEF-5 changed -- so the pairing this repository
+// insists on (an exit code beside the artefact it should have produced) is
+// exit 1 with no artefact. `TRANSCRIPT.txt` beside this file holds both
+// transcripts: Part A at the current pin, Part B the original, verbatim.
+//
+// ==================== WHAT THE DEFECT WAS, KEPT AS WRITTEN ==================
 // THE DEFECT, MINIMAL. Four lines of content: a `mod:` header and a `main`.
 // There is no `failsafe`, no import, no arithmetic, no allocation.
 //

@@ -4,6 +4,18 @@ Guidance for Claude Code sessions working in this repository.
 
 ## What this is
 
+`ntime` — a date, time and time-zone library for **Nitpick**, the
+safety-critical systems language at `../../nitpick`.
+
+**Status, after cycle 0.0.1: a skeleton.** `src/` holds `lib.npk`, the empty
+umbrella, and one placeholder module per directory that parses and is
+**replaced, not deleted**, by the cycle named in its header.
+`tests/conformance/import.npk` imports the umbrella, links and runs.
+`harness/run.py` is a **floor**, not the harness — it checks the toolchain pin,
+that every `.npk` under `src/` compiles, that the consumer RUNS, and that every
+`.npk` under `tests/` is covered by an expectation. **No library code computes
+anything yet**; the first is `src/core/` at 0.0.4.
+
 ## Before starting a session here
 
 Check **[`../BOARD.md`](../BOARD.md)** — it says whether this repository
@@ -11,10 +23,6 @@ is claimed by a stream, and by which. **One writer per repository, always.**
 [`../WORKSTREAMS.md`](../WORKSTREAMS.md) is the dependency graph and the
 stream partition: what gates this repository, what this repository gates, and
 what to do when a cross-stream gate is not ready yet.
-
-`ntime` — a date, time and time-zone library for **Nitpick**, the
-safety-critical systems language at `../../nitpick`. **Status: planning.** No
-library code exists yet. The specifications and the plan do.
 
 ## Read these first, in this order
 
@@ -80,6 +88,30 @@ Full statement in `meta/specs/SAFETY.md` §1. The ones that bite hardest here:
   unspellable — but `ntime` has no `async` function at all, and should not
   grow one.
 
+**And the four that cycle 0.0.0 MEASURED rather than read**, each of which
+changed a document:
+
+- **There is no checked narrowing** (TM-105). `=>!` truncates in silence, and
+  the checked `=>` at the same narrowing is refused at compile time
+  (`NITPICK-TYPE-009`). Every narrowing therefore carries its own range check —
+  written by you, in code.
+- **`exit 0` says nothing about managed memory** (TM-106). D-151 watches `wild`
+  allocations only. A `Vec<string>` whose block is freed and whose elements are
+  not retained 125 MiB over two million elements **and exited 0**.
+- **An import's arm bill is its `fail` SITES plus its ARITHMETIC**, charged per
+  module, not per call (TM-107). Importing a module that declares no error at
+  all still cost four arms. Avoiding a failing *function* buys nothing; module
+  boundaries are the only granularity there is.
+- **`Vec<T>` and `Bytes` are NOT bounds-checked** (TM-108). The check attaches
+  to the *type*: slices, arrays and simd lanes trap, **a bare pointer does
+  not**, and both of those are reached as one. The accessor pair is the only
+  bound there is, and it checks `0 <= i` as well as `i < count`.
+
+**And one about the compiler itself: `npkc` exit 0 is not well-formedness**
+(TM-112). It accepted a root with `main` and no `failsafe` until DEF-5 landed.
+Pair every exit code with the artefact it should have produced; a status that
+disagrees with an artefact is the tell.
+
 ## Reserved words that read like ordinary names
 
 `meta/specs/BUILD.md` §7 has the table. The ones this domain wants most:
@@ -92,17 +124,42 @@ a rounding granularity, **`hi`**/**`lo`** for range bounds, **`rem`** for a
 modulus result, **`zone_off`** for a fixed offset in seconds, **`bound`** for a
 limit, **`src`** for an input byte slice, **`sink`** for an output `Bytes`.
 
+And **`stack`**, which is not in this library's own list and is the one that
+costs an hour: it is a memory qualifier beside `wild`, and using it as a local
+name gives `PARSE-002` at the declaration followed by *"this `{` is never
+closed"* pointing at `main`'s closing brace — so it reads as a brace imbalance
+dozens of lines away and gets bisected as one. A sibling library lost about an
+hour to it. **If a parse error claims an unclosed brace and the braces are
+balanced, check whether a local is named after a qualifier before you touch the
+braces.**
+
 Three shapes that surprise a C or Rust habit: adjacent string literals do not
 concatenate; `discard(x);` takes parentheses and `defer { … }` takes no
 trailing semicolon; declarations end `};` and control-flow blocks do not.
+
+**And a file's `mod:` name must equal its basename** — the loader reports
+`NITPICK-RESOLVE-005` at line 1 and says nothing about the name. Since D-248 a
+module name is an **identifier**, so a file named after a reserved word, or
+beginning with a digit, is refused: hence `probeNN_topic.npk` and never
+`NN_topic.npk`.
 
 ## Building and testing
 
 **`npkg` cannot build this yet** (`meta/specs/BUILD.md` §1): it is the
 compiler's own bootstrap ladder, and `[dependencies]` resolves to nothing.
-`harness/run.py` is the runner until that changes (TM-003). Until cycle 0.0.2
-lands it, probes are run by hand — `meta/roadmap/0.0/0.0.0.md` §2 has the
-command.
+`harness/run.py` is the runner until that changes (TM-003).
+
+**What `harness/run.py` is today, and what it is not.** Cycle 0.0.1 wrote it as
+a **floor**, deliberately not an `exit 0` stub: `python3 harness/run.py` with
+`$NPKC` and `$NPKRT` set checks four things and prints its denominators. It is
+**replaced** by the real runner at 0.0.2/0.0.3 — there is no manifest reader, no
+stage dispatch, and **no self-check, so it has never been proven able to fail**
+except by the four planted failures 0.0.1 ran by hand. Probes are still run
+individually by hand; `meta/roadmap/0.0/0.0.0.md` §2 has the command.
+
+**Two probes need `TZ=Europe/Kyiv` exported** (09 and 09b). Without it they
+exit **30**; with the wrong value, **39**. Neither number is a verdict about
+the language — that is the point of them (TM-116).
 
 The compiler binary is the **pinned toolchain** the board names
 (`../BOARD.md`, W-18): `$NPKC` and `$NPKRT` are supplied to every session by the

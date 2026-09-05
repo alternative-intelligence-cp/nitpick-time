@@ -1,0 +1,19 @@
+// The civil calendar — the PLACEHOLDER (0.0.1 P-7).
+//
+// EMPTY ON PURPOSE: see `../core/core.npk` for why a placeholder exists at all.
+// It is REPLACED at the cycle below, never deleted.
+//
+// WHAT FILLS IT: `CivilDate`, `CivilTime`, `CivilDateTime`, `Weekday`, `Month`,
+// Hinnant's `days_from_civil` / `civil_from_days` used as given (TM-016), the
+// leap rule, ISO week dates and ordinal dates. Governed by
+// `meta/specs/CALENDAR.md`.
+// WHEN: cycle 0.1 (`meta/roadmap/0.1/README.md`).
+//
+// WHAT IT MAY IMPORT: `core` only (`BUILD.md` B-17). In particular NOT `zone` —
+// that separation is what keeps a consumer doing plain calendar arithmetic at
+// ONE identity arm rather than two (`SAFETY.md` S-4), and it is a budget
+// decision, not a tidiness one.
+//
+// THE ERROR IT DECLARES: `ETimeValue`, one of the three the whole library is
+// allowed (TM-017). A fourth is a MAJOR version (TM-013).
+mod:cal;

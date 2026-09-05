@@ -1,0 +1,46 @@
+// `ntime` — the UMBRELLA. The public surface of the library, in one file.
+//
+// WHY THIS FILE EXISTS AT ALL. `use` is not transitive in this language
+// (the compiler's `MODULE_REFERENCE.md` §2.3: symbols imported into a module
+// are NOT automatically re-exported, and `pub use` is the only way to
+// re-export). A consumer that imported `src/cal/cal.npk` would therefore get
+// `cal`'s names and nothing else, and a consumer wanting the library would
+// write six imports. So the library re-exports deliberately, and the cost of
+// doing it by hand is the FEATURE: the public surface is a list a reviewer can
+// read in one sitting (0.0.1 P-8, `BUILD.md` B-16).
+//
+// THE RULE FOR THIS FILE, AND IT IS THE WHOLE RULE:
+//
+//     ONE LINE PER PUBLIC NAME. NEVER A `.*` GLOB.
+//
+// A glob would make the surface whatever the modules happen to declare, which
+// is the opposite of a reviewed surface — and it would silently re-export
+// `host`'s impure five, which is the one thing `SAFETY.md` §3 exists to keep
+// deliberate. Adding a line here is the moment a name becomes public and, by
+// TM-013, a thing a MAJOR version is needed to take away.
+//
+// EMPTY TODAY, AND THAT IS THE POINT (cycle 0.0's checklist). No module has a
+// public name yet; the first arrives with `src/core/` at 0.0.4. Because this
+// file re-exports nothing, `tests/conformance/import.npk` compiles against an
+// empty surface — and it goes on compiling as the surface grows. The day it
+// does NOT, the surface changed incompatibly, which is exactly what that test
+// is for.
+//
+// THE SHAPE THE LINES TAKE, so the first one added is not also the first one
+// designed (the form is the compiler's own `lib/nbridge.npk`, and it is
+// checked: `pub use "<relative path>".<name>;`):
+//
+//     pub use "./core/vec.npk".Vec;
+//     pub use "./core/vec.npk".vec_init;
+//     pub use "./cal/cal.npk".CivilDate;
+//     pub use "./host/host.npk".host_now_utc;
+//
+// ORDER THEM BY LAYER, base first — core, cal, span, zone, fmt, host — which
+// is `BUILD.md` B-17's diagram read left to right, so the file's shape and the
+// dependency graph's shape are the same shape.
+//
+// `host` IS RE-EXPORTED FROM HERE AND FROM NOWHERE ELSE. It is the one module
+// nothing in the library may import (B-17, TM-018); this file and an
+// application are the two exceptions, and this comment is the reason a reader
+// meets before `check_layering` enforces it at 0.0.3.
+mod:lib;

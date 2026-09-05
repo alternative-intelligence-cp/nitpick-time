@@ -18,7 +18,8 @@ than sampled. Where that is possible it is the gate, and §3 says where.
 | Stage | Answers |
 |---|---|
 | `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial |
-| `accept` | the public API compiles in a program that only imports it |
+| `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
+| `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
 | `check` | every documented refusal actually refuses, with exactly its code |
 | `program` | the library does what it says, judged by exit code, at -O0 and under `opt -O2` |
 | `golden` | formatted output is exactly the bytes it is supposed to be |
@@ -45,12 +46,35 @@ them found something on its first run.
 | `check_int128_sites` | `int128` appears at exactly the three sites `SPAN_MODEL.md` §5 names, and nowhere else |
 | `check_constants_named` | no bound outside `src/core/limits.npk`; no magic 86400, 146097, 719468 or 1000000000 outside the algorithm module that owns it |
 | `check_no_format_string` | no function anywhere takes a pattern `string` and interprets it — `FORMAT_MODEL.md` F-5's rule, made checkable |
+| `check_expect_headers` | **the tree partitioned three ways, with the denominator printed** (TM-115): every `.npk` is under `src/` (judged by "it compiles"), or under `tests/` with an `expect-` marker of its own or a NAMED exemption, or it is unowned — and unowned is a failure. The exemption list is diffed in both directions, so an exemption naming a file that is gone fails too |
 | `check_specs_current` | **reports, does not fail**: spec citations that no longer resolve |
 
 **Rule V-1.** `check_purity` and `check_int128_sites` are the two that matter
 most, because they guard the two claims this library makes that are easy to
 break by accident and hard to notice: that it is reproducible, and that its
 arithmetic does not silently overflow.
+
+**Rule V-1b (TM-115) — every sweep states its denominator, green or red.** A
+sweep that matched nothing and a sweep that opened nothing print the same line,
+so the count of files opened is part of the result and not part of the
+debugging. This is not a style rule: it is how the three
+`tests/probe/defect/missing_failsafe/` cases went two days with **no `expect-`
+marker at all** — the sweep that would have caught them could not see them, and
+its silence was indistinguishable from a pass. A check whose subject is empty
+(`0` files under `tests/`) fails rather than passes.
+
+**Rule V-1c (TM-115) — an exemption is NAMED, carries its reason, and is diffed
+in both directions.** A pattern exemption silently excuses whatever is later
+placed under it. A named one that outlives its file silently excuses the next
+file with that name. Both directions are checked.
+
+**Rule V-1d (TM-116) — a test with a precondition states it in its header and
+exits a code no substantive assertion in that file uses.** `probe09b` needed
+`TZ=Europe/Kyiv` and, run without it, exited **10** — its own "the returned
+view is not the entry", which is the one question it exists to ask. An unmet
+precondition that arrives as a verdict is worse than a failure, because it is
+believed. `probe09` and `probe09b` now share **30** (the variable is absent)
+and **39** (present and wrong).
 
 ---
 

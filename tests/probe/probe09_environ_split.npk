@@ -1,6 +1,16 @@
 // expect-exit: 0
-// PRECONDITION: run with `TZ=Europe/Kyiv` exported. The probe exits 30 if it
-// is not, so a missing precondition names itself instead of passing quietly.
+// PRECONDITION: run with `TZ=Europe/Kyiv` exported. The probe exits 30 if
+// `TZ` is ABSENT and 39 if it is PRESENT AND SET TO SOMETHING ELSE, so an
+// unmet precondition names itself instead of arriving as a verdict. Both codes
+// are dedicated: no substantive assertion in this file uses either.
+//
+// 39 WAS ADDED 2026-09-05 (TM-116), AND 30 ALONE WAS NOT ENOUGH. Measured at
+// pin `0dfddac`: `TZ=UTC` exited 31 and `TZ=Europe/KIEV` exited 34 -- both
+// substantive codes from the map below, so "you did not set TZ correctly" and
+// "`environ()` does not behave as this library assumes" were the same signal.
+// The sibling defect in `probe09b_environ_view_returned.npk` was the one that
+// prompted the look; this file, held up as the model, had a quieter version of
+// it.
 //
 // PROBE 09 — `environ()` and a `KEY=VALUE` split.
 //
@@ -120,6 +130,31 @@ func:main = int32(cstring[]:_~argv) {
         else { j = j + 1i64; }
     }
     if (found < 0i64)                                   { exit 30i32; }
+
+    // ---- 3a. THE PRECONDITION, CHECKED BEFORE ANY VERDICT -----------------
+    //
+    // `exit 30` above catches `TZ` ABSENT. This catches `TZ` PRESENT AND
+    // WRONG, which used to land on 31, 32, 33, 34 or 35 -- every one of them a
+    // statement about the language rather than about the run. It is the same
+    // shape as the two-argument `assert` that reports which side failed: the
+    // reader has to be able to tell an unmet precondition from a finding.
+    //
+    // Compared byte for byte against a BOUND literal, not against
+    // `string_bytes("...")` directly: a view of a temporary is refused
+    // (`NITPICK-BORROW-012`, TM-110), and binding first is the idiom the rest
+    // of this file already uses.
+    string:want_entry = "TZ=Europe/Kyiv";
+    uint8[]:web = string_bytes(want_entry);
+    cstring:pre = env[found];
+    string:pres = string_from_bytes(pre.ptr, pre.len);
+    uint8[]:preb = string_bytes(pres);
+    if (preb.len != web.len)                            { exit 39i32; }
+    int64:w = 0i64;
+    while (w < web.len) {
+        if (preb[w] != web[w])                          { exit 39i32; }
+        w = w + 1i64;
+    }
+
 
     // `TZ=Europe/Kyiv` -- the value is 11 bytes, and the split is an OFFSET
     // PAIR into an entry the caller still holds, not a returned slice.

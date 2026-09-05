@@ -1,0 +1,19 @@
+// Formatting and parsing — the PLACEHOLDER (0.0.1 P-7).
+//
+// EMPTY ON PURPOSE: see `../core/core.npk` for why a placeholder exists at all.
+// It is REPLACED at the cycle below, never deleted.
+//
+// WHAT FILLS IT: the named formats in both directions, `FmtPart` and `Layout`,
+// `format_with` and `parse_with`, the `Parsed` record with its two `folded_`
+// flags, and `ParseError`. Written PRINTER-FIRST, because for a parser the
+// printer is the oracle. Governed by `meta/specs/FORMAT_MODEL.md`.
+// WHEN: cycle 0.4 (`meta/roadmap/0.4/README.md`).
+//
+// WHAT IT MAY IMPORT: `zone`, `span`, `cal` and `core` (`BUILD.md` B-17).
+//
+// WHAT WILL NEVER EXIST HERE: a format string. No `strftime`, no
+// `layout_from_pattern` (TM-009, TM-023) — the language has no
+// format-specifier language and no closures (D-053, D-018), so a layout is a
+// TYPED VALUE the formatter interprets. `check_no_format_string` makes adding
+// one a red run.
+mod:fmt;

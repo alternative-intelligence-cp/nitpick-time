@@ -1,0 +1,36 @@
+// THE ONLY IMPURE MODULE IN THE LIBRARY — the PLACEHOLDER (0.0.1 P-7, P-11).
+//
+// EMPTY ON PURPOSE: see `../core/core.npk` for why a placeholder exists at all.
+// It is REPLACED at the cycle below, never deleted. The rule below is carried
+// from day one, deliberately: it is what a reader meets before a check
+// enforces it.
+//
+// ============================ THE PURITY RULE ============================
+// NO SYSCALL, NO CLOCK, NO ENVIRONMENT READ AND NO FILE READ EXISTS ANYWHERE
+// IN THIS LIBRARY EXCEPT IN THIS DIRECTORY (TM-018, `SAFETY.md` §3).
+//
+// Everything outside `src/host/` is a pure function of its arguments. That is
+// what makes the library reproducible, testable with no double, and portable
+// by rewriting one module. `check_purity` fails the build when it stops being
+// true, and it is the single most important check in the suite.
+//
+// AND THE ARROW POINTS ONE WAY: NOTHING imports `host` except `src/lib.npk`
+// and an application (`BUILD.md` B-17). That is the purity boundary expressed
+// as a layering rule, and `check_layering` enforces it.
+// =========================================================================
+//
+// WHAT FILLS IT: five functions and nothing else — `host_now_utc`,
+// `host_now_instant`, `host_now_boot`, `host_clock_res`, `host_system_zone` —
+// with `clock_gettime` reached through `sys` and a 16-byte `timespec` laid out
+// in a `buffer` (probe 03 pinned that shape). Governed by
+// `meta/specs/HOST.md`.
+// WHEN: cycle 0.3 (`meta/roadmap/0.3/README.md`), which is also when
+// `check_purity` goes live and must be SEEN TO FAIL against a planted
+// `mono_now()` outside this directory.
+//
+// WHAT IT MAY IMPORT: `zone` (for the name lookup), `cal` (for the range
+// check) and `core` (`BUILD.md` B-17).
+//
+// THE ERRORS IT RAISES: none of its own — kernel errnos are FORWARDED VERBATIM
+// (`SAFETY.md` S-5), exactly as `lib/nsys.npk` does.
+mod:host;

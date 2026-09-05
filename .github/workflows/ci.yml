@@ -1,0 +1,225 @@
+# ntime CI.
+#
+# EVERY INPUT IS PINNED, AND EVERY PIN IS ASSERTED RATHER THAN REQUESTED (0.0.1
+# P-10; D-204, which makes the toolchain a build input). The compiler is a
+# COMMIT, never a branch: `nitpick` is moving through its cycle 1.5, and a
+# library whose CI tracks another repository's `main` is a library whose CI goes
+# red for reasons that are not its own. Bumping either pin is a deliberate
+# commit, and the commit that bumps it is the one that runs the full suite.
+#
+# ============================================================================
+# THE TWO CONDITIONS THIS FILE EXISTS TO WRITE DOWN
+# ============================================================================
+# A green run here may be read as "ntime builds against compiler 0dfddac" only
+# because BOTH of the following are stated AND enforced below. Either one
+# missing and the claim is weaker than it sounds.
+#
+#   (1) LLVM 20.1.2 EXACTLY -- the patch release included. A patch release can
+#       change instruction selection, so "LLVM 20" is not a pin. `nitpick.toml`
+#       [toolchain] names three digits for this reason, and the step below
+#       FAILS on any other version rather than reporting it.
+#
+#   (2) THE BUILD LADDER IS INVOKED FROM THE COMPILER TREE ROOT. The compiler
+#       is built by its own bootstrap ladder and by nothing else; the ladder's
+#       entry point takes a path relative to the working directory, so the
+#       working directory is part of the recipe. The step below sets it and
+#       then asserts it, because `working-directory:` silently succeeding at
+#       the wrong place is the failure mode that would make the artefacts a
+#       build of something other than what the pin names.
+#
+# The workbench measured that a fresh detached worktree at this commit, with
+# nothing uncommitted, driven through that ladder, reproduces the two pinned
+# artefacts. That is why the claim is available at all. It was measured THERE,
+# on one machine, and this file does not assume it holds HERE -- see the digest
+# step near the end, which reports rather than asserts, and says why.
+# ============================================================================
+#
+# WHAT A GREEN RUN PROVES TODAY, AND IT IS DELIBERATELY SMALL. `src/` is six
+# placeholder modules and an empty umbrella; the library has no behaviour yet,
+# so nothing here is evidence about behaviour. What it is evidence of: the
+# pinned compiler builds from a clean checkout at exactly LLVM 20.1.2, every
+# `.npk` under `src/` compiles, and `tests/conformance/import.npk` emits,
+# assembles, links, RUNS and exits 0. The run is what is judged -- `npkc`
+# exiting 0 is NOT well-formedness (O-N11, TM-112), and a stage that stopped at
+# the `.ll` would have passed a program with no handler.
+#
+# AND WHAT IT IS NOT EVIDENCE OF: that the runner can FAIL. `harness/run.py` is
+# cycle 0.0.1's floor, not the harness; the self-check that proves it fails
+# seven ways is cycle 0.0.3 (`meta/specs/TESTING.md` V-14). Until that exists,
+# a green run here is an unfalsified claim rather than a tested one. The floor
+# was commissioned by hand at 0.0.1 against four planted failures and the
+# transcript is in `meta/roadmap/0.0/0.0.1.md`; that is weaker than V-14 and it
+# is what there is.
+#
+# NOT PINNED, AND KNOWN: `actions/checkout@v4` and `actions/cache@v4` are moving
+# tags -- the only inputs in this file that are not immutable. A workflow this
+# insistent about pinning a compiler by sha and LLVM by patch release should not
+# be surprised when the parts left on a floating tag roll forward underneath it.
+# The sibling library records that GitHub already annotates both for a Node
+# runtime deprecation; nothing is broken and there is nothing to do until the
+# forcing ends, at which point the fix is to bump both.
+
+name: ntime
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  # ../BOARD.md's pinned toolchain, by FULL sha. `0dfddac` is the short form
+  # used in the roadmap, in the manifest and in the transcripts.
+  NITPICK_COMMIT: 0dfddac045bdab6abbd367b1ffb31de695b9bf22
+  NITPICK_COMMIT_SHORT: 0dfddac
+  # nitpick.toml [toolchain] llvm. Condition (1) above.
+  LLVM_VERSION: 20.1.2
+  # The digests of the artefacts the workbench pins, from
+  # ../.internal/toolchain/0dfddac/SHA256SUMS. Reported against CI's own, never
+  # asserted -- see the step that uses them for why.
+  NPKC_SHA256_WORKBENCH: 38e48973eee3a83056a62d515abc68d6bca62d052f3b5e1fbf2ced00101267d9
+  NPKRT_SHA256_WORKBENCH: c9ddbcffd32eccc7787bd71c39ebefd25913170a9fae48de32eb53ca68b2239e
+
+jobs:
+  build:
+    # Pinned, not `ubuntu-latest`, for the same reason the compiler is pinned by
+    # commit: a runner image that rolls forward is an unpinned build input.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out ntime
+        uses: actions/checkout@v4
+
+      - name: Check out the pinned compiler
+        uses: actions/checkout@v4
+        with:
+          repository: alternative-intelligence-cp/nitpick
+          ref: ${{ env.NITPICK_COMMIT }}
+          path: .nitpick
+
+      # `actions/checkout` with an explicit `ref` should make this redundant.
+      # It is here anyway because it is the single fact every claim in this file
+      # rests on, and a claim that rests on a tool's promise rather than on a
+      # measurement is the shape this repository keeps refusing.
+      - name: Assert the compiler is AT the pinned commit
+        run: |
+          set -euo pipefail
+          have="$(git -C .nitpick rev-parse HEAD)"
+          if [ "$have" != "$NITPICK_COMMIT" ]; then
+            echo "compiler checkout is at $have; the pin is $NITPICK_COMMIT" >&2
+            exit 1
+          fi
+          # Nothing uncommitted, which is the other half of the workbench's
+          # provenance test: a binary built from a dirty tree is a build of no
+          # commit that ever existed.
+          if [ -n "$(git -C .nitpick status --porcelain)" ]; then
+            echo "the compiler checkout is dirty; the pin names a commit" >&2
+            git -C .nitpick status --porcelain >&2
+            exit 1
+          fi
+          echo "compiler HEAD == $have (clean)"
+
+      # The upstream release tarball, because apt.llvm.org packages by MAJOR
+      # version and would give whatever 20.1.x is current -- which is precisely
+      # the pin condition (1) forbids. ~2 GB, so it is cached on the version
+      # alone: the asset is immutable for a given tag.
+      - name: Cache LLVM ${{ env.LLVM_VERSION }}
+        id: llvm-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/llvm
+          key: llvm-${{ env.LLVM_VERSION }}-linux-x64
+
+      - name: Install LLVM ${{ env.LLVM_VERSION }}
+        if: steps.llvm-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p ~/llvm
+          url="https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/LLVM-${LLVM_VERSION}-Linux-X64.tar.xz"
+          curl -fsSL "$url" | tar -xJ --strip-components=1 -C ~/llvm
+
+      # CONDITION (1), enforced.
+      - name: Put LLVM on PATH and assert the exact patch release
+        run: |
+          set -euo pipefail
+          echo "$HOME/llvm/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/llvm/bin:$PATH"
+          have="$(llvm-config --version)"
+          if [ "$have" != "$LLVM_VERSION" ]; then
+            echo "LLVM is $have; nitpick.toml pins $LLVM_VERSION EXACTLY." >&2
+            echo "A patch release can change instruction selection, which is" >&2
+            echo "why the pin names three digits and this step fails." >&2
+            exit 1
+          fi
+          echo "llvm-config --version == $have"
+          for t in llc opt ld.lld; do
+            command -v "$t" >/dev/null || { echo "$t not on PATH" >&2; exit 1; }
+          done
+
+      # Keyed on the compiler's commit AND on LLVM's version, so a cache hit is
+      # by construction a binary built from this commit at this LLVM.
+      - name: Cache the built compiler
+        id: npkc-cache
+        uses: actions/cache@v4
+        with:
+          path: .nitpick/.internal/quickemit
+          key: npkc-${{ env.NITPICK_COMMIT }}-llvm-${{ env.LLVM_VERSION }}
+
+      # CONDITION (2), enforced. `working-directory` puts the shell at the
+      # compiler tree root; the `pwd` check asserts that it did, because the
+      # ladder's argument (`npkg/main.npk`) is resolved against the working
+      # directory and a ladder run from anywhere else would either fail
+      # confusingly or build the wrong entry.
+      - name: Build the compiler from the pinned commit, FROM ITS TREE ROOT
+        if: steps.npkc-cache.outputs.cache-hit != 'true'
+        working-directory: .nitpick
+        run: |
+          set -euo pipefail
+          test "$(pwd)" = "$GITHUB_WORKSPACE/.nitpick" \
+            || { echo "ladder not at the compiler tree root: $(pwd)" >&2; exit 1; }
+          test -f npkg/main.npk \
+            || { echo "npkg/main.npk not resolvable from $(pwd)" >&2; exit 1; }
+          echo "ladder root: $(pwd)"
+          python3 bootstrap/harness/quickemit.py --keep npkg/main.npk
+
+      - name: Export the toolchain, and report its digests
+        run: |
+          set -euo pipefail
+          npkc="$GITHUB_WORKSPACE/.nitpick/.internal/quickemit/npkc"
+          npkrt="$GITHUB_WORKSPACE/.nitpick/.internal/quickemit/npkrt.o"
+          test -f "$npkc"  || { echo "no npkc"  >&2; exit 1; }
+          test -f "$npkrt" || { echo "no npkrt" >&2; exit 1; }
+          echo "NPKC=$npkc"   >> "$GITHUB_ENV"
+          echo "NPKRT=$npkrt" >> "$GITHUB_ENV"
+          # REPORTED, NOT ASSERTED, AND THE DISTINCTION IS THE POINT.
+          #
+          # The workbench measured that its ladder at this commit reproduces its
+          # own two artefacts byte for byte -- on ONE machine. Byte-identical
+          # objects ACROSS machines is a strictly stronger claim and nobody has
+          # measured it; the compiler's reproducibility rule (D-078, D-204,
+          # BUILD.md B-4) is about the emitted IR from different working
+          # DIRECTORIES, not about linked binaries from different hosts. Nor is
+          # this the same ladder: the workbench's pin was produced by
+          # `npkg build`, and CI uses the bootstrap harness's builder, which is
+          # the recipe a sibling library has actually seen go green here.
+          #
+          # So this step prints both digests beside the workbench's. If a run
+          # shows them equal, a later commit may promote these four lines to an
+          # assertion and say which run measured it. Asserting first would make
+          # the first red run ambiguous between "the pin is wrong" and "CI's
+          # linker is not this laptop's", which is the worse of the two.
+          echo "npkc   CI: $(sha256sum "$npkc"  | cut -d' ' -f1)"
+          echo "npkc   WB: $NPKC_SHA256_WORKBENCH"
+          echo "npkrt  CI: $(sha256sum "$npkrt" | cut -d' ' -f1)"
+          echo "npkrt  WB: $NPKRT_SHA256_WORKBENCH"
+          echo "built from compiler ${NITPICK_COMMIT_SHORT} at LLVM ${LLVM_VERSION}"
+
+      # Cycle 0.0.1's floor: the toolchain pin, every `.npk` under `src/`, and
+      # the conformance consumer's four steps with the RUN as the verdict. It is
+      # replaced by the real runner at 0.0.2 and this step does not change when
+      # that happens, which is the point of invoking the runner rather than a
+      # list of commands.
+      - name: Run the harness
+        run: python3 harness/run.py

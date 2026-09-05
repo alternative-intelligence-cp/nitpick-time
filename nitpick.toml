@@ -56,8 +56,51 @@ lld-flags     = ["-static"]
 # The stages are the compiler's (BUILD_REFERENCE §7.1) and the expectation
 # grammar lives inside each test file.
 #
-# [[test]]
-# name = "conformance"
-# stage = "compile"
-# kind = "positive"
-# path = "tests/conformance"
+# AND THE OTHER HALF OF THAT RULE, LEARNED AT 0.0.1: an entry whose `kind`
+# disagrees with the files under its path is worse than an empty one, because
+# it fails for a reason that is not the library's. `tests/probe/` holds nineteen
+# positive probes and seven that MUST NOT COMPILE, and the schema selects by
+# directory, never by file (the compiler's runner globs `<path>/*.npk`). That
+# is O-X7, and the `probe` entry below is written to be true about the nineteen
+# it can be true about.
+
+# THE PROBES. Stage `program`: emitted, scanned, assembled, linked, run at -O0
+# and again through `opt -O2`, the same exit required both times (B-3).
+#
+# NOT `recursive`, and the omission is the point: a plain glob is
+# `tests/probe/*.npk`, which is exactly the twenty-six probe programs and
+# EXCLUDES the two subdirectories that must never be run as tests --
+#   tests/probe/support/  three library modules probe 11 imports. No `main`,
+#                         no `failsafe`; running one is not a thing to do.
+#   tests/probe/defect/   reproductions of compiler defects. Several are
+#                         SUPPOSED to be refused, and two of them are now
+#                         regression cases for a refusal that has landed.
+# `recursive = true` here would sweep both, so the default is load-bearing and
+# is stated rather than left to be rediscovered (0.0.3's checklist asks for
+# exactly this exclusion, with the reason written next to it).
+#
+# THE SEVEN FILES THIS ENTRY IS NOT TRUE ABOUT, named so the gap is greppable
+# rather than counted (the count came from the command, not from reading the
+# names -- `probe05b_derive_eq_refused.npk` is called `_refused` and is a
+# POSITIVE regression case since O-N10 was fixed, which is exactly how an
+# eyeballed count goes wrong): probe02c_narrow_refused, probe02d_wide_literal_refused,
+# probe10b_view_of_temporary_refused, probe10c_view_of_move_param_refused,
+# probe11b_arm_omitted_refused, probe11c_import_arm_cost,
+# probe11e_unused_import_refused. Each carries `// expect-error:` instead of
+# `// expect-exit:`, and 0.0.2 settles how the runner tells them apart (O-X7).
+[[test]]
+name  = "probe"
+stage = "program"
+path  = "tests/probe"
+
+# THE CONSUMER. Stage `compile`, `kind = "positive"` -- which in the compiler's
+# vocabulary means "compiles, links, runs, and exits with the expected code",
+# NOT "was accepted". The distinction is this repository's own O-N11: `npkc`
+# exit 0 is not well-formedness, and a stage that stops at acceptance passes a
+# program with no `failsafe`. `tests/probe/defect/missing_failsafe/` is the
+# proof, and it is why this entry is not `stage = "accept"`.
+[[test]]
+name  = "conformance"
+stage = "compile"
+kind  = "positive"
+path  = "tests/conformance"

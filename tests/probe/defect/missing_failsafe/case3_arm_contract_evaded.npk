@@ -1,3 +1,34 @@
+// expect-error: NITPICK-REACH-003
+// expect-error-at: 58:1
+//
+// THE HEADER THIS FILE DID NOT HAVE UNTIL 0.0.1. See
+// `case1_no_failsafe.npk`'s header for why the absence mattered: these three
+// files changed behaviour completely on 2026-09-04 and were the only tracked
+// `.npk` outside the expect-header sweep that should have been inside it
+// (TM-115).
+//
+// WHAT IT IS NOW: A REGRESSION CASE, and the one that carries the point. O-N11
+// landed as the compiler's DEF-5 and this file is refused at `main`, with the
+// diagnostic LISTING the arms the absent handler owes -- SIX here, against
+// `case1`'s four, and the difference is exactly the import:
+//
+//     NITPICK-REACH-003 ...: `main` without `failsafe` (D-013): ...
+//       -- 6 identities: probe11_arms_lib.EProbeZone, Unreachable, HeapOom,
+//          HeapBadRequest, WildLeak, IntOverflow --
+//
+// So the arm contract is no longer dischargeable by deleting the handler, and
+// the diagnostic now says what the handler would have owed -- which is the ask
+// this repository made, granted in full. Measured at pin `0dfddac`; no `.ll`
+// is written.
+//
+// ONE CORRECTION TO THE TEXT BELOW, WHICH IS OTHERWISE AS WRITTEN ON
+// 2026-09-03: it says the true cause is "here are the NINE arms it owes".
+// Nine was never measured -- it is the arm count of
+// `../../probe11_failsafe_arms.npk`, a different program. The measured bill
+// for this file is six. The sentence is left standing because it is what was
+// believed then; this is the correction.
+//
+// ==================== WHAT THE DEFECT WAS, KEPT AS WRITTEN ==================
 // WHY THIS DEFECT MATTERS TO `ntime` RATHER THAN BEING A TIDINESS COMPLAINT.
 //
 // This file imports `probe11_arms_lib`, which declares `pub error:EProbeZone;`

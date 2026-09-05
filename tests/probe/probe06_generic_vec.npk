@@ -11,7 +11,9 @@
 // map, no second sequence), `Layout` stores `Vec<FmtPart>`, and cycle 0.0.4 is
 // the subcycle that builds it. Its API table is `0.0.4.md` §2.
 //
-// THE SHAPE IS THE COMPILER'S OWN `List<T>` (src/frontend/list.npk, D-209),
+// THE SHAPE IS THE COMPILER'S OWN `List<T>` (D-209 -- and the file MOVED:
+// it was `src/frontend/list.npk`, and D-239 put `List<T>` in the PRELUDE at
+// `src/prelude/prelude.npk`, where the old path no longer exists. TM-113),
 // deliberately: B-12 says ours is that shape "because that shape is right and
 // has been exercised across twenty-two families", and ours because a library
 // must not import a compiler's internals. So this probe is not asking whether
@@ -89,7 +91,8 @@
 // NOT ASKED HERE: an inherent `impl:<T>:Vec<T>` with a mutating receiver. §4
 // listed it as a fallback to measure beside the free-function form, and
 // `0.0.4.md` §2 has since settled the API as free functions -- `vec_init<T>`,
-// `vec_push<T>` and the rest -- following the compiler's `list.npk`. A probe
+// `vec_push<T>` and the rest -- following the compiler's `list_*` functions,
+// which are now prelude functions rather than `list.npk`'s (TM-113). A probe
 // for a form the design does not use would pin a fact nothing depends on. The
 // call syntax the free-function form needs IS pinned here, because it is not
 // guessable: an explicit generic argument is a TURBOFISH, `vec_init::<int64>(2)`,
@@ -105,7 +108,9 @@ struct:Vec<T> = {
 
 // A capacity of zero would make the doubling below a no-op forever, so the
 // floor is one -- the compiler's `list_init` makes the same choice for the
-// same reason.
+// same reason. That function is STILL THERE, and it moved with its type: it is
+// `src/prelude/prelude.npk`'s `pub func:list_init<T>`, whose own comment gives
+// the same reason in the same words (TM-113).
 func:vec_init<T> = Vec<T>(int64:cap) never fails {
     int64:n = cap;
     if (n < 1i64) { n = 1i64; }

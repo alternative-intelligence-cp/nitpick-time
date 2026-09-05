@@ -77,13 +77,32 @@ The harness mirrors the compiler's stage vocabulary (`BUILD_REFERENCE.md`
 
 | Stage | Directory | Passes when |
 |---|---|---|
+| `compile` **(the default)** | `tests/conformance/` | held to its `kind`: `positive` **compiles, links, runs and exits with the expected code**; `negative` fails to compile emitting **exactly** the expected diagnostics; `diagnostic` compiles emitting exactly the expected warnings |
 | `parse` | every `.npk` in the tree | accepted by `tools/parse_check` with no diagnostic |
-| `accept` | `tests/conformance/` | accepted by `tools/check` in silence |
+| `accept` | *(not used by this library — see below)* | accepted by `tools/check` in silence |
 | `check` | `tests/rejection/` | refused by the frontend with **exactly** the expected codes |
-| `program` | `tests/unit/` | emitted, scanned, assembled, linked, run at -O0 and again under `opt -O2`, the same exit both times |
+| `program` | `tests/unit/`, `tests/probe/` | emitted, scanned, assembled, linked, run at -O0 and again under `opt -O2`, the same exit both times |
 | `golden` | `tests/golden/` | as `program`, and the emitted text matches the committed golden byte for byte |
 | `sweep` | `tests/unit/sweep/` | as `program`, but **long** — the exhaustive calendar and zone sweeps, run in full on a full invocation and skipped loudly under `--quick` |
 | `fixture` | `tests/fixtures/` | built and never run; its uppercased stem becomes an `// argv:` token |
+
+**Rule B-4b (TM-114) — `tests/conformance/` is `compile`/`positive`, and NOT
+`accept`.** This table said `accept` until 0.0.1 and that was a defect, not a
+simplification: `accept` stops at *"accepted in silence"*, and this repository
+holds the reproduction of what that misses. A root file with `main` and no
+`failsafe` was accepted by `npkc` at exit 0 and refused only by the linker
+(`tests/probe/defect/missing_failsafe/`, O-N11, TM-112). **`npkc` exit 0 is not
+well-formedness**, so the conformance suite is judged on the RUN. `accept` is
+kept in the table because the stage exists upstream, with the note that this
+library does not use it.
+
+**Four further stages exist upstream and are deliberately absent here**, each
+to be added by the cycle that can honour it rather than sit dormant:
+`resolve` (loader refusals), `runtime` (a hand-written `.ll`), `verify`
+(`--obligations` under the pinned z3, the compiler's D-218) and `cost` (the
+allocator's own `NPK_HEAP_STATS` numbers held to a stated bound — the
+instrument cycle 0.0.4's managed-memory gate is waiting for, and the reason
+that gate is a `ulimit -v` cap today).
 
 **Rule B-5 — expectations live in the test file**, marker for marker as the
 compiler's:

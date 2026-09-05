@@ -46,6 +46,21 @@ entries from cycle 0.0.2.
   that answer is a red run.
 - **A file's `mod:` name equals its basename**, and no identifier may begin
   with a digit — hence `probeNN_topic.npk` and never `NN_topic.npk`.
+- **A probe with a PRECONDITION states it in the header and exits a code no
+  substantive assertion in that file uses** (TM-116, `TESTING.md` V-1d). Two
+  probes here read `$TZ`. Run without it, `probe09b` used to exit **10** — its
+  own *"the returned view is not the entry"*, which is the single question it
+  exists to ask — so an unmet precondition and a real finding about the
+  language were the same signal. Both files now use **30** for "the variable is
+  absent" and **39** for "present and not `TZ=Europe/Kyiv`". Note the second:
+  `TZ=Europe/Kiev`, the old IANA spelling, used to pass **both** probes at exit
+  0, because every byte either one checks is equally true of `Kiev` and `Kyiv`.
+- **Every `.npk` under `tests/` carries an `expect-` marker or is named as an
+  exemption with its reason** (TM-115, `TESTING.md` V-1b/V-1c). The three
+  modules in `support/` are the exemptions — no `main`, no `failsafe`, nothing
+  to expect. `harness/run.py` sweeps this and **prints its denominator**,
+  because the three `defect/missing_failsafe/` cases went two days with no
+  marker at all and the silence looked exactly like a pass.
 
 ## What is here
 
@@ -66,8 +81,8 @@ entries from cycle 0.0.2.
 | `probe06c_element_drop.npk` | the same, one line different: `free_names` first | the same — the remedy half. **Both exit 0**, which is the point |
 | `probe07_negative_div.npk` | does signed `/` truncate toward zero and `%` take the dividend's sign? | TM-016, `CALENDAR.md`'s negative years |
 | `probe08_readlink.npk` | `readlink` through `sys`, with the returned length as the authority | `HOST.md` H-13, H-14, H-15 |
-| `probe09_environ_split.npk` | `environ()`, every entry as `KEY=VALUE`, and `TZ` split by prefix. **Needs `TZ=Europe/Kyiv` exported**; exits 30 if not | `HOST.md`, TM-110 |
-| `probe09b_environ_view_returned.npk` | a view of an environment entry, **returned**, and read after its frame died | TM-110 — the pointer-shaped root, with a parameter confound |
+| `probe09_environ_split.npk` | `environ()`, every entry as `KEY=VALUE`, and `TZ` split by prefix. **Needs `TZ=Europe/Kyiv` exported**; exits **30** if `TZ` is absent and **39** if it is present and wrong (TM-116) | `HOST.md`, TM-110 |
+| `probe09b_environ_view_returned.npk` | a view of an environment entry, **returned**, and read after its frame died. **Needs `TZ=Europe/Kyiv` exported**, same two codes as its neighbour — **30** absent, **39** wrong (TM-116) | TM-110 — the pointer-shaped root, with a parameter confound |
 | `probe10_view_edges.npk` | the five borrow edges, and §1 is the discriminator: an `alloc`'d block viewed and returned with **no parameter in the root chain** | TM-110, `SAFETY.md` S-22 |
 | `probe10b_view_of_temporary_refused.npk` | *(must not compile)* a view of a **temporary**, returned | TM-110 — fires `NITPICK-BORROW-012` |
 | `probe10c_view_of_move_param_refused.npk` | *(must not compile)* a view of a **`move` parameter**, returned | TM-110 — a `move` parameter is the callee's own |
@@ -78,11 +93,13 @@ entries from cycle 0.0.2.
 | `probe11e_unused_import_refused.npk` | *(must not compile)* is the arm owed by the import, or by the call? | TM-107, `SAFETY.md` S-4c |
 | `probe11f_declared_unraised.npk` | does a `pub error:` **declaration** cost an arm, or does the first `fail`? | TM-107, `SAFETY.md` S-6 |
 
-Probes 09 and 10 are planned in `0.0.0.md` §4 and **held, not merely
+Probes 09 and 10 were planned in `0.0.0.md` §4 and **held, not merely
 unwritten**: they are the borrow-edge probes, and the author ruled O-N9
-BLOCKING (Q-5), so they wait for the compiler's cycle 1.5.1b rather than being
-written against a rule that is about to change. `defect/` carries the
-reproductions of every defect this subcycle found.
+BLOCKING (Q-5), so they waited for the compiler's cycle 1.5.1b rather than
+being written against a rule that was about to change. **The hold ended on
+2026-09-04** and all five files are here. `defect/` carries the reproductions
+of every defect the subcycle found — and `defect/missing_failsafe/` is now a
+**regression suite** rather than a reproduction, since O-N11 is fixed.
 
 ### Why 02 has three twins
 

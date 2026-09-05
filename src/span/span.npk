@@ -1,0 +1,17 @@
+// Instants, timestamps and `Duration` interop — the PLACEHOLDER (0.0.1 P-7).
+//
+// EMPTY ON PURPOSE: see `../core/core.npk` for why a placeholder exists at all.
+// It is REPLACED at the cycle below, never deleted.
+//
+// WHAT FILLS IT: `Instant` with its clock tag, `Timestamp` with its
+// normalisation invariant, the `Duration` constructors `ntime` adds,
+// `timestamp_since` with its ±292-year refusal, and `timestamp_until` in
+// calendar units. Governed by `meta/specs/SPAN_MODEL.md`.
+// WHEN: cycle 0.2 (`meta/roadmap/0.2/README.md`).
+//
+// WHAT IT MAY IMPORT: `cal` and `core` (`BUILD.md` B-17).
+//
+// WHAT IT MUST NOT DECLARE: a `Duration` (TM-004). The prelude's is the
+// ecosystem's one span type; a second would immediately become the type
+// everybody converts to and from.
+mod:span;

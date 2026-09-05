@@ -490,3 +490,60 @@ thing that goes stale silently.
 **Nothing waits on it.** N-20b binds to every narrowing site in §5's table
 regardless of the count, so the range-check obligation TM-105 creates is
 complete today.
+
+---
+
+### O-X7 — one `[[test]]` entry cannot cover `tests/probe/`, because seven of its twenty-six must not compile
+
+**Raised 2026-09-05 at cycle 0.0.1 step 3**, writing the manifest's first
+`[[test]]` entries.
+
+**The measurement, with its denominator.** `tests/probe/*.npk` — the plain
+non-recursive glob a `path` entry selects — is **26** files: **19** carrying
+`// expect-exit:` and **7** carrying `// expect-error:`, none without a marker.
+The seven are `probe02c_narrow_refused`, `probe02d_wide_literal_refused`,
+`probe10b_view_of_temporary_refused`, `probe10c_view_of_move_param_refused`,
+`probe11b_arm_omitted_refused`, `probe11c_import_arm_cost` and
+`probe11e_unused_import_refused`.
+
+**The count came from a command, not from reading the names**, and that matters
+here: `probe05b_derive_eq_refused.npk` is called `_refused` and is a
+**positive** regression case since O-N10 was fixed (TM-111). An eyeballed list
+gets it wrong, and did, once, on this dispatch.
+
+**Why one entry cannot cover them.** A `[[test]]` selects by **directory** —
+the compiler's runner globs `<path>/*.npk`, or `<path>/**/*.npk` when the entry
+says `recursive` — never by file. `kind` is per entry. And an entry a runner
+cannot honour is refused **by name** before anything runs, never skipped. So a
+`program`-stage entry over `tests/probe/` would try to link and run seven files
+that are supposed to be refused.
+
+**What the manifest does today.** The `probe` entry is `stage = "program"`,
+non-recursive, and its comment names the seven files it is **not** true about.
+That is honest and it is not a solution.
+
+**Recommendation — dispatch by the file's own header, and say so in `BUILD.md`
+§3.** B-5 already puts the expectation in the file, and B-7 already makes the
+*set* of reported codes the criterion; a file carrying `expect-error:` is a
+refusal case wherever it lives. The compiler's own runner already has per-file
+membership rules inside a stage — *"a `resolve`/`check` file with no
+`expect-error` is a fixture another file imports and is skipped; a
+`compile`/`program` file some other file in its suite imports is skipped"* — so
+this is an extension of an existing mechanism rather than a new one.
+
+**The cost of that recommendation, stated because it is the argument against
+it.** `BUILD.md` §3 opens by saying the harness mirrors the compiler's stage
+vocabulary *"so the eventual move to `npkg` is a change of runner and not of
+suite"*. Header dispatch is a divergence from that, and the day `npkg` can
+build a library (O-N1, O-B1) it becomes a migration cost: either `npkg` grows
+the same rule, or the seven move to a directory of their own.
+
+**The alternative, and why it is second.** Move the seven to
+`tests/probe/refused/` and give them a `check`-stage entry. It fits the schema
+exactly and needs no new rule — but it churns paths that `0.0.0.md`'s verdict
+table, `tests/probe/README.md`'s table and several decisions cite by name, and
+P-5 says a probe is never deleted for the same reason those citations exist.
+
+**Settled at 0.0.2**, which builds the runner. **Nothing waits on it**: no
+probe changes either way, and the entry in the manifest is true about the
+nineteen today.

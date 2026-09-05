@@ -61,6 +61,21 @@ def run(argv, cwd=None, env=None, timeout=None):
     return p.returncode, p.stdout.decode("utf-8", "replace")
 
 
+def run_split(argv, cwd=None, env=None, timeout=None):
+    """As `run`, but keeps stdout and stderr apart and returns BYTES.
+
+    The `golden` stage needs both halves of that. A golden file asserts what a
+    program WROTE, byte for byte -- so it must not have the runtime's stderr
+    folded into it, and it must not be decoded and re-encoded on the way to the
+    comparison. `run` above merges the streams because for a `program` unit the
+    exit code is the verdict and the output is only evidence; here the output IS
+    the verdict.
+    """
+    p = subprocess.run(argv, cwd=cwd, env=env, stdout=subprocess.PIPE,
+                       stderr=subprocess.PIPE, timeout=timeout)
+    return p.returncode, p.stdout, p.stderr
+
+
 # `use "<path>".<what>;` and `pub use "<path>".<what>;` -- BUILD.md B-16: every
 # import is relative until dependency roots are populated (O-N1).
 _USE = re.compile(r'^\s*(?:pub\s+)?use\s+"([^"]+)"')

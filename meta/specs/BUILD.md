@@ -20,6 +20,14 @@ Read at the compiler's commit for cycle 1.5.0 (2026-09-03):
   A `use "ntime/cal.npk"` path — the dependency-root form — therefore resolves
   against an empty set. Only `./` and `../` paths work.
 - **`npkg` has no `install` and no `update`.**
+- **The frontend tools are SOURCE, not binaries** (measured at 0.0.3, TM-123).
+  `tools/parse_check.npk` and `tools/check.npk` — the two this library's `parse`
+  and `check` stages were planned around — are `.npk` files importing twenty of
+  `src/frontend/` and the whole driver pipeline respectively. Building either is
+  building the compiler, from a tree that moves ahead of our pin, so the `parse`
+  stage asks the pinned `npkc` instead and reads the diagnostic's code family
+  (B-7b). If the toolchain pin ever ships those tools built, that decision is
+  superseded rather than worked around.
 
 None of this is a criticism of `npkg`; D-206 scoped it to the compiler's own
 suite. It is written down because a plan that assumes tooling it has not
@@ -115,8 +123,8 @@ The harness mirrors the compiler's stage vocabulary (`BUILD_REFERENCE.md`
 | Stage | Directory | Passes when |
 |---|---|---|
 | `compile` **(the default)** | `tests/conformance/` | held to its `kind`: `positive` **compiles, links, runs and exits with the expected code**; `negative` fails to compile emitting **exactly** the expected diagnostics; `diagnostic` compiles emitting exactly the expected warnings |
-| `parse` | every `.npk` in the tree | accepted by `tools/parse_check` with no diagnostic |
-| `accept` | *(not used by this library — see below)* | accepted by `tools/check` in silence |
+| `parse` | every `.npk` in the tree | **rooted at `$NPKC` once each, and no `NITPICK-LEX-*` or `NITPICK-PARSE-*` comes back** — unless the file's own header names one, in which case one must (B-7b, TM-123). A whole-tree stage: a `[[test]]` entry naming it is refused by name |
+| `accept` | *(DECLINED by this library — B-4b, TM-124)* | accepted by `tools/check` in silence |
 | `check` | `tests/rejection/` | refused by the frontend with **exactly** the expected codes |
 | `program` | `tests/unit/`, `tests/probe/` | emitted, scanned, assembled, linked, run at -O0 and again under `opt -O2`, the same exit both times |
 | `golden` | `tests/golden/` | as `program`, and the emitted text matches the committed golden byte for byte |
@@ -132,6 +140,14 @@ holds the reproduction of what that misses. A root file with `main` and no
 well-formedness**, so the conformance suite is judged on the RUN. `accept` is
 kept in the table because the stage exists upstream, with the note that this
 library does not use it.
+
+**And the runner refuses it by name with that reason (TM-124), which is a
+different refusal from "not implemented yet".** *"Not yet"* invites a later
+session to implement it; this says *not here*, and names `compile` with
+`kind = "positive"` as the thing to write instead. A runner that implemented
+`accept` would be offering the exact shape this rule exists to keep out of
+reach, and `meta/roadmap/0.0/0.0.3.md` §2 — which listed it among the stages to
+add — is the document that was wrong.
 
 **Rule B-4c (TM-119) — inside a `program` entry, the FILE'S OWN HEADER decides
 what kind of test it is. This is a deliberate divergence from `npkg`'s `kind`.**
@@ -168,7 +184,18 @@ compiler's:
 // stress: 40                run it that many times, the SAME answer every time
 // argv: …
 // expect-golden: name       the golden file this test asserts against
+// sweep-count: 7304485      the domain a `sweep` must visit (TM-122)
 ```
+
+**Rule B-5e (TM-122) — a `sweep` member declares its domain and the program
+prints what it visited.** `// sweep-count: N`, and the program writes exactly one
+line `swept <N>` to stdout; the harness requires the two numbers to be equal. An
+exhaustive loop that returns after one iteration exits 0 exactly like one that
+ran to the end, so the exit code cannot carry this and the program is made to
+testify. The marker is read by the `sweep` stage and by nothing else: absent on
+a `sweep` member it is a failure, and present on a member of any other stage it
+is a failure too, because there it is an expectation that does nothing (B-5b's
+rule applied to a marker that is real but misplaced).
 
 **Rule B-5b (TM-121) — the marker block is contiguous from LINE 1.** It is the
 maximal run of marker lines starting at line 1 and ends at the first line that is
@@ -197,14 +224,39 @@ the fix reads like a mystery otherwise.
 (D-237): the set of codes a rejection test reports must **equal** the set its
 expectations name.
 
+**Rule B-7b (TM-123) — the `parse` stage asserts the PARSE half, and only that.**
+`npkc` has no parse-only mode, so the stage reads the diagnostic's code FAMILY:
+`NITPICK-LEX-*` comes from the compiler's `src/frontend/diag_codes.npk` and
+`NITPICK-PARSE-*` from `parse_codes.npk`; every other family belongs to a later
+phase, so a file reported with one of those **necessarily parsed**. That is what
+lets the stage cover the twenty-six files here that must not compile — they are
+refused at `TYPE-009`, `BORROW-001`, `BORROW-012`, `REACH-002` and `REACH-003`,
+all of which run only on something that parsed. Measured at pin `0dfddac`:
+**50 files = 36 parse cleanly + 13 parse and are refused later + 1 does not
+parse**, and the one is `probe02d_wide_literal_refused.npk`.
+
 **Rule B-8 — the harness is itself tested.** A self-check feeds it wrong
 expectations and requires it to report every one as a failure. A suite that
 only ever agrees with what it is handed reports green while checking nothing.
+It runs **first** in every full invocation and its failure is fatal
+(`TESTING.md` V-14, V-15).
 
 **Rule B-9 — the `sweep` stage is separable but not optional.** The exhaustive
 calendar round trip (`CALENDAR.md` §5) takes seconds, not minutes, so it runs on
 every full invocation; `--quick` skips it **with a loud line**, and nothing is
 concluded from a `--quick` run.
+
+**Rule B-9b (TM-125) — no CI workflow may pass `--quick`**, and O-X5 is settled
+that way. The argument is not that the sweeps are cheap — they are, and that
+would stop being an argument the moment one got slow, which is exactly when
+somebody would reach for the flag. It is what the sweeps ARE: `TESTING.md` V-2
+makes the exhaustive gate *the* gate, and V-3 calls the civil sweep the
+strongest statement this library makes, so a CI run that skipped it would be a
+CI run that concluded nothing. **It is enforced by shape rather than by
+policy**: a `--quick` run announces twice that it concludes nothing, emits a
+`SKIP` line per skipped entry through the same report object as every other
+verdict — so the transcript and the summary cannot disagree about what ran — and
+**refuses to print the unqualified word `GREEN`**.
 
 ---
 

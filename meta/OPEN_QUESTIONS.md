@@ -457,13 +457,23 @@ for anybody who measured. **Open by design until cycle 0.8's benchmark** says
 whether it matters; if it does, the answer is documentation pointing at the
 `Bytes` form, not hidden state.
 
-### O-X5 — the `sweep` stage under `--quick`
-`BUILD.md` B-9 makes the exhaustive sweeps skippable under `--quick` with a
-loud line. Whether CI should ever use `--quick` is a policy question.
-**Recommendation:** no. The sweeps run in seconds; the flag exists for a
+### ~~O-X5 — the `sweep` stage under `--quick`~~ — **SETTLED, TM-125**
+~~`BUILD.md` B-9 makes the exhaustive sweeps skippable under `--quick` with a
+loud line. Whether CI should ever use `--quick` is a policy question.~~
+~~**Recommendation:** no. The sweeps run in seconds; the flag exists for a
 developer iterating on one function, and a CI run that skipped the gate would
 be a CI run that concluded nothing. Decide at cycle 0.0.3 when the harness
-grows the flag.
+grows the flag.~~
+
+**Settled at cycle 0.0.3 as TM-125, as the recommendation proposed: NO.** The
+decision records a *different* reason from the one above, and deliberately —
+"the sweeps run in seconds" is a fact about today's domain sizes and would stop
+being an argument the moment a sweep got slow, which is exactly when somebody
+would reach for the flag. The durable reason is what the sweeps ARE:
+`TESTING.md` V-2 makes the exhaustive gate *the* gate and V-3 calls the civil
+sweep the strongest statement this library makes, so a `--quick` CI run would
+be publishing a green badge for something no run had checked. It is enforced by
+shape rather than by policy — see `BUILD.md` B-9b.
 
 ### O-X6 — `SPAN_MODEL.md` N-20 says three `int128` sites and §5's table names one
 **Found at cycle 0.0.0, 2026-09-03**, while writing N-20b against §5. N-20 says

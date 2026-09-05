@@ -82,14 +82,36 @@ REQUIRED = {
 
 ARRAY_TABLES = ("test",)
 
-# The stages this library's harness knows. `BUILD.md` §3 lists nine; 0.0.2
-# implements two, and an entry naming one of the other seven is refused BY NAME
-# rather than skipped -- the compiler's rule, and O-X7's own argument: "an entry
-# a runner cannot honour is refused by name before anything runs, never
-# skipped". A skipped entry is a suite reporting green while checking nothing.
+# The stages this library's harness knows. `BUILD.md` §3 lists nine; an entry
+# naming one it cannot honour is refused BY NAME rather than skipped -- the
+# compiler's rule, and O-X7's own argument: "an entry a runner cannot honour is
+# refused by name before anything runs, never skipped". A skipped entry is a
+# suite reporting green while checking nothing.
 KNOWN_STAGES = ("compile", "parse", "accept", "check", "program", "golden",
                 "sweep", "fixture")
-IMPLEMENTED_STAGES = ("compile", "program")
+IMPLEMENTED_STAGES = ("compile", "check", "program", "golden", "sweep")
+
+# `parse` IS A WHOLE-TREE STAGE HERE, NOT A DIRECTORY ENTRY. `BUILD.md` §3's
+# own Directory column reads "every `.npk` in the tree" for it, and that is the
+# point of the stage: the files it is worth running on are precisely the ones no
+# `[[test]]` entry selects. Writing `stage = "parse"` on an entry would narrow
+# it to one directory and silently un-cover the rest, so it is refused by name.
+WHOLE_TREE_STAGES = ("parse",)
+
+# `accept` IS DELIBERATELY NOT IMPLEMENTED, AND THAT IS A DECISION, NOT A GAP
+# (TM-124, B-4b, TM-114). It stops at "accepted in silence", and this repository
+# holds the reproduction of what that misses: a root with `main` and no
+# `failsafe` was accepted by `npkc` at exit 0 and refused only by the linker
+# (`tests/probe/defect/missing_failsafe/`, O-N11). `TESTING.md` §1 and
+# `BUILD.md` §3 both already say this library does not use the stage; a runner
+# that implemented it anyway would be offering the shape those rules exist to
+# keep out of reach.
+DECLINED_STAGES = {
+    "accept": "it stops at \"accepted in silence\", which is the shape a "
+              "program with no `failsafe` walks through (B-4b, TM-114). Use "
+              "`compile` with `kind = \"positive\"`, which is judged on the "
+              "RUN.",
+}
 KNOWN_KINDS = ("positive", "negative", "diagnostic")
 
 
@@ -276,11 +298,23 @@ def check(doc, path):
         if stage is not None and stage not in KNOWN_STAGES:
             problems.append("[[test]] `%s`: stage `%s` is not one of %s"
                             % (who, stage, ", ".join(KNOWN_STAGES)))
+        elif stage in DECLINED_STAGES:
+            problems.append(
+                "[[test]] `%s`: stage `%s` exists upstream and this library "
+                "does not use it -- %s" % (who, stage, DECLINED_STAGES[stage]))
+        elif stage in WHOLE_TREE_STAGES:
+            problems.append(
+                "[[test]] `%s`: stage `%s` runs over the WHOLE TREE here and "
+                "is not a `[[test]]` entry (BUILD.md §3's Directory column for "
+                "it reads \"every `.npk` in the tree\"). An entry would narrow "
+                "it to one directory and silently un-cover the rest -- and the "
+                "files worth parsing are exactly the ones no entry selects."
+                % (who, stage))
         elif stage is not None and stage not in IMPLEMENTED_STAGES:
             # REFUSED BY NAME, NOT SKIPPED. See KNOWN_STAGES above.
             problems.append(
                 "[[test]] `%s`: stage `%s` is a real stage this harness does "
-                "not implement yet (0.0.2 does `%s`). An entry a runner cannot "
+                "not implement yet (it does `%s`). An entry a runner cannot "
                 "honour is refused by name before anything runs, never skipped."
                 % (who, stage, "` and `".join(IMPLEMENTED_STAGES)))
         kind = entry.get("kind")

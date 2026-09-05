@@ -1771,3 +1771,236 @@ a check that cannot be fooled.
 - **Require the block to be the whole leading comment.** Every file here puts
   documentation under its markers, and that documentation is the most valuable
   thing in the directory.
+
+---
+
+## The self-check batch — cycle 0.0.3, measured against pin `0dfddac`
+
+Five decisions, all produced by building `TESTING.md` V-14's self-check and
+finding what a runner has to be able to do before it can be shown able to fail.
+Two of them correct something this repository had already planned.
+
+### TM-122 — a `sweep` declares its domain in its header and PRINTS the count it visited
+**2026-09-05. New marker, `// sweep-count: N`.** `BUILD.md` B-5 and B-9,
+`TESTING.md` V-14 case 7 and the new V-16.
+
+**The problem, and it is this library's most plausible way to be green and
+wrong.** `ntime`'s strongest claim is an exhaustive sweep — V-2 and V-3: every
+day in `[−9999-01-01, +9999-12-31]`, both directions, 7 304 485 × 2 — and **an
+exhaustive loop that returns after one iteration exits 0 exactly like one that
+ran to the end.** No exit code distinguishes them. Neither does wall time, on a
+sweep that takes seconds. Nothing *outside* the program can tell the difference,
+because the only evidence that the work happened is inside the process that did
+it.
+
+**The decision.** *A `sweep` member declares `// sweep-count: N` — the size of
+the domain it must visit — and writes exactly one line `swept <N>` to stdout.
+The harness requires the two numbers to be equal. A sweep member with no
+`sweep-count` is a failure, not a skip; so is a `sweep-count` on a member of any
+other stage, because there it is an expectation that does nothing (V-1f).*
+
+**Why the evidence has to come from the program.** Every alternative that keeps
+the program silent measures something other than the work: a timer measures the
+machine, a coverage counter measures the compiler, and an exit code measures
+nothing at all. The program is the only witness, so the design makes it testify.
+
+**The three ways a sweep does not run, and all three are covered**, which is the
+point — the marker alone would leave two of them open:
+
+1. **the entry selects no files** — `run.py`'s `run_entry` fails an entry whose
+   glob matched nothing, which is the rule the manifest already carried;
+2. **`--quick` skipped the stage** — announced through the same `Report` object
+   as every other verdict, so the transcript and the summary cannot disagree,
+   and the run refuses to print the unqualified word GREEN;
+3. **the program ran and did no work** — this marker.
+
+*Alternatives declined:*
+
+- **Reuse `expect-golden` and commit a golden file per sweep.** It works, and it
+  costs a committed file per sweep to assert one integer. The marker says the
+  same thing where a reader of the test will see it.
+- **Have the harness time the sweep and fail a suspiciously fast one.** That is
+  a threshold on somebody's machine, which is the shape D-076 and B-4 exist to
+  keep out of this suite.
+- **Let a sweep member without the marker run as an ordinary `program`.** It is
+  the skip that makes a suite green while checking nothing, and this library
+  already lost two days to one (TM-115).
+
+### TM-123 — the `parse` stage asks `$NPKC` and reads the CODE FAMILY, because there is no parse-only mode
+**2026-09-05. Measured** at pin `0dfddac`. **Corrects `BUILD.md` §3 and
+`meta/roadmap/0.0/0.0.3.md` §2**, both of which name the compiler's
+`tools/parse_check` as this stage's tool.
+
+**What the plan assumed.** That the three frontend tools — `tools/parse_check`,
+`tools/check`, `tools/resolve_check` — would be *"built once per run from the
+pinned checkout"*.
+
+**What is actually there.** They are `.npk` **source files**.
+`tools/parse_check.npk` is 131 lines that `use` twenty of the compiler's
+`src/frontend/` modules; `tools/check.npk` imports the whole driver pipeline.
+Building either means building the compiler — from a working tree that is
+**ahead of our pin and moving** — which W-18 forbids, and which would put an
+**unpinned parser** behind a stage whose three sibling tools are held to an
+exact LLVM patch release (D-204). A stage that asserts less than its neighbours
+about its own provenance is the wrong shape for the one stage whose subject is
+every file in the tree.
+
+**And `npkc` has no parse-only mode.** Its usage line at the pin is
+`npkc <root.npk> [-o out.ll] [--obligations DIR] [--elide …]
+[--extra-picky=no-wildx]`. No `--parse`, no `-fsyntax-only`.
+
+**The decision.** *The `parse` stage roots every `.npk` in the tree at `$NPKC` —
+the pinned artefact — once each, and reads the FAMILY of any diagnostic that
+comes back. `NITPICK-LEX-*` is declared in the compiler's
+`src/frontend/diag_codes.npk` and `NITPICK-PARSE-*` in `parse_codes.npk`; every
+other family in that tree belongs to a later phase, so a file reported with one
+of those necessarily parsed. A file must parse unless its own header names a
+parse-phase code.*
+
+**Why that rule is exactly right for this tree, and it is not obvious.** Twenty-
+six files here must NOT compile, and they are refused at `TYPE-009`,
+`BORROW-001`, `BORROW-012`, `REACH-002` and `REACH-003` — every one of which is
+a phase that only runs on something that parsed. Exactly **one** file in the
+tree is expected not to parse (`probe02d_wide_literal_refused.npk`, a literal
+outside the 64-bit envelope), and the stage's job is to confirm that it is
+exactly that one. Measured: **50 = 36 parse cleanly + 13 parse and are refused
+later + 1 does not parse**.
+
+**It is a whole-tree stage and not a `[[test]]` entry**, and an entry naming it
+is refused by name. `BUILD.md` §3's own Directory column for `parse` reads
+*"every `.npk` in the tree"*, and that is the stage's whole value here: of the
+50 files, the library build roots 1, the suite roots 27 and 3 more are reached
+by `use` from a suite root, so **19 are put in front of the compiler by nothing
+else** — the six `src/` placeholders, which `src/lib.npk` does not reach because
+it re-exports nothing yet, and the thirteen reproductions under
+`tests/probe/defect/`, the directory whose files went two days with no
+expectation at all (TM-115).
+
+**The cost is real, measured, and shrinking.** 40.1 s for the 50 files, because
+`npkc` runs its whole pipeline and every root re-emits the prelude (TM-117); a
+file that does not parse costs 0.03 s, since it fails at once and writes
+nothing. The prelude cost is the compiler's own item and is being cut, so the
+simple design is the right one to hold: it depends on no other stage's
+membership and cannot silently un-cover a file.
+
+*Alternatives declined:*
+
+- **Extract the compiler at the pin and build the three tools.** Correct in
+  principle and unavailable in practice: it is building the compiler, and the
+  pinned artefacts this workbench distributes are `npkc` and `npkrt.o`. If the
+  toolchain pin ever ships the frontend tools too, this decision is superseded
+  rather than worked around.
+- **Parse only the files no other stage roots.** Half the cost and a coupling
+  to the suite's membership, so a `[[test]]` entry gaining a directory would
+  silently stop the parse stage covering it.
+- **Skip the stage.** It is the only thing that opens nineteen files.
+
+### TM-124 — `accept` is DECLINED, not unimplemented, and the manifest says which
+**2026-09-05.** Carries `BUILD.md` B-4b and TM-114 into the runner.
+
+**The tension.** `meta/roadmap/0.0/0.0.3.md` §2 lists `accept` among the stages
+this subcycle adds. `BUILD.md` §3 marks it *"(not used by this library)"* and
+B-4b explains at length why, and `TESTING.md` §1 says *"the stage exists
+upstream; this library does not use it"*. **The specifications are the
+authority** (TM-002), so the plan is the document that is wrong.
+
+**The decision.** *`accept` is refused by name with its reason, in the same
+schema check that refuses an unimplemented stage — but as a different kind of
+refusal. An unimplemented stage says "not yet"; `accept` says "not here, and
+here is what to use instead".*
+
+**Why the distinction is worth a decision.** *"Not yet"* invites a later session
+to implement it. `accept` stops at *"accepted in silence"*, and this repository
+holds the reproduction of exactly what that misses: a root with `main` and no
+`failsafe` was accepted by `npkc` at exit 0 and refused only by the linker
+(`tests/probe/defect/missing_failsafe/`, O-N11, TM-112). A runner that
+implemented the stage would be offering the shape B-4b exists to keep out of
+reach. The message names `compile` with `kind = "positive"` — judged on the RUN
+— as the thing to write instead.
+
+### TM-125 — CI never uses `--quick`, and the reason is a property of THIS library
+**2026-09-05. Settles O-X5**, as its recommendation proposed, and the reasoning
+is recorded because a later session under time pressure will want to reopen it.
+
+**The decision.** *`--quick` is for a developer iterating on one function. No
+CI workflow in this repository may pass it, and none does.*
+
+**Why, and the argument is not "sweeps are cheap".** They are — V-3 says the
+civil sweep runs in seconds — but cheapness is a fact about today's domain
+sizes and would stop being an argument the moment a sweep got slow, which is
+precisely when somebody would want the flag. The durable reason is what the
+sweeps ARE: `TESTING.md` V-2 makes the exhaustive gate *the* gate for every
+property that can be checked over its whole domain, and V-3 calls the civil
+sweep **the strongest statement this library makes**. A CI run that skipped it
+would be a CI run that concluded nothing — so the badge would be asserting
+something no run had checked, which is worse than having no badge.
+
+**And it is enforced by shape rather than by policy.** A `--quick` run announces
+twice that it concludes nothing, prints a `SKIP` line per skipped entry through
+the same `Report` object as every other verdict, and **refuses to print the
+unqualified word `GREEN`**. So a `--quick` run pasted into a review reads as
+what it is.
+
+*Alternatives declined:*
+
+- **Allow `--quick` on pull requests and run the full suite on `main`.** It is
+  the arrangement that lets a sweep regression land and be discovered by
+  somebody else's merge, and the bisect then spans every commit in between.
+- **Leave it to reviewer discipline.** The flag exists to be convenient; a rule
+  that depends on nobody reaching for it under deadline is not a rule.
+
+### TM-126 — a tree check is COMMISSIONED, not merely written; `check_purity` and `check_host_isolation` go live now
+**2026-09-05. Supersedes the dormancy half of `meta/roadmap/0.0/0.0.3.md` P-21**
+— which said `check_purity` and `check_host_isolation` are *"written now and
+dormant"*, to go live at cycle 0.3 when `src/host/` exists.
+
+**Why the plan said dormant, and what it got right.** P-21's reasoning is sound
+and survives: *"writing them here means 0.3 turns them on rather than inventing
+them, which is the compiler's rule that instruments precede the constructs they
+guard."* The intent is that 0.3 inherits a working instrument.
+
+**What building them showed.** `src/host/host.npk` already exists — as a
+placeholder, but the check does not care — so both checks can RUN today, over
+six files, and report `0` findings with the denominator printed. That is P-20's
+own argument (*"`check_no_owning_fields` over an empty set is the right
+answer"*) applied to these two, and there is no reason it applies to four of the
+family and not to six.
+
+**And a stronger thing became available.** The tree checks are pure functions of
+a directory, so the self-check can plant a violation in a scratch tree and
+require each check to find it — for nothing, in milliseconds, with no
+compilation. **Nine planted violations, nine clean controls, on every full
+invocation.** So `check_purity` is not merely live today; it has been *seen to
+fail*, which is what 0.3's own note in `src/host/host.npk` asks for and which no
+amount of dormancy would have delivered.
+
+**The decision.** *Every tree check runs on every full invocation from the cycle
+it can be written, and every one is commissioned in `selfcheck.py` §B against a
+planted violation AND a clean control. A check that has never failed has never
+been shown to work, and "written but not run" is the weakest state an instrument
+can be in — weaker than absent, because absence is visible.*
+
+**What 0.3 inherits instead.** Not a check to turn on: a check that is on, has a
+denominator, and has been red. 0.3's job becomes the real one — planting a
+`mono_now()` in `src/cal/` **and confirming the failing run says the right
+thing about a real module**, rather than discovering on that day whether the
+predicate works at all.
+
+**And the boundary is stated wherever the check is described.** `check_purity`
+is a **source-level** check. The build's undefined-symbol scan cannot answer the
+question it answers: `npk_sys6` is the runtime's own syscall trampoline and is
+in the allowlist by construction, so a module that issues a raw syscall has an
+identical undefined set to one that does not — measured in `nitpick-regex` as
+RX-120 (29 symbols each way, diff empty) and reproduced here (TM-118, B-2c). A
+green symbol scan cited as a purity result is the failure mode, so the sentence
+appears in `elf.py`, `checks.py`, `harness/README.md`, `BUILD.md` B-2c,
+`TESTING.md` §2 and `CLAUDE.md` — six places, deliberately, because a reader
+meets one of them at a time.
+
+*Alternatives declined:*
+
+- **Keep them dormant and print the dormancy** (the acceptance item as written).
+  It is honest and it leaves two of the family unexercised for three cycles,
+  which is exactly how an instrument arrives broken on the day it is needed.
+- **Run them but do not commission them.** That is the state 0.0.2 ended in and
+  named in its own §6: three checks commissioned by hand is not a runner.

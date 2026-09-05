@@ -30,10 +30,10 @@ it is named and fails.
 import os
 import re
 
-from build import BuildError, run
+from build import BuildError, run, run_split
 
 KEYS = ("expect-exit", "expect-error", "expect-error-at", "expect-golden",
-        "stress", "argv", "env")
+        "stress", "argv", "env", "sweep-count")
 
 # Exactly `//`, one space, a known key, a colon. Nothing looser: `//      expect-
 # error: ...` (six spaces, prose in `view_escape/case3`) must NOT match, and does
@@ -60,6 +60,7 @@ class Expect:
         self.stress = 1
         self.argv = []
         self.env = {}               # name -> value
+        self.sweep_count = None     # int, the sweep stage's evidence (TM-122)
 
     @property
     def is_refusal(self):
@@ -108,6 +109,19 @@ def read(root, rel):
             e.error_at.append(value)
         elif key == "expect-golden":
             e.golden = value
+        elif key == "sweep-count":
+            # TM-122. The number of cases the sweep must report having visited.
+            if e.sweep_count is not None:
+                raise MarkerError("%s:%d: a second `sweep-count`; a sweep has "
+                                  "one domain" % (rel, lineno))
+            if not re.fullmatch(r"[1-9]\d*", value):
+                raise MarkerError(
+                    "%s:%d: `sweep-count` takes a positive integer -- the SIZE "
+                    "of the domain the sweep must visit, not %r. Zero is not "
+                    "allowed: a sweep that must visit nothing is the state "
+                    "this marker exists to make impossible."
+                    % (rel, lineno, value))
+            e.sweep_count = int(value)
         elif key == "stress":
             if not re.fullmatch(r"[1-9]\d*", value):
                 raise MarkerError("%s:%d: `stress` takes a positive integer, "
@@ -236,28 +250,32 @@ def refusal(bld, rel, e):
 
 
 def _run_once(exe, e, label):
+    """Run once. Returns `(problem_or_None, stdout_bytes)`."""
     env = env_for(e)
-    st, out = run([exe] + e.argv, env=env)
+    st, out, err = run_split([exe] + e.argv, env=env)
     if st != e.exit:
         detail = ["%s exited %d; the header expects %d" % (label, st, e.exit)]
         if e.env:
             detail.append("      environment: %s"
                           % " ".join("%s=%s" % kv for kv in sorted(e.env.items())))
-        if out.strip():
-            detail.extend("      " + l for l in out.rstrip().splitlines())
-        return "\n".join(detail)
-    return None
+        text = (out + err).decode("utf-8", "replace")
+        if text.strip():
+            detail.extend("      " + l for l in text.rstrip().splitlines())
+        return "\n".join(detail), out
+    return None, out
 
 
-def program(bld, rel, e, require_failsafe=True):
-    """The `program` stage: both legs, the same exit required (B-3).
+def _legs(bld, rel, e, require_failsafe=True):
+    """Build and run both legs (B-3). Returns `(problems, {label: stdout})`.
 
-    Returns a list of problems -- empty is a pass -- and the two exit codes it
-    saw, so the caller can print them whether or not anything is wrong.
+    The optimised leg is not an optional extra: the same program re-emitted
+    through `opt -O2` + `llc -O2` must produce the same answer, and the first
+    run of that instrument in the compiler project found a real defect that had
+    passed for six cycles.
     """
     src = os.path.join(bld.root, rel)
     stem = _stem(rel)
-    problems = []
+    problems, captured = [], {}
     for optimised in (False, True):
         label = "opt -O2" if optimised else "-O0"
         try:
@@ -273,9 +291,217 @@ def program(bld, rel, e, require_failsafe=True):
         # separate processes, so this catches "the clock went backwards between
         # two calls", which a single green run cannot.
         for i in range(e.stress):
-            bad = _run_once(exe, e, label if e.stress == 1
-                            else "%s run %d/%d" % (label, i + 1, e.stress))
+            bad, out = _run_once(exe, e, label if e.stress == 1
+                                 else "%s run %d/%d" % (label, i + 1, e.stress))
+            captured.setdefault(label, out)
             if bad:
                 problems.append(bad)
                 break
+    return problems, captured
+
+
+def program(bld, rel, e, require_failsafe=True):
+    """The `program` stage: both legs, the same exit required (B-3)."""
+    problems, _ = _legs(bld, rel, e, require_failsafe)
+    if e.sweep_count is not None:
+        # TM-121's rule applied to a marker that is real but in the wrong
+        # stage. `sweep-count` is read by the `sweep` stage and by nothing
+        # else, so on a `program` member it is an expectation that does
+        # nothing -- which is worse than none.
+        problems.append(
+            "%s carries `sweep-count`, which only the `sweep` stage reads. "
+            "Here it is an expectation that does nothing (V-1f). Move the file "
+            "under a `sweep` entry, or drop the marker." % rel)
+    return problems
+
+
+# ---------------------------------------------------------------------------
+# the `parse` stage -- BUILD.md §3, TESTING.md §1
+# ---------------------------------------------------------------------------
+
+# THE PARSE PHASE'S TWO CODE FAMILIES, read out of the compiler at the pin
+# rather than assumed: `NITPICK-LEX-*` is declared in
+# `src/frontend/diag_codes.npk` (the lexer's) and `NITPICK-PARSE-*` in
+# `src/frontend/parse_codes.npk` (the parser's). Every other family in that tree
+# -- RESOLVE, TYPE, BORROW, MOVE, REACH, ASSIGN, LOCK, TAINT, WILDX, SUSPEND,
+# RUNG, PICK, MACRO, DERIVE, EXTERN, DIAG -- is declared by a later phase, so a
+# file reported with one of THOSE necessarily parsed.
+PARSE_FAMILIES = ("NITPICK-LEX-", "NITPICK-PARSE-")
+
+# `npkc` HAS NO PARSE-ONLY MODE, AND THAT IS THE MEASUREMENT THIS STAGE RESTS
+# ON. Its usage line at pin `0dfddac` is
+# `npkc <root.npk> [-o out.ll] [--obligations DIR] [--elide ...]
+# [--extra-picky=no-wildx]` -- no `--parse`, no `-fsyntax-only`. `BUILD.md` §3
+# and this subcycle's plan both name the compiler's `tools/parse_check` for this
+# stage, and that tool is a `.npk` SOURCE FILE (`tools/parse_check.npk`, 131
+# lines, importing twenty of the compiler's frontend modules). Building it would
+# mean building the compiler -- from a tree that is AHEAD of our pin and moving,
+# which W-18 forbids and which would put an UNPINNED parser behind a stage whose
+# siblings are held to an exact LLVM patch release. So the stage asks `$NPKC`,
+# the pinned artefact, and reads the CODE FAMILY of what comes back. TM-123.
+#
+# WHAT THAT COSTS AND WHAT IT BUYS, both measured at this cycle:
+#   costs  ~0.8 s per file that compiles, because the whole pipeline runs and
+#          every root re-emits the prelude (TM-117). A file that does not parse
+#          costs 0.03 s -- it fails at once and writes nothing.
+#   buys   MORE than `parse_check` would: a file that reaches this stage
+#          clean has been through resolve, the type checker and reachability
+#          as well. The stage asserts only the parse half, which is the half
+#          that is true of every file in the tree.
+
+
+def parse_verdict(bld, rel, e):
+    """Hold one file to "it parses", or to "it does not" if its header says so.
+
+    `e` may be `None` for a file with no marker block at all -- every `src/`
+    file, which carries none by design (a library module has no exit code and
+    no diagnostic to expect).
+
+    THE RULE IS ONE LINE AND ITS CONSEQUENCE IS NOT OBVIOUS: a file must parse
+    UNLESS its own header names a parse-phase code. That is what lets the stage
+    cover the twenty-six files in this tree that must NOT compile -- they are
+    refused at TYPE-009, BORROW-012, REACH-002 and REACH-003, all of which are
+    phases that only run on something that parsed. Exactly one file in the tree
+    is expected not to parse, and the check is that it is exactly that one.
+    """
+    want_refusal = bool(e) and any(
+        code.startswith(PARSE_FAMILIES) for code in e.errors)
+    ll = os.path.join(bld.out_dir, _stem(rel) + ".parse.ll")
+    st, out = bld.emit_expecting_refusal(os.path.join(bld.root, rel), ll)
+    got = sorted({m.group(1) for m in
+                  (_DIAG.match(l) for l in out.splitlines()) if m})
+    parse_codes = [c for c in got if c.startswith(PARSE_FAMILIES)]
+
+    if want_refusal:
+        if parse_codes:
+            return [], "does not parse: %s" % ", ".join(parse_codes)
+        return ([
+            "%s: its header names a parse-phase code (%s) and the parser "
+            "accepted it. npkc exit %d%s." % (
+                rel, ", ".join(c for c in e.errors
+                               if c.startswith(PARSE_FAMILIES)), st,
+                "" if not got else ", reporting " + ", ".join(got))
+        ], "")
+    if parse_codes:
+        return ([
+            "%s: the parser refused it -- %s. Every source in the tree is "
+            "readable by the real parser, or the grammar has been quietly made "
+            "partial (TESTING.md §1). npkc exit %d, verbatim:\n%s"
+            % (rel, ", ".join(parse_codes), st,
+               "\n".join("      " + l for l in out.rstrip().splitlines()))
+        ], "")
+    later = [c for c in got if not c.startswith(PARSE_FAMILIES)]
+    return [], ("parses" if not later
+                else "parses; refused later at %s" % ", ".join(later))
+
+
+# ---------------------------------------------------------------------------
+# the `golden` stage -- BUILD.md §3
+# ---------------------------------------------------------------------------
+
+def golden(bld, rel, e):
+    """As `program`, and the emitted text matches the committed golden EXACTLY.
+
+    Two assertions, and the second is the one a single-leg runner would miss:
+    the bytes match the committed file, AND the two optimisation legs produced
+    the same bytes as each other. A formatter whose output changed under
+    `opt -O2` would otherwise pass whichever leg the golden was recorded from.
+    """
+    if not e.golden:
+        return ["%s is a `golden` member and carries no `expect-golden:` "
+                "marker. The stage has nothing to compare against, and a "
+                "golden test with no golden is a `program` test wearing the "
+                "wrong name -- which is a suite reporting green while checking "
+                "nothing (B-8)." % rel]
+    problems, captured = _legs(bld, rel, e)
+    path = os.path.join(bld.root, os.path.dirname(rel), e.golden + ".txt")
+    if not os.path.isfile(path):
+        problems.append(
+            "%s expects golden `%s`, and %s does not exist. A missing golden "
+            "is a failure and not a skip." % (rel, e.golden,
+                                              os.path.relpath(path, bld.root)))
+        return problems
+    with open(path, "rb") as fh:
+        want = fh.read()
+    legs = sorted(captured)
+    if len(legs) == 2 and captured[legs[0]] != captured[legs[1]]:
+        problems.append(
+            "%s: the two optimisation legs wrote DIFFERENT bytes (%d at %s, %d "
+            "at %s). B-3 requires the same answer from both, and for a golden "
+            "member the output IS the answer." % (
+                rel, len(captured[legs[0]]), legs[0],
+                len(captured[legs[1]]), legs[1]))
+    for label in legs:
+        got = captured[label]
+        if got == want:
+            continue
+        off = next((i for i in range(min(len(got), len(want)))
+                    if got[i] != want[i]), min(len(got), len(want)))
+        problems.append(
+            "%s (%s): output does not match %s. %d B written, %d B expected; "
+            "first difference at byte %d.\n      wrote:    %r\n"
+            "      expected: %r" % (
+                rel, label, os.path.relpath(path, bld.root), len(got),
+                len(want), off, got[max(0, off - 20):off + 20],
+                want[max(0, off - 20):off + 20]))
+    return problems
+
+
+# ---------------------------------------------------------------------------
+# the `sweep` stage -- BUILD.md B-9, TESTING.md V-2, and TM-122
+# ---------------------------------------------------------------------------
+
+_SWEPT = re.compile(rb"^swept (\d+)$", re.MULTILINE)
+
+
+def sweep(bld, rel, e):
+    """As `program`, but it must PROVE it did the work. TM-122.
+
+    THIS IS THIS LIBRARY'S MOST PLAUSIBLE WAY TO BE GREEN AND WRONG, and the
+    reason is structural rather than hypothetical. `ntime`'s strongest claim is
+    an exhaustive sweep (V-2, V-3: every day in [-9999-01-01, +9999-12-31],
+    both directions, 7 304 485 x 2) -- and an exhaustive loop that returns
+    early exits 0 exactly like one that ran. Exit code cannot tell them apart,
+    and neither can anything else OUTSIDE the program.
+
+    So the evidence has to come from the program: a sweep member prints
+    `swept <N>` and the harness requires N to equal the `// sweep-count:` its
+    header declares. A sweep that returned after one iteration prints `swept 1`
+    and is red; one that never entered the loop prints `swept 0` or nothing and
+    is red; one whose domain was silently narrowed is red at the number.
+
+    THE OTHER TWO WAYS A SWEEP DOES NOT RUN ARE CAUGHT ELSEWHERE, and all three
+    are needed: an entry that selects no files fails in `run.py`'s `run_entry`
+    (a suite naming an empty directory), and `--quick` announces what it skipped
+    through the SAME `Report` object every other line goes through, so the
+    summary and the transcript cannot disagree about it.
+    """
+    problems, captured = _legs(bld, rel, e)
+    if e.sweep_count is None:
+        problems.append(
+            "%s is a `sweep` member and declares no `// sweep-count:`. The "
+            "stage would then assert only its exit code, which is exactly what "
+            "an exhaustive test that quietly did not run also produces. A "
+            "sweep with no declared domain is not a sweep." % rel)
+        return problems
+    for label in sorted(captured):
+        out = captured[label]
+        found = _SWEPT.findall(out)
+        if len(found) != 1:
+            problems.append(
+                "%s (%s): expected exactly one `swept <N>` line on stdout and "
+                "found %d. The header declares a domain of %d; without the "
+                "line there is no evidence the sweep ran at all, and an "
+                "exhaustive loop that returned early exits 0 just like one "
+                "that finished."
+                % (rel, label, len(found), e.sweep_count))
+            continue
+        got = int(found[0])
+        if got != e.sweep_count:
+            problems.append(
+                "%s (%s): swept %d of the %d its header declares -- %d case(s) "
+                "were NOT visited. This is the failure V-14 case 7 exists for: "
+                "the run is green on exit code and the exhaustive claim is "
+                "false." % (rel, label, got, e.sweep_count,
+                            e.sweep_count - got))
     return problems

@@ -98,6 +98,39 @@ name  = "probe"
 stage = "program"
 path  = "tests/probe"
 
+# THE STAGES THAT HAVE NO ENTRY HERE, AND WHY EACH ABSENCE IS DELIBERATE. An
+# entry naming an empty directory is refused (see above), so the absence is the
+# correct spelling until there is something to run — but an absence nobody
+# wrote down is indistinguishable from an omission, which is the whole of
+# TM-115.
+#
+#   `parse`   HAS NO ENTRY BY DESIGN, not by omission (TM-123). It is a
+#             WHOLE-TREE stage: `BUILD.md` §3's Directory column for it reads
+#             "every `.npk` in the tree", and that is where its value is — of
+#             the 50 files here, 19 are put in front of the compiler by nothing
+#             else. An entry would narrow it to one directory and silently
+#             un-cover the rest, so `stage = "parse"` is REFUSED BY NAME.
+#   `accept`  DECLINED, not unimplemented (TM-124, B-4b). It stops at "accepted
+#             in silence", which is the shape a program with no `failsafe`
+#             walks through; `tests/probe/defect/missing_failsafe/` is the
+#             reproduction. Refused by name, naming `compile`/`positive`
+#             instead.
+#   `check`   IMPLEMENTED, and `tests/rejection/` is empty: every refusal this
+#             library has today is a probe under `tests/probe/`, dispatched by
+#             its own header (B-4c). The stage is exercised on every run by
+#             `selfcheck.py` cases 2 and 3, and gains an entry when the library
+#             has a refusal of its own to assert — cycle 0.0.4.
+#   `golden`  IMPLEMENTED, and `tests/golden/` is empty: nothing formats
+#             anything yet. Exercised by `selfcheck.py` case 4. Its entry
+#             arrives with `fmt` at cycle 0.4.
+#   `sweep`   IMPLEMENTED, and `tests/unit/sweep/` is empty. Exercised by
+#             `selfcheck.py` case 7. **Its entry arrives at cycle 0.1 with the
+#             civil round-trip sweep** (`TESTING.md` V-2, V-3: 7 304 485 days,
+#             both directions), and every member will carry `// sweep-count:`
+#             so the harness can tell a sweep that ran from one that did not
+#             (TM-122). Until then `--quick` has nothing to skip and says so
+#             with the number.
+
 # THE CONSUMER. Stage `compile`, `kind = "positive"` -- which in the compiler's
 # vocabulary means "compiles, links, runs, and exits with the expected code",
 # NOT "was accepted". The distinction is this repository's own O-N11: `npkc`

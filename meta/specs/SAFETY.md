@@ -126,6 +126,37 @@ a program importing each public module and asserts its `failsafe` compiles with
 exactly the documented arms and no more. An out-of-date arm list is the kind of
 document that goes stale silently, so it is derived, not written.
 
+**Rule S-6b (cycle 0.0.3) — the ORACLE is the compiler's own diagnostic, and the
+generator is the thing under test.** `NITPICK-REACH-003` does not merely refuse a
+program with `main` and no `failsafe`: it **lists the identities owed**. That
+list is the truth, because it is what the consuming program will actually have
+to write. So `check_failsafe_arms` generates, per public module, a program that
+imports it and declares no handler, reads the identity list out of the refusal,
+and requires it to **equal** the set computed from source — in both directions.
+
+*The source computation is what S-6 publishes*, because a table a reader can be
+shown the reason for (*"you owe `DivByZero` because `cal` divides"*) is worth
+more than a number scraped out of a diagnostic; the compiler is what says
+whether the reasoning is right. A disagreement is a defect in the generator,
+never in the compiler, and it is a red run rather than a quiet drift.
+
+**And this is what makes constraint 3 above mechanical rather than aspirational.**
+"And no more" cannot be caught by any build — a superset of the required arms
+compiles — so it is caught by a set equality asserted here. Measured at pin
+`0dfddac` on the three specimens cycle 0.0.0 left behind, and the arithmetic is
+written out because a number embedded in prose travels with the prose:
+
+| Module | Owes | = floor + | Which constraint it pins |
+|---|---|---|---|
+| *(nothing imported)* | **4** | — | the floor: `Unreachable`, `HeapOom`, `HeapBadRequest`, `WildLeak` |
+| `probe11_silent_lib` | **4** | + 0 | **1** — it declares `pub error:EProbeSilent` and never raises it, and the identity is **absent** from the list |
+| `probe11_arms_lib` | **5** | + 1 | a `fail` SITE puts it in, module-qualified: `probe11_arms_lib.EProbeZone` |
+| `probe11_calc_lib` | **8** | + 4 | **2** — it declares no error at all; `DivByZero`, `DivOverflow` from its `/` and `%`, `IntOverflow` from its `+`, `OutOfBounds` from its one index |
+
+8 − 4 = 4 is S-4b's measured *"four extra arms"*, and none of the three
+functions is ever called by the generated program — S-4c, the arm is owed by the
+**import**.
+
 **Three constraints on that generator, all measured at cycle 0.0.0 (TM-107) and
 each of which the obvious implementation gets wrong:**
 
@@ -142,14 +173,26 @@ each of which the obvious implementation gets wrong:**
    why this rule exists.
 
 **And the check must not stop at `npkc`.** A program with `main` and **no**
-`failsafe` is accepted by `npkc` at exit 0 and refused only by `llc`
-(`../OPEN_QUESTIONS.md` O-N11, accepted as the compiler's DEF-5 and refused as
-`NITPICK-REACH-003` from its cycle 1.5.1b — but not in the pinned toolchain, so
-this constraint stands), so a conformance test that compiles
-to `.ll` and reads the exit code would pass a program with no handler at all.
-It runs the full four steps, or asserts `grep -c '^define i32 @npk_failsafe'` is
-1. This is a constraint on cycle 0.0.3's harness and is recorded in its
-checklist.
+`failsafe` was accepted by `npkc` at exit 0 and refused only by `llc`
+(`../OPEN_QUESTIONS.md` O-N11, accepted as the compiler's DEF-5).
+
+> **Amended at cycle 0.0.3.** This rule said *"— but not in the pinned
+> toolchain, so this constraint stands"*. **That parenthetical is now false and
+> was measured so**: at pin `0dfddac`,
+> `tests/probe/defect/missing_failsafe/case1_no_failsafe.npk` is refused
+> `NITPICK-REACH-003` by `npkc` itself, at exit 1 with no `.ll` written.
+> **THE CONSTRAINT STANDS ANYWAY, AND FOR A BETTER REASON THAN THE ONE GIVEN:**
+> the stage must not depend on which pin it runs against. A rule justified by
+> "our compiler does not do this yet" evaporates the day it does, and takes the
+> belt with it — which is exactly the moment nobody is watching.
+
+So a conformance test that compiles to `.ll` and reads the exit code would pass
+a program with no handler at all. It runs the full four steps, **or** asserts
+`grep -c '^define i32 @npk_failsafe'` is 1 — and it does **both**:
+`build_program`'s `require_failsafe` is redundant at this pin and is kept, and
+cycle 0.0.3's self-check drives it through an `npkc` wrapper that renames the
+define after emission (`TESTING.md` V-14 case 8). A belt that has never been
+tested is not a belt.
 
 ---
 
@@ -182,6 +225,31 @@ every behaviour in this library reproducible in a test to the nanosecond.
 outside `src/host/` for `sys(`, `mono_now`, `environ`, `read_file`, `open` and
 `write`, and fails on any hit. The rule is not a convention if nothing checks
 it, and this is the check.
+
+**Rule S-10b (TM-126) — it is a SOURCE-LEVEL check, it is LIVE, and it has been
+SEEN TO FAIL.** Three separate claims, and each was missing:
+
+- **Source-level, and nothing else can stand in for it.** The build's
+  undefined-symbol scan cannot answer this question at all: `npk_sys6` is the
+  runtime's own syscall trampoline and is in its allowlist by construction, so a
+  module that issues a raw syscall has an *identical* undefined set to one that
+  does not — measured in `nitpick-regex` as RX-120 (29 symbols each way, the
+  diff empty) and reproduced here (`BUILD.md` B-2c, TM-118). **A green symbol
+  scan cited as a purity result is the failure mode.**
+- **Live from cycle 0.0.3**, not from 0.3. It runs over the six non-`host`
+  files today and reports `0` findings with the denominator printed, which is
+  the same answer `check_no_owning_fields` gives over an empty set and is
+  equally worth having.
+- **Commissioned.** The self-check plants `mono_now()` in a scratch `src/cal/`
+  and requires the check to find it, then runs it over a control where
+  `mono_now()` appears **in a comment** and requires silence. That second half
+  is not decoration: `src/host/host.npk`'s own header names `mono_now()` while
+  explaining this rule, and `src/lib.npk`'s names `host_now_utc` while showing
+  the shape of a re-export line, so a check that read prose would fail this
+  repository on its own documentation — and the first draft did.
+
+The matching statement for `check_host_isolation` is the same three, with
+`src/lib.npk` as its one **named** exemption (V-1c) rather than a pattern.
 
 **Rule S-11 — there is no implicit local time.** `ntime` has no
 `now_in_local_zone()`. A program that wants local time calls

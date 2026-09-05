@@ -17,7 +17,7 @@ than sampled. Where that is possible it is the gate, and §3 says where.
 
 | Stage | Answers |
 |---|---|
-| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial |
+| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **19 files of 50 that no other stage roots** |
 | `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
 | `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
 | `check` | every documented refusal actually refuses, with exactly its code |
@@ -46,6 +46,7 @@ them found something on its first run.
 | `check_int128_sites` | `int128` appears at exactly the three sites `SPAN_MODEL.md` §5 names, and nowhere else |
 | `check_constants_named` | no bound outside `src/core/limits.npk`; no magic 86400, 146097, 719468 or 1000000000 outside the algorithm module that owns it |
 | `check_no_format_string` | no function anywhere takes a pattern `string` and interprets it — `FORMAT_MODEL.md` F-5's rule, made checkable |
+| `check_raw_index` | no `.items[` outside `src/core/vec.npk` and no `.ptr[` outside `src/core/bytes.npk`. `Vec<T>.items` and `Bytes`' buffer body are **bare pointers**, which the language does not bounds-check (TM-108, `SAFETY.md` S-17b), so the accessor pair is the only bound there is |
 | `check_expect_headers` | **the tree partitioned three ways, with the denominator printed** (TM-115): every `.npk` is under `src/` (judged by "it compiles"), or under `tests/` with an `expect-` marker of its own or a NAMED exemption, or it is unowned — and unowned is a failure. The exemption list is diffed in both directions, so an exemption naming a file that is gone fails too |
 | `check_specs_current` | **reports, does not fail**: spec citations that no longer resolve |
 
@@ -53,6 +54,22 @@ them found something on its first run.
 most, because they guard the two claims this library makes that are easy to
 break by accident and hard to notice: that it is reproducible, and that its
 arithmetic does not silently overflow.
+
+**Rule V-1a (TM-126) — a check runs from the cycle it can be written, and its
+pending siblings are PRINTED.** Nine of the fourteen above are live as of cycle
+0.0.3, several over a subject that is currently empty — which is the right
+answer, and is what makes the check exist on the day the first table type is
+written rather than be invented in the same week as the thing it guards. The
+other four print on every run as `PEND`, each naming **the cycle that turns it
+on and why it cannot run today**, because a family whose gaps are invisible is a
+family nobody completes:
+
+| Pending | Live from | Why not now |
+|---|---|---|
+| `check_int128_sites` | 0.2 | `SPAN_MODEL.md` N-20 says three sites and §5's table marks one (O-X6). A rule invented to make a count come out right is worse than an acknowledged gap |
+| `check_no_format_string` | 0.4 | there is no function in `src/` yet, so there is no signature to read |
+| `check_tables_regenerate` | 0.5 | the mechanism exists and has been red (`repro.py --between`); what is missing is a generator and a committed table |
+| `check_table_invariants` | 0.5 | sorted, in range, indices valid — of tables that do not exist |
 
 **Rule V-1b (TM-115) — every sweep states its denominator, green or red.** A
 sweep that matched nothing and a sweep that opened nothing print the same line,
@@ -221,9 +238,56 @@ expectations and requires it to report every one as a failure:
 3. a `check` case reporting a code no expectation names (D-237's rule);
 4. a `golden` case whose bytes differ by one byte;
 5. a `parse` case that does not parse;
-6. a generator whose output differs from the committed table by one line;
+6. a generator whose output differs from the committed table by one line
+   — **pending until cycle 0.5**, and it prints as pending rather than passing.
+   The *mechanism* already exists and has already been red: `repro.py --between`
+   runs a generator between two builds and requires the IR unchanged, driven red
+   at 0.0.2 against a generator whose rows came out of an unsorted `set`;
 7. a `sweep` case that is silently skipped — the harness must notice it did not
-   run.
+   run;
+8. **a program whose `failsafe` has been deleted** — this repository's own
+   addition, because `npkc` exit 0 is not well-formedness (B-4b, TM-112) and
+   V-14's seven do not cover it.
 
-**Rule V-15.** The self-check runs **first** in every full invocation. A
-harness that has not proven it can fail has not proven anything.
+**Rule V-14b — every case carries a CONTROL, in the same run.** Each case's
+scratch tree holds a correct twin of the faulted file, and the case asserts a
+`PASS` for it beside the `FAIL`. Without that, a red proves only that
+*something* went wrong — the tree, the manifest, the toolchain — and a
+self-check satisfied by a broken harness is worse than none. It is 0.0.2 §5.3's
+own argument (*a red that came from the mechanism rather than from the fault
+would prove nothing*) made a rule.
+
+**Rule V-14c (TM-126) — every check in §2 is commissioned the same way.** The
+tree checks are pure functions of a directory, so the self-check plants one
+violation per check and requires each to find it, then runs it over a clean
+control and requires silence. This costs milliseconds and no compilation, and it
+is what makes *"written"* and *"working"* different words. **A check that has
+never failed has never been shown to work**, and "written but not run" is the
+weakest state an instrument can be in — weaker than absent, because absence is
+visible.
+
+**Rule V-14d — the S-6 arm generator is commissioned against the compiler.**
+`check_failsafe_arms` computes an arm bill from source and diffs it against the
+identity list `NITPICK-REACH-003` itself prints. The self-check runs that diff
+over three modules whose bills TM-107 measured — `probe11_silent_lib` (declares
+an identity and never raises it: **4**, the floor), `probe11_arms_lib` (raises
+one: **5**) and `probe11_calc_lib` (declares none and costs **8**, the floor
+plus its own arithmetic). Those three are TM-107's three constraints, one each,
+and the numbers are re-measured on every run rather than remembered.
+
+**Rule V-15.** The self-check runs **first** in every full invocation, and its
+failure is **fatal** — nothing below it runs. A harness that has not proven it
+can fail has not proven anything, so a green suite underneath a red self-check
+is a state this ordering makes unreachable rather than merely discouraged. A
+self-check that *could not run* — no `$NPKC`, no manifest — is a **failure and
+not a skip**, because silence there is indistinguishable from a pass.
+
+**Rule V-16 (TM-122) — a sweep declares its domain and PRINTS what it visited.**
+A `sweep` member carries `// sweep-count: N` and writes exactly one line
+`swept <N>` to stdout; the harness requires the two to be equal. **An exhaustive
+loop that returns after one iteration exits 0 exactly like one that ran to the
+end** — no exit code distinguishes them, and neither does wall time on a sweep
+that takes seconds. Nothing outside the program can tell the difference, so the
+program is made to testify. A `sweep` member with no `sweep-count` is a failure,
+and a `sweep-count` on a member of any other stage is a failure too, because
+there it is an expectation that does nothing (V-1f).

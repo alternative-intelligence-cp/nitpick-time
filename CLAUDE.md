@@ -7,15 +7,21 @@ Guidance for Claude Code sessions working in this repository.
 `ntime` — a date, time and time-zone library for **Nitpick**, the
 safety-critical systems language at `../../nitpick`.
 
-**Status, after cycle 0.0.2: a skeleton with a real harness.** `src/` holds
-`lib.npk`, the empty umbrella, and one placeholder module per directory that
-parses and is **replaced, not deleted**, by the cycle named in its header.
-`tests/conformance/import.npk` imports the umbrella, links and runs.
-`harness/` is now the runner `BUILD.md` describes — a manifest reader, the
-toolchain pin, an ELF symbol scan, the build pipeline, the `program` stage at
-both optimisation levels, and the `repro` check — and it runs 27 units green in
-about 65 s. **No library code computes anything yet**; the first is `src/core/`
-at 0.0.4, and the harness's own self-check is 0.0.3.
+**Status, after cycle 0.0.3: a skeleton with a harness that has been shown able
+to fail.** `src/` holds `lib.npk`, the empty umbrella, and one placeholder
+module per directory that parses and is **replaced, not deleted**, by the cycle
+named in its header. `tests/conformance/import.npk` imports the umbrella, links
+and runs. `harness/` is the runner `BUILD.md` describes — nine stages, ten
+modules — and a full invocation is 27 units green in about **184 s**. **No
+library code computes anything yet**; the first is `src/core/` at 0.0.4.
+
+**What 0.0.3 added, and the first item is the one that matters.**
+`harness/selfcheck.py` runs **first** in every full invocation (`TESTING.md`
+V-15) and plants eight faults, nine tree-check violations and three arm-bill
+specimens, requiring a red run that names each and a green control beside it.
+Before it, three of the harness's checks had been commissioned by hand and that
+was three checks, not a runner. Then: the `parse`, `check`, `golden` and `sweep`
+stages; `--quick`; and nine live tree checks.
 
 ## Before starting a session here
 
@@ -150,20 +156,24 @@ beginning with a digit, is refused: hence `probeNN_topic.npk` and never
 compiler's own bootstrap ladder, and `[dependencies]` resolves to nothing.
 `harness/run.py` is the runner until that changes (TM-003).
 
-**What the harness is after 0.0.2.**
+**What the harness is after 0.0.3.**
 
 ```
-$ NPKC=… NPKRT=… python3 harness/run.py [--only SUBSTRING] [--verdicts PATH]
+$ NPKC=… NPKRT=… python3 harness/run.py [--only SUBSTRING] [--quick]
+                                        [--verdicts PATH] [--root DIR]
 ```
 
-Six modules under `harness/` — `manifest`, `toolchain`, `elf`, `build`,
-`stages`, `repro` — driven by `run.py`. It reads `nitpick.toml` and hardcodes
-nothing; holds `llc`, `opt` and `ld.lld` to the pinned patch release; sweeps
-every `.npk` in the tree and prints the denominator; builds the library; proves
-the IR identical from two working directories; and runs each test file at -O0
-and again under `opt -O2`. `harness/README.md` is the guide.
+Ten modules under `harness/` — `manifest`, `toolchain`, `elf`, `build`,
+`stages`, `checks`, `arms`, `repro`, `selfcheck` — driven by `run.py` in nine
+stages. It proves it can fail; reads `nitpick.toml` and hardcodes nothing;
+holds `llc`, `opt` and `ld.lld` to the pinned patch release; sweeps every
+`.npk` in the tree and prints the denominator; diffs the tree against the
+documents describing it; roots every `.npk` at the real parser; builds the
+library; proves the IR identical from two working directories; and runs each
+test file at -O0 and again under `opt -O2`. `harness/README.md` is the guide
+and carries the cost table.
 
-**Three things it is easy to over-read, so they are written down.**
+**Four things it is easy to over-read, so they are written down.**
 
 - **The library object is linked into nothing** (TM-117). There is no separate
   compilation: `npkc` emits the whole module graph a root reaches, so every
@@ -171,12 +181,17 @@ and again under `opt -O2`. `harness/README.md` is the guide.
   duplicate-symbol error. The library is built because *building it is a check*.
 - **The undefined-symbol scan cannot see a syscall** (TM-118). `npk_sys6` is the
   runtime's own and is in the allowlist by construction. The scan supports
-  B-2's "no C, ever" and nothing wider; `check_purity` is source-level and is
-  0.0.3's.
-- **The harness has no self-check yet** (`TESTING.md` V-14/V-15, cycle 0.0.3).
-  Three of its checks have been commissioned by hand and seen to go red — the
-  symbol scan, the toolchain pin and `repro` — and that is three checks, not
-  the runner.
+  B-2's "no C, ever" and nothing wider. **`check_purity` is SOURCE-level and is
+  the only thing here that answers "did this module touch the kernel"** — never
+  cite a green symbol scan for it (B-2c, S-10b, RX-120).
+- **The `parse` stage asks `npkc`, not the compiler's `tools/parse_check`**
+  (TM-123): those are `.npk` source files, and building one is building the
+  compiler from a tree ahead of our pin. It reads the diagnostic's code
+  *family* instead — `LEX` and `PARSE` are the parse phase and everything else
+  is later.
+- **A `--only` or `--quick` run concludes nothing**, says so twice, and will
+  not print the unqualified word `GREEN`. CI passes no flags and that is a rule
+  (TM-125, B-9b), asserted by the workflow rather than left to review.
 
 **Two probes need `TZ=Europe/Kyiv`** (09 and 09b). They now say so in their own
 headers — `// env: TZ=Europe/Kyiv`, TM-120 — and the harness **constructs** each

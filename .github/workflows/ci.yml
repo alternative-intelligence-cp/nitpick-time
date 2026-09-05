@@ -43,15 +43,19 @@
 # exiting 0 is NOT well-formedness (O-N11, TM-112), and a stage that stopped at
 # the `.ll` would have passed a program with no handler.
 #
-# AND WHAT IT IS NOT EVIDENCE OF: that the runner can FAIL. `harness/run.py` is
-# cycle 0.0.2's runner -- a real one now, but with no self-check of its own; the
-# self-check that proves it fails seven ways is cycle 0.0.3
-# (`meta/specs/TESTING.md` V-14). Until that exists, a green run here is an
-# unfalsified claim rather than a tested one. THREE of its checks were
-# commissioned by hand at 0.0.2 -- the undefined-symbol scan, the toolchain pin
-# and `repro` -- each seen red against a deliberate fault and green again, with
-# the transcripts in `meta/roadmap/0.0/0.0.2.md`; that is three checks rather
-# than the runner, it is weaker than V-14, and it is what there is.
+# AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
+# harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
+# V-15): eight faults planted in scratch trees, each requiring a RED run that
+# names it AND a green control beside it, then nine planted violations across
+# the tree checks, then the S-6 arm generator diffed against the compiler's own
+# `NITPICK-REACH-003` identity list. It runs FIRST and its failure is fatal, so
+# a green run below a broken runner is not a state this workflow can report.
+# Until 0.0.3 that was the honest gap here, and it was written in this comment
+# for three cycles.
+#
+# WHAT IT IS STILL NOT EVIDENCE OF: that the library WORKS. `src/` is six
+# placeholder modules and an empty umbrella. The first computation is
+# `src/core/` at cycle 0.0.4.
 #
 # NOT PINNED, AND KNOWN: `actions/checkout@v4` and `actions/cache@v4` are moving
 # tags -- the only inputs in this file that are not immutable. A workflow this
@@ -218,10 +222,40 @@ jobs:
           echo "npkrt  WB: $NPKRT_SHA256_WORKBENCH"
           echo "built from compiler ${NITPICK_COMMIT_SHORT} at LLVM ${LLVM_VERSION}"
 
-      # Cycle 0.0.1's floor: the toolchain pin, every `.npk` under `src/`, and
-      # the conformance consumer's four steps with the RUN as the verdict. It is
-      # replaced by the real runner at 0.0.2 and this step does not change when
-      # that happens, which is the point of invoking the runner rather than a
-      # list of commands.
+      # THE FULL INVOCATION, AND NO FLAGS -- WHICH IS A RULE (TM-125, B-9b), NOT
+      # AN OMISSION. `--quick` skips the `sweep` stage, and `TESTING.md` V-2
+      # makes the exhaustive sweeps THE gate for every property that can be
+      # checked over its whole domain; V-3 calls the civil sweep the strongest
+      # statement this library makes. A CI run that skipped it would publish a
+      # green badge for something no run had checked. `--only` is worse: it
+      # concludes nothing by construction and says so twice.
+      #
+      # The argument is deliberately NOT "the sweeps are cheap". They are, and
+      # that would stop being an argument the moment one got slow -- which is
+      # exactly when somebody under deadline would reach for the flag.
+      #
+      # This step has not changed since cycle 0.0.1 and will not, which is the
+      # point of invoking the runner rather than a list of commands: the runner
+      # grew from four hardcoded checks to nine stages underneath it.
       - name: Run the harness
-        run: python3 harness/run.py
+        run: |
+          # NOT `set -e`: the runner's exit status is CAPTURED, on its own line,
+          # with no pipeline between it and the command. `$?` after a pipeline
+          # is the last command's status, and a `| tee` here would report tee's.
+          set -uo pipefail
+          log="$RUNNER_TEMP/harness.log"
+          python3 harness/run.py > "$log" 2>&1
+          status=$?
+          cat "$log"
+          if [ "$status" -ne 0 ]; then exit "$status"; fi
+          # AND THE SUMMARY IS ASSERTED, NOT JUST THE STATUS. A filtered run
+          # exits 0 too -- it prints `GREEN under --only …` or `GREEN under
+          # --quick …` and then says twice that it concludes nothing. Only a
+          # full invocation prints the unqualified line, so this is TM-125 made
+          # mechanical: a future edit that adds a flag to the command above
+          # turns this step red instead of quietly weakening the badge.
+          if ! grep -q '^GREEN -- ' "$log"; then
+            echo "the harness did not print the UNQUALIFIED green summary." >&2
+            echo "CI runs the full suite: no --quick, no --only (TM-125, B-9b)." >&2
+            exit 1
+          fi

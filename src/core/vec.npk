@@ -15,23 +15,45 @@
 // that owns nothing -- an integer, a float, an enum without a payload, a struct
 // of those. At an OWNING `T` (a `string`, a `buffer`, another `Vec`) this type
 // does not discharge its element-lifetime obligation, and the reason is a
-// COMPILER DEFECT that is raised and not worked around:
+// COMPILER DEFECT that is raised and not worked around.
 //
-//   O-N17 -- a GENERIC function that MOVES OUT OF an indexed element, at an
-//   OWNING `T`, emits a call to an undefined `@npk.vacant.<dty>`. `npkc`
-//   accepts it at exit 0 and writes the `.ll`; `llc` then refuses the IR and
-//   writes no object. Reproduction, five cases and their controls:
-//   `../../tests/probe/defect/generic_element_move/`.
+// THE REASON CHANGED AT CYCLE 0.0.5, AND THE RESTRICTION DID NOT (TM-136).
+// O-N17 -- the defect this restriction was written against -- IS FIXED at pin
+// `aaffb87`; all five of its reproduction cases now compile, link and run
+// (`../../tests/probe/defect/generic_element_move/`, TRANSCRIPT PART D). Two
+// things found in the same hour keep the restriction anyway:
 //
-// FIVE OF THE NINE OPERATIONS BELOW ARE BUILT ON ONE BLOCKED PRIMITIVE --
-// `T:x = move(v.items[i])` inside a generic function -- namely `vec_pop`,
-// `vec_set`, `vec_clear`, `vec_truncate` and `vec_free`. At a non-owning `T`
-// none of them needs it and all nine link and run; at an owning `T` the
-// element-drop path cannot be written generically at this pin. It is NOT
-// approximated here: `SAFETY.md` S-18b puts element lifetime AT THE
-// INSTANTIATION, and the sanctioned concrete spellings are measured and
-// committed -- `probe06_generic_vec.npk`'s `free_names` and `probe12b`'s
-// `vec_set_string`.
+//   1. THE ELEMENT-DROP LOOP AS THIS FILE WOULD SPELL IT IS REFUSED. One
+//      hoisted `#wild_slice` binding with `move(s[i])` inside a loop is
+//      `NITPICK-MOVE-001`: moving out of an element invalidates the binding
+//      the element was reached THROUGH, and the next iteration reads it
+//      again. It is refused at `T = int64` as well, so it is a move-tracker
+//      rule and not an ownership one. Re-making the slice inside the loop
+//      body compiles; so does `move(v.items[i])` through the bare pointer,
+//      which TM-129 forbids here because it loses the bounds guard.
+//
+//   2. AND THE WORSE ONE: `NITPICK-TYPE-046` IS NOT ENFORCED INSIDE A GENERIC
+//      BODY. `T:answer = s[i]` at an owning `T` -- a COPY of an owner -- is
+//      accepted at exit 0, links, and runs; the identical statement with
+//      `string` written out is refused. So a future function here that read
+//      an element without `move` would ship two owners of one body and
+//      nothing would say a word. Reproduction, four cases and a control:
+//      `../../tests/probe/defect/generic_owning_copy/`, where `case4` reads
+//      the allocator's 0xAA poison through the second owner and exits 170.
+//
+// THAT SECOND ONE ALREADY BIT THIS FILE. `vec_pop<T>` shipped at 0.0.4 as
+// `T:answer = s[v.count - 1i64]` -- `case1`'s function exactly -- and the
+// comment beside `vec_at` claimed such a copy was "refused by TYPE-046",
+// which is false at every pin this workbench has used. The `move` is written
+// now, where it always belonged.
+//
+// FIVE OF THE NINE OPERATIONS BELOW OWE AN ELEMENT DROP AT AN OWNING `T` --
+// `vec_pop`, `vec_set`, `vec_clear`, `vec_truncate` and `vec_free` -- and none
+// of them discharges it. At a non-owning `T` none of them needs to and all
+// nine link and run. It is NOT approximated here: `SAFETY.md` S-18b puts
+// element lifetime AT THE INSTANTIATION, and the sanctioned concrete
+// spellings are measured and committed -- `probe06_generic_vec.npk`'s
+// `free_names` and `probe12b`'s `vec_set_string`.
 //
 // WHY THAT IS NOT A WORKAROUND (W-11). No function here is bent around the
 // bug; each is the one that would have been written anyway. `0.0.4.md` §2
@@ -122,9 +144,14 @@ pub func:vec_reserve<T> = NIL(Vec<T>->:v, int64:need) never fails {
     wild int8->:mem = alloc(n * #size_of<T>());
     wild T->:fresh = mem =>! wild T->;
     // COPYING IS A COPY AND NOT A MOVE, which is what confines this function to
-    // a non-owning `T` -- TYPE-046 makes an owning value move-only, and the
-    // move spelling is O-N17's blocked primitive. Both slices are laid over the
-    // live element count, so both ends of the copy are guarded.
+    // a non-owning `T` -- TYPE-046 makes an owning value move-only. AND THE
+    // CONFINEMENT IS THIS COMMENT, NOT A CHECK (TM-136): TYPE-046 does not
+    // fire inside a generic body, so at `T = string` this loop copies each
+    // handle into the new block and `dalloc` then releases the old one. That
+    // happens to leave exactly one owner -- measured, 0 vacate and 0 drop
+    // calls in the whole emitted body -- so this row is correct at an owning
+    // `T` BY ACCIDENT. Both slices are laid over the live element count, so
+    // both ends of the copy are guarded.
     T[]:from = #wild_slice<T>(v.items, v.count);
     T[]:into = #wild_slice<T>(fresh, v.count);
     int64:i = 0i64;
@@ -158,8 +185,20 @@ pub func:vec_push<T> = NIL(Vec<T>->:v, move T:x) never fails {
 
 // `requires i >= 0 && i < v.count`
 //
-// RETURNS BY VALUE, so this is for a scalar `T`: at an owning `T` a copy is
-// refused by TYPE-046, and such a family reads through `v.items[i]` at the site
+// RETURNS BY VALUE, SO THIS IS FOR A SCALAR `T` -- and the reason is not the
+// one written here until 0.0.5, which was wrong in both halves. It said "at an
+// owning `T` a copy is refused by TYPE-046". Nothing refuses it, and what
+// happens instead is not a copy: `pass` of a PLACE at an owning type MOVES
+// IMPLICITLY, so at `T = string` this function REMOVES the element from the
+// `Vec` -- the emitted body stores `zeroinitializer` over the slot and calls
+// `npk.vacant.<dty>` on it -- while leaving `count` untouched, so the
+// container still claims to hold it. Measured: a second `vec_at` of the same
+// index returns a length-0 string
+// (`../../tests/probe/defect/generic_owning_copy/case5_vec_at_destructive.npk`,
+// exit 11). That is the LANGUAGE behaving as specified and is not a defect;
+// it is a reason this row is for a non-owning `T` (TM-136).
+//
+// A family that wants an owning element reads through `v.items[i]` at the site
 // that knows the element's shape. That is the compiler's own note on `List<T>`
 // and the reason there is no generic `list_at` there either.
 pub func:vec_at<T> = T(Vec<T>->:v, int64:i) never fails {
@@ -185,9 +224,18 @@ pub func:vec_set<T> = NIL(Vec<T>->:v, int64:i, move T:x) never fails {
 //
 // Measured out of range: with `count == 0` the slice is empty and the index
 // `-1` traps `OutOfBounds` rather than reading backwards off the block.
+//
+// THE `move` IS LOAD-BEARING AND WAS MISSING UNTIL 0.0.5 (TM-136). Without it
+// this body reads `T:answer = s[v.count - 1i64]`, which at an owning `T` is a
+// COPY of an owner: the returned value and the slot both hold the same
+// pointer. `NITPICK-TYPE-046` exists to refuse exactly that and does not fire
+// inside a generic body, so the row shipped at 0.0.4 with the bug and a green
+// suite beside it. A pop TRANSFERS ownership, so `move` is the spelling that
+// was always correct; at a non-owning `T` it costs nothing, which is the whole
+// reason writing it is not a workaround for the missing check.
 pub func:vec_pop<T> = T(Vec<T>->:v) never fails {
     T[]:s = #wild_slice<T>(v.items, v.count);
-    T:answer = s[v.count - 1i64];
+    T:answer = move(s[v.count - 1i64]);
     v.count = v.count - 1i64;
     pass answer;
 };

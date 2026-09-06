@@ -37,6 +37,24 @@
 // there is no third spelling. That HELD `vec_pop<T>`'s row, and it is why
 // this pair is written at the instantiation, which is where `SAFETY.md` S-18b
 // already puts element lifetime.
+//
+// CORRECTED 2026-09-05 AT PIN `aaffb87` (cycle 0.0.5, TM-136). The paragraph
+// above is `0dfddac`'s and is left standing because it was true there. Two of
+// its claims are not true here. **O-N17 IS FIXED**, so the generic remedy no
+// longer fails at `llc`; and **"there is no third spelling" was wrong even
+// about the two it names** -- at this pin a generic `vec_set<T>` that moves the
+// outgoing element into a dying local compiles, links and runs, PROVIDED the
+// slice is re-made after the move (`npkc` 0 with a 61 044 B `.ll`, `llc` 0,
+// `ld.lld` 0, exit 0). Writing through the SAME `#wild_slice` binding the move
+// came out of is `NITPICK-MOVE-001`, because moving out of an element
+// invalidates the binding it was reached through.
+//
+// THIS PAIR IS UNCHANGED AND MEASURES WHAT IT ALWAYS DID -- the leak and its
+// remedy at the instantiation, which is where `SAFETY.md` S-18b puts element
+// lifetime and where TM-136 keeps it. The reason moved: not that the generic
+// spelling cannot be written, but that `NITPICK-TYPE-046` does not fire inside
+// a generic body, so nothing would catch the next one written without a
+// `move` (`defect/generic_owning_copy/`).
 mod:probe12b_set_overwrite_drop;
 
 struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };

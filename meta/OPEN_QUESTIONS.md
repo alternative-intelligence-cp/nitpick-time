@@ -419,23 +419,26 @@ action until it closes: the harness and `npkg` then run side by side with a
 parity check before the harness retires, exactly as in the compiler
 repository. **No action.**
 
-### O-Z1 — ship every zone, or a selectable subset?
-`specs/ZONE_MODEL.md` §8's item, mirrored here. §3's measured ≈348 KiB says
-ship them all, and a subset would be a build-configuration knob the ecosystem
-does not have.
-**Open by design until cycle 0.0.5's spike measures the real emitted object
-size** (O-X2). `meta/roadmap/0.0/0.0.5.md` §3 has the thresholds and the
-fallback candidates, decided in advance so that a bad number produces a stop
-rather than an improvisation.
+### ~~O-Z1 — ship every zone, or a selectable subset?~~ — SETTLED, TM-135
+`specs/ZONE_MODEL.md` §8's item, mirrored here. **Answered at cycle 0.0.5:
+ship them all.** The measured **477.8 KiB** falls in the first of
+`meta/roadmap/0.0/0.0.5.md` §3's three bands, decided in advance so that a bad
+number would produce a stop rather than an improvisation, so none of the
+fallbacks — dropping the pre-1900 LMT transitions, delta-encoding the
+transition times, or a build-time zone subset — is reached. **Not deleted**,
+because Z-7b's margin is 4.4% and a future tzdata release could reopen it
+against a number.
 
-### O-X2 — the real emitted tzdb size
-`ZONE_MODEL.md` §3 estimates **≈348 KiB** from a measurement of tzdata 2026c's
-447 canonical zones and 26 838 transitions. **Open by design:** it is a
-*measurement*, taken at cycle 0.5 against what the generator actually emits,
-and recorded there with the number.
-**If it comes in above ~1 MiB**, O-Z1's question — ship every zone or a
-selectable subset — becomes real again, and the fallback is decided then
-against the number rather than invented now.
+### ~~O-X2 — the real emitted tzdb size~~ — CLOSED, TM-135
+`ZONE_MODEL.md` §3 estimated **≈348 KiB** from tzdata 2026c's 447 canonical
+zones and 26 838 transitions. **Measured at cycle 0.0.5, a cycle earlier than
+planned, because O-N4's discharge made it affordable:** the four tables and two
+pools are **475 006 B**, and **489 310 B** with `POSIX_RULES` at its real
+cardinality — read off the object with `nm -S`, against a one-zone baseline
+that puts the program-and-prelude share at 36 014 B by one route and 35 866 B
+by another. The estimate was low by 37% and wrong in four independent ways;
+TM-135 has each with its number, and the spike is
+`meta/scratch/tzdb_spike/`.
 
 ### O-X3 — whether `Instant` exposes its clock kind publicly
 TM-010.1 makes `Instant` carry which clock produced it, so that
@@ -573,7 +576,24 @@ nineteen today.
 
 ---
 
-### O-N17 — a generic function that MOVES OUT of an indexed element, at an owning `T`, calls an undefined `@npk.vacant.<dty>` — **BLOCKING one capability**
+### ~~O-N17 — a generic function that MOVES OUT of an indexed element, at an owning `T`, calls an undefined `@npk.vacant.<dty>`~~ — **FIXED at pin `aaffb87`, verified here 2026-09-05 (TM-136)**
+
+> **Verified, not assumed.** All five reproduction cases now compile, assemble,
+> link and run at exit 0 —
+> `tests/probe/defect/generic_element_move/TRANSCRIPT.txt` PART D, appended
+> rather than substituted. Both `case1` and `case5` carry `// expect-exit: 0`
+> and neither is in `EXPECT_EXEMPT` any more (TM-137).
+>
+> **IT DID NOT LIFT TM-132's RESTRICTION**, and the reason is a second and
+> worse defect found while checking whether it had: `NITPICK-TYPE-046` does not
+> fire inside a generic body, so a *bare* read of an owning element — no
+> `move` at all — is accepted, links, runs, and produces two owners of one
+> heap body. Reproduction by path, deliberately unnumbered because `O-N` is
+> the workbench registry's namespace:
+> **`tests/probe/defect/generic_owning_copy/`**. Reproduced at all four pins
+> this workbench has used, so it is not a regression at `aaffb87`.
+>
+> The record below is what was raised at `0dfddac` and is left standing.
 
 **Raised 2026-09-05 by cycle 0.0.4, at pin `0dfddac`. Registered in the
 workbench's `meta/OPEN_QUESTIONS.md` and raised to the compiler session as a

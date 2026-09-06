@@ -145,15 +145,18 @@ TM-030. All settled. **Nothing in this cycle is blocked on a question.**
       not the library, so the belt is one shared 64 MiB cap with opposite
       outcomes rather than a low cap on the clean half alone
 
-### 0.0.5 — the tzdb size spike
-- [ ] `tools/gen_tzdb.py` far enough to read the pinned tzdata release's TZif files and emit the four tables from `ZONE_MODEL.md` §3
-- [ ] the emitted `.npk` compiled by `npkc`, and **the object's size measured** — source bytes, IR bytes, and object bytes
-- [ ] the number recorded in `0.0.5.md` and in `meta/research/`, against §3's ≈348 KiB estimate
-- [ ] `#size_of` of each table row asserted, so the estimate's arithmetic is checkable
-- [ ] **nothing committed from the spike but the number** — the real generator is 0.5, and a half-finished one in the tree would be a thing somebody later mistakes for the real one
-- [ ] if the number is above ~1 MiB: **stop**, reopen O-Z1, and decide before 0.1 starts
+### 0.0.5 — the tzdb size spike — **DONE 2026-09-05**
+- [x] ~~`tools/gen_tzdb.py`~~ **`meta/scratch/tzdb_spike/`** far enough to read the pinned tzdata release's TZif files and emit the four tables from `ZONE_MODEL.md` §3 — **struck as written and done as P-28 requires**: this checklist named `tools/`, and P-28 says the spike is throwaway and is *named* throwaway, so it lives under `meta/scratch/` with a README whose first line says so
+- [x] the emitted `.npk` compiled by `npkc`, and **the object's size measured** — source bytes, IR bytes, and object bytes, plus the linked binary and the **per-symbol table sizes**, which are what the estimate was actually a claim about
+- [x] the number recorded in `0.0.5.md` §4 and in `meta/research/tzdb-size.md`, against §3's ≈348 KiB estimate — **475 006 B for the four tables and two pools, 489 310 B with `POSIX_RULES`** (TM-135)
+- [x] `#size_of` of each table row asserted, so the estimate's arithmetic is checkable — **and measured first**: two of the three estimated widths were wrong (`ZoneTransition` 12→16, `ZoneEntry` 16→28), so asserting the estimate would have reddened the run instead of correcting the document
+- [x] **nothing committed from the spike but the number** — the generator is committed under `meta/scratch/` because a number whose program is not committed is a claim rather than evidence (`PLAYBOOK.md` §6); its two-megabyte emitted `.npk` is **not**, and goes to `.internal/` so the harness never sweeps it
+- [x] if the number is above ~1 MiB: **stop** — **it is not.** 477.8 KiB is row one of `0.0.5.md` §3, so O-X2 closes and O-Z1 is settled as "ship them all", with the 4.4% margin written into `ZONE_MODEL.md` as Z-7b
+- [x] **not on this list, and it is the more consequential half:** TM-132's restriction was re-examined at the new pin because O-N17 is fixed. It **stays** — `NITPICK-TYPE-046` does not fire inside a generic body, `vec_pop<T>` had shipped a duplicate-owner read and now writes the `move`, and `vec_at<T>` at an owning `T` removes the element (TM-136, `tests/probe/defect/generic_owning_copy/`)
+- [x] **nor this:** O-N17's two `EXPECT_EXEMPT` entries had expired and the mechanism that promised to expire them checked only that the file existed. Both files now carry `// expect-exit: 0`, and `check_exemptions_live` re-derives every exemption's recorded verdict on every run (TM-137)
 
 ### 0.0.6 — close
+- [ ] **delete `meta/scratch/tzdb_spike/`** (P-28) — or decide, with a reason in the record, that `TRANSCRIPT.txt` is worth keeping beside TM-135 and delete only the code
 - [ ] every probe verdict recorded, every forced spec amendment landed
 - [ ] the harness self-check green, the full run green
 - [ ] `meta/DECISIONS.md` updated with anything the probes settled

@@ -66,36 +66,36 @@ HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # BOTH directions: a name here that no longer exists is itself a failure,
 # because an exemption that outlives its file silently excuses the next file
 # with that name.
+#
+# EVERY ENTRY CARRIES THE VERDICT IT WAS WRITTEN AGAINST, AND THAT IS TM-137.
+# The first column is where the file STOPS -- `npkc`, `llc`, `ld`, `run:<code>`
+# or `none` for a file no program roots -- and `check_exemptions_live` below
+# re-derives it on every full run. Until 0.0.5 the both-directions diff checked
+# only that the named file still EXISTED, and this list's own text claimed the
+# entry "fails the both-directions diff" on the day its defect landed. It did
+# not: O-N17 landed at pin `aaffb87`, `case1` and `case5` went from `llc` to
+# `run:0`, the suite stayed GREEN, and nothing anywhere said so. An exemption
+# whose reason has expired is exactly the shape this repository keeps finding
+# -- a check whose NAME describes the property while its MECHANISM covers
+# something narrower -- and it was in the mechanism written to prevent it.
 EXPECT_EXEMPT = {
-    "tests/probe/support/probe11_arms_lib.npk":
+    "tests/probe/support/probe11_arms_lib.npk": ("none",
         "a library module probe 11 imports: no `main`, no `failsafe`, never "
         "run and never refused, so there is no exit code and no diagnostic to "
-        "expect (tests/probe/README.md, 0.0.0 P-1)",
-    "tests/probe/support/probe11_calc_lib.npk":
+        "expect (tests/probe/README.md, 0.0.0 P-1)"),
+    "tests/probe/support/probe11_calc_lib.npk": ("none",
         "the same: a support module, imported by probe 11c to price its "
-        "arithmetic",
-    "tests/probe/support/probe11_silent_lib.npk":
+        "arithmetic"),
+    "tests/probe/support/probe11_silent_lib.npk": ("none",
         "the same: a support module that declares no error at all, the control "
-        "for TM-107's per-module arm bill",
-    "tests/probe/defect/generic_element_move/case1_generic_move_out.npk":
-        "O-N17's reproduction, and NO MARKER IS SPELLABLE FOR IT: `npkc` "
-        "ACCEPTS it at exit 0 and writes the .ll, and `llc` then refuses the "
-        "IR with `use of undefined value '@npk.vacant.1876'`. So "
-        "`expect-error:` is false (nothing refused it) and `expect-exit:` is "
-        "false (it never links). The expectation lives in that directory's "
-        "TRANSCRIPT.txt until the defect lands, at which point this entry "
-        "fails the both-directions diff until somebody deletes it and gives "
-        "the file its `// expect-exit: 0` -- which is the mechanism that "
-        "makes the gap close itself rather than be remembered",
-    "tests/probe/defect/generic_element_move/case5_generic_drop_loop.npk":
-        "the same defect in a second shape, and the shape that establishes its "
-        "EXTENT (TM-132): case1 moves an element out AND RETURNS it, this one "
-        "moves them out AND DROPS THEM IN A LOOP, which is the "
-        "vec_clear/vec_truncate/vec_free shape. Same `npkc` 0 / `llc` 1, same "
-        "`use of undefined value '@npk.vacant.<dty>'`, so no marker is "
-        "spellable for it either. It leaves with case1 and by the same "
-        "mechanism",
-    "tests/probe/defect/fixed_array_len/case1_local_array_len.npk":
+        "for TM-107's per-module arm bill"),
+    # O-N17's two reproductions ARE NOT HERE ANY MORE, and their absence is
+    # the mechanism working. They were exempt because `npkc` accepted them at
+    # exit 0 and `llc` then refused the IR, so neither `expect-error:` nor
+    # `expect-exit:` was true of them. O-N17 landed at pin `aaffb87`: both now
+    # link and run, both carry `// expect-exit: 0`, and both are ordinary
+    # members of the `probe` stage. TM-137.
+    "tests/probe/defect/fixed_array_len/case1_local_array_len.npk": ("npkc",
         "a SECOND compiler defect, found at 0.0.4: `.len` on a fixed-size "
         "array `T[N]` is accepted by the frontend and cannot be lowered "
         "(`NITPICK-EMIT-002`). `expect-error:` would be spellable here -- "
@@ -104,7 +104,28 @@ EXPECT_EXEMPT = {
         "asserting the refusal would turn the bug into a committed "
         "expectation and go RED on the day it is fixed. The controls (a slice "
         "`.len`, and the same array indexed without `.len`) are in that "
-        "directory's README",
+        "directory's README"),
+    "tests/probe/defect/generic_owning_copy/case1_generic_bare_copy.npk":
+        ("run:0",
+        "a THIRD compiler defect, found at 0.0.5: `NITPICK-TYPE-046` is not "
+        "enforced inside a GENERIC function body, so `T:answer = s[i]` at an "
+        "owning `T` compiles, links and runs -- and the identical statement "
+        "with `string` written out is refused (`case2`). No marker is right: "
+        "`expect-error:` is false, because nothing refuses it; and "
+        "`expect-exit: 0` would commit the repository to a program whose "
+        "whole point is that exiting 0 is WRONG, and would go red on the day "
+        "the check lands. The recorded verdict above is what makes that "
+        "landing visible instead: `run:0` becomes `npkc` and this entry "
+        "fails. TM-136"),
+    "tests/probe/defect/generic_owning_copy/case4_use_after_free.npk":
+        ("run:170",
+        "the same defect's CONSEQUENCE: two owners of one body, the first "
+        "dropped, the second read -- exit 170 is the allocator's 0xAA poison "
+        "(D-183), which is the evidence that the copy was real. `expect-exit: "
+        "170` is spellable and is declined for `case1`'s reason: it would "
+        "make a use-after-free a committed expectation of this suite. The "
+        "recorded verdict carries it instead, and `run:170` becomes `npkc` "
+        "when the check lands. TM-136"),
 }
 
 # The directories a `.npk` may not live in and be missed: none. This walk is
@@ -292,6 +313,85 @@ def check_expect_headers(rep, root):
                      "exemption that outlives its file is how a later file "
                      "with the same name gets excused without anyone deciding "
                      "to excuse it (V-1c).")
+
+
+def _verdict(bld, root, rel, out_dir):
+    """Where does this file STOP?  `npkc`, `llc`, `ld`, `run:<code>`, or
+    `none` when nothing roots it.  Every status is taken from the call that
+    produced it and paired with the artefact it should have written.
+    """
+    src = os.path.join(root, rel)
+    with open(src, "r", encoding="utf-8", errors="replace") as fh:
+        text = fh.read()
+    # A module with no `main` is not a program: `npkc` has no root to compile
+    # and the question does not arise.  This is the `none` bucket, and it is
+    # the support modules.
+    if "func:main" not in text:
+        return "none"
+    stem = os.path.splitext(os.path.basename(rel))[0]
+    ll = os.path.join(out_dir, stem + ".exempt.ll")
+    obj = os.path.join(out_dir, stem + ".exempt.o")
+    exe = os.path.join(out_dir, stem + ".exempt")
+    for path in (ll, obj, exe):
+        if os.path.exists(path):
+            os.remove(path)
+    st, _out = bld.emit_expecting_refusal(src, ll)
+    if st != 0 or not os.path.isfile(ll):
+        return "npkc"
+    try:
+        bld.assemble(ll, obj)
+    except build_mod.BuildError:
+        return "llc"
+    if not os.path.isfile(obj):
+        return "llc"
+    try:
+        bld.link([obj], exe)
+    except build_mod.BuildError:
+        return "ld"
+    if not os.path.isfile(exe):
+        return "ld"
+    st, _out = build_mod.run([exe])
+    return "run:%d" % st
+
+
+def check_exemptions_live(rep, root, bld):
+    """AN EXEMPTION'S REASON EXPIRES, AND NOTHING USED TO NOTICE.  TM-137.
+
+    Every entry in `EXPECT_EXEMPT` records the verdict it was written against.
+    This re-derives that verdict from the file itself, on every full run, and
+    fails when it has changed -- because the reason an exemption exists is a
+    claim about what the compiler does, and the compiler moves.
+
+    THE CASE THAT MADE THIS NECESSARY IS THE ONE THE LIST ITSELF DESCRIBED.
+    O-N17's two entries said, in the list, that on the day the defect landed
+    the entry would "fail the both-directions diff until somebody deletes it".
+    The diff checked only that the named file still EXISTED.  O-N17 landed;
+    both files went from stopping at `llc` to running clean; the suite was
+    green; nothing said a word.  A rule that asks a later reader to remember
+    is not a mechanism, and this is the mechanism.
+    """
+    exempt_list = exemptions_for(root)
+    out_dir = os.path.join(root, "build", "exempt")
+    os.makedirs(out_dir, exist_ok=True)
+    checked, moved = 0, 0
+    for rel in sorted(exempt_list):
+        if rel not in set(all_npk(root)):
+            continue                      # already failed as a stale exemption
+        recorded = exempt_list[rel][0]
+        got = _verdict(bld, root, rel, out_dir)
+        checked += 1
+        if got != recorded:
+            moved += 1
+            rep.fail("expired exemption: %s" % rel,
+                     "the entry records that this file stops at `%s`; it now "
+                     "stops at `%s`. An exemption is a claim about what the "
+                     "compiler does, and that claim has changed. Either the "
+                     "defect it stands on has landed -- in which case give "
+                     "the file its `expect-` marker and delete this entry -- "
+                     "or it has changed shape and the entry must say how "
+                     "(TM-137)." % (recorded, got))
+    rep.say("      exemption verdicts: %d of %d re-derived, %d moved"
+            % (checked, len(exempt_list), moved))
 
 
 # ---------------------------------------------------------------------------
@@ -670,6 +770,12 @@ def main(argv):
     bld = build_mod.Build(root, man, npkc, npkrt, os.path.join(root, "build"))
     rep.say("      allowlist: %d symbol(s), derived from %s (TM-118)"
             % (len(bld.allowlist), os.path.basename(npkrt)))
+
+    # 4b. every exemption's recorded verdict, re-derived (TM-137). It belongs
+    #     to step 4 and runs here because it needs a toolchain and step 4 does
+    #     not -- step 4's finding is worth having even when the toolchain is
+    #     wrong, and this one cannot be taken at all without one.
+    check_exemptions_live(rep, root, bld)
 
     # 5. the tree checks
     run_tree_checks(rep, root, bld)

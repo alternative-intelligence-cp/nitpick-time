@@ -1,0 +1,99 @@
+// NO `expect-` MARKER, for case1's reason and one more: `// expect-exit: 170`
+// is spellable and TRUE, and writing it would make a USE-AFTER-FREE a
+// committed expectation of this suite. Named in `harness/run.py`'s
+// `EXPECT_EXEMPT` with the verdict `run:170` instead (TM-137).
+//
+// ===========================================================================
+// WHAT case1's COPY COSTS: TWO OWNERS OF ONE BODY
+// ===========================================================================
+//
+// case1 shows the copy is accepted. This shows it is a copy. The duplicate is
+// taken inside a loop whose body ends, so the FIRST owner drops and frees the
+// string's body; the element still sitting in the `Vec` then points at freed
+// memory, and reading it reads the allocator's poison.
+//
+// THE RUNTIME POISONS EVERY FREE WITH 0xAA (D-183), which is what makes this
+// deterministic evidence rather than a flake -- and 0xAA is 170, comfortably
+// inside the one byte an exit status has.
+//
+//   exit 170 = the poison was read       -> the duplicate is real
+//   exit 69  = the byte was still 'E'    -> no duplicate, no defect
+//   exit 60  = neither                   -> the probe is wrong, not the answer
+//
+// MEASURED 170 at pin `aaffb87` AND at `0dfddac`. The defect is not new; what
+// is new is that O-N17's fix lets the owning instantiation reach the linker,
+// so the consequence can be RUN rather than only read off the IR.
+mod:case4_use_after_free;
+
+struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };
+
+func:vec_init<T> = Vec<T>(int64:cap) never fails {
+    int64:n = cap;
+    if (n < 1i64) { n = 1i64; }
+    wild int8->:mem = alloc(n * #size_of<T>());
+    pass Vec{ items: mem =>! wild T->, count: 0i64, cap: n };
+};
+
+func:vec_push<T> = NIL(Vec<T>->:v, move T:x) never fails {
+    T[]:room = #wild_slice<T>(v.items, v.cap);
+    room[v.count] = move(x);
+    v.count = v.count + 1i64;
+    pass NIL;
+};
+
+func:vec_free<T> = NIL(Vec<T>->:v) never fails {
+    dalloc(v.items =>! wild int8->);
+    v.count = 0i64;
+    v.cap = 0i64;
+    pass NIL;
+};
+
+func:peek<T> = T(Vec<T>->:v, int64:i) never fails {
+    T[]:s = #wild_slice<T>(v.items, v.count);
+    T:answer = s[i];
+    pass answer;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    Vec<string>:v = raw vec_init::<string>(2i64);
+    drop vec_push(@v, string_concat("Europe/", "Kyiv"));
+
+    // One duplicate, taken and dropped inside a scope that ends. A `while`
+    // and not a bare block, because that is how this repository's other
+    // element-lifetime probes spell a dying scope (`probe06c`).
+    int64:k = 0i64;
+    while (k < 1i64) {
+        string:dying = raw peek::<string>(@v, 0i64);
+        discard(string_byte_length(dying));
+        k = k + 1i64;
+    }
+
+    // The element is STILL in the `Vec` -- `count` was never touched -- and
+    // still holds the pointer the line above just freed.
+    string:still = raw peek::<string>(@v, 0i64);
+    uint8[]:b = string_bytes(still);
+    uint8:first = b[0i64];
+
+    // The block is released before the verdict so that `exit` cannot be
+    // reached with a live `wild` allocation (D-151). Neither `still` nor
+    // `dying` is dropped again: `exit` runs no destructors, so this program
+    // demonstrates the double OWNER without performing the double FREE.
+    drop vec_free(@v);
+    if (first == 170u8) { exit 170i32; }
+    if (first == 69u8)  { exit 69i32; }
+    exit 60i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};
+

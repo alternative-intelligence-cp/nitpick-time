@@ -1,0 +1,65 @@
+// expect-error: NITPICK-TYPE-046
+//
+// CASE 2 -- THE CONTROL THAT MAKES case1 A DEFECT RATHER THAN A SUSPICION.
+//
+// `peek_string` is `case1`'s `peek<T>` with `T` replaced by `string`
+// throughout and NOTHING ELSE CHANGED. It is refused; case1 is not.
+//
+// THE MARKER IS ASSERTED HERE AND NOWHERE ELSE IN THIS DIRECTORY, and the
+// asymmetry is deliberate: this refusal is the compiler being RIGHT, so
+// committing it as an expectation commits nothing but correct behaviour. The
+// other three record what the compiler does WRONG, and an expectation of a
+// wrong answer goes green forever and red on the fix.
+mod:case2_concrete_bare_copy;
+
+struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };
+
+func:vec_init<T> = Vec<T>(int64:cap) never fails {
+    int64:n = cap;
+    if (n < 1i64) { n = 1i64; }
+    wild int8->:mem = alloc(n * #size_of<T>());
+    pass Vec{ items: mem =>! wild T->, count: 0i64, cap: n };
+};
+
+func:vec_push<T> = NIL(Vec<T>->:v, move T:x) never fails {
+    T[]:room = #wild_slice<T>(v.items, v.cap);
+    room[v.count] = move(x);
+    v.count = v.count + 1i64;
+    pass NIL;
+};
+
+func:vec_free<T> = NIL(Vec<T>->:v) never fails {
+    dalloc(v.items =>! wild int8->);
+    v.count = 0i64;
+    v.cap = 0i64;
+    pass NIL;
+};
+
+func:peek_string = string(Vec<string>->:v, int64:i) never fails {
+    string[]:s = #wild_slice<string>(v.items, v.count);
+    string:answer = s[i];
+    pass answer;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    Vec<string>:v = raw vec_init::<string>(2i64);
+    drop vec_push(@v, string_concat("Europe/", "Kyiv"));
+    string:a = raw peek_string(@v, 0i64);
+    discard(string_byte_length(a));
+    drop vec_free(@v);
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};
+

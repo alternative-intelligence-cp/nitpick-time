@@ -7,24 +7,38 @@ Guidance for Claude Code sessions working in this repository.
 `ntime` — a date, time and time-zone library for **Nitpick**, the
 safety-critical systems language at `../../nitpick`.
 
-**Status, after cycle 0.0.4: the first library code.** `src/core/` holds
+**Status, after cycle 0.0.5: the first library code, and the tzdb sized.**
+TM-007's compiled-in database is **475 006 bytes** of read-only data for the
+four tables and two pools, **489 310** with `POSIX_RULES` — measured, not
+estimated, against a 348 KiB estimate that was wrong in four ways (TM-135).
+That is inside the budget `0.0.5.md` §3 set in advance, with 4.4% to spare, so
+TM-007 stands and O-X2 and O-Z1 close.
+
+**After cycle 0.0.4: the first library code.** `src/core/` holds
 `vec.npk` (`Vec<T>`, nine functions), `bytes.npk` (`Bytes`, eleven) and
 `limits.npk` (thirteen named bounds, each with the rule that set it). The
 umbrella re-exports **35** names, one line each. The other five directories are
 still placeholders that parse and are **replaced, not deleted**, by the cycle
 named in each header. `harness/` is the runner `BUILD.md` describes — nine
 stages, ten modules — and a full invocation is **40 units green in about
-241 s**.
+42 s** at pin `aaffb87`. It was **241 s** at `0dfddac`; the compiler's 1.5.2d
+close made every emitted module carry only the prelude functions it references,
+and that is the whole of the difference — same 40 units, same verdicts.
 
 **Two things to know before touching `src/core/`.**
 
-- **`Vec<T>` is for a NON-OWNING `T`** (TM-132). At an owning `T` the
-  element-drop path cannot be written generically at this pin: **O-N17** makes
-  `T:x = move(v.items[i])` inside a generic function emit a call to an
-  undefined `@npk.vacant.<dty>`, which `npkc` accepts at exit 0 and `llc`
-  refuses. That is five of the nine rows. It is recorded, not worked around —
+- **`Vec<T>` is for a NON-OWNING `T`** (TM-132, and the reason changed at
+  0.0.5 — TM-136). **O-N17 is FIXED** at pin `aaffb87`; the restriction stays
+  because **`NITPICK-TYPE-046` does not fire inside a generic function body**,
+  so `T:x = s[i]` at an owning `T` — a copy of an owner — compiles, links,
+  runs, and leaves two owners of one heap body. Reading through the second
+  after the first has dropped returns the allocator's `0xAA` poison, exit 170
+  (`tests/probe/defect/generic_owning_copy/`). It bit this file: `vec_pop<T>`
+  shipped as that bare read at 0.0.4 and now writes the `move`. And
+  **`vec_at<T>` at an owning `T` REMOVES the element** — `pass` of a place
+  moves implicitly — which is the language behaving as specified and is why
   element lifetime at an owning `T` goes **at the instantiation**, where
-  `SAFETY.md` S-18b already puts it.
+  `SAFETY.md` S-18b and S-18d put it.
 - **The bounds guard is the compiler's, not ours** (TM-129, S-17c). Each
   accessor lays a `#wild_slice` over `count` and indexes that, so
   `emit_bounds_guard` runs and one unsigned compare rejects both ends. The

@@ -1,0 +1,102 @@
+// NO `expect-` MARKER, AND THE ONE THAT IS TRUE IS THE ONE THAT MUST NOT BE
+// WRITTEN. This file compiles, links and exits 0, so `// expect-exit: 0` would
+// be accurate -- and it would commit this repository to a program whose whole
+// point is that exiting 0 is WRONG, and would go red on the day the missing
+// check lands. Named in `harness/run.py`'s `EXPECT_EXEMPT` with the verdict
+// `run:0`, which `check_exemptions_live` re-derives on every full run (TM-137),
+// so the landing fails the entry instead of passing unnoticed.
+//
+// ===========================================================================
+// THE DEFECT: `NITPICK-TYPE-046` IS NOT ENFORCED INSIDE A GENERIC FUNCTION BODY
+// ===========================================================================
+//
+// `peek<T>` below reads an indexed element into a local WITHOUT `move`:
+//
+//     T:answer = s[i];
+//
+// At `T = string` that is a copy of an owning value, which is precisely what
+// D-183's move-only rule exists to refuse -- "copying it here would leave two
+// owners and one double free", in the diagnostic's own words. `case2` is the
+// SAME STATEMENT with `string` written out and it IS refused. This one is
+// accepted at exit 0, assembles, links and runs.
+//
+// THE MECHANISM, read at the pin and then produced rather than assumed.
+// `require_move_if_owning` (`../../../../../nitpick/src/frontend/type_expr.npk`)
+// fires only when `type_drops` is true of the expression's type. Inside a
+// generic body the type is the parameter `T`, whose drop-ness is not known
+// until monomorphisation, so the guard never fires; the backend then
+// monomorphises at `string` and emits a bitwise `load` of the element with NO
+// vacancy of the slot it came from. Two owners, and nothing said so.
+//
+// MEASURED AT PIN `aaffb87`, each status beside the artefact it produced, and
+// AT `0dfddac`, `950bb1d` AND `94874ce` TOO -- this is not a regression at the
+// new pin, it is a gap that has been open for every pin this workbench has
+// used. What changed at `aaffb87` is that O-N17's fix made the owning
+// instantiation reach the LINKER, so the consequence is now runnable: `case4`.
+//
+//   case1 (generic, owning)     npkc 0, .ll | llc 0, .o | ld 0 | run 0
+//   case2 (concrete, owning)    npkc 1, NO .ll -- NITPICK-TYPE-046
+//   case3 (generic, scalar)     npkc 0, .ll | llc 0, .o | ld 0 | run 0
+//   case4 (case1's consequence) npkc 0, .ll | llc 0, .o | ld 0 | run 170
+//
+// The pair case1/case2 is the whole finding: the same statement, refused when
+// the type is spelled and accepted when it arrives through a parameter.
+//
+// WHY THIS REPOSITORY CARES. `src/core/vec.npk`'s `vec_pop<T>` IS this
+// function, and it shipped at 0.0.4 (TM-136). `TRANSCRIPT.txt` has every
+// command with its exit status and the emitted IR at the fault.
+mod:case1_generic_bare_copy;
+
+struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };
+
+func:vec_init<T> = Vec<T>(int64:cap) never fails {
+    int64:n = cap;
+    if (n < 1i64) { n = 1i64; }
+    wild int8->:mem = alloc(n * #size_of<T>());
+    pass Vec{ items: mem =>! wild T->, count: 0i64, cap: n };
+};
+
+func:vec_push<T> = NIL(Vec<T>->:v, move T:x) never fails {
+    T[]:room = #wild_slice<T>(v.items, v.cap);
+    room[v.count] = move(x);
+    v.count = v.count + 1i64;
+    pass NIL;
+};
+
+func:vec_free<T> = NIL(Vec<T>->:v) never fails {
+    dalloc(v.items =>! wild int8->);
+    v.count = 0i64;
+    v.cap = 0i64;
+    pass NIL;
+};
+
+// THE BLOCKED SHAPE, and it is not blocked -- that is the defect. The slice is
+// laid over the live element count exactly as `src/core/vec.npk` lays it
+// (TM-129), so this is the library's spelling and not a contrivance.
+func:peek<T> = T(Vec<T>->:v, int64:i) never fails {
+    T[]:s = #wild_slice<T>(v.items, v.count);
+    T:answer = s[i];
+    pass answer;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    Vec<string>:v = raw vec_init::<string>(2i64);
+    drop vec_push(@v, string_concat("Europe/", "Kyiv"));
+    string:a = raw peek::<string>(@v, 0i64);
+    discard(string_byte_length(a));
+    drop vec_free(@v);
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

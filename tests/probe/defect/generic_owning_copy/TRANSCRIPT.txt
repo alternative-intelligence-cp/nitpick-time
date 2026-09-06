@@ -1,0 +1,226 @@
+TRANSCRIPT -- tests/probe/defect/generic_owning_copy
+==============================================================================
+Generated 2026-09-05. Every command below was run from the repository root, its
+exit status captured on its own line with nothing between, and printed
+BESIDE the artefact it should have produced. No pipeline is used anywhere.
+
+### 1.  THE FIVE CASES AT THE PINNED TOOLCHAIN, aaffb87
+==============================================================================
+--- case1_generic_bare_copy @ aaffb87
+$ /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/aaffb87/npkc tests/probe/defect/generic_owning_copy/case1_generic_bare_copy.npk -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.aaffb87.ll
+  exit=0   build/gotx/case1_generic_bare_copy.aaffb87.ll = 59582 B
+$ llc -O0 -filetype=obj -relocation-model=static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.aaffb87.ll -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.aaffb87.o
+  exit=0   build/gotx/case1_generic_bare_copy.aaffb87.o = 33040 B
+$ ld.lld -static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.aaffb87.o /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/aaffb87/npkrt.o -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.aaffb87
+  exit=0   build/gotx/case1_generic_bare_copy.aaffb87 = 66440 B
+$ /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.aaffb87
+  exit=0
+
+--- case2_concrete_bare_copy @ aaffb87
+$ /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/aaffb87/npkc tests/probe/defect/generic_owning_copy/case2_concrete_bare_copy.npk -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case2_concrete_bare_copy.aaffb87.ll
+  exit=1   build/gotx/case2_concrete_bare_copy.aaffb87.ll = ABSENT
+  | NITPICK-TYPE-046 tests/probe/defect/generic_owning_copy/case2_concrete_bare_copy.npk:40:5: `string` owns storage that is released at scope exit, so it is move-only (D-183): copying it here would leave two owners and one double free. Write `move(...)` to transfer it (invalidating the source), take an explicit copy with `.clone()`, or build the value in place — a temporary has no second name to invalidate
+
+--- case3_generic_scalar @ aaffb87
+$ /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/aaffb87/npkc tests/probe/defect/generic_owning_copy/case3_generic_scalar.npk -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case3_generic_scalar.aaffb87.ll
+  exit=0   build/gotx/case3_generic_scalar.aaffb87.ll = 57449 B
+$ llc -O0 -filetype=obj -relocation-model=static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case3_generic_scalar.aaffb87.ll -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case3_generic_scalar.aaffb87.o
+  exit=0   build/gotx/case3_generic_scalar.aaffb87.o = 32352 B
+$ ld.lld -static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case3_generic_scalar.aaffb87.o /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/aaffb87/npkrt.o -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case3_generic_scalar.aaffb87
+  exit=0   build/gotx/case3_generic_scalar.aaffb87 = 65896 B
+$ /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case3_generic_scalar.aaffb87
+  exit=0
+
+--- case4_use_after_free @ aaffb87
+$ /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/aaffb87/npkc tests/probe/defect/generic_owning_copy/case4_use_after_free.npk -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case4_use_after_free.aaffb87.ll
+  exit=0   build/gotx/case4_use_after_free.aaffb87.ll = 62310 B
+$ llc -O0 -filetype=obj -relocation-model=static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case4_use_after_free.aaffb87.ll -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case4_use_after_free.aaffb87.o
+  exit=0   build/gotx/case4_use_after_free.aaffb87.o = 33848 B
+$ ld.lld -static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case4_use_after_free.aaffb87.o /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/aaffb87/npkrt.o -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case4_use_after_free.aaffb87
+  exit=0   build/gotx/case4_use_after_free.aaffb87 = 67080 B
+$ /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case4_use_after_free.aaffb87
+  exit=170
+
+--- case5_vec_at_destructive @ aaffb87
+$ /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/aaffb87/npkc tests/probe/defect/generic_owning_copy/case5_vec_at_destructive.npk -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case5_vec_at_destructive.aaffb87.ll
+  exit=0   build/gotx/case5_vec_at_destructive.aaffb87.ll = 65904 B
+$ llc -O0 -filetype=obj -relocation-model=static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case5_vec_at_destructive.aaffb87.ll -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case5_vec_at_destructive.aaffb87.o
+  exit=0   build/gotx/case5_vec_at_destructive.aaffb87.o = 34808 B
+$ ld.lld -static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case5_vec_at_destructive.aaffb87.o /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/aaffb87/npkrt.o -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case5_vec_at_destructive.aaffb87
+  exit=0   build/gotx/case5_vec_at_destructive.aaffb87 = 67680 B
+$ /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case5_vec_at_destructive.aaffb87
+  exit=11
+
+### 2.  THE EMITTED IR AT THE FAULT
+==============================================================================
+`case1`'s `peek<string>` against `case3`'s `peek<int64>`: the owning one
+loads the element and vacates NOTHING, so the slot keeps the pointer.
+
+$ awk /^define .*peek<string>/,/^}/ /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.aaffb87.ll
+  exit=0
+  | define { { ptr, i64, i64 }, i32 } @"npk.case1_generic_bare_copy.peek<string>"(ptr %a0, i64 %a1) {
+  | entry:
+  |   %t0 = alloca ptr
+  |   %t1 = alloca i64
+  |   %t2 = alloca { ptr, i64 }
+  |   %t11 = alloca { ptr, i64, i64 }
+  |   %t19 = alloca i8
+  |   store ptr %a0, ptr %t0
+  |   store i64 %a1, ptr %t1
+  |   %t3 = load ptr, ptr %t0
+  |   %t4 = load %"npk.case1_generic_bare_copy.Vec<string>", ptr %t3
+  |   %t5 = extractvalue %"npk.case1_generic_bare_copy.Vec<string>" %t4, 0
+  |   %t6 = load ptr, ptr %t0
+  |   %t7 = load %"npk.case1_generic_bare_copy.Vec<string>", ptr %t6
+  |   %t8 = extractvalue %"npk.case1_generic_bare_copy.Vec<string>" %t7, 1
+  |   %t9 = insertvalue { ptr, i64 } zeroinitializer, ptr %t5, 0
+  |   %t10 = insertvalue { ptr, i64 } %t9, i64 %t8, 1
+  |   store { ptr, i64 } %t10, ptr %t2
+  |   %t12 = load { ptr, i64 }, ptr %t2
+  |   %t13 = load i64, ptr %t1
+  |   %t14 = extractvalue { ptr, i64 } %t12, 1
+  |   %t15 = icmp ult i64 %t13, %t14
+  |   br i1 %t15, label %idx.ok1, label %idx.oob0
+  | idx.oob0:
+  |   call void @npk_chain_reset(i32 270)
+  |   call void @npk_trap(i32 -4099)
+  |   unreachable
+  | idx.ok1:
+  |   %t16 = extractvalue { ptr, i64 } %t12, 0
+  |   %t17 = getelementptr { ptr, i64, i64 }, ptr %t16, i64 %t13
+  |   %t18 = load { ptr, i64, i64 }, ptr %t17
+  |   store { ptr, i64, i64 } %t18, ptr %t11
+  |   store i8 1, ptr %t19
+  |   %t20 = load { ptr, i64, i64 }, ptr %t11
+  |   store i8 0, ptr %t19
+  |   %t21 = insertvalue { { ptr, i64, i64 }, i32 } zeroinitializer, { ptr, i64, i64 } %t20, 0
+  |   %t22 = insertvalue { { ptr, i64, i64 }, i32 } %t21, i32 0, 1
+  |   %t23 = load i8, ptr %t19
+  |   %t24 = icmp ne i8 %t23, 0
+  |   br i1 %t24, label %drop.go2, label %drop.done3
+  | drop.go2:
+  |   call void @"npk.drop.3"(ptr %t11)
+  |   br label %drop.done3
+  | drop.done3:
+  |   ret { { ptr, i64, i64 }, i32 } %t22
+  | }
+And `case5`, where `pass s[i]` DOES vacate -- the same file's `vec_at`:
+
+$ awk /^define .*vec_at<string>/,/^}/ /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case5_vec_at_destructive.aaffb87.ll
+  exit=0
+  | define { { ptr, i64, i64 }, i32 } @"npk.vec.vec_at<string>"(ptr %a0, i64 %a1) {
+  | entry:
+  |   %t0 = alloca ptr
+  |   %t1 = alloca i64
+  |   %t2 = alloca { ptr, i64 }
+  |   store ptr %a0, ptr %t0
+  |   store i64 %a1, ptr %t1
+  |   %t3 = load ptr, ptr %t0
+  |   %t4 = load %"npk.vec.Vec<string>", ptr %t3
+  |   %t5 = extractvalue %"npk.vec.Vec<string>" %t4, 0
+  |   %t6 = load ptr, ptr %t0
+  |   %t7 = load %"npk.vec.Vec<string>", ptr %t6
+  |   %t8 = extractvalue %"npk.vec.Vec<string>" %t7, 1
+  |   %t9 = insertvalue { ptr, i64 } zeroinitializer, ptr %t5, 0
+  |   %t10 = insertvalue { ptr, i64 } %t9, i64 %t8, 1
+  |   store { ptr, i64 } %t10, ptr %t2
+  |   %t11 = load { ptr, i64 }, ptr %t2
+  |   %t12 = load i64, ptr %t1
+  |   %t13 = extractvalue { ptr, i64 } %t11, 1
+  |   %t14 = icmp ult i64 %t12, %t13
+  |   br i1 %t14, label %idx.ok1, label %idx.oob0
+  | idx.oob0:
+  |   call void @npk_chain_reset(i32 270)
+  |   call void @npk_trap(i32 -4099)
+  |   unreachable
+  | idx.ok1:
+  |   %t15 = extractvalue { ptr, i64 } %t11, 0
+  |   %t16 = getelementptr { ptr, i64, i64 }, ptr %t15, i64 %t12
+  |   %t17 = load { ptr, i64, i64 }, ptr %t16
+  |   store { ptr, i64, i64 } zeroinitializer, ptr %t16
+  |   call void @"npk.vacant.3"(ptr %t16)
+  |   %t18 = insertvalue { { ptr, i64, i64 }, i32 } zeroinitializer, { ptr, i64, i64 } %t17, 0
+  |   %t19 = insertvalue { { ptr, i64, i64 }, i32 } %t18, i32 0, 1
+  |   ret { { ptr, i64, i64 }, i32 } %t19
+  | }
+### 3.  THE SAME PAIR AT EVERY PIN THIS WORKBENCH HAS USED
+==============================================================================
+The gap is not a regression at `aaffb87`. `case2` is refused and `case1`
+is accepted at all four, and `case4` reads the poison at `0dfddac` too.
+
+--- case1_generic_bare_copy @ 0dfddac
+$ /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/0dfddac/npkc tests/probe/defect/generic_owning_copy/case1_generic_bare_copy.npk -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.0dfddac.ll
+  exit=0   build/gotx/case1_generic_bare_copy.0dfddac.ll = 854304 B
+$ llc -O0 -filetype=obj -relocation-model=static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.0dfddac.ll -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.0dfddac.o
+  exit=0   build/gotx/case1_generic_bare_copy.0dfddac.o = 532608 B
+$ ld.lld -static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.0dfddac.o /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/0dfddac/npkrt.o -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.0dfddac
+  exit=0   build/gotx/case1_generic_bare_copy.0dfddac = 507888 B
+$ /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.0dfddac
+  exit=0
+
+--- case2_concrete_bare_copy @ 0dfddac
+$ /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/0dfddac/npkc tests/probe/defect/generic_owning_copy/case2_concrete_bare_copy.npk -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case2_concrete_bare_copy.0dfddac.ll
+  exit=1   build/gotx/case2_concrete_bare_copy.0dfddac.ll = ABSENT
+  | NITPICK-TYPE-046 tests/probe/defect/generic_owning_copy/case2_concrete_bare_copy.npk:40:5: `string` owns storage that is released at scope exit, so it is move-only (D-183): copying it here would leave two owners and one double free. Write `move(...)` to transfer it (invalidating the source), take an explicit copy with `.clone()`, or build the value in place — a temporary has no second name to invalidate
+
+--- case4_use_after_free @ 0dfddac
+$ /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/0dfddac/npkc tests/probe/defect/generic_owning_copy/case4_use_after_free.npk -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case4_use_after_free.0dfddac.ll
+  exit=0   build/gotx/case4_use_after_free.0dfddac.ll = 857032 B
+$ llc -O0 -filetype=obj -relocation-model=static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case4_use_after_free.0dfddac.ll -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case4_use_after_free.0dfddac.o
+  exit=0   build/gotx/case4_use_after_free.0dfddac.o = 533408 B
+$ ld.lld -static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case4_use_after_free.0dfddac.o /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/0dfddac/npkrt.o -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case4_use_after_free.0dfddac
+  exit=0   build/gotx/case4_use_after_free.0dfddac = 508528 B
+$ /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case4_use_after_free.0dfddac
+  exit=170
+
+--- case1_generic_bare_copy @ 950bb1d
+$ /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/950bb1d/npkc tests/probe/defect/generic_owning_copy/case1_generic_bare_copy.npk -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.950bb1d.ll
+  exit=0   build/gotx/case1_generic_bare_copy.950bb1d.ll = 430786 B
+$ llc -O0 -filetype=obj -relocation-model=static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.950bb1d.ll -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.950bb1d.o
+  exit=0   build/gotx/case1_generic_bare_copy.950bb1d.o = 263032 B
+$ ld.lld -static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.950bb1d.o /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/950bb1d/npkrt.o -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.950bb1d
+  exit=0   build/gotx/case1_generic_bare_copy.950bb1d = 265136 B
+$ /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.950bb1d
+  exit=0
+
+--- case2_concrete_bare_copy @ 950bb1d
+$ /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/950bb1d/npkc tests/probe/defect/generic_owning_copy/case2_concrete_bare_copy.npk -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case2_concrete_bare_copy.950bb1d.ll
+  exit=1   build/gotx/case2_concrete_bare_copy.950bb1d.ll = ABSENT
+  | NITPICK-TYPE-046 tests/probe/defect/generic_owning_copy/case2_concrete_bare_copy.npk:40:5: `string` owns storage that is released at scope exit, so it is move-only (D-183): copying it here would leave two owners and one double free. Write `move(...)` to transfer it (invalidating the source), take an explicit copy with `.clone()`, or build the value in place — a temporary has no second name to invalidate
+
+--- case4_use_after_free @ 950bb1d
+$ /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/950bb1d/npkc tests/probe/defect/generic_owning_copy/case4_use_after_free.npk -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case4_use_after_free.950bb1d.ll
+  exit=0   build/gotx/case4_use_after_free.950bb1d.ll = 433216 B
+$ llc -O0 -filetype=obj -relocation-model=static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case4_use_after_free.950bb1d.ll -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case4_use_after_free.950bb1d.o
+  exit=0   build/gotx/case4_use_after_free.950bb1d.o = 263720 B
+$ ld.lld -static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case4_use_after_free.950bb1d.o /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/950bb1d/npkrt.o -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case4_use_after_free.950bb1d
+  exit=0   build/gotx/case4_use_after_free.950bb1d = 265648 B
+$ /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case4_use_after_free.950bb1d
+  exit=170
+
+--- case1_generic_bare_copy @ 94874ce
+$ /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/94874ce/npkc tests/probe/defect/generic_owning_copy/case1_generic_bare_copy.npk -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.94874ce.ll
+  exit=0   build/gotx/case1_generic_bare_copy.94874ce.ll = 465539 B
+$ llc -O0 -filetype=obj -relocation-model=static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.94874ce.ll -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.94874ce.o
+  exit=0   build/gotx/case1_generic_bare_copy.94874ce.o = 271352 B
+$ ld.lld -static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.94874ce.o /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/94874ce/npkrt.o -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.94874ce
+  exit=0   build/gotx/case1_generic_bare_copy.94874ce = 275336 B
+$ /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case1_generic_bare_copy.94874ce
+  exit=0
+
+--- case2_concrete_bare_copy @ 94874ce
+$ /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/94874ce/npkc tests/probe/defect/generic_owning_copy/case2_concrete_bare_copy.npk -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case2_concrete_bare_copy.94874ce.ll
+  exit=1   build/gotx/case2_concrete_bare_copy.94874ce.ll = ABSENT
+  | NITPICK-TYPE-046 tests/probe/defect/generic_owning_copy/case2_concrete_bare_copy.npk:40:5: `string` owns storage that is released at scope exit, so it is move-only (D-183): copying it here would leave two owners and one double free. Write `move(...)` to transfer it (invalidating the source), take an explicit copy with `.clone()`, or build the value in place — a temporary has no second name to invalidate
+
+--- case4_use_after_free @ 94874ce
+$ /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/94874ce/npkc tests/probe/defect/generic_owning_copy/case4_use_after_free.npk -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case4_use_after_free.94874ce.ll
+  exit=0   build/gotx/case4_use_after_free.94874ce.ll = 468267 B
+$ llc -O0 -filetype=obj -relocation-model=static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case4_use_after_free.94874ce.ll -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case4_use_after_free.94874ce.o
+  exit=0   build/gotx/case4_use_after_free.94874ce.o = 272136 B
+$ ld.lld -static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case4_use_after_free.94874ce.o /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/94874ce/npkrt.o -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case4_use_after_free.94874ce
+  exit=0   build/gotx/case4_use_after_free.94874ce = 275960 B
+$ /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/gotx/case4_use_after_free.94874ce
+  exit=170
+
+END OF TRANSCRIPT

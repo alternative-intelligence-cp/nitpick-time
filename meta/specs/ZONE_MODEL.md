@@ -67,21 +67,47 @@ version of `ntime`, never a patch, because it changes computed answers.
 
 ## 3. The table, and its measured size
 
-**Measured on the workbench against tzdata 2026c**, over the canonical zones
-only (symlinks and the `posix/` and `right/` trees excluded):
+**MEASURED, at cycle 0.0.5 (TM-135), against tzdata 2026c**, over the canonical
+zones only (symlinks and the `posix/` and `right/` trees excluded). The four
+tables and two pools were emitted as real Nitpick source, compiled, linked and
+run, and the bytes below were read off the object with `nm -S` rather than
+computed:
 
-| | |
-|---|---|
-| canonical zones | 447 |
-| transitions, all zones | 26 838 |
-| local-time types | 2 484 |
-| largest single zone | `Europe/London`, 242 transitions |
-| **estimated compiled size** | **≈ 348 KiB** |
+| | measured | the 0.0.3 estimate |
+|---|---|---|
+| canonical zones | 447 | 447 |
+| transitions, all zones | **27 183** (the v2+ block) | 26 838 (the v1 block) |
+| local-time types | **2 513** | 2 484 |
+| largest single zone | **`Asia/Hebron`, 310** | `Europe/London`, 242 |
+| `#size_of<ZoneTransition>` | **16** | 12 |
+| `#size_of<ZoneType>` | 8 | 8 |
+| `#size_of<ZoneEntry>` | **28** | 16 |
+| `#size_of<PosixRule>` | **32** | — |
+| **the four tables and two pools** | **475 006 B = 463.9 KiB** | ≈ 356 119 B |
+| **the same, with `POSIX_RULES`** | **489 310 B = 477.8 KiB** | not estimated |
 
-That is the whole database, every zone, in a static binary. Cycle 0.5
-re-measures against what the generator actually emits and records the real
-number; this estimate exists so that the decision in §1 was made against a
-number rather than a fear.
+434 928 (`TRANSITIONS`) + 20 104 (`TYPES`) + 12 516 (`ZONES`) + 6 592
+(`NAME_POOL`) + 866 (`ABBR_POOL`) = **475 006**, plus 14 304 for 447
+`PosixRule` rows.
+
+That is the whole database, every zone, in a static binary — **37% above the
+estimate and still inside the budget `0.0.5.md` §3 set in advance**, which is
+what a threshold decided before the measurement is for. Four things the
+estimate got wrong, all four in the same direction: two row widths derived from
+field sums instead of measured, the transition count read from the v1 block
+that stops at 2038, and no abbreviation pool at all. TM-135 has each with its
+number.
+
+**Rule Z-7b (TM-135) — the margin is part of the answer.** The gap to
+`0.0.5.md` §3's next threshold is **22 690 bytes, which is 1 418 transitions**
+— about 4.4%. tzdata adds transitions at every release, so cycle 0.5's
+regeneration check re-measures this number and `COMPAT.md` carries it, rather
+than anyone assuming the headroom is large.
+
+**And there are two pools, not one.** Zone names need no terminator because
+`ZoneEntry` carries `name_len`; `ZoneType.abbr_offset` has no length beside it,
+so the abbreviation pool is NUL-terminated. 187 distinct abbreviations, 866
+bytes.
 
 **Rule Z-7 — the representation is four flat tables plus a name pool**, which
 is the shape TZif itself uses and the shape the sibling library's range tables
@@ -234,8 +260,11 @@ see because it only checks the table against itself.
 
 ## 8. Open items
 
-- **O-Z1 — whether to ship every zone or a selectable subset.** §3's measured
-  348 KiB says ship them all, and a subset would be a build-configuration knob
-  the ecosystem does not have. **Open by design until cycle 0.5 measures the
-  real emitted size**; if it comes in above ~1 MiB the question is real again,
-  and the fallback is stated there rather than invented then.
+- ~~**O-Z1 — whether to ship every zone or a selectable subset.**~~
+  **SETTLED at cycle 0.0.5 by TM-135: ship them all.** §3's measured **477.8
+  KiB** is inside the first of `0.0.5.md` §3's three bands, decided before the
+  measurement was taken, so the fallbacks it named — dropping the pre-1900 LMT
+  transitions (Z-13), delta-encoding the transition times, or a build-time zone
+  subset — are not reached. The question stays written here rather than deleted
+  because the margin is 4.4% (Z-7b) and a later release could reopen it; it
+  reopens against a number, not a fear.

@@ -58,9 +58,12 @@ mod:lib;
 // whether it should be public at all -- which is the whole reason the umbrella
 // is written by hand rather than globbed.
 
-// `Vec<T>` -- FOR A NON-OWNING `T`. See `core/vec.npk`'s header and TM-132:
-// at an owning `T` the element-drop path cannot be written generically at this
-// pin (O-N17), and the restriction is stated rather than approximated.
+// `Vec<T>` -- FOR A NON-OWNING `T`. See `core/vec.npk`'s header, TM-132 and
+// TM-136. O-N17 -- the defect the restriction was first written against -- is
+// FIXED at pin `aaffb87`, and the restriction stands anyway: `NITPICK-TYPE-046`
+// does not fire inside a generic body, so a function here that read an owning
+// element without `move` would ship two owners of one body at exit 0 with
+// nothing to catch it (`SAFETY.md` S-18d).
 pub use "./core/vec.npk".Vec;
 pub use "./core/vec.npk".vec_init;
 pub use "./core/vec.npk".vec_reserve;

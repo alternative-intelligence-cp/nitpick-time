@@ -1,10 +1,26 @@
-# `generic_element_move` — O-N17
+# `generic_element_move` — O-N17, **FIXED at pin `aaffb87`**
 
 **A generic function that moves *out of* an indexed element, at an owning `T`,
-emits a call to a `@npk.vacant.<dty>` helper that is never defined.** `npkc`
-exits **0** and writes the `.ll`; `llc` exits **1** and writes no object.
+emitted a call to a `@npk.vacant.<dty>` helper that was never defined.** `npkc`
+exited **0** and wrote the `.ll`; `llc` exited **1** and wrote no object.
 
-Raised by cycle **0.0.4**, 2026-09-05, at pin `0dfddac`.
+Raised by cycle **0.0.4**, 2026-09-05, at pin `0dfddac`. **Fixed in the
+compiler's 1.5.2d close and verified here by cycle 0.0.5 on 2026-09-05: all
+five cases compile, assemble, link and run at exit 0.** `TRANSCRIPT.txt`
+PART D has the landing run, appended rather than substituted; PART A is still
+`0dfddac`'s record and still true of that toolchain. Both `case1` and `case5`
+now carry `// expect-exit: 0` and neither is in `EXPECT_EXEMPT` any more.
+
+> **THE FIX DOES NOT MAKE `Vec<T>` SAFE AT AN OWNING `T`, and cycle 0.0.5 went
+> looking.** Two things measured in the same hour stand in the way. The
+> library's own spelling of the drop loop — one hoisted `#wild_slice` binding
+> and `move(s[i])` inside a loop — is **refused `NITPICK-MOVE-001`**, because
+> moving out of an element invalidates the binding the element was reached
+> through and the next iteration reads it again (it is refused at `T = int64`
+> too, so it is a move-tracker rule and not an ownership one). And a **bare**
+> read of an owning element in a generic body is accepted with no diagnostic at
+> all, which is a second and worse defect: `../generic_owning_copy/`. TM-136
+> keeps the restriction and says why the reason has changed rather than gone.
 
 > **Filed first as `O-N12`, which was already taken** — that is
 > `nitpick-regex`'s settled `>>>`/`string_repeat` question in the workbench
@@ -12,8 +28,11 @@ Raised by cycle **0.0.4**, 2026-09-05, at pin `0dfddac`.
 > orchestrator, corrected across all 10 citations in this repository.
 > `TRANSCRIPT.txt`'s header records the correction rather than hiding it.
 
-**It blocks one row of `0.0.4.md` §2's API table — `vec_pop<T>` — and that row
-is HELD, not written another way.** Returning `NIL`, or restricting it to a
+**It blocked one row of `0.0.4.md` §2's API table — `vec_pop<T>` — and that row
+was HELD, not written another way.** *(Superseded twice and both are recorded:
+TM-132 measured the extent at **five** rows, and TM-136 found at 0.0.5 that
+`vec_pop<T>`'s shipped body was wrong for an unrelated reason — a bare read
+where a `move` belonged.)* Returning `NIL`, or restricting it to a
 scalar `T` "for symmetry with `vec_at`", would be a workaround buried in
 library code that outlives the bug and reads, later, as a design choice nobody
 would question. The rest of 0.0.4 was built; see `0.0.4.md` §2's table, where
@@ -62,12 +81,16 @@ one it does not.
 
 ## The files
 
-| File | What it is | `npkc` | `llc` | run |
-|---|---|---|---|---|
-| `case1_generic_move_out.npk` | **the defect** — generic, owning `T`, move out | 0 | **1** | — |
-| `case2_concrete_move_out.npk` | control: the same move in a **concrete** function | 0 | 0 | 0 |
-| `case3_generic_scalar.npk` | control: the same **generic** function at a scalar `T` | 0 | 0 | 0 |
-| `case4_generic_move_in.npk` | control: generic, owning `T`, move **in** | 0 | 0 | 0 |
+Two columns, because the whole point of this directory is that they differ.
+`0dfddac` is PART A's record; `aaffb87` is PART D's.
+
+| File | What it is | `0dfddac`: `npkc` / `llc` / run | `aaffb87`: `npkc` / `llc` / run |
+|---|---|---|---|
+| `case1_generic_move_out.npk` | **the defect** — generic, owning `T`, move out | 0 / **1** / — | 0 / 0 / **0** |
+| `case2_concrete_move_out.npk` | control: the same move in a **concrete** function | 0 / 0 / 0 | 0 / 0 / 0 |
+| `case3_generic_scalar.npk` | control: the same **generic** function at a scalar `T` | 0 / 0 / 0 | 0 / 0 / 0 |
+| `case4_generic_move_in.npk` | control: generic, owning `T`, move **in** | 0 / 0 / 0 | 0 / 0 / 0 |
+| `case5_generic_drop_loop.npk` | the **extent** — move out and drop in a loop (TM-132) | 0 / **1** / — | 0 / 0 / **0** |
 
 `TRANSCRIPT.txt` has every command with its exit status **beside the artefact it
 should have produced**, the emitted IR at the fault, and the arm-bill
@@ -76,19 +99,30 @@ measurement TM-129 rests on.
 The three controls place the fault at exactly one combination — **generic**,
 **owning**, **move-out** — and no two of them.
 
-## Why `case1` carries no `expect-` marker
+## Why `case1` carried no `expect-` marker, and why it carries one now
 
-Because none is spellable. `expect-error:` is false — `npkc` accepts it.
-`expect-exit:` is false — it never links. It is named in `harness/run.py`'s
-`EXPECT_EXEMPT` with that reason, which is the only honest bucket the header
-sweep has (TM-115, V-1c), and the exemption list is diffed in both directions,
-so **when the defect lands, the exemption fails until somebody removes it** and
-gives the file its `// expect-exit: 0`. The gap closes itself.
+Because none was spellable. `expect-error:` was false — `npkc` accepted it.
+`expect-exit:` was false — it never linked. It was named in `harness/run.py`'s
+`EXPECT_EXEMPT` with that reason, which was the only honest bucket the header
+sweep had (TM-115, V-1c).
 
-This is the same bucket `missing_failsafe/case1_no_failsafe.npk` was in before
+**The sentence that used to be here said the gap would close itself, and it
+would not have.** It read: *"the exemption list is diffed in both directions,
+so when the defect lands, the exemption fails until somebody removes it."* That
+diff checked **only that the named file still existed**. O-N17 landed at
+`aaffb87`; `case1` and `case5` went from stopping at `llc` to running clean;
+the full suite was **GREEN, 40 units, 0 failures**, with both stale entries in
+place, and nothing anywhere said so. Found by cycle 0.0.5 while removing them
+by hand. `check_exemptions_live` now records each exemption's **verdict** —
+`npkc`, `llc`, `ld`, `run:<code>` or `none` — and re-derives it on every full
+run, so the next expiry is a red run rather than a thing somebody notices.
+TM-137.
+
+This was the same bucket `missing_failsafe/case1_no_failsafe.npk` was in before
 DEF-5 landed, and for the same reason — with one difference worth noting: that
 file carried *no* marker and *no* exemption for two days, which is the hole
-TM-115 was written about. This one is named from the hour it was committed.
+TM-115 was written about. This one was named from the hour it was committed,
+and the hole that remained was in the exemption's own expiry.
 
 ## What it does **not** block
 

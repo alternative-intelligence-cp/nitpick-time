@@ -1,12 +1,23 @@
-// NO `expect-` MARKER IS SPELLABLE FOR THIS FILE, AND THAT IS THE DEFECT.
-// `npkc` ACCEPTS it at exit 0 and `llc` then refuses the IR, so there is
-// neither an exit code nor a diagnostic to expect. It is named in
-// `harness/run.py`'s `EXPECT_EXEMPT` with that reason, which is the only
-// honest bucket the sweep has for it (TM-115, V-1c). When the defect lands
-// the marker becomes `// expect-exit: 0`, the exemption goes, and the sweep's
-// both-directions diff makes removing it compulsory rather than optional.
+// expect-exit: 0
 //
-// THE DEFECT (O-N17, raised 2026-09-05 at pin `0dfddac`).
+// O-N17 HAS LANDED, AND THIS MARKER IS THE PROOF. Until pin `aaffb87` this
+// file carried no marker and could carry none: `npkc` accepted it at exit 0
+// and `llc` then refused the IR, so neither an exit code nor a diagnostic was
+// true of it, and it lived in `harness/run.py`'s `EXPECT_EXEMPT` instead. At
+// `aaffb87` it compiles, assembles, links and runs clean, so it is an
+// ordinary member of the sweep again and the exemption is gone (TM-137).
+//
+// THE EXEMPTION DID NOT REMOVE ITSELF, WHICH IS THE OTHER HALF OF TM-137.
+// The entry claimed that on the day the defect landed it would "fail the
+// both-directions diff until somebody deletes it". That diff checked only
+// that the named file still EXISTED. O-N17 landed, this file went from
+// stopping at `llc` to running clean, and the suite stayed GREEN with the
+// stale entry in place. `check_exemptions_live` now re-derives every
+// exemption's recorded verdict on every full run, so the next one expires
+// loudly.
+//
+// THE DEFECT AS IT WAS (O-N17, raised 2026-09-05 at pin `0dfddac`, FIXED at
+// `aaffb87` — the text below is kept in the past tense it deserves).
 //
 // A GENERIC function that MOVES OUT OF an indexed element, instantiated at an
 // OWNING `T`, emits a call to a `@npk.vacant.<dty>` helper whose body is never

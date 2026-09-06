@@ -1,9 +1,10 @@
-// NO `expect-` MARKER, AND NONE IS SPELLABLE -- the same bucket as `case1`, for
-// the same reason, and named in `harness/run.py`'s `EXPECT_EXEMPT` with it.
-// `npkc` ACCEPTS this at exit 0 and writes the `.ll`; `llc` then refuses the
-// IR. So `expect-error:` is false and `expect-exit:` is false. The expectation
-// lives in `TRANSCRIPT.txt` until O-N17 lands, at which point the exemption's
-// both-directions diff makes removing it compulsory rather than optional.
+// expect-exit: 0
+//
+// O-N17 HAS LANDED (pin `aaffb87`), so this file leaves `EXPECT_EXEMPT` with
+// `case1` and by the mechanism that entry described — except that the
+// mechanism did not work and had to be built: see `case1`'s header and
+// TM-137. Until then `npkc` accepted this at exit 0 and `llc` refused the IR,
+// so neither `expect-error:` nor `expect-exit:` was true of it.
 //
 // THE EXTENT OF O-N17 (added 2026-09-05, TM-132). `case1` moves an element OUT
 // AND RETURNS IT -- the `vec_pop<T>` shape. This file moves elements out AND

@@ -1,0 +1,65 @@
+// expect-exit: 11
+//
+// CASE 5 -- THE LIBRARY'S OWN `vec_at<T>`, AND THIS ONE IS NOT A COMPILER
+// DEFECT. It is the language behaving as specified, producing a result the
+// library's own header claimed was impossible.
+//
+// `src/core/vec.npk`'s `vec_at<T>` ends `pass s[i];`. `pass` of a PLACE at an
+// owning type MOVES IMPLICITLY -- specified, and the compiler's own note on
+// the 1.2.2 sweep counts the 146 sites that stopped needing an explicit
+// `move` when it did. So at `T = string` the emitted body loads the element,
+// stores `zeroinitializer` over the slot and calls `npk.vacant.<dty>` on it:
+// the element is REMOVED from the `Vec` by a function called `at`, and
+// `count` is not touched, so the container still says it holds one.
+//
+// THE MARKER IS ASSERTED, unlike case1's and case4's, and the difference is
+// the point: this behaviour is CORRECT and will not change when the TYPE-046
+// gap closes, so committing it as an expectation commits a true statement
+// about the language rather than a bug. If a later pin makes `vec_at` a
+// non-destructive read, this file goes red and somebody reads why.
+//
+//   exit 11 = the second read saw a length-0 string -> `vec_at` is DESTRUCTIVE
+//   exit 0  = both reads saw 11 bytes               -> `vec_at` is a read
+//   exit 20 = the FIRST read was already wrong      -> the probe is wrong
+//   exit 21 = `count` moved                         -> the probe is wrong
+//
+// WHAT IT CHANGES. `src/core/vec.npk`'s header said, of `vec_at`, "at an
+// owning `T` a copy is refused by TYPE-046". That is false in both halves:
+// nothing refuses it, and what happens instead is not a copy. Corrected at
+// 0.0.5 by TM-136, in the same commit as this file.
+mod:case5_vec_at_destructive;
+
+use "../../../../src/core/vec.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    Vec<string>:v = raw vec_init::<string>(2i64);
+    drop vec_push(@v, string_concat("Europe/", "Kyiv"));   // 11 bytes
+
+    string:a = raw vec_at::<string>(@v, 0i64);
+    int64:na = string_byte_length(a);
+    if (na != 11i64) { exit 20i32; }
+
+    // `vec_at` does not touch `count`, so the container still claims one
+    // element. Read the same index again.
+    if (v.count != 1i64) { exit 21i32; }
+    string:b = raw vec_at::<string>(@v, 0i64);
+    int64:nb = string_byte_length(b);
+
+    drop vec_free(@v);
+    if (nb == 0i64)  { exit 11i32; }
+    if (nb == 11i64) { exit 0i32; }
+    exit 12i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

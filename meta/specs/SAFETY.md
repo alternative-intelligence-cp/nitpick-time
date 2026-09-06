@@ -540,6 +540,29 @@ a generic function has no scope in which a bare `T` may simply die. S-18's "so
 `exit 0` never trips D-151" is therefore a statement about the block alone —
 correct, and not the whole obligation.
 
+**Rule S-18d (TM-136) — THE RESTRICTION IS NOT ENFORCEABLE BY THE COMPILER,
+AND THAT IS WHY IT STAYS.** S-18b puts element lifetime at the instantiation
+and TM-132 restricted `Vec<T>` to a non-owning `T` because O-N17 blocked the
+generic drop path. **O-N17 is fixed** at pin `aaffb87` — all five reproduction
+cases link and run. The restriction stands anyway, on a measurement taken in
+the same hour: **`NITPICK-TYPE-046` does not fire inside a generic function
+body.** `T:answer = s[i]` at an owning `T` — a copy of an owner, which that
+diagnostic exists to refuse — is accepted at exit 0, links, runs, and produces
+two owners of one heap body; the identical statement with `string` written out
+is refused. Reading through the second owner after the first has dropped
+returns the allocator's `0xAA` poison, exit **170**
+(`tests/probe/defect/generic_owning_copy/`, reproduced at all four pins this
+workbench has used).
+
+So a `Vec<T>` advertised as safe at an owning `T` would rest on the author
+never writing a bare read, with **no compiler check and no leak gate behind
+it** — D-151 counts `wild` blocks and cannot see a managed body (TM-106). Two
+rows were already wrong when this was found: `vec_pop<T>` shipped the bare read
+and now writes the `move`, and **`vec_at<T>` at an owning `T` REMOVES the
+element** — `pass` of a place moves implicitly, `count` is untouched, and a
+second read of the same index returns a length-0 string (exit **11**). The last
+of those is the language behaving as specified; the first was ours.
+
 **Rule S-18c (TM-127) — OVERWRITING an element discards one too, so the
 obligation covers `vec_set` and not only the three that sound like it does.**
 S-18b and `0.0.4.md` §2 both name three entries that discard elements —

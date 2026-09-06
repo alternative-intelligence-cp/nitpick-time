@@ -2507,3 +2507,304 @@ says so rather than leaving a bare `=>!`.
   records and reports rather than fixes.
 - **Use `9223372036854775807u64 * 2u64 + 1u64`.** It traps for the same reason,
   and it is arithmetic a reader has to verify instead of a name.
+
+### TM-135 — the compiled tzdb is 475 006 bytes of read-only data, not ≈348 KiB; the estimate was wrong in four independent ways and `ZONE_MODEL.md` §3 is amended
+**2026-09-05, cycle 0.0.5. Closes O-X2, settles O-Z1, amends `ZONE_MODEL.md`
+§3 and `meta/research/tzdb-size.md`.**
+
+**The measurement.** A real zone table was emitted from tzdata **2026c** at
+`/usr/share/zoneinfo` — the release `ZONE_MODEL.md` Z-4 pins and the one the
+estimate was taken from, so the two numbers are comparable — compiled, linked
+and run. The spike is `meta/scratch/tzdb_spike/` (P-28: throwaway, and named
+throwaway); `TRANSCRIPT.txt` there has every command with its exit status
+beside the artefact it produced.
+
+**The tables, read off the object with `nm -S` rather than computed:**
+
+| symbol | bytes | = rows × width |
+|---|---|---|
+| `TRANSITIONS` | 434 928 | 27 183 × 16 |
+| `TYPES` | 20 104 | 2 513 × 8 |
+| `ZONES` | 12 516 | 447 × 28 |
+| `NAME_POOL` | 6 592 | 6 592 × 1 |
+| `ABBR_POOL` | 866 | 866 × 1 |
+| **total** | **475 006** | **463.9 KiB** |
+
+434 928 + 20 104 + 12 516 + 6 592 + 866 = **475 006**, and every one of the five
+symbols is `R` in `nm` — read-only data, global.
+
+**With `POSIX_RULES` at its real cardinality** — 447 rows of 32 bytes = 14 304,
+emitted with placeholder contents because Z-12's footer parsing is 0.5's work
+and only the row *width* matters to a size question — the total is **489 310 B
+= 477.8 KiB**.
+
+**The three artefact sizes P-29 asks for**, four-table variant, three runs each
+and the object byte-identical every time:
+
+| | four tables | + `POSIX_RULES` |
+|---|---|---|
+| emitted `.npk` | 2 040 106 B | 2 156 824 B |
+| emitted `.ll` | 1 900 429 B | 1 956 382 B |
+| **object (`.o`)** | **510 872 B** | **525 600 B** |
+| linked static binary | 543 432 B | 558 064 B |
+| `npkc` | 0, 1.28–1.39 s, 28 160–28 352 KiB | 0, 1.39–1.42 s, ~31 660 KiB |
+| `llc` | 0, 0.07–0.08 s | 0, 0.07–0.08 s |
+
+**The `.ll` byte count is the one number here that is not stable, and the
+reason is worth knowing:** it embeds `npk.site.paths`, so moving the emitted
+file between two directories whose names differ by one character changed it by
+exactly 14 bytes — one per site — while the object and the binary did not move
+at all. Quote the object; treat the `.ll` figure as approximate.
+
+**THE OBJECT IS NOT THE TABLES, and the control says by how much.** The same
+program emitted at **one** zone gives an object of 36 096 B carrying 82 B of
+tables. So the program-and-prelude share is 36 096 − 82 = **36 014 B**, against
+510 872 − 475 006 = **35 866 B** taken the other way: two independent routes to
+the same overhead, agreeing to 148 B. In the linked binary the same subtraction
+gives 68 414 and 68 426, agreeing to 12 B. **The tables cost the same 475 006
+bytes in the object and in the binary**, because they are `.rodata` and are
+copied verbatim.
+
+**The four ways the estimate was wrong**, each measured:
+
+1. **`#size_of<ZoneTransition>` is 16, not 12** — the estimate summed field
+   widths. `PLAYBOOK.md` says never to; it was done anyway, and this is the
+   largest table.
+2. **`#size_of<ZoneEntry>` is 28, not 16** — same cause, worse ratio. Six
+   fields totalling 22 bytes, aligned to 28.
+3. **The transition count is 27 183, not 26 838** — the estimate read the v1
+   block, which stops at 2038 by construction. `meta/research/tzdb-size.md`
+   predicted this direction and not its size. Types are 2 513, not 2 484; the
+   largest zone is `Asia/Hebron` at 310, not `Europe/London` at 242.
+4. **There was no abbreviation pool at all.** The estimate's "name pool | 7 039"
+   is the zone names plus a NUL each (6 592 + 447 = 7 039). `ZoneType`'s
+   `abbr_offset` needs a second pool; it is 866 bytes NUL-terminated, and the
+   zone-name pool needs no NULs because `ZoneEntry` carries `name_len`.
+
+**The zone count is 447 and the relation is worth writing down**, because the
+first sweep here returned 446: 447 = 446 + `Factory`, a real TZif file the
+distribution ships and `zoneinfo` resolves, excluded by name in the first pass.
+Denominator: 600 files outside `posix/` and `right/` = 447 non-symlink TZif +
+153 symlinks (Z-10 resolves links at generation time) + the metadata files.
+
+**THE VERDICT AGAINST `0.0.5.md` §3's THRESHOLDS: row one.** 477.8 KiB is at or
+under ~500 KiB, so **TM-007 stands, O-X2 closes, O-Z1 is settled as "ship them
+all", and cycle 0.5 proceeds.** The estimate was low by 37% and the decision it
+supported survives it, which is the outcome a spike is for.
+
+**And the margin is stated rather than left to be discovered.** The gap to the
+row-two boundary is 512 000 − 489 310 = **22 690 bytes, which is 1 418
+transitions at 16 bytes a row** — about 4.4%. tzdata adds transitions at every
+release. A future bump does not silently cross that line: `0.5`'s regeneration
+check re-measures, and the number belongs in `COMPAT.md` when the generator
+lands.
+
+**Read-only, and no startup cost, confirmed at the real scale** — probe 04's
+question, which it could only answer at 300 rows because answering it at 30 000
+cost 281 s and 30.9 GiB before O-N4 landed:
+
+- all five (six with `POSIX_RULES`) table symbols are `= constant` in the IR,
+  never `= global`;
+- `llvm.global_ctors` appears **0** times, and no `^@… = global ` line exists
+  at all;
+- in the object, `.rodata` is 484 576 B with flags `A` and not `W`;
+- in the linked binary, `.rodata` is 485 312 B with flags `AM`, `.data` is
+  **112 B** and `.bss` is 696 B — there is no room in either for a table, let
+  alone a routine that fills one.
+
+**The instrument was commissioned before it was believed**, positive and
+negative: five zones emit, compile and run clean printing `swept 101`, the
+domain its header declares; the same file with one row's clock wound backwards
+exits **23** on Z-8's strictly-increasing invariant; and the same file with one
+zone's `trans_count` understated by three exits **24** and prints no `swept`
+line at all.
+
+*Alternatives declined:*
+
+- **Report the object size (510 872 B) as the answer.** It is the program's as
+  well as the tables', and P-29's question is what a consumer pays for the
+  database. The symbol sizes answer that exactly and the baseline control
+  proves the split.
+- **Emit `posix_rule: -1` everywhere and stop there, as `0.0.5.md` §2 step 2
+  says.** The step is right that the footer must not be *parsed* here; it would
+  have left the measurement short by a whole table, and a size answer that
+  omits 14 304 bytes of a 500 KiB budget with a 22 690-byte margin is the shape
+  of error this spike exists to prevent. Both numbers are reported.
+
+### TM-136 — `NITPICK-TYPE-046` is not enforced inside a generic body; `vec_pop<T>` shipped a duplicate owner, `vec_at<T>` is destructive, and TM-132's restriction stands for a NEW reason
+**2026-09-05, cycle 0.0.5. Amends `SAFETY.md` S-18, `src/core/vec.npk`,
+`src/lib.npk` and `0.0.4.md` §2's API table. Does not supersede TM-132: that
+decision's conclusion survives and its premise is replaced.**
+
+**What was believed.** TM-132 restricted `Vec<T>` to a non-owning `T` because
+O-N17 blocked the generic element-drop path. **O-N17 is fixed at pin
+`aaffb87`** — all five reproduction cases compile, assemble, link and run at
+exit 0 (`tests/probe/defect/generic_element_move/TRANSCRIPT.txt` PART D) — so
+the reason had expired and the restriction was expected to lift.
+
+**It does not lift, and two measurements say why.**
+
+**1. The library's own spelling of the drop loop is REFUSED.** One hoisted
+`#wild_slice` binding with `move(s[i])` inside a loop is `NITPICK-MOVE-001`,
+*"this binding was moved out of and is invalid until it is assigned again"* —
+moving out of an element invalidates the binding it was reached **through**,
+and the next iteration reads that binding again. The boundary, measured with
+controls:
+
+| shape | `npkc` | artefact |
+|---|---|---|
+| hoisted slice, `move(s[i])` in a loop, `T = string` | **1** | none — `MOVE-001` |
+| the same at **`T = int64`** | **1** | none — the *same* `MOVE-001` |
+| `move(v.items[i])` in a loop, bare pointer, `T = string` | 0 | `.ll`, `.o`, links, exit 0 |
+| `move(s[i])` **once**, no loop, `T = string` | 0 | links, exit 0 |
+| the slice **re-made inside** the loop body, `T = string` | 0 | links, exit 0 |
+
+It fires at a scalar too, so it is a move-tracker granularity rule and not an
+ownership one, and it is not obviously a defect. A spelling that works exists —
+re-make the slice per iteration — and it keeps TM-129's bounds guard, which
+`move(v.items[i])` would lose.
+
+**2. And the one that decides it: `NITPICK-TYPE-046` DOES NOT FIRE INSIDE A
+GENERIC BODY.** `T:answer = s[i]` at an owning `T` is a copy of an owner, and:
+
+| case | shape | `npkc` | run |
+|---|---|---|---|
+| `case1` | GENERIC, owning `T`, bare read | **0**, links | **0** |
+| `case2` | CONCRETE, `string` spelled out, same statement | **1**, no `.ll` | — |
+| `case3` | GENERIC at `T = int64` | 0, links | 0 |
+| `case4` | `case1`'s duplicate, first owner dropped, second read | 0, links | **170** |
+
+Exit 170 is the allocator's `0xAA` poison (D-183): a **use-after-free**, at
+exit 0 from every stage of the toolchain. `case2`'s diagnostic is the sentence
+`case1` is not told — *"copying it here would leave two owners and one double
+free"*. Reproduction and mechanism: `tests/probe/defect/generic_owning_copy/`.
+The mechanism is `require_move_if_owning`'s early return when `type_drops` is
+false, which it is of an unsubstituted `T`; it was read at the pin and then
+**produced**, in that order.
+
+**It is not a regression at this pin.** The same pair was run at `0dfddac`,
+`950bb1d` and `94874ce`: `case1` accepted and `case2` refused at all four, and
+`case4` reads the poison at `0dfddac` too. What changed at `aaffb87` is that
+O-N17's fix lets the owning instantiation reach the linker, so the consequence
+became *runnable* rather than only readable off the IR.
+
+**THE EXTENT, WHICH IS A SEPARATE MEASUREMENT FROM THE EXISTENCE.** All nine
+rows instantiated at `T = string` against the real `src/core/vec.npk`; **all
+nine compile, link and run at exit 0**, which is exactly why the exit code
+decides nothing here:
+
+| row | body | at an owning `T` |
+|---|---|---|
+| `vec_init` | allocates a block | correct |
+| `vec_reserve` | `into[i] = from[i]` | copies handles, old block freed → one owner. **Correct by accident**: 0 vacate and 0 drop calls in the whole emitted body |
+| `vec_push` | `room[count] = move(x)` | correct |
+| `vec_at` | `pass s[i]` | **DESTRUCTIVE** — see below |
+| `vec_set` | `s[i] = move(x)` | leaks the outgoing element (S-18c, known) |
+| `vec_pop` | `T:answer = s[i]` | **DUPLICATE OWNER** (`case1`/`case4`) |
+| `vec_truncate`, `vec_clear` | lower `count` | leak (S-18b, known) |
+| `vec_free` | `dalloc` only | leak (S-18b, known) |
+
+Two rows are new and neither is a leak. **`vec_at<T>` at an owning `T` REMOVES
+the element**: `pass` of a place at an owning type moves implicitly, so the
+emitted body stores `zeroinitializer` over the slot and calls `npk.vacant`,
+while `count` is untouched — a second `vec_at` of the same index returns a
+length-0 string (`case5_vec_at_destructive.npk`, exit **11**). That is the
+language behaving as specified and is **not** a defect; what was wrong is this
+repository's comment beside it, which said *"at an owning `T` a copy is refused
+by TYPE-046"* — false in both halves at every pin.
+
+**The decision, in three parts.**
+
+*1. `Vec<T>` remains restricted to a NON-OWNING `T`, and the reason is now that
+the compiler cannot police the type the lift would open. A future function here
+that reads an owning element without `move` compiles, links, runs and exits 0,
+and nothing in this repository or in `npkc` would say a word. Lifting on a
+house rule — "always write `move`" — is precisely what
+`compiler-defects-block-not-house-rules` says not to do, and the leak gate
+cannot catch it either, because D-151 counts `wild` blocks and a `string` body
+is managed (TM-106).*
+
+*2. `vec_pop<T>` gets the `move` that always belonged there.* `T:answer =
+move(s[v.count - 1i64])`. This is not a workaround for the missing check: a pop
+**transfers** ownership, the `move` is the correct spelling at any `T`, it costs
+nothing at a scalar, and the emitted body now stores `zeroinitializer` and calls
+`npk.vacant.3` on the slot where it previously left the pointer. All nine rows
+still build and run at `T = string` and at `T = int64`, and the full suite is
+green.
+
+*3. The defect is raised by PATH and not by number.* `O-N` is the workbench
+registry's namespace and a worker cannot see what it has issued; the last
+worker to number its own cost ten edits in ten files. The reproduction is
+`tests/probe/defect/generic_owning_copy/` and the orchestrator assigns the id.
+
+*Alternatives declined:*
+
+- **Lift the restriction anyway, writing the drop loops in the spelling that
+  compiles.** The code would be correct today and unguarded forever. The
+  restriction's cost is nil — `ntime` instantiates no owning `T`, by design:
+  `Layout`'s vector is a payload-free enum but for `Literal(uint16)` and the
+  zone tables hold offsets into a name pool precisely so no row owns anything,
+  which `check_no_owning_fields` enforces rather than trusts.
+- **Leave `vec_pop<T>` as it shipped, since the type is documented non-owning.**
+  A latent use-after-free left in a file because a comment says nobody will
+  reach it is the same bargain this repository refuses everywhere else, and the
+  fix is one word.
+- **Assert `// expect-exit: 0` on `case1` and `// expect-exit: 170` on
+  `case4`.** Both are true and both would make a use-after-free a committed
+  expectation of this suite, green forever and red on the fix. They are
+  exempt with their verdicts recorded instead (TM-137), which fails on the fix
+  rather than passing through it.
+
+### TM-137 — an exemption records the verdict it was written against, because O-N17 landed and the entry that promised to expire did not
+**2026-09-05, cycle 0.0.5. Amends `harness/run.py`'s `EXPECT_EXEMPT` and
+`tests/probe/defect/generic_element_move/README.md`.**
+
+**What the tree claimed.** `EXPECT_EXEMPT`'s entry for O-N17's `case1` said that
+on the day the defect landed *"this entry fails the both-directions diff until
+somebody deletes it and gives the file its `// expect-exit: 0` — which is the
+mechanism that makes the gap close itself rather than be remembered"*. The
+directory's README said the same thing in its own words.
+
+**What the mechanism did.** The both-directions diff checks that every named
+file still **exists**. Nothing else. O-N17 landed at pin `aaffb87`; `case1` and
+`case5` went from stopping at `llc` to linking and running clean; the full
+harness reported **GREEN — 40 units, 0 failures** with both stale entries in
+place, and nothing anywhere said a word. It was found by hand, by a worker
+removing the entries because it happened to know the defect had landed — which
+is the "remembered" half the sentence said had been engineered away.
+
+**This is the fourth instance of one shape in this repository** — a check whose
+NAME describes the property while its MECHANISM covers something narrower,
+after the `exit 0` leak gate (TM-106), `SAFETY.md`'s bounds promise (TM-108)
+and the undefined-symbol scan (TM-118). What makes this one worth its own
+decision is *where* it was: in the mechanism written to prevent exactly this,
+by the session most alert to it, and it survived the review that produced
+TM-115.
+
+**The decision.** *Every `EXPECT_EXEMPT` entry is a pair — the verdict the
+exemption was written against, and the reason. The verdict is where the file
+STOPS: `npkc`, `llc`, `ld`, `run:<code>`, or `none` for a module no program
+roots. `check_exemptions_live` re-derives it from the file on every full run
+and fails when it has moved, naming both verdicts.*
+
+**Commissioned positive and negative before it was believed**, which is the
+rule this decision is an instance of: with the true verdicts the run is green
+and prints `exemption verdicts: 6 of 6 re-derived, 0 moved`; with one entry's
+verdict changed from `run:170` to `llc` the run is **RED**, `1 moved`, and the
+message reads *"the entry records that this file stops at `llc`; it now stops
+at `run:170`"*.
+
+**O-N17's two entries are gone** and both files carry `// expect-exit: 0`. The
+list now holds six: three support modules at `none`, `fixed_array_len/case1` at
+`npkc`, and `generic_owning_copy`'s `case1` at `run:0` and `case4` at
+`run:170` — the two whose expiry this check exists to catch, since a landing
+there turns `run:0` into `npkc` and fails the entry.
+
+*Alternatives declined:*
+
+- **A `// expect-` marker on each exempt file instead.** That is the thing they
+  are exempt from: no marker is true of a file the compiler accepts and the
+  assembler refuses, and an exit-code marker on a use-after-free commits the
+  suite to it.
+- **Re-derive the verdict but only warn.** Printing is what "green because it
+  never ran" looks like. The check fails.

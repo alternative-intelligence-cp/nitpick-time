@@ -1,0 +1,135 @@
+// expect-exit: 0
+//
+// PROBE 15 — CAN A CONSUMER BUILD AN UNREAL `CivilDate` BY STRUCT LITERAL,
+// BYPASSING THE VALIDATING CONSTRUCTOR? YES. This file is the standing proof.
+//
+// ===========================================================================
+// READ THE EXIT CODE THE RIGHT WAY ROUND
+// ===========================================================================
+//
+// **`expect-exit: 0` HERE MEANS "THE BYPASS STILL WORKS", NOT "ALL IS WELL".**
+// Every other `expect-exit: 0` in this directory asserts something the library
+// wants to be true. This one asserts something the library wishes were false,
+// and it is committed precisely so that the day it goes RED somebody reads
+// `CALENDAR.md` C-8b rather than deleting the test. **A probe's marker records
+// what the probe asks, never a verdict about whether the answer is good.**
+//
+// If a future compiler grows per-field visibility, or an `opaque struct` with
+// a body, this file stops compiling — and that is the notification that C-8b
+// can be narrowed and `check_civil_literal` can be retired. There is no other
+// mechanism in this repository that would tell us.
+//
+// ===========================================================================
+// WHAT IT MEASURES, AND WHY IT IS A PROBE RATHER THAN A PARAGRAPH
+// ===========================================================================
+//
+// `CALENDAR.md` C-8 says *"There is no unchecked constructor: a `CivilDate`
+// that exists is a date that exists, which is what lets everything downstream
+// skip the question."* The first clause is true of `src/cal/`. The second is
+// not true of the TYPE, and the whole of cycle 0.1.1 was going to be written
+// against it.
+//
+// Measured at pin `aaffb87`, the full four-step recipe — because `npkc` exit 0
+// is not well-formedness (TM-112) and a claim that stops at acceptance has
+// measured nothing:
+//
+//     npkc   exit 0, .ll written        llc    exit 0, .o written
+//     ld.lld exit 0, exe written        run    exit 0, month == 99
+//
+// **A PROSE SUMMARY OF A TRANSCRIPT IS NOT EVIDENCE** — this repository had
+// its emission claims failed by its own verifier at cycle 0.0.0 for exactly
+// that. So TM-148's central measurement is committed as a program the harness
+// re-runs on every invocation, at `-O0` and again under `opt -O2`, rather than
+// as four lines somebody once pasted into a decision. TM-147's evidence is
+// committed the same way, in `probe14_error_payload_refused.npk`; this file
+// exists so the more important of the two findings is not the one with the
+// weaker evidence.
+//
+// AND THERE IS NO MECHANISM TO PREVENT IT, which is the half that makes it a
+// specification amendment rather than a bug report. Visibility in this
+// language is per-declaration (`pub`, `MODULE_REFERENCE.md` §3) with no
+// per-field form, and `opaque struct:Name = { … };` is refused
+// `NITPICK-PARSE-001` — the bodyless `opaque struct:Name;` is the
+// extern-driver declaration (D-149) and nothing else. **This is the language
+// as specified, not a compiler defect**: nothing is raised upstream and
+// nothing is worked around.
+//
+// WHAT IS DONE ABOUT IT: `check_civil_literal` fails the run on a `CivilDate{`
+// or `CivilTime{` literal in `src/` outside `src/cal/cal.npk`. That covers the
+// half that is enforceable — the library keeping its own contract, which is
+// the half both of cycle 0.0's shipped use-after-frees broke. It does NOT
+// cover a consumer, and this file is what keeps that limit visible.
+//
+// **THIS FILE IS NOT ITSELF A VIOLATION OF THAT CHECK**, and the reason is the
+// check's denominator rather than an exemption: `check_civil_literal` scans
+// `src/` and this is `tests/`. A probe that had to be exempted from the rule
+// it demonstrates would be the stale-exemption shape TM-137 and TM-145 are
+// about, so the scoping is deliberate and is stated here rather than left to
+// be inferred from a green run.
+mod:probe15_civil_literal_bypass;
+
+use "../../src/cal/cal.npk".CivilDate;
+use "../../src/cal/cal.npk".ETimeValue;
+use "../../src/cal/cal.npk".civil_date;
+
+func:main = int32(cstring[]:_~argv) {
+    // ---- the bypass ----------------------------------------------------
+
+    // Month 99 and day 99 of year 32000 — outside every bound C-4 and C-8
+    // state, and refused by `civil_date` on three separate rows. The struct
+    // literal asks none of those questions.
+    CivilDate:fake = CivilDate{ year: 32000i32, month: 99u8, day: 99u8 };
+
+    // Reading the fields back is what makes this a measurement rather than a
+    // compile check: the value is not merely constructible, it is USABLE, and
+    // it carries exactly the nonsense that went in.
+    if (fake.year != 32000i32) { exit 10i32; }
+    if (fake.month != 99u8)    { exit 11i32; }
+    if (fake.day != 99u8)      { exit 12i32; }
+
+    // ---- THE CONTROL, and without it this file proves nothing -----------
+
+    // The SAME values through the validating constructor are REFUSED. A test
+    // showing only the bypass half would be consistent with `civil_date`
+    // being broken too, in which case the finding would be an ordinary bug
+    // rather than a statement about the language. `bytes_view`'s lifetime
+    // test was given its control for this reason (TM-139) and so is this.
+    Result<CivilDate>:refused = civil_date(32000i64, 99i64, 99i64);
+    if (!refused.is_error) { exit 20i32; }
+
+    // And a REAL date goes through the constructor cleanly, so the refusal
+    // above is a bound and not a blanket — the third leg that distinguishes
+    // "the constructor validates" from "the constructor rejects everything".
+    CivilDate:real = civil_date(2000i64, 2i64, 29i64) ?! ETimeValue;
+    if (real.month != 2u8) { exit 21i32; }
+    if (real.day != 29u8)  { exit 22i32; }
+
+    // ---- what the two halves say together -------------------------------
+
+    // `civil_date` refuses what the literal accepts. So the guarantee is
+    // real and is about the values THIS LIBRARY PRODUCES (C-8b), and it is
+    // not a property of the type that anything downstream may assume.
+
+    // D-151: exit 0 additionally asserts no live `wild` allocation, and
+    // NOTHING MORE than that (TM-106). This file allocates nothing.
+    exit 0i32;
+};
+
+// The nine identities a program importing only `cal` owes, measured from
+// `NITPICK-REACH-003`'s own list (`SAFETY.md` S-4) and diffed both directions
+// by `check_failsafe_arms` on every run.
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (DivByZero)      { exit 90i32; },
+        (DivOverflow)    { exit 89i32; },
+        (ETimeValue)     { exit 88i32; },
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

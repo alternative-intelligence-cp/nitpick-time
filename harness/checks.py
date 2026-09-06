@@ -659,6 +659,83 @@ PURITY_BAN = ("sys(", "mono_now(", "environ(", "read_file(", "open(", "write(")
 HOST_DIR = "src/host/"
 
 
+# ---------------------------------------------------------------------------
+# check_civil_literal -- CALENDAR.md C-8b / TM-148
+# ---------------------------------------------------------------------------
+
+# A TYPE WITH A VALIDATING CONSTRUCTOR IS BUILT BY THAT CONSTRUCTOR AND BY
+# NOTHING ELSE -- inside this library, which is the half that is enforceable.
+#
+# C-8 says "there is no unchecked constructor: a `CivilDate` that exists is a
+# date that exists, which is what lets everything downstream skip the
+# question". MEASURED AT PIN `aaffb87`, THAT IS NOT TRUE OF THE TYPE, only of
+# the values this library produces: a consumer can write
+#
+#     CivilDate:fake = CivilDate{ year: 32000i32, month: 99u8, day: 99u8 };
+#
+# and it compiles, links and runs at exit 0 with `fake.month == 99`. There is
+# no private field in this language and `opaque struct:Name = { ... };` is
+# refused `NITPICK-PARSE-001` -- the bodyless `opaque struct:Name;` is the
+# extern-driver form and nothing else -- so the library cannot take the literal
+# away. TM-148 records the measurement and C-8b is the amended rule.
+#
+# WHAT THIS CHECK CAN AND CANNOT DO, stated because the name is broader than
+# the mechanism and that is the shape this repository keeps meeting. It cannot
+# reach a consumer. It CAN keep `src/` honest -- and that is the half that
+# matters most, because both use-after-frees cycle 0.0 shipped were the library
+# defeating its own stated contract, under a green suite (S-18d, S-18e). A
+# later cycle reaching for the literal instead of the constructor is exactly
+# how `date_to_days` comes to be handed February 30th.
+#
+# `CivilDateTime` IS NOT ON THE LIST AND THE ABSENCE IS THE RULE WORKING: it
+# has no validating constructor, deliberately (`src/cal/cal.npk`), because both
+# its members can only have come from one, so its literal checks nothing that
+# was not already checked. Banning it would be banning the only way to build it.
+CIVIL_LITERAL_OWNER = "src/cal/cal.npk"
+_CIVIL_LITERAL = re.compile(r"\b(CivilDate|CivilTime)\s*\{")
+
+
+def check_civil_literal(tree, **_):
+    """No `CivilDate{` or `CivilTime{` literal outside `src/cal/cal.npk`.
+
+    READS CODE, NEVER PROSE. `code_lines` blanks comments and string bodies
+    first, and the clean control that proves it is `src/lib.npk`, whose header
+    spells `CivilDate{ year: 32000i32, month: 99u8, day: 99u8 }` out in a
+    comment -- to document this very rule. A grep-shaped version of this check
+    fails the repository on the paragraph arguing for it, which is the failure
+    `check_purity` met on its first run and the reason the control is a comment
+    rather than an empty file.
+    """
+    files = src_files(tree)
+    problems, hits, scanned = [], 0, 0
+    for rel in files:
+        if rel == CIVIL_LITERAL_OWNER:
+            continue
+        scanned += 1
+        for lineno, line in code_lines(os.path.join(tree, rel)):
+            for m in _CIVIL_LITERAL.finditer(line):
+                hits += 1
+                problems.append(
+                    "%s:%d builds a `%s` by struct literal. Inside this "
+                    "library that type is built by `civil_date`/`civil_time` "
+                    "and by nothing else (C-8, C-8b): the constructor is the "
+                    "only thing that refuses February 30th, month 13 and "
+                    "hour 24, and it is the only thing that validates BEFORE "
+                    "it narrows -- `268 =>! uint8` is `12`, a valid month "
+                    "(TM-105). The language cannot take the literal away "
+                    "(TM-148), so this check is what keeps `src/` inside the "
+                    "guarantee the rest of the library is written against."
+                    % (rel, lineno, m.group(1)))
+    headline = ("%d civil-literal site(s) over %d of %d file(s) in src/ "
+                "(%s is the owner)"
+                % (hits, scanned, len(files), CIVIL_LITERAL_OWNER))
+    if not scanned:
+        problems.append("check_civil_literal opened 0 files outside its "
+                        "owner. An empty denominator reports green while "
+                        "checking nothing (V-1b).")
+    return Result("check_civil_literal", headline, problems)
+
+
 def check_purity(tree, **_):
     """`src/` outside `src/host/` against S-10's ban list. SOURCE-LEVEL.
 
@@ -1115,6 +1192,7 @@ LIVE = (
     check_constants_named,
     check_no_owning_fields,
     check_raw_index,
+    check_civil_literal,
     check_purity,
     check_host_isolation,
     check_specs_current,

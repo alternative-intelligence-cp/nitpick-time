@@ -19,9 +19,16 @@
 // deliberate. Adding a line here is the moment a name becomes public and, by
 // TM-013, a thing a MAJOR version is needed to take away.
 //
-// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 35
-// names now, forty lines below. (This paragraph still read "EMPTY TODAY ...
-// this file re-exports nothing" two subcycles after they were added — C6.)
+// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 48
+// names now [[sweep: lib_reexports=48]], sixty lines below. (This paragraph
+// still read "EMPTY TODAY ... this file re-exports nothing" two subcycles
+// after they were added — C6. It then carried `35` through cycle 0.1.0's
+// thirteen additions until the tag was added: an UNTAGGED derived number in a
+// live document is history, which is TM-142's whole rule, and this file was
+// carrying one at the moment it was quoting the rule. The tag was written `49`
+// first, from counting the list in the head rather than with `grep -c`, and
+// `check_denominators` is what said 48 — which is the mechanism working on
+// the very number added to prove the mechanism works.)
 // `tests/conformance/import.npk` compiled against the empty surface and goes
 // on compiling as the surface grows. The day it does NOT, the surface changed
 // incompatibly, which is exactly what that test is for.
@@ -116,3 +123,56 @@ pub use "./core/limits.npk".NTIME_OFFSET_MAX;
 pub use "./core/limits.npk".NTIME_SECS_PER_DAY;
 pub use "./core/limits.npk".NTIME_NANOS_PER_SEC;
 pub use "./core/limits.npk".NTIME_DIGITS_MAX;
+
+// ===========================================================================
+// cal -- the civil calendar (cycle 0.1.0). THE FIRST ERROR IDENTITY.
+// ===========================================================================
+//
+// `ETimeValue` IS THE FIRST OF THE THREE (TM-017, S-1) AND THE FIRST LINE HERE
+// THAT COSTS A CONSUMER SOMETHING IT CANNOT DECLINE. REACH-002 makes it a
+// mandatory `failsafe` arm in every program that imports `cal`, and taking it
+// away again is a MAJOR version (TM-013, S-2). Measured at pin `aaffb87`: a
+// program importing only `src/cal/cal.npk` owes NINE identities, not one --
+// `cal.ETimeValue` plus the four floor arms plus `DivByZero`, `DivOverflow`,
+// `IntOverflow` and `OutOfBounds`, which `cal`'s own `%`, `+` and table index
+// arm in the CONSUMER however pure the consumer's code is (S-4b, S-4c, TM-107).
+// The number is read from `NITPICK-REACH-003`'s own list on every run by
+// `check_failsafe_arms`, in both directions, and never predicted.
+pub use "./cal/cal.npk".ETimeValue;
+
+// The detail enum (S-3). PAYLOAD-FREE BECAUSE AN `error:` CANNOT CARRY ONE --
+// measured, `tests/probe/probe14_error_payload_refused.npk`, and C-5b is the
+// amendment. It is public because a caller that will one day be handed a
+// `ValueFault` needs to be able to name the type; HOW a refusing constructor
+// hands it back is O-X8 and is deliberately not settled here.
+pub use "./cal/cal.npk".ValueFault;
+
+// The civil types. Field order is comparison order (C-6) and the fields are
+// NARROW, so every constructor below validates before it narrows -- there is
+// no checked narrowing in this language (TM-105, S-15b).
+pub use "./cal/cal.npk".CivilDate;
+pub use "./cal/cal.npk".CivilTime;
+pub use "./cal/cal.npk".CivilDateTime;
+pub use "./cal/cal.npk".Weekday;
+pub use "./cal/cal.npk".Month;
+
+// THE VALIDATING CONSTRUCTORS, AND THERE IS NO UNCHECKED ONE IN THE MODULE
+// (C-8). Read C-8b before relying on that sentence for more than it says: the
+// language has no private field and no `opaque` struct with a body, so a
+// CONSUMER can still write `CivilDate{ year: 32000i32, month: 99u8, day: 99u8 }`
+// -- measured at pin `aaffb87`, it compiles, links and runs at exit 0. The
+// guarantee is about every value THIS LIBRARY PRODUCES, and `check_civil_literal`
+// is what keeps the library itself inside it.
+pub use "./cal/cal.npk".civil_date;
+pub use "./cal/cal.npk".civil_time;
+
+// The leap rule and the month lengths. Here rather than at 0.1.1 because
+// `civil_date` cannot refuse February 30th without them, and a constructor that
+// validates three of its four conditions is not a validating constructor.
+pub use "./cal/cal.npk".is_leap_year;
+pub use "./cal/cal.npk".days_in_month;
+
+// C-7: Monday = 1 ... Sunday = 7, with the C convention beside it because a
+// caller porting code will look for it. The enum's own order stays ISO's.
+pub use "./cal/cal.npk".weekday_number;
+pub use "./cal/cal.npk".weekday_number_sunday_first;

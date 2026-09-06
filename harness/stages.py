@@ -3,8 +3,8 @@
 THE HEADER IS THE AUTHORITY (B-5), AND FROM THIS CYCLE IT ALSO DECIDES WHAT KIND
 OF TEST A FILE IS (O-X7, TM-119). A `[[test]]` entry selects by DIRECTORY and
 never by file, so one `program` entry over `tests/probe/` cannot be true about
-both the 25 files carrying `expect-exit:` [[sweep: probe_exit=25]] and the 7
-carrying `expect-error:` [[sweep: probe_error=7]]. It dispatches per file
+both the 26 files carrying `expect-exit:` [[sweep: probe_exit=26]] and the 8
+carrying `expect-error:` [[sweep: probe_error=8]]. It dispatches per file
 instead:
 
     expect-error:  present  ->  a REFUSAL member. `npkc` must fail, and the SET
@@ -360,11 +360,18 @@ def parse_verdict(bld, rel, e):
 
     THE RULE IS ONE LINE AND ITS CONSEQUENCE IS NOT OBVIOUS: a file must parse
     UNLESS its own header names a parse-phase code. That is what lets the stage
-    cover the 15 files in this tree [[sweep: tests_error=15]] that must NOT
-    compile -- they are refused at TYPE-009, BORROW-001, BORROW-012, REACH-002,
-    REACH-003 and EMIT-002, all of which are phases that only run on something
-    that parsed. Exactly one file in the tree is expected not to parse, and the
-    check is that it is exactly that one.
+    cover the 16 files in this tree [[sweep: tests_error=16]] that must NOT
+    compile -- they are refused at PARSE-001, LEX-004, PARSE-002, TYPE-009,
+    BORROW-001, BORROW-012, REACH-002, REACH-003 and EMIT-002, and every family
+    after the first three is a phase that only runs on something that parsed.
+    TWO files in the tree are expected not to parse, and the check is that it
+    is exactly those two: `probe02d_wide_literal_refused.npk` (LEX-004,
+    PARSE-002) and, since cycle 0.1.0,
+    `probe14_error_payload_refused.npk` (PARSE-001, an `error:` given a
+    payload -- TM-147). This sentence said "exactly one" until the second
+    arrived, which is the ordinary way a hand-written count in prose beside a
+    tagged number goes stale: the TAG moves under `check_denominators` and the
+    SENTENCE does not.
     """
     want_refusal = bool(e) and any(
         code.startswith(PARSE_FAMILIES) for code in e.errors)

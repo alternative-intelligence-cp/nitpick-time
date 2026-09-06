@@ -6,8 +6,9 @@
 // WHAT IT ASSERTS, AND IT IS NOT "the library works". It asserts that the
 // PUBLIC SURFACE IS IMPORTABLE. It was written when the surface was EMPTY --
 // importing an empty surface was exactly the test -- and at 0.0.4 the surface
-// became 35 names from `src/core/`: this file goes on compiling as names are
-// added to `src/lib.npk`, and the day it does NOT, the surface changed in a
+// became 35 names from `src/core/`, then 48 at 0.1.0 with `src/cal/`'s
+// thirteen: this file goes on compiling as names are added to `src/lib.npk`,
+// and the day it does NOT, the surface changed in a
 // way that breaks every consumer -- which is a MAJOR version by TM-013 and had
 // better be a deliberate act rather than a discovery.
 //
@@ -36,8 +37,45 @@ func:main = int32(cstring[]:_~argv) {
     exit 0i32;
 };
 
-// THE MOVE PREDICTED BY THIS COMMENT HAS HAPPENED, AT CYCLE 0.0.4, AND THE
-// PREVIOUS TEXT IS KEPT SO THE BEFORE-AND-AFTER IS ONE READ.
+// THE MOVE PREDICTED BY THIS COMMENT HAS HAPPENED TWICE NOW -- AT CYCLE 0.0.4
+// AND AGAIN AT 0.1.0 -- AND EVERY PREVIOUS TEXT IS KEPT SO THE WHOLE
+// BEFORE-AND-AFTER IS ONE READ.
+//
+// ===========================================================================
+// CYCLE 0.1.0: NINE, AND THE NINTH IS THE FIRST THAT IS AN IDENTITY
+// ===========================================================================
+//
+// `src/cal/` landed and declared `ETimeValue`, the first of the three the whole
+// library is allowed (TM-017, S-1). This file went red again, alone in the
+// suite again, `NITPICK-REACH-002` naming `cal.ETimeValue`. **The bill is now
+// NINE:**
+//
+//     9 = 8 (the cycle-0.0.4 bill below, unchanged)
+//       + 1 cal.ETimeValue   -- the `fail` sites in `civil_date`,
+//                               `civil_time` and `days_in_month`
+//
+// THE PREVIOUS EIGHT DID NOT MOVE, and that is worth reading twice: `cal`
+// divides (`%` three times in the leap rule), indexes (`MONTH_LENGTH[m - 1]`)
+// and adds, so it arms `DivByZero`, `DivOverflow`, `IntOverflow` and
+// `OutOfBounds` in every consumer -- and all four were ALREADY armed by
+// `src/core/`. A second module doing the same arithmetic costs a consumer
+// nothing new. The arm set is a SET, and this is the first measurement in this
+// repository that shows it behaving like one.
+//
+// SO THE ARITHMETIC HALF OF S-4b's WARNING IS FRONT-LOADED: the four system
+// arms arrive with the first module that computes anything and never grow
+// again. What still grows, one per module that declares and RAISES an
+// identity, is the identity half -- `ETimeParse` at 0.4 and `ETimeZone` at 0.3
+// are the two remaining, and this file is where each will first show.
+//
+// MEASURED, NOT PREDICTED. `check_failsafe_arms` reads `NITPICK-REACH-003`'s
+// own list on every run and diffs it against the set computed from source in
+// BOTH directions (S-6b) -- the overstating direction being the one no build
+// can catch, since a superset of the required arms compiles and runs.
+//
+// ===========================================================================
+// CYCLE 0.0.4: the previous text, kept
+// ===========================================================================
 //
 // It used to say: *"The four unconditional floor arms and the wildcard, which
 // is `tests/probe/probe11d_floor_only.npk`'s set exactly. That this compiles
@@ -78,6 +116,7 @@ func:failsafe = int32(Error:e) {
         (WildLeak)       { exit 96i32; },
         (DivByZero)      { exit 97i32; },
         (DivOverflow)    { exit 98i32; },
+        (ETimeValue)     { exit 87i32; },
         (*)              { exit 99i32; }
     }
     exit 9i32;

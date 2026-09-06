@@ -3387,3 +3387,138 @@ that had been "written and validated locally" for five subcycles.
   value is that it finds a `.npk` nobody committed, which is how the
   `tests/probe/defect/missing_failsafe/` files were found with no marker at all
   (TM-115).
+
+---
+
+# Cycle 0.1.0 — ratified 2026-09-06
+
+### TM-147 — an `error:` identity cannot carry a payload, so C-5's "`ETimeValue` with a `ValueFault`" is amended and the delivery mechanism is left open
+
+**2026-09-06, measured at pin `aaffb87`.** `CALENDAR.md` C-5 said *"a range
+violation is `ETimeValue` with a `ValueFault`"*. Read the way a reader coming
+from an exception language or from Rust's `enum Error` reads it — as an error
+**payload** — that sentence describes something this language cannot express.
+C-5b is the amendment; the fault is a value the library computes.
+
+*The measurement, and both halves matter:*
+
+- `pub error:ETimeValue(ValueFault);` is refused `NITPICK-PARSE-001` at exit 1
+  with **no `.ll` written**. Committed as
+  `tests/probe/probe14_error_payload_refused.npk`, so the harness re-derives
+  the verdict on every run rather than a transcript recording it once — which
+  is TM-137's rule applied to a language fact instead of to an exemption.
+  The compiler's own `AST_REFERENCE.md` agrees, read at the pin with
+  `git show aaffb87:…` rather than in its working tree: *"`ErrorDecl` |
+  `name`, `code: Expr?` — **`error:Name;`** (D-179) … The explicit-code form
+  (`error:Name = 4102i32;`) is the prelude's alone"*.
+- And there is nowhere for a payload to live in any case: `Result<T>` is
+  `{ T value, tbb32 err }`, so the error half of every return in this language
+  is a **code**. Confirming the declaration form would not have settled it;
+  the second half is what makes the conclusion about the language rather than
+  about one spelling.
+
+*What is NOT decided, deliberately:* how a refusing constructor hands the
+`ValueFault` back. That is **O-X8**. Nothing in cycle 0.1 needs it —
+`civil_date` and `civil_time` refuse every row of their table correctly and
+completely without it — and every candidate adds a public name, which by
+TM-013 is a thing a MAJOR version is needed to take away. **A name added to
+settle a question nobody has asked is a commitment taken by default**, and this
+repository's own umbrella exists to make that moment deliberate. The
+recommendation is recorded in O-X8 so a later session inherits an input rather
+than a rediscovery.
+
+*Alternatives declined:*
+
+- **Declare one `error:` per fault class.** Refused by the budget: three
+  identities is a ceiling (TM-017, S-2) and each is a mandatory `failsafe` arm
+  in every consumer. Ten `ValueFault` variants would be ten arms.
+- **Encode the fault in the `Result`'s value slot** on the failure path, using
+  the explicit `return Result{err: …, value: …}` form. It is spellable, and it
+  would mean a `CivilDate` existed carrying a fault code in its fields — the
+  exact opposite of C-8, and unreadable at every call site.
+- **Settle O-X8 now with the companion classifier.** It is the recommendation
+  and it is still not this subcycle's to take: the plan's scope and the cycle
+  README's checklist both ask for `ValueFault` **declared**, and a public name
+  chosen without a caller is a name chosen without a requirement.
+
+### TM-148 — the struct literal is an unchecked constructor the language will not let us remove, so C-8's guarantee is about the values this library PRODUCES
+
+**2026-09-06, measured at pin `aaffb87`.** `CALENDAR.md` C-8 said *"There is no
+unchecked constructor: a `CivilDate` that exists is a date that exists, which
+is what lets everything downstream skip the question."* The first clause is
+true of this module and the second is not true of the type.
+
+*The measurement.* A consumer that imports `cal` and writes
+
+```nitpick
+CivilDate:fake = CivilDate{ year: 32000i32, month: 99u8, day: 99u8 };
+```
+
+gets `npkc` exit 0 with the `.ll` written, `llc` exit 0, `ld.lld` exit 0, and a
+program that **runs at exit 0** with `fake.month == 99`. Every status was paired
+with the artefact it should have produced, and the whole four-step recipe was
+run, because `npkc` exit 0 is not well-formedness (TM-112).
+
+**COMMITTED AS `tests/probe/probe15_civil_literal_bypass.npk`, so the harness
+re-runs it every invocation rather than a decision quoting four exit codes
+nobody re-derives.** A prose summary of a transcript is not evidence — this
+repository had its emission claims failed by its own verifier at 0.0.0 for
+exactly that — and the first draft of this decision was that summary, with the
+measurement living only in gitignored scratch. **That left the more important
+of this subcycle's two findings with weaker evidence than the lesser one**,
+which is backwards: TM-147 had a committed probe from the start.
+`expect-exit: 0` on that file means *the bypass still works*, and its header
+says so at length, because the day it goes red is the day C-8b can be narrowed.
+It carries its control — the same values through `civil_date`, refused — since
+a file showing only the bypass half is consistent with the constructor being
+broken too (TM-139's lesson).
+
+*And there is no mechanism to prevent it.* Visibility in this language is
+per-declaration (`pub`, `MODULE_REFERENCE.md` §3) and there is no per-field
+form; `opaque struct:Name = { … };` is refused `NITPICK-PARSE-001`, the
+bodyless `opaque struct:Name;` being the extern-driver declaration (D-149) and
+nothing else. So this is **the language as specified, not a compiler defect** —
+nothing is raised upstream and nothing is worked around.
+
+*Why it is a decision rather than a note.* C-8's last clause is the stated
+reason every later cycle may skip the validity question, and cycle 0.1.1's
+`date_to_days` is the first thing that would rely on it. Understating the
+extent is the dangerous direction and it fails silently: read as the strong
+guarantee, C-8 licenses an algorithm written as though its input could not be
+February 30th. **Extent, with its denominator: four live sites carried the
+strong reading, over 177 tracked files** with the archived cycle 0.0 excluded —
+C-8 itself, `meta/roadmap/0.1/README.md`, `meta/roadmap/0.1/0.1.0.md`, and
+`src/cal/cal.npk`'s header as it was first written in this subcycle. Only one
+of the four is a specification.
+
+*What was done about the half that is fixable.* `check_civil_literal` fails the
+run on a `CivilDate{` or `CivilTime{` literal anywhere in `src/` outside
+`src/cal/cal.npk`, and it is **commissioned** rather than merely written
+(TM-126): two planted violations, each with a clean control, and one of the
+controls is the banned form written **in a comment** — because `src/lib.npk`'s
+own header spells the fake-date literal out in prose to document this rule, so
+a grep-shaped check would fail the repository on the paragraph arguing for it.
+That is `check_purity`'s first-run failure (TM-138's family) met in advance
+rather than discovered.
+
+*What it cannot do, said plainly rather than left to be over-read:* it cannot
+reach a consumer. The library's guarantee to a caller is "nothing `ntime`
+returns is an unreal date", and that is a real and useful guarantee — it is
+simply not the one C-8 claimed.
+
+*Alternatives declined:*
+
+- **Wrap the fields in a nominal wrapper** — `struct:CivilDate = { Inner:v; }`
+  with `Inner` unexported. The umbrella is hand-written, so `Inner` would
+  simply not be re-exported; but a consumer imports `src/cal/cal.npk` directly
+  in every test in this repository, `Inner` is `pub` there, and the wrapper
+  buys an indirection at every field read for a guarantee it does not deliver.
+- **Say nothing and rely on the constructors.** That is what C-8 already did,
+  and it is how a later cycle comes to write an algorithm against a promise
+  nothing keeps. The two use-after-frees cycle 0.0 shipped were both this
+  shape.
+- **Treat it as a compiler request for private fields.** It may be one, and it
+  is not this repository's to raise on a design preference: the language's
+  visibility model is a settled compiler decision, not a gap, and O-N ids are
+  for gaps. If a sibling library meets the same wall the case is stronger made
+  once, jointly.

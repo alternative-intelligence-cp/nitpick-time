@@ -1,0 +1,66 @@
+// expect-error: NITPICK-PARSE-001
+// expect-error-at: 49:21
+//
+// PROBE 14 — CAN AN `error:` IDENTITY CARRY A PAYLOAD? No. And this file is
+// what keeps that answer checked rather than remembered.
+//
+// THIS FILE MUST NOT COMPILE.
+//
+// ASKS: `SAFETY.md` S-3 says the caller's distinctions "ride as detail fields,
+// not as errors", and `CALENDAR.md` C-5 said, until this probe was written,
+// that "a range violation is `ETimeValue` with a `ValueFault`". Read as an
+// error PAYLOAD -- which is how a reader coming from Rust's `enum Error` or
+// from an exception language reads it -- that sentence describes something the
+// language cannot express.
+//
+// DEPENDS ON THE ANSWER: `CALENDAR.md` C-5b, `SAFETY.md` S-3, TM-147, and the
+// shape of every refusing entry point this library will ever write. If an
+// error could carry a payload, `civil_date` would hand the caller a
+// `ValueFault` for free and O-X8 would not exist.
+//
+// THE ANSWER, MEASURED AT PIN `aaffb87`: `pub error:ETimeValue(ValueFault);`
+// is refused `NITPICK-PARSE-001` at exit 1 with NO `.ll` written. The compiler
+// stops at the `(`, because an `ErrorDecl` is a NAME and an optional explicit
+// CODE and has no payload slot at all — `AST_REFERENCE.md`'s table reads
+// "`ErrorDecl` | `name`, `code: Expr?` — **`error:Name;`** (D-179): one declared
+// error constant. The explicit-code form (`error:Name = 4102i32;`) is the
+// prelude's alone". Read at the pin with `git show`, not in the compiler's
+// working tree, which is routinely ahead of it.
+//
+// AND THE OTHER HALF OF THE SAME FACT, which is why the conclusion is about
+// the language rather than about one declaration form: a `Result<T>` is
+// `{ T value, tbb32 err }` (`TYPE_REFERENCE.md` §"Result"), so the error half
+// of every return in this language is a CODE. There is nowhere for a payload
+// to live even if the declaration admitted one.
+//
+// WHAT IT DOES NOT SAY. This is the language behaving as specified, NOT a
+// compiler defect, so nothing here is raised upstream and nothing is worked
+// around. What it changes is a specification sentence: C-5b now says the fault
+// is a value the library computes, and how a refusing constructor hands it back
+// is O-X8 — open, because nothing in cycle 0.1 needs it and settling it would
+// add a public name by default (TM-013).
+mod:probe14_error_payload_refused;
+
+// The whole probe. `ValueFault` is declared first so that the refusal below is
+// about the payload SYNTAX and not about an unresolved name — a probe whose
+// refusal has two possible causes has measured neither.
+pub enum:ValueFault = { YearRange; MonthRange; };
+
+pub error:ETimeValue(ValueFault);
+
+func:main = int32(cstring[]:_~argv) {
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

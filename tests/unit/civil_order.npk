@@ -1,0 +1,190 @@
+// expect-exit: 0
+//
+// C-6 — FIELD ORDER IS DECLARATION ORDER IS COMPARISON ORDER, asserted PER
+// FIELD rather than inferred from the derive's presence.
+//
+// WHY A DERIVE THAT COMPILES IS NOT A DERIVE THAT COMPARES CORRECTLY: that is
+// exactly what O-N10 was. `#[derive(Ord)]` on a payload enum compiled at the
+// old pin and reported `Literal(7)` equal to `Literal(9)` -- a silent wrong
+// answer under a green build. So every field of every type here gets two
+// assertions: that it orders, and that it is DOMINATED by the field declared
+// before it. The second is the one that catches a reordering, because a type
+// whose fields were swapped still orders correctly on each field alone.
+//
+// `weekday_number` IS ASSERTED FOR ALL SEVEN VALUES, and that is not padding:
+// `src/cal/cal.npk` computes it from the enum's TAG rather than from a
+// seven-arm `pick`, deliberately, so that C-7's Monday-first order is stated
+// once. This test is what makes the tag mapping checked rather than assumed.
+mod:civil_order;
+
+use "../../src/cal/cal.npk".CivilDate;
+use "../../src/cal/cal.npk".CivilTime;
+use "../../src/cal/cal.npk".CivilDateTime;
+use "../../src/cal/cal.npk".Weekday;
+use "../../src/cal/cal.npk".Month;
+use "../../src/cal/cal.npk".ETimeValue;
+use "../../src/cal/cal.npk".civil_date;
+use "../../src/cal/cal.npk".civil_time;
+use "../../src/cal/cal.npk".weekday_number;
+use "../../src/cal/cal.npk".weekday_number_sunday_first;
+
+func:main = int32(cstring[]:_~argv) {
+    // ---- CivilDate: year, then month, then day ------------------------
+
+    CivilDate:d_2000_01_01 = civil_date(2000i64, 1i64, 1i64) ?! ETimeValue;
+    CivilDate:d_2000_01_02 = civil_date(2000i64, 1i64, 2i64) ?! ETimeValue;
+    CivilDate:d_2000_02_01 = civil_date(2000i64, 2i64, 1i64) ?! ETimeValue;
+    CivilDate:d_2000_12_31 = civil_date(2000i64, 12i64, 31i64) ?! ETimeValue;
+    CivilDate:d_2001_01_01 = civil_date(2001i64, 1i64, 1i64) ?! ETimeValue;
+
+    // day orders
+    pick (d_2000_01_01.cmp(d_2000_01_02) ?! ETimeValue) {
+        (Ordering.Less) { }, (*) { exit 10i32; } }
+    pick (d_2000_01_02.cmp(d_2000_01_01) ?! ETimeValue) {
+        (Ordering.Greater) { }, (*) { exit 11i32; } }
+
+    // month orders, AND DOMINATES day: 2000-02-01 beats 2000-01-02 even
+    // though its day is the smaller of the two.
+    pick (d_2000_01_02.cmp(d_2000_02_01) ?! ETimeValue) {
+        (Ordering.Less) { }, (*) { exit 12i32; } }
+    pick (d_2000_02_01.cmp(d_2000_01_02) ?! ETimeValue) {
+        (Ordering.Greater) { }, (*) { exit 13i32; } }
+
+    // year orders, AND DOMINATES month and day: 2001-01-01 beats 2000-12-31.
+    // This is the assertion every later cycle's comparison actually rests on.
+    pick (d_2000_12_31.cmp(d_2001_01_01) ?! ETimeValue) {
+        (Ordering.Less) { }, (*) { exit 14i32; } }
+    pick (d_2001_01_01.cmp(d_2000_12_31) ?! ETimeValue) {
+        (Ordering.Greater) { }, (*) { exit 15i32; } }
+
+    // equal in all three is Equal, and `Eq` agrees with `Ord`
+    CivilDate:d_again = civil_date(2000i64, 1i64, 1i64) ?! ETimeValue;
+    pick (d_2000_01_01.cmp(d_again) ?! ETimeValue) {
+        (Ordering.Equal) { }, (*) { exit 16i32; } }
+    if (!(d_2000_01_01.eq(d_again) ?! ETimeValue))       { exit 17i32; }
+    if (d_2000_01_01.eq(d_2000_01_02) ?! ETimeValue)     { exit 18i32; }
+
+    // THE YEAR IS SIGNED. A negative year is BCE and must order before a
+    // positive one -- the case a positive-only suite never reaches, and the
+    // one a field read as unsigned would put at the far end of the range.
+    CivilDate:d_neg = civil_date(0i64 - 44i64, 3i64, 15i64) ?! ETimeValue;
+    pick (d_neg.cmp(d_2000_01_01) ?! ETimeValue) {
+        (Ordering.Less) { }, (*) { exit 19i32; } }
+
+    // ---- CivilTime: hour, minute, second, then nanos -------------------
+
+    CivilTime:t_00000 = civil_time(0i64, 0i64, 0i64, 0i64) ?! ETimeValue;
+    CivilTime:t_nano  = civil_time(0i64, 0i64, 0i64, 1i64) ?! ETimeValue;
+    CivilTime:t_sec   = civil_time(0i64, 0i64, 1i64, 0i64) ?! ETimeValue;
+    CivilTime:t_min   = civil_time(0i64, 1i64, 0i64, 0i64) ?! ETimeValue;
+    CivilTime:t_hour  = civil_time(1i64, 0i64, 0i64, 0i64) ?! ETimeValue;
+    // The dominance ladder's lower rung each time: the largest value the
+    // NEXT field down can take, so a field that failed to dominate would
+    // order the wrong way rather than merely tie.
+    CivilTime:t_max_nano = civil_time(0i64, 0i64, 0i64, 999999999i64)
+                           ?! ETimeValue;
+    CivilTime:t_max_sec  = civil_time(0i64, 0i64, 59i64, 999999999i64)
+                           ?! ETimeValue;
+    CivilTime:t_max_min  = civil_time(0i64, 59i64, 59i64, 999999999i64)
+                           ?! ETimeValue;
+
+    // nanos order
+    pick (t_00000.cmp(t_nano) ?! ETimeValue) {
+        (Ordering.Less) { }, (*) { exit 20i32; } }
+    // second dominates nanos
+    pick (t_max_nano.cmp(t_sec) ?! ETimeValue) {
+        (Ordering.Less) { }, (*) { exit 21i32; } }
+    // minute dominates second
+    pick (t_max_sec.cmp(t_min) ?! ETimeValue) {
+        (Ordering.Less) { }, (*) { exit 22i32; } }
+    // hour dominates minute
+    pick (t_max_min.cmp(t_hour) ?! ETimeValue) {
+        (Ordering.Less) { }, (*) { exit 23i32; } }
+    // and the reverse direction once, so `Greater` is exercised too
+    pick (t_hour.cmp(t_max_min) ?! ETimeValue) {
+        (Ordering.Greater) { }, (*) { exit 24i32; } }
+
+    // ---- CivilDateTime: date, then time --------------------------------
+
+    // DATE DOMINATES TIME: the later date wins even carrying midnight
+    // against the previous day's last nanosecond.
+    CivilTime:t_last = civil_time(23i64, 59i64, 59i64, 999999999i64)
+                       ?! ETimeValue;
+    CivilDateTime:dt_early = CivilDateTime{ date: d_2000_01_01, time: t_last };
+    CivilDateTime:dt_late  = CivilDateTime{ date: d_2000_01_02, time: t_00000 };
+    pick (dt_early.cmp(dt_late) ?! ETimeValue) {
+        (Ordering.Less) { }, (*) { exit 30i32; } }
+
+    // and within one date the time decides
+    CivilDateTime:dt_same_early = CivilDateTime{ date: d_2000_01_01,
+                                                 time: t_00000 };
+    pick (dt_same_early.cmp(dt_early) ?! ETimeValue) {
+        (Ordering.Less) { }, (*) { exit 31i32; } }
+    if (!(dt_early.eq(dt_early) ?! ETimeValue))          { exit 32i32; }
+
+    // ---- Weekday and Month: declaration order is the order -------------
+
+    // C-7: MONDAY FIRST. Monday before Sunday is the whole ISO claim.
+    pick (Weekday.Monday.cmp(Weekday.Sunday) ?! ETimeValue) {
+        (Ordering.Less) { }, (*) { exit 40i32; } }
+    pick (Weekday.Saturday.cmp(Weekday.Sunday) ?! ETimeValue) {
+        (Ordering.Less) { }, (*) { exit 41i32; } }
+    if (!(Weekday.Friday.eq(Weekday.Friday) ?! ETimeValue)) { exit 42i32; }
+    if (Weekday.Friday.eq(Weekday.Monday) ?! ETimeValue)    { exit 43i32; }
+
+    // January before December, and February before March -- the second
+    // because an off-by-one in the tag would still put January first.
+    pick (Month.January.cmp(Month.December) ?! ETimeValue) {
+        (Ordering.Less) { }, (*) { exit 44i32; } }
+    pick (Month.March.cmp(Month.February) ?! ETimeValue) {
+        (Ordering.Greater) { }, (*) { exit 45i32; } }
+
+    // ---- weekday_number: all seven, both conventions -------------------
+
+    // ISO, Monday = 1 ... Sunday = 7 (C-7).
+    if (raw weekday_number(Weekday.Monday) != 1i64)      { exit 50i32; }
+    if (raw weekday_number(Weekday.Tuesday) != 2i64)     { exit 51i32; }
+    if (raw weekday_number(Weekday.Wednesday) != 3i64)   { exit 52i32; }
+    if (raw weekday_number(Weekday.Thursday) != 4i64)    { exit 53i32; }
+    if (raw weekday_number(Weekday.Friday) != 5i64)      { exit 54i32; }
+    if (raw weekday_number(Weekday.Saturday) != 6i64)    { exit 55i32; }
+    if (raw weekday_number(Weekday.Sunday) != 7i64)      { exit 56i32; }
+
+    // The C convention, Sunday = 0 ... Saturday = 6. All seven again,
+    // because the wrap at Sunday is the only interesting one and asserting
+    // it alone would leave the other six to a comment.
+    if (raw weekday_number_sunday_first(Weekday.Sunday) != 0i64)    { exit 60i32; }
+    if (raw weekday_number_sunday_first(Weekday.Monday) != 1i64)    { exit 61i32; }
+    if (raw weekday_number_sunday_first(Weekday.Tuesday) != 2i64)   { exit 62i32; }
+    if (raw weekday_number_sunday_first(Weekday.Wednesday) != 3i64) { exit 63i32; }
+    if (raw weekday_number_sunday_first(Weekday.Thursday) != 4i64)  { exit 64i32; }
+    if (raw weekday_number_sunday_first(Weekday.Friday) != 5i64)    { exit 65i32; }
+    if (raw weekday_number_sunday_first(Weekday.Saturday) != 6i64)  { exit 66i32; }
+
+    // D-151: exit 0 additionally asserts no live `wild` allocation -- and
+    // NOTHING MORE than that (TM-106). This file allocates nothing, so the
+    // statement is about coverage rather than cleanliness.
+    exit 0i32;
+};
+
+// The nine identities `NITPICK-REACH-003` names for a program importing only
+// `cal`, MEASURED rather than predicted (`0.1.0.md` §4, and the command is in
+// this subcycle's execution record). `(*)` is present because exhaustiveness
+// (`NITPICK-PICK-003`) wants it and it discharges none of the nine
+// (`NITPICK-REACH-002`) -- two rules, two diagnostics, and the wildcard answers
+// only the first.
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (DivByZero)      { exit 90i32; },
+        (DivOverflow)    { exit 89i32; },
+        (ETimeValue)     { exit 88i32; },
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

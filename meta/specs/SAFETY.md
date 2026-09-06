@@ -69,17 +69,50 @@ rule and it is what keeps the budget at three without losing information.
 **Rule S-4 — module decomposition is part of the budget**, because REACH is
 import-scoped:
 
-| Module | Declares | Identity arms a consumer importing only this owes |
-|---|---|---|
-| `ntime/core.npk` | — | nothing |
-| `ntime/cal.npk` | `ETimeValue` | one arm |
-| `ntime/span.npk` | — (raises `cal`'s) | one arm |
-| `ntime/zone.npk` | `ETimeZone` | two arms |
-| `ntime/fmt.npk` | `ETimeParse` | three arms |
-| `ntime/host.npk` | — (forwards errnos) | one arm |
+| Module | Declares | Identity arms a consumer importing only this owes | TOTAL arms, MEASURED at pin `aaffb87` |
+|---|---|---|---|
+| `ntime/core.npk` | — | nothing | **4** — the floor; `core` is not yet reachable as its own public module, and the umbrella's bill is the row below the table |
+| `ntime/cal.npk` | `ETimeValue` | one arm | **9** — measured 2026-09-06 |
+| `ntime/span.npk` | — (raises `cal`'s) | one arm | placeholder; **4** today, and the number is meaningless until cycle 0.2 gives the module a body |
+| `ntime/zone.npk` | `ETimeZone` | two arms | placeholder; **4** today (cycle 0.3) |
+| `ntime/fmt.npk` | `ETimeParse` | three arms | placeholder; **4** today (cycle 0.4) |
+| `ntime/host.npk` | — (forwards errnos) | one arm | placeholder; **4** today |
 
 **A program that only wants calendar arithmetic owes one IDENTITY arm.** That is
 the decomposition working, and it is why `cal` does not import `zone`.
+
+**AND IT OWES NINE ARMS ALTOGETHER — the totals column is now real for the one
+module that has a body, and it is MEASURED rather than predicted**, which is
+what S-4b promised cycle 0.1 would deliver. Read out of `NITPICK-REACH-003`'s
+own list by compiling a consumer that imports only `src/cal/cal.npk` and
+declares no handler:
+
+```
+$NPKC arm_cal.npk -o arm_cal.ll     →  exit 1, no .ll written
+NITPICK-REACH-003 … 9 identities: cal.ETimeValue, Unreachable, HeapOom,
+  HeapBadRequest, WildLeak, DivByZero, DivOverflow, IntOverflow, OutOfBounds
+```
+
+`check_failsafe_arms` runs that generation on every full invocation and diffs
+the list against the set computed from source **in both directions**, so this
+row cannot go stale in silence.
+
+**9 = 4 + 1 + 4**: the floor, plus `cal.ETimeValue`, plus the four system arms
+`cal`'s own `%`, `+` and `MONTH_LENGTH[m - 1]` arm in the CONSUMER however pure
+the consumer's code is (S-4b). **The cycle README's checklist predicted "exactly
+one arm" and that prediction was wrong by eight** — recorded rather than
+quietly corrected, because it is TM-107's lesson arriving in a checklist a
+session would otherwise have ticked.
+
+**AND THE ARM SET IS A SET, which this is the first measurement here to show.**
+`tests/conformance/import.npk` — the consumer of the whole umbrella — went from
+**8** to **9** when `cal` landed, not from 8 to 12: `src/core/` had already
+armed `DivByZero`, `DivOverflow`, `IntOverflow` and `OutOfBounds`, and a second
+module doing the same kind of arithmetic adds nothing. So S-4b's system-arm
+half is **front-loaded** — it arrives with the first module that computes
+anything and never grows again — while the identity half grows one per module
+that declares *and raises*. `ETimeParse` (0.4) and `ETimeZone` (0.3) are the two
+still to come, and `import.npk` is where each will first show.
 
 **Rule S-4b (TM-107) — the identity column is not the whole bill, and this table
 is not yet the bill.** Measured at cycle 0.0.0 by

@@ -173,9 +173,9 @@ add — is the document that was wrong.
 **Rule B-4c (TM-119) — inside a `program` entry, the FILE'S OWN HEADER decides
 what kind of test it is. This is a deliberate divergence from `npkg`'s `kind`.**
 A `[[test]]` selects by **directory** and `kind` is per entry, so one entry over
-`tests/probe/` cannot be true about both the 25 files carrying `expect-exit:`
-<!-- [[sweep: probe_exit=25]] -->
-and the 7 carrying `expect-error:` (O-X7). The runner therefore dispatches per
+`tests/probe/` cannot be true about both the 26 files carrying `expect-exit:`
+<!-- [[sweep: probe_exit=26]] -->
+and the 8 carrying `expect-error:` (O-X7). The runner therefore dispatches per
 file: `expect-error:` present makes it a **refusal** member — `npkc` must fail
 and the *set* of codes must equal the set named (B-7) — and `expect-exit:`
 present makes it a **run** member. **Both markers is a failure; neither is a
@@ -251,14 +251,27 @@ expectations name.
 `NITPICK-LEX-*` comes from the compiler's `src/frontend/diag_codes.npk` and
 `NITPICK-PARSE-*` from `parse_codes.npk`; every other family belongs to a later
 phase, so a file reported with one of those **necessarily parsed**. That is what
-lets the stage cover the 15 files here that must not compile
-<!-- [[sweep: tests_error=15]] --> — they are
-refused at `TYPE-009`, `BORROW-001`, `BORROW-012`, `REACH-002` and `REACH-003`,
-all of which run only on something that parsed. Re-measured at pin `aaffb87`,
-cycle 0.0.6: **78 files = 62 parse cleanly + 15 parse and are refused later + 1
-does not parse** <!-- [[sweep: npk_total=78]] -->, and the one is
-`probe02d_wide_literal_refused.npk`. It read `50 = 36 + 13 + 1` for three
-subcycles after the tree stopped being that size, which is TM-142.
+lets the stage cover the 16 files here that must not compile
+<!-- [[sweep: tests_error=16]] --> — they are
+refused at `PARSE-001`, `LEX-004`, `PARSE-002`, `TYPE-009`, `BORROW-001`,
+`BORROW-012`, `REACH-002`, `REACH-003` and `EMIT-002`, and every family after
+the first three runs only on something that parsed. Re-measured at pin
+`aaffb87`, cycle 0.1.0: **83 files = 66 parse cleanly + 15 parse and are
+refused later + 2 do not parse** <!-- [[sweep: npk_total=83]] -->, and the two
+are `probe02d_wide_literal_refused.npk` (LEX-004, PARSE-002) and
+`probe14_error_payload_refused.npk` (PARSE-001, TM-147). It read
+`50 = 36 + 13 + 1` for three subcycles after the tree stopped being that size,
+which is TM-142.
+
+**AND THE TWO SIXTEENS IN THAT PARAGRAPH ARE DIFFERENT SETS THAT HAPPEN TO BE
+THE SAME SIZE** — which is worth one sentence, because the previous version had
+two fifteens in the same position and read as though one number were being
+quoted twice. `tests_error` is *files under `tests/` whose header names an
+`expect-error:`*; "parse and are refused later" is *files the parse stage
+rooted that produced a non-parse diagnostic*, which also picks up the
+`tests/probe/support/` modules and the `src/` placeholders when rooted alone.
+Two of `tests_error`'s sixteen do not parse at all, so the sets overlap in
+fourteen. **Ask what was counted, not who miscounted.**
 
 **Rule B-8 — the harness is itself tested.** A self-check feeds it wrong
 expectations and requires it to report every one as a failure. A suite that

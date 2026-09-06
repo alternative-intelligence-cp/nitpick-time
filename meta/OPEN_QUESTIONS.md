@@ -540,6 +540,67 @@ complete today.
 
 ---
 
+### O-X8 — how does a refusing constructor hand back its `ValueFault`?
+
+**Raised 2026-09-06 at cycle 0.1.0**, writing `civil_date` and `civil_time`.
+**Not blocking: cycle 0.1 does not need it**, and it is recorded now because
+the next session to meet it should inherit an input rather than a
+rediscovery.
+
+*The question.* `SAFETY.md` S-3 says the caller's distinctions ride as detail
+fields rather than as errors, and `ValueFault` is that detail — ten variants,
+one per refusal row. **TM-147 measured that an `error:` cannot carry a
+payload** (`tests/probe/probe14_error_payload_refused.npk`,
+`NITPICK-PARSE-001`, exit 1, no `.ll`), and a `Result<T>` is
+`{ T value, tbb32 err }`, so the error half of every return is a code. There
+is therefore no mechanism in the language that delivers the fault alongside
+the refusal, and `civil_date` today returns `Result<CivilDate>` whose error
+half says `ETimeValue` and nothing finer.
+
+*Why it is open rather than decided.* Every candidate adds a **public name**,
+which by TM-013 is a thing a MAJOR version is needed to take away. Neither the
+cycle README's 0.1.0 checklist nor `0.1.0.md` asks for delivery — both ask for
+`ValueFault` **declared** — and a name chosen without a caller is a name chosen
+without a requirement. The constructors refuse every row of their table
+correctly and completely without it, and every candidate below is a pure
+addition, so **nothing about deciding this later is more expensive than
+deciding it now.** That is the test that makes deferring it right rather than
+merely comfortable.
+
+*The recommendation, so it is an input:* **a `never fails` companion
+classifier.**
+
+```nitpick
+pub func:civil_date_fault = ValueFault(int64:y, int64:m, int64:d) never fails;
+```
+
+`civil_date` becomes two lines over it, so the rules live in exactly one place
+and the constructor cannot drift from the classifier. It needs an **eleventh
+`ValueFault` variant** meaning "no fault" — which amends `SAFETY.md` S-3's enum
+and is the substantive part of the decision, not the function. It costs a
+consumer nothing: a `never fails` function arms no identity, so the arm bill
+does not move.
+
+*Alternatives, with what each costs:*
+
+- **An out parameter** — `civil_date(y, m, d, ValueFault->:fault)`. One name
+  instead of two, but every caller that does not want the fault must supply a
+  place for it, and a pointer parameter on the library's most-called
+  constructor is the wrong default.
+- **A richer success type** — return `Result<Checked>` where `Checked` carries
+  both. It puts a fault field on the happy path, which is the shape S-3 exists
+  to avoid.
+- **`Optional<ValueFault>` from the classifier** rather than an eleventh
+  variant. Avoids amending the enum; costs an `Optional` at every call and a
+  second way to spell "valid". Worth measuring before choosing — `Optional` is
+  on DERIVE-006's refused list, so a `ValueFault` inside one cannot be derived
+  over, which may decide it.
+
+*What settles it:* the first caller that needs the distinction. `src/fmt/`'s
+parser at cycle 0.4 is the likely one — it will want to tell a user *which*
+field of a timestamp was out of range — and a decision taken with that call
+site in view will be better than one taken here.
+
 ### ~~O-X7 — one `[[test]]` entry cannot cover `tests/probe/`, because seven of its twenty-six must not compile~~ — **SETTLED 2026-09-05, TM-119**
 
 **Settled as recommended: the runner dispatches on the file's own header**,
@@ -606,7 +667,7 @@ P-5 says a probe is never deleted for the same reason those citations exist.
 
 **Settled at 0.0.2**, which builds the runner. **Nothing waits on it**: no
 probe changes either way, and the entry in the manifest is true about the 25
-<!-- [[sweep: probe_exit=25]] --> today. *(That word was `nineteen` until cycle
+<!-- [[sweep: probe_exit=26]] --> today. *(That word was `nineteen` until cycle
 0.0.6 — a settled question's prose is history and is normally frozen, but this
 sentence is in the PRESENT tense about the tree as it is now, so it is a claim
 and not a record. TM-142.)*

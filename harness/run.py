@@ -568,10 +568,10 @@ def run_parse(rep, root, bld):
     """Every `.npk` in the tree in front of the real parser, each exactly once.
 
     THE DENOMINATOR IS THE WHOLE TREE AND THAT IS WHY THE STAGE IS WORTH ITS
-    COST. Re-measured at cycle 0.0.6: of the 78 `.npk` files here
-    [[sweep: npk_total=78]] the library build roots 4 [[sweep: lib_reach=4]],
-    the suite roots 41 [[sweep: suite_roots=41]], and 3 more are reached by
-    `use` from a suite root [[sweep: support_total=3]] -- so 30 are put in
+    COST. Re-measured at cycle 0.1.0: of the 83 `.npk` files here
+    [[sweep: npk_total=83]] the library build roots 5 [[sweep: lib_reach=5]],
+    the suite roots 46 [[sweep: suite_roots=46]], and 3 more are reached by
+    `use` from a suite root [[sweep: support_total=3]] -- so 29 are put in
     front of the compiler by NOTHING ELSE. Five of those are the remaining
     `src/` placeholders and 24 are the reproductions under
     `tests/probe/defect/` [[sweep: defect_total=24]] -- the directory whose
@@ -579,12 +579,15 @@ def run_parse(rep, root, bld):
     then went three cycles asserted by nothing (TM-141), for exactly this
     reason.
 
-        78 = 4 (library) + 41 (suite roots) + 3 (reached by `use`) + 30
+        83 = 5 (library) + 46 (suite roots) + 3 (reached by `use`) + 29
 
     EVERY NUMBER IN THAT SENTENCE IS TAGGED AND CHECKED (TM-142). It read
     `50 = 1 + 27 + 3 + 19` until cycle 0.0.6, three subcycles after the tree
     stopped being that size, and nothing anywhere compared it to the line this
-    function PRINTS on every run.
+    function PRINTS on every run. Cycle 0.1.0 moved it again -- `src/cal/`
+    joined the library's reach, three unit tests and one probe joined the
+    suite -- and the check found every stale site rather than a reader
+    noticing one.
     """
     files = all_npk(root)
     verdicts = {"parses": 0, "refused later": 0, "does not parse": 0}
@@ -672,8 +675,8 @@ def select(root, entry):
     """The files a `[[test]]` entry selects: `<path>/*.npk`, non-recursive.
 
     NOT recursive, and the omission is load-bearing (the manifest says so at
-    length): a plain glob over `tests/probe/` is exactly the 32
-    [[sweep: probe_dir=32]] probe programs and excludes `support/` -- three
+    length): a plain glob over `tests/probe/` is exactly the 33
+    [[sweep: probe_dir=34]] probe programs and excludes `support/` -- three
     library modules with no `main` -- and `defect/`, whose files are
     reproductions rather than tests of this library and are judged by
     `run_defect_corpus` instead (TM-141). The schema has no `recursive` key, so

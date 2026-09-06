@@ -1,19 +1,358 @@
-// The civil calendar — the PLACEHOLDER (0.0.1 P-7).
+// The civil calendar -- the TYPES and the VALIDATING CONSTRUCTORS (cycle
+// 0.1.0). Governed by `meta/specs/CALENDAR.md`; this file implements §3, C-6
+// through C-9, and the parts of §4 the constructors cannot exist without.
 //
-// EMPTY ON PURPOSE: see `../core/core.npk` for why a placeholder exists at all.
-// It is REPLACED at the cycle below, never deleted.
+// NO ALGORITHM HERE. `date_to_days` and `days_to_date` -- Hinnant's
+// `days_from_civil` / `civil_from_days` (C-10, TM-016) -- are cycle 0.1.1's,
+// and so are the derived fields (C-13, C-14, C-15). What is here is the set of
+// types those algorithms operate on, and the constructors that make an unreal
+// date UNSPELLABLE.
 //
-// WHAT FILLS IT: `CivilDate`, `CivilTime`, `CivilDateTime`, `Weekday`, `Month`,
-// Hinnant's `days_from_civil` / `civil_from_days` used as given (TM-016), the
-// leap rule, ISO week dates and ordinal dates. Governed by
-// `meta/specs/CALENDAR.md`.
-// WHEN: cycle 0.1 (`meta/roadmap/0.1/README.md`).
+// `is_leap_year` AND `days_in_month` ARE HERE RATHER THAN AT 0.1.1, and the
+// reason is recorded rather than discovered: `civil_date` must refuse February
+// 30th (C-8), and a constructor that validates three of its four conditions is
+// not a validating constructor. `0.1.0.md` §3 took that decision at planning.
 //
-// WHAT IT MAY IMPORT: `core` only (`BUILD.md` B-17). In particular NOT `zone` —
+// WHAT IT MAY IMPORT: `core` only (`BUILD.md` B-17). In particular NOT `zone` --
 // that separation is what keeps a consumer doing plain calendar arithmetic at
 // ONE identity arm rather than two (`SAFETY.md` S-4), and it is a budget
 // decision, not a tidiness one.
 //
-// THE ERROR IT DECLARES: `ETimeValue`, one of the three the whole library is
-// allowed (TM-017). A fourth is a MAJOR version (TM-013).
+// ===========================================================================
+// NO FUNCTION IN THIS FILE RETURNS A SLICE OR A POINTER (S-18e)
+// ===========================================================================
+//
+// Every gate this repository owns is a LEAK gate. D-151's exit-0 trap counts
+// `wild` allocations and cannot see a managed body (TM-106); `check_raw_index`
+// is about indexing; the undefined-symbol scan is blind to it (TM-118).
+// **A use-after-free is a WRONG ANSWER, so it is found by a test that READS
+// and by nothing else** -- and cycle 0.0 shipped two of them on this library's
+// own public surface, `vec_pop<T>` (S-18d) and `bytes_view` (S-18e), both under
+// a green suite, a review and an independent verification.
+//
+// This module is pure value arithmetic over `int64` and declares no owning
+// type, so the class is much narrower here. The rule that keeps it narrow is
+// the one above: if a function in this file ever seems to need to return a
+// slice or a pointer, that is a STOP and a question, not a line of code.
+//
+// ===========================================================================
+// THE DERIVES, AND THE PROBE VERDICT EACH ONE RESTS ON
+// ===========================================================================
+//
+// `#[derive(Eq, Ord, Clone, Debug)]` on all five types.
+//
+//   `Ord` COMPARES IN DECLARATION ORDER -- the compiler's **D-123**, whose
+//   table reads "`Ord`, `PartialOrd` | lexicographic comparison in declaration
+//   order", and `tests/probe/probe01_derive_ord.npk` measured it on
+//   `Timestamp`'s shape in both directions: `Pair{a,b}` and `Flip{b,a}`, same
+//   fields, opposite verdicts. **CITE D-123 AND NOT D-051.** At every pin this
+//   workbench has used, D-051 is "No `ostring`; portability lives in a `Path`
+//   type above `nlibc`" -- a real heading, so nothing dangles and no reference
+//   check can see the error (TM-143, and `src/core/vec.npk` carried exactly
+//   this mis-citation for four subcycles).
+//
+//   `Eq` ON A PAYLOAD-FREE ENUM is not at issue in either direction.
+//   `tests/probe/probe05b_derive_eq_refused.npk` measured `#[derive(Eq)]` on a
+//   PAYLOAD enum: `NITPICK-TYPE-034` at the old pin, and FIXED at `aaffb87`
+//   (TM-111). `Weekday` and `Month` carry no payload, so neither the old
+//   behaviour nor the new one reaches them -- the probe is cited so a later
+//   reader does not re-run it to find that out.
+//
+//   AND A DERIVE THAT COMPILES IS NOT A DERIVE THAT COMPARES CORRECTLY. That
+//   is precisely what O-N10 was: `#[derive(Ord)]` on a payload enum compiled
+//   and reported `Literal(7)` equal to `Literal(9)`. So the order is asserted
+//   per FIELD by `tests/unit/civil_order.npk` rather than assumed from the
+//   derive's presence.
+//
+// FIELD ORDER IS COMPARISON ORDER (C-6) AND IS NOT TO BE TIDIED. Year before
+// month before day; hour before minute before second before nanos. The types
+// below are copied from `CALENDAR.md` §3's code block VERBATIM -- that block is
+// the authority (TM-002) and it is narrower than a declaration written from
+// habit would be: the fields are NARROW, and the field is `nanos` and not
+// `nano`.
 mod:cal;
+
+// The bounds this module checks against, by name. `SAFETY.md` S-12 makes every
+// range stated and checked; S-16 and `check_constants_named` make the number
+// itself live in `src/core/limits.npk` and nowhere else, with the rule that set
+// it written beside it. A second literal copy here is how two modules come to
+// disagree about a constant neither of them owns.
+use "../core/limits.npk".NTIME_YEAR_MIN;
+use "../core/limits.npk".NTIME_YEAR_MAX;
+use "../core/limits.npk".NTIME_NANOS_PER_SEC;
+
+// ===========================================================================
+// The error identity -- the FIRST this library declares
+// ===========================================================================
+
+// `cal` DECLARES `ETimeValue` AND NOTHING ELSE (TM-017, S-1, S-2). Three is the
+// whole library's budget and it is a CEILING: REACH-002 makes every identity a
+// mandatory `failsafe` arm in every consuming program, so a fourth is a
+// recorded decision AND a MAJOR version (TM-013), never a line of code.
+//
+// A DECLARATION ALONE ARMS NOTHING. The reachable set is computed from `fail`,
+// `?!` and `!!!` SITES rather than from declarations -- measured at
+// `tests/probe/probe11f_declared_unraised.npk` (S-4c). The `fail`s below are
+// what put this name in every importing program's set.
+pub error:ETimeValue;
+
+// The caller's distinction, carried beside the identity rather than as a second
+// identity (S-3): "out of range" and "not a real date" are one error to a
+// `failsafe` and two different things to a caller.
+//
+// PAYLOAD-FREE, AND THE LANGUAGE LEAVES NO CHOICE: an `error:` CANNOT CARRY
+// ONE. Measured at pin `aaffb87` --
+// `tests/probe/probe14_error_payload_refused.npk` writes
+// `pub error:ETimeValue(ValueFault);` and is refused `NITPICK-PARSE-001` at
+// exit 1 with no `.ll` written, because `ErrorDecl` is `name` plus an optional
+// explicit CODE (the prelude's alone) and has no payload slot at all. A
+// `Result<T>` is `{ T value, tbb32 err }` and the error half is a code.
+//
+// SO C-5's "`ETimeValue` WITH A `ValueFault`" CANNOT MEAN AN ERROR PAYLOAD, and
+// C-5b is the amendment that says what it does mean: the fault is a value the
+// library computes, and the mechanism by which a refusing constructor hands it
+// back is DELIBERATELY NOT DECIDED HERE (O-X8). Nothing in this cycle needs
+// it, and adding a public name to settle it would be a TM-013 commitment taken
+// by default. What IS settled is that the enum has one variant per refusal row
+// of `0.1.0.md` §3, so the distinction exists to be delivered.
+pub enum:ValueFault = {
+    YearRange; MonthRange; DayRange; HourRange; MinuteRange;
+    SecondRange; NanoRange; OffsetRange; DayOfMonth; Overflow;
+};
+
+// ===========================================================================
+// The types -- `CALENDAR.md` §3, verbatim
+// ===========================================================================
+
+// C-6: year, then month, then day -- so a derived `Ord` is exactly the ordering
+// wanted and reordering the fields would silently change it.
+//
+// THE FIELDS ARE NARROW ON PURPOSE and the cost is one test, not a design.
+// `#size_of<CivilDate>()` is 8 bytes rather than the 24 three `int64`s would
+// take; `ZONE_MODEL.md`'s tables and `SPAN_MODEL.md`'s arithmetic both assume
+// this layout. The cost is that every field is a NARROWING SITE and there is no
+// checked narrowing (TM-105, S-15b) -- see `civil_date` below, where the
+// validity check and the width check are the same check.
+#[derive(Eq, Ord, Clone, Debug)]
+pub struct:CivilDate = { int32:year; uint8:month; uint8:day; };
+
+// C-6 again: hour, minute, second, then nanos. The field is `nanos`, not
+// `nano`, and it is `uint32` -- 999 999 999 fits, so the bound is SEMANTIC
+// rather than a width check (C-9).
+#[derive(Eq, Ord, Clone, Debug)]
+pub struct:CivilTime = { uint8:hour; uint8:minute; uint8:second; uint32:nanos; };
+
+// Date before time, so the derived `Ord` compares chronologically. Both members
+// are named types, and a derived body reaches a named member through that
+// member's own impl (the compiler's D-258) -- which is why both are declared
+// above this one and both derive the same four.
+#[derive(Eq, Ord, Clone, Debug)]
+pub struct:CivilDateTime = { CivilDate:date; CivilTime:time; };
+
+// C-7: MONDAY FIRST, matching ISO 8601. Declaration order is the tag order, so
+// Monday is tag 0 and `weekday_number` below is that tag plus one.
+//
+// PAYLOAD-FREE IS DELIBERATE AND IS NOW LOAD-BEARING. O-N10's derives are fixed
+// (TM-111) and a payload enum's `Ord` works at this pin, but every
+// element-lifetime question disappears entirely for a payload-free one -- and
+// the compiler's DERIVE-006 refuses four of the seven derives over an owning
+// payload. `FORMAT_MODEL.md` §3's `Layout` vector is the only payload enum this
+// library plans, and it is cycle 0.4's.
+#[derive(Eq, Ord, Clone, Debug)]
+pub enum:Weekday = { Monday; Tuesday; Wednesday; Thursday; Friday; Saturday; Sunday; };
+
+// January first, so the tag is `month - 1` and indexes `MONTH_LENGTH` directly.
+//
+// NO `month_number` AND NO `month_from_number` IN THIS SUBCYCLE, and the
+// absence is written down rather than left to look like an omission (TM-115).
+// Neither the cycle README's 0.1.0 checklist nor `0.1.0.md` asks for one, this
+// module's own arithmetic takes `int64:m` throughout, and every name on the
+// public surface is a thing a MAJOR version is needed to take away (TM-013).
+// The first consumer that needs the conversion is what should shape it.
+#[derive(Eq, Ord, Clone, Debug)]
+pub enum:Month   = { January; February; March; April; May; June;
+                     July; August; September; October; November; December; };
+
+// ===========================================================================
+// The leap rule and the month lengths -- `CALENDAR.md` C-3
+// ===========================================================================
+
+// Days per month in a COMMON year, indexed by `month - 1`. February's 28 is the
+// common-year value and `days_in_month` overrides it; the table holds the
+// common year so that the leap correction is in exactly one place.
+//
+// A `fixed` TABLE IS `T[N]`, WHICH THE LANGUAGE BOUNDS-CHECKS (S-17b, second
+// row): the emitter's `ExprIndexExpr` calls `emit_bounds_guard` for `TY_ARRAY`,
+// so an out-of-range index here TRAPS rather than reading a wrong value. That
+// is the opposite of `Vec<T>` and `Bytes`, whose bodies are bare pointers and
+// whose accessors are the only bound that exists (TM-108). The index below is
+// additionally checked before it is taken, so the guard is the belt.
+fixed int64[12]:MONTH_LENGTH = [
+    31i64, 28i64, 31i64, 30i64, 31i64, 30i64,
+    31i64, 31i64, 30i64, 31i64, 30i64, 31i64
+];
+
+// C-3: divisible by 4 and not by 100, or divisible by 400. Applied UNIFORMLY
+// across the whole supported range including negative years, because C-1 says
+// proleptic.
+//
+// THE NEGATIVE-YEAR CORRECTION HINNANT'S ALGORITHM CARRIES IS NOT NEEDED HERE,
+// AND THAT IS A MEASUREMENT RATHER THAN AN ARGUMENT. `0.1.0.md` §6 warned that
+// `%` takes the sign of the DIVIDEND (C semantics, pinned by
+// `tests/probe/probe07_negative_div.npk`) and that the leap rule is the first
+// place it bites. It does not bite, for a reason worth stating because the
+// warning was right about the general case: **every test here compares the
+// remainder against ZERO, and zero has no sign.** `-4 % 4` is `0`, `-100 % 100`
+// is `0`, `-400 % 400` is `0`. A sign correction would be needed the moment a
+// NON-ZERO remainder were used -- as `days_from_civil`'s `era` does, which is
+// why 0.1.1 still owes `(y >= 0 ? y : y - 399) / 400`.
+//
+// The four cases and their negative mirrors are named tests in
+// `tests/unit/leap_rule.npk`; year -1, -4, -100 and -400 are there because a
+// rule that is right by accident and a rule that is right pass the same
+// positive-year suite.
+pub func:is_leap_year = bool(int64:y) never fails {
+    if ((y % 4i64) != 0i64)   { pass false; }
+    if ((y % 100i64) != 0i64) { pass true; }
+    pass ((y % 400i64) == 0i64);
+};
+
+// `requires m >= 1 && m <= 12`
+// `ensures answer >= 28 && answer <= 31`
+//
+// (`VERIFICATION.md` P-1: contracts are comments in the syntax they will take
+// at the compiler's 1.5. `answer`, never `result` -- `result` and `old` are
+// reserved `VerificationKeyword`s, TM-130/B-18, and this library's own contract
+// syntax is exactly where you meet them as things to write.)
+//
+// THE YEAR IS NOT RANGE-CHECKED HERE and that is deliberate: C-3's rule is
+// defined for every `int64` year, the range is the CONSTRUCTOR's obligation
+// (C-4), and a second copy of that check here would be a second place for the
+// two to disagree. The month IS checked, because it indexes the table.
+pub func:days_in_month = int64(int64:y, int64:m) {
+    if (m < 1i64)  { fail ETimeValue; }
+    if (m > 12i64) { fail ETimeValue; }
+    if (m == 2i64) {
+        if (raw is_leap_year(y)) { pass 29i64; }
+        pass 28i64;
+    }
+    pass MONTH_LENGTH[m - 1i64];
+};
+
+// ===========================================================================
+// The validating constructors -- C-8, and the whole contract of this cycle
+// ===========================================================================
+
+// `ensures answer.year == y && answer.month == m && answer.day == d`
+//
+// C-8: VALIDATING CONSTRUCTORS ONLY. There is no unchecked constructor in this
+// module and there is not to be one. Everything downstream -- every conversion,
+// every format, every zone lookup -- skips the question of whether a date is
+// real BECAUSE `CivilDate` CANNOT HOLD AN UNREAL ONE. A single unchecked
+// constructor added for convenience removes that guarantee everywhere at once,
+// and it will be asked for.
+//
+// VALIDATE, THEN NARROW -- IN THAT ORDER, NEVER THE REVERSE. There is no
+// checked narrowing in this language (TM-105, S-15b): `=>!` truncates in
+// silence and the checked `=>` at the same narrowing is refused outright,
+// `NITPICK-TYPE-009`. So every one of `CivilDate`'s three fields is a narrowing
+// site and the range check before it is library code, written here.
+//
+// The order matters and the counter-example is a named test: a truncated value
+// can land back INSIDE the valid range and pass the check that was supposed to
+// catch it. `m = 269` truncates to `13` and would be refused by luck;
+// **`m = 268` truncates to `12` and would be ACCEPTED, and wrong**. Validating
+// first makes both refusals, and `tests/unit/civil_construct.npk` asserts the
+// 268 case by name.
+//
+// The year bound is `int32`-narrowing as well as semantic, and is written as
+// the SEMANTIC check against the named bound (S-13, TM-014: +/-9999, far inside
+// `int32`). Written as a width check instead, a later widening of the supported
+// range would silently become a truncation.
+//
+// TAKES `int64` ARGUMENTS, because anything narrower pushes the range problem
+// to the caller -- which is the one place this library cannot check it.
+pub func:civil_date = CivilDate(int64:y, int64:m, int64:d) {
+    if (y < NTIME_YEAR_MIN) { fail ETimeValue; }   // ValueFault.YearRange
+    if (y > NTIME_YEAR_MAX) { fail ETimeValue; }   // ValueFault.YearRange
+    if (m < 1i64)           { fail ETimeValue; }   // ValueFault.MonthRange
+    if (m > 12i64)          { fail ETimeValue; }   // ValueFault.MonthRange
+    if (d < 1i64)           { fail ETimeValue; }   // ValueFault.DayRange
+    // February 30th and April 31st. `relay` propagates `days_in_month`'s
+    // refusal, which cannot fire here -- the month was checked three lines up
+    // -- so this is the belt and not the answer.
+    int64:dim = relay days_in_month(y, m);
+    if (d > dim)            { fail ETimeValue; }   // ValueFault.DayOfMonth
+    pass CivilDate{ year: y =>! int32, month: m =>! uint8, day: d =>! uint8 };
+};
+
+// `ensures answer.hour == h && answer.minute == mi`
+// `ensures answer.second == s && answer.nanos == n`
+//
+// C-9 (TM-029): `hour in [0,23]`, `minute in [0,59]`, `second in [0,59]`,
+// `nanos in [0, 999 999 999]`.
+//
+// HOUR 24 IS REFUSED. ISO 8601 permits `24:00:00` as an end-of-day marker and
+// accepting it here would give midnight two spellings, which every comparison
+// would then have to know about. The NORMALISING acceptance -- `24:00:00` read
+// as `00:00:00` of the next day, with the fact recorded on the `Parsed` record
+// -- belongs to the parser at cycle 0.4 (M-13, F-20) and is not smuggled in
+// here.
+//
+// SECOND 60 IS REFUSED FOR THE SAME REASON. RFC 3339 permits it and the parser
+// folds it to `:59` at 0.4; this type does not represent leap seconds
+// (`TIME_MODEL.md`), so there is no value of `second` above 59 to construct.
+//
+// The nanosecond bound is `NTIME_NANOS_PER_SEC - 1i64` and not a literal: S-12
+// makes every bound a named constant and `check_constants_named` fails the run
+// on a second copy of 1000000000 outside its owner.
+pub func:civil_time = CivilTime(int64:h, int64:mi, int64:s, int64:n) {
+    if (h < 0i64)  { fail ETimeValue; }            // ValueFault.HourRange
+    if (h > 23i64) { fail ETimeValue; }            // ValueFault.HourRange
+    if (mi < 0i64) { fail ETimeValue; }            // ValueFault.MinuteRange
+    if (mi > 59i64) { fail ETimeValue; }           // ValueFault.MinuteRange
+    if (s < 0i64)  { fail ETimeValue; }            // ValueFault.SecondRange
+    if (s > 59i64) { fail ETimeValue; }            // ValueFault.SecondRange
+    if (n < 0i64)  { fail ETimeValue; }            // ValueFault.NanoRange
+    if (n > (NTIME_NANOS_PER_SEC - 1i64)) { fail ETimeValue; }  // NanoRange
+    pass CivilTime{ hour: h =>! uint8, minute: mi =>! uint8,
+                    second: s =>! uint8, nanos: n =>! uint32 };
+};
+
+// NO `civil_datetime` CONSTRUCTOR, AND THE ABSENCE IS A DECISION (TM-115).
+// `CivilDateTime` holds a `CivilDate` and a `CivilTime`, both of which can only
+// have come from the two constructors above, so the struct literal
+// `CivilDateTime{ date: d, time: t }` is exactly as validated as they are --
+// there is no fourth condition for a constructor to check. A function that
+// checked nothing would be an unchecked constructor on the surface of a module
+// whose whole contract is C-8, which is the one shape this cycle is about not
+// having.
+
+// ===========================================================================
+// Weekday numbering -- C-7
+// ===========================================================================
+
+// `ensures answer >= 1 && answer <= 7`
+//
+// ISO 8601: Monday = 1 ... Sunday = 7. Read off the TAG rather than written as
+// a seven-arm `pick`, and the reason is that the enum's declaration order is
+// already the statement of this fact (C-7): a `pick` would restate it a second
+// time and the test a third, giving three copies of one rule that can drift
+// apart. `tests/unit/civil_order.npk` asserts all seven values, so the tag
+// mapping is checked rather than assumed.
+//
+// The tag is reached with `=>!` -- `=>` is refused on an enum -- and widened
+// back with the CHECKED `=>`, which leaves exactly one unchecked cast in the
+// function. A file where every cast is `=>!` hides which is which (S-15b).
+pub func:weekday_number = int64(Weekday:w) never fails {
+    pass ((w =>! int32) => int64) + 1i64;
+};
+
+// `ensures answer >= 0 && answer <= 6`
+//
+// C-7: Sunday = 0 ... Saturday = 6, the convention the C library uses. It is
+// here because a caller porting code will look for it, and the enum's own order
+// stays ISO's. Monday's tag 0 gives 1; Sunday's tag 6 gives 7 mod 7 = 0.
+pub func:weekday_number_sunday_first = int64(Weekday:w) never fails {
+    pass (((w =>! int32) => int64) + 1i64) % 7i64;
+};

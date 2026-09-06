@@ -66,6 +66,43 @@ constants with a test that recomputes them.
 
 **Rule C-5 — a range violation is `ETimeValue` with a `ValueFault`, checked
 before the trap.** D-210's trap is the belt; the check is the answer.
+**Read C-5b before reading "with a `ValueFault`" as an error payload.**
+
+**Rule C-5b (TM-147, cycle 0.1.0) — AN `error:` IDENTITY CANNOT CARRY A
+PAYLOAD, so the `ValueFault` is a value the library computes and not something
+attached to the error.**
+
+Measured at pin `aaffb87`, and the probe is committed so the fact stays checked
+rather than remembered: `pub error:ETimeValue(ValueFault);` is refused
+`NITPICK-PARSE-001` at exit 1 with no `.ll` written
+(`tests/probe/probe14_error_payload_refused.npk`). The compiler stops at the
+`(` — an `ErrorDecl` is a NAME plus an optional explicit CODE, and the
+explicit-code form is the prelude's alone. The other half of the same fact is
+that a `Result<T>` is `{ T value, tbb32 err }`, so the error half of every
+return in this language is a **code**: there is nowhere for a payload to live
+even if the declaration admitted one.
+
+C-5's sentence was written the way a reader coming from an exception language
+or from Rust's `enum Error` would write it, and **it describes something the
+language cannot express**. What survives is the part that matters: a range
+violation is `ETimeValue`, and the caller's finer distinction is a `ValueFault`
+— a payload-free enum with one variant per refusal row, declared in
+`src/cal/cal.npk`.
+
+**HOW a refusing constructor hands the `ValueFault` back is deliberately NOT
+settled here.** It is `../OPEN_QUESTIONS.md` O-X8. Nothing in cycle 0.1 needs
+it — `civil_date` and `civil_time` refuse correctly and completely without it —
+and every candidate mechanism (a companion classifier function, an out
+parameter, a richer success type) adds a public name, which by TM-013 is a
+thing a MAJOR version is needed to take away. **A name added to settle a
+question nobody has asked yet is a commitment taken by default.** The
+recommendation, so a later session inherits an input rather than a
+rediscovery, is a `never fails` companion classifier returning the fault
+directly; it needs an eleventh "no fault" variant, and that is the decision to
+take.
+
+This is the language behaving as specified rather than a compiler defect, so
+nothing here is raised upstream and nothing is worked around.
 
 ---
 
@@ -93,8 +130,57 @@ caller porting code will look for it, but the enum's own order is ISO's.
 
 **Rule C-8 — the components are validated, always.** `civil_date(y, m, d)`
 returns `Result<CivilDate>` and refuses February 30th, month 13, day 0. There
-is no unchecked constructor: a `CivilDate` that exists is a date that exists,
-which is what lets everything downstream skip the question.
+is no unchecked constructor **in the module**: a `CivilDate` this library
+produces is a date that exists. **C-8b is the limit of that sentence and must
+be read with it** — the last clause of this rule used to read "which is what
+lets everything downstream skip the question", and downstream cannot quite skip
+it.
+
+**Rule C-8b (TM-148, cycle 0.1.0) — THE GUARANTEE IS ABOUT THE VALUES THIS
+LIBRARY PRODUCES, NOT ABOUT THE TYPE, BECAUSE THE LANGUAGE HAS NO PRIVATE
+FIELD.**
+
+Measured at pin `aaffb87`. A consumer that imports `cal` can write
+
+```nitpick
+CivilDate:fake = CivilDate{ year: 32000i32, month: 99u8, day: 99u8 };
+```
+
+and it **compiles (`npkc` exit 0, `.ll` written), links, and runs at exit 0**
+with `fake.month == 99`. The struct literal is an unchecked constructor that
+every consumer has and that this library did not write and cannot remove:
+visibility in this language is per-declaration (`pub`) and there is no
+per-field form, and `opaque struct:Name = { … };` is refused
+`NITPICK-PARSE-001` — the bodyless `opaque struct:Name;` is the extern-driver
+declaration and nothing else.
+
+**Why this is a rule and not a footnote.** C-8's original last clause is cited
+as the reason every later cycle may skip the validity question, and four live
+sites carried that reading (this rule, `meta/roadmap/0.1/README.md`,
+`meta/roadmap/0.1/0.1.0.md`, and `src/cal/cal.npk`'s own header) over 177
+tracked files. It is the same shape this repository keeps meeting and named in
+`SAFETY.md` S-18e: **a rule whose NAME describes a property while its MECHANISM
+covers something narrower.** Stated correctly it is still a strong rule —
+nothing this library returns is ever an unreal date — and stated incorrectly it
+would license `date_to_days` at cycle 0.1.1 to be written as though its input
+could not be February 30th.
+
+**What follows, and both halves are obligations on later cycles:**
+
+- **Inside `src/`, the constructor is the only builder**, and
+  `check_civil_literal` fails the run on a `CivilDate{` or `CivilTime{` literal
+  outside `src/cal/cal.npk`. That is the half that is enforceable, and it is
+  the half that matters most: both use-after-frees cycle 0.0 shipped were this
+  library defeating its own stated contract under a green suite (S-18d, S-18e).
+- **Outside it, a function that would misbehave rather than merely mislead on
+  a malformed `CivilDate` says so in its header**, and is written to be total
+  where it can be. `date_to_days` (C-10) is branch-free arithmetic that is
+  total over every field value, so it is safe by construction rather than by
+  the guarantee — which is worth knowing before 0.1.1 rather than after.
+
+`CivilDateTime` has no validating constructor and needs none: both its members
+can only have come from one, so its literal checks nothing that was not already
+checked.
 
 **Rule C-9 (TM-029) — `CivilTime` admits `hour ∈ [0,23]`, `minute ∈ [0,59]`,
 `second ∈ [0,59]`, `nanos ∈ [0, 999 999 999]`.** Hour 24 is refused —

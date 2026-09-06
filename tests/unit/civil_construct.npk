@@ -1,0 +1,207 @@
+// expect-exit: 0
+//
+// C-8 and C-9 — THE VALIDATING CONSTRUCTORS, one case per refusal row of
+// `0.1.0.md` §3, plus the row that only exists because of TM-105.
+//
+// ===========================================================================
+// THE CASE THIS FILE EXISTS FOR: VALIDATE, THEN NARROW
+// ===========================================================================
+//
+// There is no checked narrowing in this language (TM-105, S-15b). `=>!`
+// truncates in SILENCE -- no trap, no diagnostic, exit 0 -- and the checked
+// `=>` at the same narrowing is refused outright, `NITPICK-TYPE-009`. Every
+// field of `CivilDate` and `CivilTime` is narrow (`CALENDAR.md` §3), so every
+// one of them is a narrowing site.
+//
+// A CONSTRUCTOR THAT NARROWED FIRST WOULD ACCEPT VALUES THAT ARE PLAINLY
+// WRONG, AND WOULD DO IT SILENTLY. The counter-examples are named cases below,
+// and each one lands back INSIDE the valid range after truncation, which is
+// what makes them invisible to the check that was supposed to catch them:
+//
+//     month 268 =>! uint8  ==  12   -- a valid month
+//     day   257 =>! uint8  ==   1   -- a valid day
+//     hour  256 =>! uint8  ==   0   -- a valid hour
+//     nanos 2^32 =>! uint32 ==  0   -- a valid nanosecond count
+//
+// Month 269 is here beside 268 as the control: it truncates to 13 and would be
+// refused BY LUCK, so a suite containing only 269 would pass over a
+// narrow-first constructor and prove nothing. The pair is the measurement.
+mod:civil_construct;
+
+use "../../src/cal/cal.npk".CivilDate;
+use "../../src/cal/cal.npk".CivilTime;
+use "../../src/cal/cal.npk".ETimeValue;
+use "../../src/cal/cal.npk".civil_date;
+use "../../src/cal/cal.npk".civil_time;
+// The bounds by NAME (S-12). `tests/unit/limits_named.npk` is what asserts the
+// named constants hold the values `CALENDAR.md` §2 gives, so using the names
+// here is not tautological -- it is the two tests dividing the work.
+use "../../src/core/limits.npk".NTIME_YEAR_MIN;
+use "../../src/core/limits.npk".NTIME_YEAR_MAX;
+use "../../src/core/limits.npk".NTIME_NANOS_PER_SEC;
+
+func:main = int32(cstring[]:_~argv) {
+    // ---- accepted: the ordinary cases ---------------------------------
+
+    CivilDate:a = civil_date(2000i64, 2i64, 29i64) ?! ETimeValue;
+    if (a.year != 2000i32) { exit 10i32; }
+    if (a.month != 2u8)    { exit 11i32; }
+    if (a.day != 29u8)     { exit 12i32; }
+
+    CivilDate:b = civil_date(1970i64, 1i64, 1i64) ?! ETimeValue;
+    if (b.year != 1970i32) { exit 13i32; }
+
+    // A negative year, because astronomical numbering (C-2) makes it an
+    // ordinary value rather than an exotic one.
+    CivilDate:c = civil_date(0i64 - 44i64, 3i64, 15i64) ?! ETimeValue;
+    if (c.year != (0i32 - 44i32)) { exit 14i32; }
+
+    // ---- accepted: both ends of the supported range exactly ------------
+
+    // C-4 / S-13: the bound is INCLUSIVE at both ends, so these two must be
+    // accepted and the two beyond them refused. A bound tested on one side
+    // only is a bound half-tested.
+    CivilDate:lo = civil_date(NTIME_YEAR_MIN, 1i64, 1i64) ?! ETimeValue;
+    if (lo.year != (0i32 - 9999i32)) { exit 15i32; }
+    CivilDate:hi = civil_date(NTIME_YEAR_MAX, 12i64, 31i64) ?! ETimeValue;
+    if (hi.year != 9999i32) { exit 16i32; }
+
+    // ---- refused: year outside [NTIME_YEAR_MIN, NTIME_YEAR_MAX] --------
+
+    Result<CivilDate>:y_lo = civil_date(NTIME_YEAR_MIN - 1i64, 1i64, 1i64);
+    if (!y_lo.is_error) { exit 20i32; }
+    Result<CivilDate>:y_hi = civil_date(NTIME_YEAR_MAX + 1i64, 1i64, 1i64);
+    if (!y_hi.is_error) { exit 21i32; }
+
+    // ---- refused: month outside [1, 12] --------------------------------
+
+    Result<CivilDate>:m_0 = civil_date(2000i64, 0i64, 1i64);
+    if (!m_0.is_error) { exit 25i32; }
+    Result<CivilDate>:m_13 = civil_date(2000i64, 13i64, 1i64);
+    if (!m_13.is_error) { exit 26i32; }
+    Result<CivilDate>:m_neg = civil_date(2000i64, 0i64 - 1i64, 1i64);
+    if (!m_neg.is_error) { exit 27i32; }
+
+    // ---- refused: day 0, and the day-of-month rows ---------------------
+
+    Result<CivilDate>:d_0 = civil_date(2000i64, 1i64, 0i64);
+    if (!d_0.is_error) { exit 30i32; }
+    Result<CivilDate>:d_neg = civil_date(2000i64, 1i64, 0i64 - 1i64);
+    if (!d_neg.is_error) { exit 31i32; }
+
+    // February 30th -- the row `days_in_month` exists for.
+    Result<CivilDate>:feb30 = civil_date(2000i64, 2i64, 30i64);
+    if (!feb30.is_error) { exit 32i32; }
+    // April 31st -- a 30-day month, which the table decides rather than the
+    // leap rule, so it exercises the other branch of `days_in_month`.
+    Result<CivilDate>:apr31 = civil_date(2000i64, 4i64, 31i64);
+    if (!apr31.is_error) { exit 33i32; }
+    // February 29th in a COMMON year is refused, and in a LEAP year accepted
+    // -- the pair, because the refusal alone would also pass a constructor
+    // that refused every 29 February.
+    Result<CivilDate>:feb29_common = civil_date(1900i64, 2i64, 29i64);
+    if (!feb29_common.is_error) { exit 34i32; }
+    CivilDate:feb29_leap = civil_date(1996i64, 2i64, 29i64) ?! ETimeValue;
+    if (feb29_leap.day != 29u8) { exit 35i32; }
+    // 31 December is accepted, so "day > days_in_month" is a bound and not a
+    // blanket refusal of the high days.
+    CivilDate:dec31 = civil_date(2000i64, 12i64, 31i64) ?! ETimeValue;
+    if (dec31.day != 31u8) { exit 36i32; }
+
+    // ===================================================================
+    // THE NARROWING COUNTER-EXAMPLES (TM-105, S-15b)
+    // ===================================================================
+
+    // month 268 =>! uint8 == 12, a VALID month. A constructor that narrowed
+    // before validating would accept this and store December.
+    Result<CivilDate>:m_268 = civil_date(2000i64, 268i64, 1i64);
+    if (!m_268.is_error) { exit 40i32; }
+    // month 269 =>! uint8 == 13, refused BY LUCK. The control: it proves the
+    // 268 case above is testing the order of the two checks rather than the
+    // presence of one.
+    Result<CivilDate>:m_269 = civil_date(2000i64, 269i64, 1i64);
+    if (!m_269.is_error) { exit 41i32; }
+    // month 256 =>! uint8 == 0, which is also invalid -- so the third point
+    // on the wrap, chosen because 0 and 12 fail the same check differently.
+    Result<CivilDate>:m_256 = civil_date(2000i64, 256i64, 1i64);
+    if (!m_256.is_error) { exit 42i32; }
+
+    // day 257 =>! uint8 == 1, a VALID day of every month.
+    Result<CivilDate>:d_257 = civil_date(2000i64, 1i64, 257i64);
+    if (!d_257.is_error) { exit 43i32; }
+    // day 288 =>! uint8 == 32 -- refused by luck, the control for 257.
+    Result<CivilDate>:d_288 = civil_date(2000i64, 1i64, 288i64);
+    if (!d_288.is_error) { exit 44i32; }
+
+    // year 4294969296 =>! int32 == 2000, a VALID year. The year field is
+    // `int32` rather than `uint8`, so its wrap is a different width and is
+    // asserted separately rather than assumed to follow from the others.
+    Result<CivilDate>:y_wrap = civil_date(4294969296i64, 1i64, 1i64);
+    if (!y_wrap.is_error) { exit 45i32; }
+
+    // ---- civil_time: accepted --------------------------------------------
+
+    CivilTime:t = civil_time(23i64, 59i64, 59i64, NTIME_NANOS_PER_SEC - 1i64)
+                  ?! ETimeValue;
+    if (t.hour != 23u8)         { exit 50i32; }
+    if (t.minute != 59u8)       { exit 51i32; }
+    if (t.second != 59u8)       { exit 52i32; }
+    if (t.nanos != 999999999u32) { exit 53i32; }
+
+    CivilTime:midnight = civil_time(0i64, 0i64, 0i64, 0i64) ?! ETimeValue;
+    if (midnight.hour != 0u8) { exit 54i32; }
+
+    // ---- civil_time: refused ---------------------------------------------
+
+    // C-9: HOUR 24 IS REFUSED. ISO 8601 permits `24:00:00` as an end-of-day
+    // marker; accepting it here would give midnight two spellings and every
+    // comparison would have to know it. The normalising acceptance is the
+    // parser's at cycle 0.4 (M-13, F-20) and is not smuggled in here.
+    Result<CivilTime>:h24 = civil_time(24i64, 0i64, 0i64, 0i64);
+    if (!h24.is_error) { exit 60i32; }
+    Result<CivilTime>:h_neg = civil_time(0i64 - 1i64, 0i64, 0i64, 0i64);
+    if (!h_neg.is_error) { exit 61i32; }
+
+    Result<CivilTime>:mi60 = civil_time(0i64, 60i64, 0i64, 0i64);
+    if (!mi60.is_error) { exit 62i32; }
+    // SECOND 60 IS REFUSED for C-9's reason: this type does not represent
+    // leap seconds, and the parser folds `:60` to `:59` at 0.4 (TM-029).
+    Result<CivilTime>:s60 = civil_time(0i64, 0i64, 60i64, 0i64);
+    if (!s60.is_error) { exit 63i32; }
+    Result<CivilTime>:n_over = civil_time(0i64, 0i64, 0i64,
+                                          NTIME_NANOS_PER_SEC);
+    if (!n_over.is_error) { exit 64i32; }
+    Result<CivilTime>:n_neg = civil_time(0i64, 0i64, 0i64, 0i64 - 1i64);
+    if (!n_neg.is_error) { exit 65i32; }
+
+    // The narrowing counter-examples for the time fields.
+    // hour 256 =>! uint8 == 0, a VALID hour.
+    Result<CivilTime>:h256 = civil_time(256i64, 0i64, 0i64, 0i64);
+    if (!h256.is_error) { exit 70i32; }
+    // minute 300 =>! uint8 == 44, a VALID minute.
+    Result<CivilTime>:mi300 = civil_time(0i64, 300i64, 0i64, 0i64);
+    if (!mi300.is_error) { exit 71i32; }
+    // nanos 2^32 =>! uint32 == 0, a VALID nanosecond count. This is the one
+    // that a `uint32` field makes reachable at a value an `int64` argument
+    // carries comfortably.
+    Result<CivilTime>:n_wrap = civil_time(0i64, 0i64, 0i64, 4294967296i64);
+    if (!n_wrap.is_error) { exit 72i32; }
+
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (DivByZero)      { exit 90i32; },
+        (DivOverflow)    { exit 89i32; },
+        (ETimeValue)     { exit 88i32; },
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

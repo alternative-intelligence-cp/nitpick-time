@@ -1,0 +1,136 @@
+// expect-exit: 0
+//
+// C-3 — THE LEAP RULE, APPLIED UNIFORMLY ACROSS NEGATIVE YEARS, and C-8's
+// February 30th refusal's other half: `days_in_month`.
+//
+// WHY THE NEGATIVE YEARS ARE THE POINT. `0.1.0.md` §6 and the cycle README both
+// warn that `/` truncates toward zero and `%` takes the sign of the DIVIDEND
+// (C semantics, pinned by `tests/probe/probe07_negative_div.npk`), that
+// Hinnant's algorithm carries a correction for it, and that any NEW arithmetic
+// has to carry it too. The leap rule is the first new arithmetic in this
+// library, so it is the first place that warning could bite.
+//
+// IT DOES NOT BITE, AND THIS FILE IS WHY THAT IS A MEASUREMENT AND NOT A HOPE:
+// every test in the rule compares the remainder against ZERO, and zero has no
+// sign. `-4 % 4`, `-100 % 100` and `-400 % 400` are all `0` under C semantics,
+// so the rule needs no correction. A correction WOULD be needed the moment a
+// non-zero remainder were used -- which `days_from_civil`'s `era` does, and
+// which is why 0.1.1 still owes `(y >= 0 ? y : y - 399) / 400`.
+//
+// A RULE THAT IS RIGHT AND A RULE THAT IS RIGHT BY ACCIDENT PASS THE SAME
+// POSITIVE-YEAR SUITE. That is the whole reason the four century cases each
+// have a negative mirror below, and why -1, -4, -100 and -400 are named cases
+// of their own.
+mod:leap_rule;
+
+use "../../src/cal/cal.npk".ETimeValue;
+use "../../src/cal/cal.npk".is_leap_year;
+use "../../src/cal/cal.npk".days_in_month;
+
+func:main = int32(cstring[]:_~argv) {
+    // ---- the four century cases (C-3's three clauses, all exercised) ---
+
+    // divisible by 400 -> leap
+    if (!(raw is_leap_year(1600i64)))        { exit 10i32; }
+    if (!(raw is_leap_year(2000i64)))        { exit 11i32; }
+    // divisible by 100 and not by 400 -> NOT leap
+    if (raw is_leap_year(1700i64))           { exit 12i32; }
+    if (raw is_leap_year(1900i64))           { exit 13i32; }
+    // divisible by 4 and not by 100 -> leap
+    if (!(raw is_leap_year(1996i64)))        { exit 14i32; }
+    if (!(raw is_leap_year(2024i64)))        { exit 15i32; }
+    // not divisible by 4 -> NOT leap
+    if (raw is_leap_year(1997i64))           { exit 16i32; }
+    if (raw is_leap_year(2023i64))           { exit 17i32; }
+
+    // ---- their negative mirrors ---------------------------------------
+
+    // Astronomical numbering (C-2): year 0 exists and is 1 BCE, so the rule
+    // applies to a negative year exactly as to a positive one. Each of these
+    // is the mirror of the case directly above it.
+    if (!(raw is_leap_year(0i64 - 1600i64))) { exit 20i32; }
+    if (!(raw is_leap_year(0i64 - 2000i64))) { exit 21i32; }
+    if (raw is_leap_year(0i64 - 1700i64))    { exit 22i32; }
+    if (raw is_leap_year(0i64 - 1900i64))    { exit 23i32; }
+    if (!(raw is_leap_year(0i64 - 1996i64))) { exit 24i32; }
+    if (raw is_leap_year(0i64 - 1997i64))    { exit 25i32; }
+
+    // ---- the four the plan names by name: -1, -4, -100, -400 ----------
+
+    // -1 is 2 BCE: not divisible by 4, so NOT leap. The case a sign error
+    // in the first clause turns into a leap year.
+    if (raw is_leap_year(0i64 - 1i64))       { exit 30i32; }
+    // -4 is 5 BCE: divisible by 4, not by 100, so LEAP.
+    if (!(raw is_leap_year(0i64 - 4i64)))    { exit 31i32; }
+    // -100: divisible by 4 AND by 100, not by 400, so NOT leap. This is the
+    // case that needs the second clause to fire on a negative dividend.
+    if (raw is_leap_year(0i64 - 100i64))     { exit 32i32; }
+    // -400: divisible by 400, so LEAP. The third clause on a negative.
+    if (!(raw is_leap_year(0i64 - 400i64)))  { exit 33i32; }
+
+    // Year 0 itself -- divisible by 400, so leap, and the value that exists
+    // only because C-2 chose astronomical numbering.
+    if (!(raw is_leap_year(0i64)))           { exit 34i32; }
+
+    // ---- days_in_month, every month of a common year ------------------
+
+    if ((days_in_month(1997i64, 1i64) ?! ETimeValue) != 31i64)  { exit 40i32; }
+    if ((days_in_month(1997i64, 2i64) ?! ETimeValue) != 28i64)  { exit 41i32; }
+    if ((days_in_month(1997i64, 3i64) ?! ETimeValue) != 31i64)  { exit 42i32; }
+    if ((days_in_month(1997i64, 4i64) ?! ETimeValue) != 30i64)  { exit 43i32; }
+    if ((days_in_month(1997i64, 5i64) ?! ETimeValue) != 31i64)  { exit 44i32; }
+    if ((days_in_month(1997i64, 6i64) ?! ETimeValue) != 30i64)  { exit 45i32; }
+    if ((days_in_month(1997i64, 7i64) ?! ETimeValue) != 31i64)  { exit 46i32; }
+    if ((days_in_month(1997i64, 8i64) ?! ETimeValue) != 31i64)  { exit 47i32; }
+    if ((days_in_month(1997i64, 9i64) ?! ETimeValue) != 30i64)  { exit 48i32; }
+    if ((days_in_month(1997i64, 10i64) ?! ETimeValue) != 31i64) { exit 49i32; }
+    if ((days_in_month(1997i64, 11i64) ?! ETimeValue) != 30i64) { exit 50i32; }
+    if ((days_in_month(1997i64, 12i64) ?! ETimeValue) != 31i64) { exit 51i32; }
+
+    // ---- February, on every branch of the leap rule --------------------
+
+    if ((days_in_month(2000i64, 2i64) ?! ETimeValue) != 29i64)  { exit 55i32; }
+    if ((days_in_month(1900i64, 2i64) ?! ETimeValue) != 28i64)  { exit 56i32; }
+    if ((days_in_month(1996i64, 2i64) ?! ETimeValue) != 29i64)  { exit 57i32; }
+    if ((days_in_month(1997i64, 2i64) ?! ETimeValue) != 28i64)  { exit 58i32; }
+    // and on the negative side, where the table is not involved and only the
+    // rule decides
+    if ((days_in_month(0i64 - 4i64, 2i64) ?! ETimeValue) != 29i64)   { exit 59i32; }
+    if ((days_in_month(0i64 - 100i64, 2i64) ?! ETimeValue) != 28i64) { exit 60i32; }
+    if ((days_in_month(0i64 - 400i64, 2i64) ?! ETimeValue) != 29i64) { exit 61i32; }
+
+    // ---- the month bound, both ends ------------------------------------
+
+    // `days_in_month` indexes `MONTH_LENGTH` by `m - 1`, so month 0 would
+    // read index -1 and month 13 index 12. The check is BEFORE the index and
+    // the language's own `T[N]` guard is behind it (S-17b), which is the belt
+    // rather than the answer -- so these two assert the ANSWER.
+    Result<int64>:m0 = days_in_month(1997i64, 0i64);
+    if (!m0.is_error)  { exit 70i32; }
+    Result<int64>:m13 = days_in_month(1997i64, 13i64);
+    if (!m13.is_error) { exit 71i32; }
+    Result<int64>:mneg = days_in_month(1997i64, 0i64 - 1i64);
+    if (!mneg.is_error) { exit 72i32; }
+    // and the two values either side of the bound are accepted, so the
+    // refusal above is a bound and not a blanket
+    if ((days_in_month(1997i64, 1i64) ?! ETimeValue) != 31i64)  { exit 73i32; }
+    if ((days_in_month(1997i64, 12i64) ?! ETimeValue) != 31i64) { exit 74i32; }
+
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (DivByZero)      { exit 90i32; },
+        (DivOverflow)    { exit 89i32; },
+        (ETimeValue)     { exit 88i32; },
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

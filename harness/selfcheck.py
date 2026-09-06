@@ -681,6 +681,34 @@ PLANTED = [
       "    wild int64->:p = v.items;\n"
       "    int64[]:s = #wild_slice<int64>(p, v.count);\n    pass s[4i64];\n};\n"),
      "which is bound as a BARE POINTER"),
+    # A TYPE WITH A VALIDATING CONSTRUCTOR, BUILT BY STRUCT LITERAL INSTEAD
+    # (C-8b, TM-148). The language cannot take the literal away -- measured at
+    # pin `aaffb87`, a consumer's `CivilDate{ year: 32000i32, month: 99u8,
+    # day: 99u8 }` compiles, links and runs at exit 0 -- so this check is what
+    # keeps `src/` itself inside the guarantee everything downstream is
+    # written against.
+    (checks_mod.check_civil_literal,
+     ("src/zone/zone.npk", "mod:zone;\nfunc:f = CivilDate() never fails "
+                           "{ pass CivilDate{ year: 1i32 }; };\n"),
+     # THE CLEAN CONTROL IS THE BANNED FORM IN A COMMENT, and it is not a
+     # contrivance: `src/lib.npk`'s own header spells `CivilDate{ year:
+     # 32000i32, ... }` out in prose to document this rule, so a grep-shaped
+     # version of this check fails the repository on the paragraph arguing for
+     # it. That is the failure `check_purity` met on its first run, and this
+     # row is where the comment-blanking is asserted rather than assumed.
+     ("src/zone/zone.npk", "mod:zone;\n// CivilDate{ year: 32000i32 } is named\n"
+                           "// here in PROSE, and CivilTime{ hour: 99u8 } too.\n"),
+     "builds a `CivilDate` by struct literal"),
+    # THE OWNER IS EXEMPT, AND THE EXEMPTION IS PROVEN RATHER THAN ASSERTED.
+    # `src/cal/cal.npk` is where both constructors live, so it writes the
+    # literal on the line after the last range check -- if the owner were not
+    # skipped, this check would fail the module it exists to protect.
+    (checks_mod.check_civil_literal,
+     ("src/span/span.npk", "mod:span;\nfunc:f = CivilTime() never fails "
+                           "{ pass CivilTime{ hour: 1u8 }; };\n"),
+     ("src/cal/cal.npk", "mod:cal;\nfunc:f = CivilTime() never fails "
+                         "{ pass CivilTime{ hour: 1u8 }; };\n"),
+     "builds a `CivilTime` by struct literal"),
     (checks_mod.check_no_owning_fields,
      ("src/zone/zone.npk",
       "mod:zone;\nstruct:Row = {\n    int64:id;\n    string:name;\n};\n"

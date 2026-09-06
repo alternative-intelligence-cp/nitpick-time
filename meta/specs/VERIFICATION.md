@@ -74,7 +74,7 @@ loop of the binary search.
 | `zone_trans_at` | slice index in range | contract, Z3 |
 | `zone_type_at` | type index in range | contract, Z3 |
 | name-pool read | `offset + len <= POOL_LEN` | contract, Z3 |
-| `Vec<T>` `at`/`set` | index `< count` | contract, Z3 |
+| `Vec<T>` `at`/`set` | **`0 <= i && i < count`** — both ends, and the negative half is not redundant: an index derived from a narrower signed field can be negative (F4) | contract, Z3 |
 | transition binary search | `lo <= hi` maintained; terminates | invariant + variant, Z3 |
 | zone-name binary search | the same | invariant + variant, Z3 |
 | format writer | `Bytes` capacity ≥ written | contract, Z3 |

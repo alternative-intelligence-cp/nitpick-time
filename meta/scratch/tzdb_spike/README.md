@@ -45,6 +45,6 @@ output is not, and is reproducible from the pinned release name.
 ## What it measured
 
 477.8 KiB for the whole database including `POSIX_RULES`, against a 348 KiB
-estimate — inside the budget `../../roadmap/0.0/0.0.5.md` §3 fixed in advance,
+estimate — inside the budget `../../roadmap/done/0.0/0.0.5.md` §3 fixed in advance,
 with 4.4% to spare. TM-135 has the arithmetic, the controls and the four
 independent ways the estimate was wrong.

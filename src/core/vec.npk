@@ -106,8 +106,16 @@
 mod:vec;
 
 // The three fields, in this order, matching `BUILD.md` B-12 exactly.
-// `Ord` derives in declaration order (D-051), so field order is semantic even
-// where nothing derives today.
+// `Ord` derives in declaration order (the compiler's **D-123**, whose table
+// reads "`Ord`, `PartialOrd` | lexicographic comparison in declaration order"),
+// so field order is semantic even where nothing derives today.
+//
+// (This cited D-051 until cycle 0.0.6. At every pin this workbench has used,
+// D-051 is "No `ostring`; portability lives in a `Path` type above `nlibc`" --
+// a real heading, so nothing dangled and `check_specs_current` cannot see it
+// by design: a compiler `D-nnn` is verified by READING it, which is what
+// caught this. `SAFETY.md` §1 already cited the rule correctly, to
+// `TRAITS_REFERENCE §2.5`, so the mis-citation was one site.)
 pub struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };
 
 // `ensures answer.count == 0 && answer.cap >= 1`
@@ -263,8 +271,19 @@ pub func:vec_clear<T> = NIL(Vec<T>->:v) never fails {
 // not null the pointer and a contract that claims more than the code does is
 // the defect this repository amends specifications over. `0.0.4.md` §2's table
 // wrote `v.items == NULL`; corrected here and in that table at cycle 0.0.4.
-// `cap == 0` is the ownership bit that matters, and it is what a later
-// `vec_free` of the same value would read.
+//
+// AND THE LAST SENTENCE OF THAT PARAGRAPH WAS WRONG UNTIL CYCLE 0.0.6 (F1).
+// It read "`cap == 0` is the ownership bit that matters, and it is what a
+// later `vec_free` of the same value would read". THIS BODY READS NO FIELD
+// BEFORE `dalloc`, so nothing here consults `cap`, and a second `vec_free`
+// would `dalloc` the same pointer again whatever `cap` said. What actually
+// contains a double free is the RUNTIME: measured at pin `aaffb87`, one free
+// exits 0, and free-then-push-then-free exits **95** -- `Unreachable`, raised
+// by the allocator and taken by `failsafe`. So `cap == 0` is a statement about
+// the value's meaning to a CALLER -- an emptied `Vec` claims to hold nothing
+// and to have room for nothing -- and it is not a guard. Stating a mechanism
+// that is not the one doing the work is how a later reader removes the real
+// one.
 //
 // EVERY SCOPE THAT MADE A `Vec` CALLS THIS, or `exit 0` traps under D-151 --
 // which watches `wild` allocations, and this block is one. THAT GUARANTEE IS

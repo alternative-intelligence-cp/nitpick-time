@@ -82,7 +82,13 @@ REQUIRED = {
 
 ARRAY_TABLES = ("test",)
 
-# The stages this library's harness knows. `BUILD.md` §3 lists nine; an entry
+# The stages this library's harness knows. `BUILD.md` §3's table lists EIGHT --
+# `compile`, `parse`, `accept`, `check`, `program`, `golden`, `sweep`,
+# `fixture` -- and this tuple is those eight. (It said "nine" for three cycles,
+# C4: the four "further stages deliberately absent" that §3 discusses in prose
+# -- `resolve`, `runtime`, `verify`, `cost` -- are outside the table and
+# outside this tuple, and counting one of them is how the number moved.) An
+# entry
 # naming one it cannot honour is refused BY NAME rather than skipped -- the
 # compiler's rule, and O-X7's own argument: "an entry a runner cannot honour is
 # refused by name before anything runs, never skipped". A skipped entry is a

@@ -10,7 +10,7 @@
 # ============================================================================
 # THE TWO CONDITIONS THIS FILE EXISTS TO WRITE DOWN
 # ============================================================================
-# A green run here may be read as "ntime builds against compiler 0dfddac" only
+# A green run here may be read as "ntime builds against compiler aaffb87" only
 # because BOTH of the following are stated AND enforced below. Either one
 # missing and the claim is weaker than it sounds.
 #
@@ -34,28 +34,36 @@
 # step near the end, which reports rather than asserts, and says why.
 # ============================================================================
 #
-# WHAT A GREEN RUN PROVES TODAY, AND IT IS DELIBERATELY SMALL. `src/` is six
-# placeholder modules and an empty umbrella; the library has no behaviour yet,
-# so nothing here is evidence about behaviour. What it is evidence of: the
-# pinned compiler builds from a clean checkout at exactly LLVM 20.1.2, every
-# `.npk` under `src/` compiles, and `tests/conformance/import.npk` emits,
-# assembles, links, RUNS and exits 0. The run is what is judged -- `npkc`
-# exiting 0 is NOT well-formedness (O-N11, TM-112), and a stage that stopped at
-# the `.ll` would have passed a program with no handler.
+# WHAT A GREEN RUN PROVES TODAY. `src/core/` is real code since cycle 0.0.4 --
+# `Vec<T>`, `Bytes` and thirteen named bounds, re-exported as 35 public names --
+# so this IS evidence about behaviour, of the 62 units the runner reports. What
+# it is evidence of: the pinned compiler builds from a clean checkout at exactly
+# LLVM 20.1.2, every `.npk` under `src/` compiles, every unit under `tests/`
+# meets its own header at -O0 and again under `opt -O2`, the whole
+# `tests/probe/defect/` regression corpus meets its markers (TM-141), and
+# `tests/conformance/import.npk` emits, assembles, links, RUNS and exits 0. The
+# run is what is judged -- `npkc` exiting 0 is NOT well-formedness (O-N11,
+# TM-112), and a stage that stopped at the `.ll` would have passed a program
+# with no handler.
 #
 # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
 # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
-# V-15): eight faults planted in scratch trees, each requiring a RED run that
-# names it AND a green control beside it, then nine planted violations across
-# the tree checks, then the S-6 arm generator diffed against the compiler's own
-# `NITPICK-REACH-003` identity list. It runs FIRST and its failure is fatal, so
+# V-15): SEVEN of V-14's eight faults planted in scratch trees -- case 6 is
+# `PEND` until cycle 0.5 and prints as pending rather than passing -- each
+# requiring a RED run that names it AND a green control beside it; then ten
+# planted violations across the tree checks; then the S-6 arm generator diffed
+# against the compiler's own `NITPICK-REACH-003` identity list; then the
+# verdict mechanisms of TM-137 and TM-141 driven red. It runs FIRST and its
+# failure is fatal, so
 # a green run below a broken runner is not a state this workflow can report.
 # Until 0.0.3 that was the honest gap here, and it was written in this comment
 # for three cycles.
 #
-# WHAT IT IS STILL NOT EVIDENCE OF: that the library WORKS. `src/` is six
-# placeholder modules and an empty umbrella. The first computation is
-# `src/core/` at cycle 0.0.4.
+# WHAT IT IS STILL NOT EVIDENCE OF. Five of the six `src/` directories are
+# still placeholders -- `cal/`, `span/`, `zone/`, `fmt/`, `host/` -- so nothing
+# here dates anything. And a green run is not a MEMORY result for the managed
+# half: D-151's exit-0 trap counts `wild` allocations and a `buffer` is managed
+# (TM-106), so `exit 0` says nothing about `Bytes` (S-18b, S-18e).
 #
 # NOT PINNED, AND KNOWN: `actions/checkout@v4` and `actions/cache@v4` are moving
 # tags -- the only inputs in this file that are not immutable. A workflow this
@@ -75,16 +83,24 @@ permissions:
   contents: read
 
 env:
-  # ../BOARD.md's pinned toolchain, by FULL sha. `0dfddac` is the short form
+  # ../BOARD.md's pinned toolchain, by FULL sha. `aaffb87` is the short form
   # used in the roadmap, in the manifest and in the transcripts.
-  NITPICK_COMMIT: 0dfddac045bdab6abbd367b1ffb31de695b9bf22
-  NITPICK_COMMIT_SHORT: 0dfddac
+  #
+  # THIS PIN WAS `0dfddac` UNTIL CYCLE 0.0.6 AND THE COMMENT ABOVE WAS FALSE
+  # WHILE IT WAS (TM-140). The board moved to `aaffb87` on 2026-09-05 and this
+  # file did not; nothing noticed, because a workflow that has never run cannot
+  # go red. Bumping either pin is a deliberate commit, and this is that commit:
+  # the whole suite was run at `aaffb87` before it was made, and the audit
+  # additionally built the library and every runnable unit at `0dfddac`, so the
+  # content is known pin-portable and what was wrong was only the pin.
+  NITPICK_COMMIT: aaffb8768dd60b61b7a82cdf5b4736d40deac8fb
+  NITPICK_COMMIT_SHORT: aaffb87
   # nitpick.toml [toolchain] llvm. Condition (1) above.
   LLVM_VERSION: 20.1.2
   # The digests of the artefacts the workbench pins, from
-  # ../.internal/toolchain/0dfddac/SHA256SUMS. Reported against CI's own, never
+  # ../.internal/toolchain/aaffb87/SHA256SUMS. Reported against CI's own, never
   # asserted -- see the step that uses them for why.
-  NPKC_SHA256_WORKBENCH: 38e48973eee3a83056a62d515abc68d6bca62d052f3b5e1fbf2ced00101267d9
+  NPKC_SHA256_WORKBENCH: a3b0dadc650421b25ac24bfc073ee29e2b57659a48bd84338edd3b23c382c86e
   NPKRT_SHA256_WORKBENCH: c9ddbcffd32eccc7787bd71c39ebefd25913170a9fae48de32eb53ca68b2239e
 
 jobs:

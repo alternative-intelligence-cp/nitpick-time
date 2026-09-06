@@ -4,7 +4,9 @@
 WHAT A GREEN RUN HERE IS, AND IS NOT.
 
   IT IS: the self-check green FIRST (V-15), so the runner has been shown able
-  to fail eight ways before it is believed about anything; the manifest read
+  to fail SEVEN ways before it is believed about anything -- V-14 names eight
+  and case 6 is `PEND` until cycle 0.5, which is a number this file claimed
+  wrong for three cycles (TM-142); the manifest read
   and schema-checked; the three tools held to the pin's exact patch release;
   every `.npk` in the tree put in front of the real parser; the tree diffed
   against the documents that describe it by eight checks, each of which has
@@ -17,8 +19,13 @@ WHAT A GREEN RUN HERE IS, AND IS NOT.
   allowlist by construction (`elf.py`, B-2c, TM-118, RX-120). `check_purity` is
   a SOURCE-level check and is the only thing that answers that question.
 
-  IT IS NOT evidence that the LIBRARY works. There is none yet; `src/` is
-  placeholders. The first computation is `src/core/` at 0.0.4.
+  IT IS NOT evidence that the WHOLE library works. `src/core/` is real code
+  since cycle 0.0.4 -- `Vec<T>`, `Bytes` and thirteen named bounds -- and the
+  suite is evidence about it. The other five `src/` directories are still
+  placeholders, so nothing here dates anything. AND IT IS NOT A MEMORY RESULT
+  FOR THE MANAGED HALF: D-151's exit-0 trap counts `wild` allocations and a
+  `buffer` is managed (TM-106), so a green run says nothing about `Bytes`
+  (S-18b, S-18e).
 
   IT IS NOT a `--quick` or `--only` run. Both say so twice, at the top and at
   the bottom, and both refuse to print the word GREEN on its own.
@@ -96,7 +103,9 @@ EXPECT_EXEMPT = {
     # link and run, both carry `// expect-exit: 0`, and both are ordinary
     # members of the `probe` stage. TM-137.
     "tests/probe/defect/fixed_array_len/case1_local_array_len.npk": ("npkc",
-        "a SECOND compiler defect, found at 0.0.4: `.len` on a fixed-size "
+        "O-N18, a SECOND compiler defect, found at 0.0.4 (the compiler's "
+        "DEF-22, FIXED in its 1.5.2e which is AHEAD of our pin): `.len` on a "
+        "fixed-size "
         "array `T[N]` is accepted by the frontend and cannot be lowered "
         "(`NITPICK-EMIT-002`). `expect-error:` would be spellable here -- "
         "`npkc` DOES refuse it -- and is WRONG ANYWAY: EMIT-002's own text "
@@ -107,7 +116,8 @@ EXPECT_EXEMPT = {
         "directory's README"),
     "tests/probe/defect/generic_owning_copy/case1_generic_bare_copy.npk":
         ("run:0",
-        "a THIRD compiler defect, found at 0.0.5: `NITPICK-TYPE-046` is not "
+        "O-N19, a THIRD compiler defect, found at 0.0.5, ACCEPTED as a "
+        "soundness hole in the checker: `NITPICK-TYPE-046` is not "
         "enforced inside a GENERIC function body, so `T:answer = s[i]` at an "
         "owning `T` compiles, links and runs -- and the identical statement "
         "with `string` written out is refused (`case2`). No marker is right: "
@@ -132,7 +142,9 @@ EXPECT_EXEMPT = {
 # over the whole tree deliberately, because the file that went uncovered for two
 # days was under `tests/probe/defect/`, which every directory-scoped sweep
 # written before it had left out.
-WALK_SKIP = {".git", ".internal", "build", "__pycache__"}
+# The skip list now lives in `checks.py` beside the walk that uses it; this
+# name is kept because the module's own prose cites it.
+WALK_SKIP = checks_mod.WALK_SKIP
 
 STEPS = 9
 
@@ -216,14 +228,9 @@ class Report:
 # ---------------------------------------------------------------------------
 
 def all_npk(root):
-    found = []
-    for dirpath, dirs, names in os.walk(root):
-        dirs[:] = sorted(d for d in dirs if d not in WALK_SKIP)
-        for n in sorted(names):
-            if n.endswith(".npk"):
-                found.append(os.path.relpath(os.path.join(dirpath, n), root)
-                             .replace(os.sep, "/"))
-    return sorted(found)
+    """ONE walk, and it lives in `checks.py` so `check_denominators` and this
+    runner cannot disagree about what "every `.npk` in the tree" means."""
+    return checks_mod.all_npk(root)
 
 
 def exemptions_for(root):
@@ -238,7 +245,7 @@ def exemptions_for(root):
     return EXPECT_EXEMPT if os.path.abspath(root) == HERE else {}
 
 
-def check_expect_headers(rep, root):
+def check_expect_headers(rep, root, exempt_list=None):
     """Every `.npk` in the tree is in exactly ONE of three buckets.
 
       src/       judged by "it compiles" -- check 7 emits the whole graph the
@@ -257,9 +264,17 @@ def check_expect_headers(rep, root):
     the point: the sweep and the dispatch cannot disagree about what a header
     says, and the sweep reaches files no `[[test]]` entry selects -- every file
     under `tests/probe/defect/`, which is all of them.
+
+    `exempt_list` IS A PARAMETER BECAUSE THIS ROW WAS PLANTED NOWHERE (TM-141).
+    It is `TESTING.md` §2's row 13 and V-14c claimed "every check in §2 is
+    commissioned the same way"; this was the row that made the claim false, and
+    the row it was false about is the one TM-115 was written to create. Its
+    stale-exemption branch -- V-1c's both-directions diff -- cannot be driven
+    at all without handing it a list, which is why it never was.
     """
     files = all_npk(root)
-    exempt_list = exemptions_for(root)
+    if exempt_list is None:
+        exempt_list = exemptions_for(root)
     in_src, in_tests, orphan = [], [], []
     for rel in files:
         (in_src if rel.startswith("src/")
@@ -354,7 +369,7 @@ def _verdict(bld, root, rel, out_dir):
     return "run:%d" % st
 
 
-def check_exemptions_live(rep, root, bld):
+def check_exemptions_live(rep, root, bld, exempt_list=None):
     """AN EXEMPTION'S REASON EXPIRES, AND NOTHING USED TO NOTICE.  TM-137.
 
     Every entry in `EXPECT_EXEMPT` records the verdict it was written against.
@@ -369,8 +384,16 @@ def check_exemptions_live(rep, root, bld):
     both files went from stopping at `llc` to running clean; the suite was
     green; nothing said a word.  A rule that asks a later reader to remember
     is not a mechanism, and this is the mechanism.
+
+    `exempt_list` IS A PARAMETER SO THAT THIS CAN BE COMMISSIONED (TM-141).
+    Until cycle 0.0.6 it read `EXPECT_EXEMPT` directly and could therefore only
+    ever be run against a tree where every recorded verdict was correct -- so
+    the mechanism written to catch a check that had never failed had itself
+    never failed.  `selfcheck.py` part D hands it a list with one verdict moved
+    and requires the red, and the same list unmoved and requires silence.
     """
-    exempt_list = exemptions_for(root)
+    if exempt_list is None:
+        exempt_list = exemptions_for(root)
     out_dir = os.path.join(root, "build", "exempt")
     os.makedirs(out_dir, exist_ok=True)
     checked, moved = 0, 0
@@ -394,11 +417,99 @@ def check_exemptions_live(rep, root, bld):
             % (checked, len(exempt_list), moved))
 
 
+DEFECT_DIR = "tests/probe/defect"
+
+
+def run_defect_corpus(rep, root, bld, subdir=None):
+    """THE REGRESSION CORPUS FOR EVERY DISCHARGED COMPILER DEFECT, ASSERTED.
+
+    TM-141.  THE INVERSION THIS FIXES IS SHARP.  `tests/probe/defect/` holds
+    24 `.npk`.  Three are EXEMPT from carrying an expectation, and those three
+    had their verdict re-derived on every run since 0.0.5 (TM-137).  The other
+    21 CARRY one -- `expect-exit: 121` for O-N10, `expect-error:
+    NITPICK-BORROW-001` for O-N9, `expect-error: NITPICK-REACH-003` for O-N11,
+    `expect-exit: 0` for the TM-137 fix -- and until cycle 0.0.6 NOTHING
+    ASSERTED ANY OF THEM.  `nitpick.toml`'s `probe` entry is deliberately
+    non-recursive, so the suite selected 0 of these 24; `check_expect_headers`
+    checks only that a marker is WELL-FORMED; and `run_parse` compares only
+    the diagnostic's phase family, never the code.
+
+    So the files exempt from having an expectation were checked and the files
+    that had one were not.  `TESTING.md` §1 described the coverage as "under
+    `tests/` with an `expect-` marker of its own or a NAMED exemption", which
+    reads as coverage and was, for 21 files, membership in a bucket nobody
+    evaluated.
+
+    WHY HERE AND NOT AS A `[[test]]` ENTRY.  The manifest selects by DIRECTORY
+    with a non-recursive glob (`<path>/*.npk`), and this corpus is six
+    subdirectories deep-ish; a recursive entry over `tests/probe/` would also
+    sweep `support/`, which must never be run.  One entry per subdirectory
+    would put the coverage rule in six places that can drift apart.  This walks
+    the directory, so a NEW subdirectory is covered the day it is created --
+    which is the property that failed here.
+
+    THE ARITHMETIC IS PRINTED AND ASSERTED: 24 = 3 exempt + 21 asserted.  A
+    corpus that grew a file nobody judged would change the sum.
+
+    `subdir` IS A PARAMETER FOR THE SAME REASON `check_exemptions_live` takes
+    one: a stage that can only be pointed at a corpus where everything already
+    passes cannot be shown to fail.  `selfcheck.py` part D points it at a
+    scratch corpus holding one file whose `expect-exit:` is wrong by one.
+    """
+    if subdir is not None:
+        return _defect_corpus(rep, root, bld, subdir, {})
+    if os.path.abspath(root) != HERE:
+        # An inner tree -- a self-check scratch root -- has no defect corpus,
+        # for the reason `exemptions_for` gives about `EXPECT_EXEMPT`: this
+        # corpus names files in THIS repository, so it applies to this one.
+        # Saying so with a number is the difference between "nothing to judge"
+        # and "judged nothing".
+        rep.say("      defect corpus: not this tree (--root), 0 file(s)")
+        return
+    return _defect_corpus(rep, root, bld, DEFECT_DIR, exemptions_for(root))
+
+
+def _defect_corpus(rep, root, bld, subdir, exempt_list):
+    base = os.path.join(root, subdir)
+    if not os.path.isdir(base):
+        rep.fail("defect corpus", "%s is not a directory. The regression "
+                 "corpus for every discharged compiler defect lives there "
+                 "(TM-141)." % subdir)
+        return
+    files = sorted(rel for rel in all_npk(root)
+                   if rel.startswith(subdir + os.sep))
+    exempt_here = [rel for rel in files if rel in exempt_list]
+    judged = [rel for rel in files if rel not in exempt_list]
+    refusals, runs, bad_header = 0, 0, 0
+    for rel in judged:
+        try:
+            e = stages.read(root, rel)
+        except stages.MarkerError as err:
+            bad_header += 1
+            rep.unit(rel, [str(err)])
+            continue
+        if e.is_refusal:
+            refusals += 1
+            rep.unit(rel, stages.refusal(bld, rel, e),
+                     "refused %s" % ", ".join(sorted(set(e.errors))))
+        else:
+            runs += 1
+            t0 = time.time()
+            rep.unit(rel, stages.program(bld, rel, e),
+                     "exit %d, both legs, %.1f s" % (e.exit, time.time() - t0))
+    rep.say("      defect corpus: %d file(s) = %d exempt (verdict re-derived "
+            "above) + %d asserted (%d run, %d refusal, %d unowned)"
+            % (len(files), len(exempt_here), len(judged), runs, refusals,
+               bad_header))
+    if len(exempt_here) + len(judged) != len(files):
+        rep.fail("defect corpus", "the buckets do not sum to %d" % len(files))
+
+
 # ---------------------------------------------------------------------------
 # 5. the tree checks
 # ---------------------------------------------------------------------------
 
-def run_tree_checks(rep, root, bld):
+def run_tree_checks(rep, root, bld, extra=None):
     """`TESTING.md` §2's family. Every one runs on every full invocation (P-20).
 
     A CHECK WITH NOTHING TO CHECK RUNS ANYWAY AND SAYS SO WITH A NUMBER. That
@@ -411,7 +522,9 @@ def run_tree_checks(rep, root, bld):
     rep.say("[5/%d] tree checks -- %d live, %d pending"
             % (STEPS, len(live) + 1, len(checks_mod.PENDING)))
     for fn in live:
-        res = fn(root)
+        # `extra` carries the two denominators that need the manifest. Every
+        # check takes `**_`, so the ones that do not want it never see it.
+        res = fn(root, extra=extra)
         if res.problems:
             rep.fail(res.name, res.headline)
             for p in res.problems:
@@ -450,15 +563,23 @@ def run_parse(rep, root, bld):
     """Every `.npk` in the tree in front of the real parser, each exactly once.
 
     THE DENOMINATOR IS THE WHOLE TREE AND THAT IS WHY THE STAGE IS WORTH ITS
-    COST. Measured at this cycle: of the 50 `.npk` files here, the library
-    build roots 1, the suite roots 27, and 3 more are reached by `use` from a
-    suite root -- so 19 are put in front of the compiler by NOTHING ELSE. Six
-    of those are the `src/` placeholders, which `src/lib.npk` does not reach
-    because it re-exports nothing yet, and thirteen are the reproductions under
-    `tests/probe/defect/` -- the directory whose files went two days with no
-    expectation at all (TM-115), for exactly this reason.
+    COST. Re-measured at cycle 0.0.6: of the 78 `.npk` files here
+    [[sweep: npk_total=78]] the library build roots 4 [[sweep: lib_reach=4]],
+    the suite roots 41 [[sweep: suite_roots=41]], and 3 more are reached by
+    `use` from a suite root [[sweep: support_total=3]] -- so 30 are put in
+    front of the compiler by NOTHING ELSE. Five of those are the remaining
+    `src/` placeholders and 24 are the reproductions under
+    `tests/probe/defect/` [[sweep: defect_total=24]] -- the directory whose
+    files went two days with no expectation at all (TM-115), and whose markers
+    then went three cycles asserted by nothing (TM-141), for exactly this
+    reason.
 
-        50 = 1 (library root) + 27 (suite roots) + 3 (reached by `use`) + 19
+        78 = 4 (library) + 41 (suite roots) + 3 (reached by `use`) + 30
+
+    EVERY NUMBER IN THAT SENTENCE IS TAGGED AND CHECKED (TM-142). It read
+    `50 = 1 + 27 + 3 + 19` until cycle 0.0.6, three subcycles after the tree
+    stopped being that size, and nothing anywhere compared it to the line this
+    function PRINTS on every run.
     """
     files = all_npk(root)
     verdicts = {"parses": 0, "refused later": 0, "does not parse": 0}
@@ -546,11 +667,12 @@ def select(root, entry):
     """The files a `[[test]]` entry selects: `<path>/*.npk`, non-recursive.
 
     NOT recursive, and the omission is load-bearing (the manifest says so at
-    length): a plain glob over `tests/probe/` is exactly the twenty-six probe
-    programs and excludes `support/` -- three library modules with no `main` --
-    and `defect/`, whose files are reproductions rather than tests of this
-    library. The schema has no `recursive` key, so writing one is refused by
-    name rather than silently ignored.
+    length): a plain glob over `tests/probe/` is exactly the 32
+    [[sweep: probe_dir=32]] probe programs and excludes `support/` -- three
+    library modules with no `main` -- and `defect/`, whose files are
+    reproductions rather than tests of this library and are judged by
+    `run_defect_corpus` instead (TM-141). The schema has no `recursive` key, so
+    writing one is refused by name rather than silently ignored.
     """
     d = os.path.join(root, entry["path"])
     if not os.path.isdir(d):
@@ -683,7 +805,14 @@ def main(argv):
     rep = Report(verdicts_path)
     t0 = time.time()
     rep.say("ntime harness -- cycle 0.0.3. The self-check runs FIRST (V-15) and")
-    rep.say("this runner has been shown able to fail eight ways (V-14).")
+    # SEVEN, NOT EIGHT, AND THE NUMBER IS DERIVED (TM-142). V-14 names eight
+    # cases and case 6 is `PEND` until cycle 0.5, so seven faults are planted.
+    # This line said "eight" for three cycles and `0.0/README.md`'s Gate --
+    # which says seven -- was the only place that had it right.
+    import selfcheck as selfcheck_mod        # local: `selfcheck` imports this
+    rep.say("this runner has been shown able to fail %d ways (V-14), of the "
+            "%d V-14 names."
+            % (selfcheck_mod.PLANTED_CASES, selfcheck_mod.V14_CASES))
 
     # P-22: a FILTERED RUN CONCLUDES NOTHING, and it says so twice.
     if only is not None:
@@ -777,8 +906,29 @@ def main(argv):
     #     wrong, and this one cannot be taken at all without one.
     check_exemptions_live(rep, root, bld)
 
-    # 5. the tree checks
-    run_tree_checks(rep, root, bld)
+    # 4c. and the OTHER 21 files in the same directory, whose `expect-` markers
+    #     were asserted by nothing (TM-141). It runs beside 4b because the two
+    #     together are what make the coverage claim in `TESTING.md` §1 true:
+    #     3 exempt + 21 asserted = the whole corpus. Not under `--only`'s or
+    #     `--quick`'s control, for 4b's reason -- this is coverage, not a
+    #     suite a developer iterates on.
+    run_defect_corpus(rep, root, bld)
+
+    # 5. the tree checks. `suite_roots` and `lib_reach` need the manifest, so
+    #    they are measured here and handed to `check_denominators`; everything
+    #    else it needs is a property of the directory.
+    suite_roots = set()
+    for entry in man["test"]:
+        for rel in (select(root, entry) or ()):
+            suite_roots.add(rel)
+    try:
+        lib_reach = len(build_mod.reachable_sources(
+            os.path.join(root, man["build"]["entry"])))
+    except Exception:
+        lib_reach = -1
+    run_tree_checks(rep, root, bld,
+                    extra={"suite_roots": len(suite_roots),
+                           "lib_reach": lib_reach})
 
     # 6. parse
     run_parse(rep, root, bld)

@@ -7,7 +7,7 @@
 // exit 0. It is no longer a defect reproduction; it is a regression case,
 // which is what the note below always said it would become.
 //
-// Obtained by running the four-step recipe of `meta/roadmap/0.0/0.0.0.md` §2
+// Obtained by running the four-step recipe of `meta/roadmap/done/0.0/0.0.0.md` §2
 // against the pinned toolchain. The derive was additionally checked for
 // CORRECTNESS rather than for compiling -- see TM-111 -- because a derived
 // `eq` that builds and answers wrongly is the same class of defect O-N10 was.

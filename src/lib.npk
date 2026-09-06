@@ -19,12 +19,12 @@
 // deliberate. Adding a line here is the moment a name becomes public and, by
 // TM-013, a thing a MAJOR version is needed to take away.
 //
-// EMPTY TODAY, AND THAT IS THE POINT (cycle 0.0's checklist). No module has a
-// public name yet; the first arrives with `src/core/` at 0.0.4. Because this
-// file re-exports nothing, `tests/conformance/import.npk` compiles against an
-// empty surface — and it goes on compiling as the surface grows. The day it
-// does NOT, the surface changed incompatibly, which is exactly what that test
-// is for.
+// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 35
+// names now, forty lines below. (This paragraph still read "EMPTY TODAY ...
+// this file re-exports nothing" two subcycles after they were added — C6.)
+// `tests/conformance/import.npk` compiled against the empty surface and goes
+// on compiling as the surface grows. The day it does NOT, the surface changed
+// incompatibly, which is exactly what that test is for.
 //
 // THE SHAPE THE LINES TAKE, so the first one added is not also the first one
 // designed (the form is the compiler's own `lib/nbridge.npk`, and it is
@@ -78,6 +78,13 @@ pub use "./core/vec.npk".vec_free;
 // `Bytes` -- the byte sink every formatter writes into. NO `bytes_free`, and
 // its absence is the design (P-24, TM-133): the body is a managed `buffer` and
 // its scope-exit drop IS the reclaim.
+//
+// `bytes_view` HANDS OUT A VIEW THAT GROWTH INVALIDATES (S-18e, TM-139), and
+// both it and `bytes_push` are on this list. A view is valid until the next
+// call that can grow the sink -- `push`, `extend`, `extend_str`, `put_uint`,
+// `put_int`, `reserve` -- and reading it afterwards returns the allocator's
+// poison, not the sink's bytes. Its header states the rule; this line is here
+// because a public surface is where a consumer looks first.
 pub use "./core/bytes.npk".Bytes;
 pub use "./core/bytes.npk".bytes_init;
 pub use "./core/bytes.npk".bytes_reserve;

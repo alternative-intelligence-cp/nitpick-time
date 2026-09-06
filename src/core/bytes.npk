@@ -140,12 +140,23 @@ pub func:bytes_extend_str = NIL(Bytes->:b, string:src) never fails {
 //
 // THE SCRATCH ARRAY NEVER ASKS ITS OWN LENGTH: `.len` on a fixed-size array is
 // accepted by the frontend and cannot be lowered at this pin
-// (`NITPICK-EMIT-002`, `../../tests/probe/defect/fixed_array_len/`). The bound
-// is `NTIME_DIGITS_MAX`, which is the better spelling regardless.
+// (`NITPICK-EMIT-002`, `../../tests/probe/defect/fixed_array_len/`, O-N18). The
+// bound is `NTIME_DIGITS_MAX`, which is the better spelling regardless.
+//
+// AND SINCE CYCLE 0.0.6 THE ARRAY IS SIZED BY THAT NAME AND NOT BY `20` (D2).
+// It read `uint8[20]:digits` at both sites while `limits.npk` said *"and
+// `src/core/bytes.npk` sizes its stack buffer with this name"* -- so the one
+// file `limits.npk` names as its consumer did not consume it, `use
+// "./limits.npk".*;` above imported nothing that was used, and
+// `check_constants_named` could not see it (`_NUMBER` wants four or more
+// digits and `CONSTANT_OWNER` has no entry for `20`). Measured before it was
+// changed: `uint8[N]` with `N` a module-level `fixed`, and with one imported
+// from another module, both compile at exit 0 -- so the name was always
+// spellable here and the literal was the only thing standing.
 //
 // 20 BYTES IS EXACTLY ENOUGH: `uint64`'s maximum is 20 digits.
 pub func:bytes_put_uint = NIL(Bytes->:b, uint64:v) never fails {
-    uint8[20]:digits = [0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8,
+    uint8[NTIME_DIGITS_MAX]:digits = [0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8,
                         0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8];
     int64:n = 0i64;
     uint64:x = v;
@@ -206,7 +217,7 @@ pub func:bytes_put_int = NIL(Bytes->:b, int64:v) never fails {
         pass NIL;
     }
     drop bytes_push(b, 45u8);                       // '-'
-    uint8[20]:digits = [0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8,
+    uint8[NTIME_DIGITS_MAX]:digits = [0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8,
                         0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8];
     int64:n = 0i64;
     int64:x = v;                                     // stays negative throughout
@@ -237,10 +248,47 @@ pub func:bytes_len = int64(Bytes->:b) never fails {
 // A BORROWED VIEW OF THE LIVE PREFIX -- over `len`, never over `cap`, so the
 // uninitialised tail is not visible through it.
 //
-// THE BORROW OUTLIVES NOTHING IT SHOULD NOT: the slice refers to the sink's
-// body, so it is valid exactly as long as the `Bytes` is. `probe10`'s family
-// and `tests/probe/defect/view_escape/` are this repository's record of where
-// the language does and does not catch a view escaping its owner.
+// ===========================================================================
+// THE VIEW IS INVALIDATED BY GROWTH. READ THIS BEFORE HOLDING ONE (TM-139)
+// ===========================================================================
+//
+//     A view is valid until the next call that can GROW this `Bytes`, and
+//     no longer. That is `bytes_push`, `bytes_extend`, `bytes_extend_str`,
+//     `bytes_put_uint`, `bytes_put_int` and `bytes_reserve` itself -- every
+//     operation that appends. `bytes_len`, `bytes_view`, `bytes_take` and
+//     `bytes_clear` do not grow and do not invalidate.
+//
+// WHY, IN ONE LINE: `bytes_reserve` grows by allocating a FRESH buffer,
+// copying, and overwriting `b.body`, which DROPS the old one (D-186, and the
+// overwrite is marked as such 150 lines above). The view still points into
+// the released block.
+//
+// UNTIL CYCLE 0.0.6 THIS COMMENT SAID THE OPPOSITE -- "valid exactly as long
+// as the `Bytes` is" -- and `bytes_view` and `bytes_push` are BOTH on the
+// public surface (`../lib.npk`), so a consumer following it wrote a
+// use-after-free that compiles, links, runs, and reads 170, the allocator's
+// `0xAA` free poison (D-183). Measured at pin `aaffb87`; the pair is
+// `../../tests/unit/bytes_view_lifetime.npk`, which holds a view across forty
+// NON-growing pushes and reads it back correctly, and then does the same at a
+// capacity that forces growth.
+//
+// NO GATE HERE COULD HAVE FOUND IT (`SAFETY.md` S-18e). D-151's exit-0 trap
+// counts `wild` blocks and a `buffer` is managed (TM-106); `check_raw_index`
+// is about indexing; the symbol scan is blind to it. Every gate this
+// repository owns is a LEAK gate, and this is a WRONG ANSWER -- so it is
+// found by a test that reads, and by nothing else.
+//
+// `Vec<T>` DOES NOT HAVE THIS SHAPE, and the reason is worth writing down
+// rather than rediscovering: `vec_reserve` reallocates exactly the same way,
+// but no function in `vec.npk` RETURNS a slice, so there is no view for a
+// caller to hold. Inside both files every `#wild_slice` binding is made AFTER
+// the `*_reserve` call in the same body, never before -- which is the rule
+// `SAFETY.md` S-18e states for `src/fmt/` to inherit.
+//
+// `probe10`'s family and `../../tests/probe/defect/view_escape/` remain this
+// repository's record of where the LANGUAGE does and does not catch a view
+// escaping its owner. This is a different question: the view here never
+// outlives its owner, it outlives its owner's BODY.
 pub func:bytes_view = uint8[](Bytes->:b) never fails {
     pass #wild_slice<uint8>(b.body.ptr, b.len);
 };

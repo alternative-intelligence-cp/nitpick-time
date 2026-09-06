@@ -5,7 +5,7 @@ language fact that `meta/specs/` depends on, so that a change to that fact is a
 red run here rather than a wrong date in cycle 0.6.
 
 Written in cycle 0.0.0; governed by
-[`../../meta/roadmap/0.0/0.0.0.md`](../../meta/roadmap/0.0/0.0.0.md), which
+[`../../meta/roadmap/done/0.0/0.0.0.md`](../../meta/roadmap/done/0.0/0.0.0.md), which
 carries the verdict table. Picked up by the harness as ordinary `program`-stage
 entries from cycle 0.0.2.
 

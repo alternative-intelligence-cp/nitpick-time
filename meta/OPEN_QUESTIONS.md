@@ -77,7 +77,40 @@ Recorded here because the mismatch looks like a defect on first sight and
 somebody will eventually propose the "fix".
 **Ask: none.**
 
-### O-N4 — `npkc` is quadratic in the size of one declaration — **BLOCKING**
+### ~~O-N4 — `npkc` is quadratic in the size of one declaration~~ — **DISCHARGED, RE-MEASURED HERE AT PIN `aaffb87` ON 2026-09-06**
+
+> **The heading said BLOCKING until cycle 0.0.6 and it had not been for two
+> subcycles.** The compiler's 1.5.1b fixed it — three text builders in
+> `src/backend/` that re-concatenated an accumulator per element, per trap site
+> and per byte — and the workbench verified that on 2026-09-04. Cycle 0.0.5's
+> tzdb spike then RAN, which this question was the block on, so its own gate
+> had already been passed. **This entry is exactly the shape E1 named**: a
+> status that is true on the workbench board and unfindable from inside the
+> repository. Struck here on this repository's own measurement rather than on
+> the board's report.
+>
+> **Re-measured at the close**, `/usr/bin/time` on the pinned `npkc` against
+> `tests/probe/probe04_big_fixed_table.npk`, the 30 000-row case this entry is
+> about:
+>
+> | | time | peak |
+> |---|---|---|
+> | at `950bb1d`, cycle 0.0.0 | **281 s** | **30.9 GiB** |
+> | at `aaffb87`, cycle 0.0.6 | **1.20 s** | **26 900 KiB** |
+>
+> **And the speed is not bought by emitting less**, which is the check that
+> would have made this a hollow discharge (O-N11 is precisely that shape):
+> `npkc` exit 0 is paired with a **2 266 485 B** `.ll` that carries
+> `[30000 x %"npk.probe04_big_fixed_table.ZoneTransition"]` — the rows are
+> there. The relation is no longer quadratic either: at 4 000 rows the same
+> recipe is 0.24 s, so 7.5× the rows costs 5× the time where quadratic would
+> cost ~56×.
+>
+> **Nothing waits on it.** `ZONE_MODEL.md` §3's 26 838 transition rows are
+> inside the measured envelope, TM-135 sized the whole database at 475 006 B,
+> and cycle 0.5's generator is unblocked. The record below is what was raised
+> at `950bb1d` and is left standing.
+
 **Measured at cycle 0.0.0, 2026-09-03**, against the pinned toolchain (compiler
 commit `950bb1d`). Compile time and peak memory grow as the square of the number
 of elements in one array initialiser, the number of statements in one function
@@ -106,7 +139,8 @@ would be the same workaround wearing a decision's clothes.
 **Gates:** cycle 0.0.5's tzdb size spike, cycle 0.5's generator, and the rest of
 0.0.0's probes only insofar as they wait on the toolchain being re-pinned. The
 probes themselves are unaffected — the defect is a resource cost, not a
-semantics change.
+semantics change. *(Both gates are now passed: 0.0.5 ran and 0.5 is unblocked.
+See the discharge note at the top of this entry.)*
 
 ### ~~Q-5 — is O-N9 a block for `ntime`, or a conformance rule plus a raised defect?~~ — **ANSWERED 2026-09-03: A BLOCK**
 **The author ruled it BLOCKING, against the recommendation recorded below.**
@@ -422,7 +456,7 @@ repository. **No action.**
 ### ~~O-Z1 — ship every zone, or a selectable subset?~~ — SETTLED, TM-135
 `specs/ZONE_MODEL.md` §8's item, mirrored here. **Answered at cycle 0.0.5:
 ship them all.** The measured **477.8 KiB** falls in the first of
-`meta/roadmap/0.0/0.0.5.md` §3's three bands, decided in advance so that a bad
+`meta/roadmap/done/0.0/0.0.5.md` §3's three bands, decided in advance so that a bad
 number would produce a stop rather than an improvisation, so none of the
 fallbacks — dropping the pre-1900 LMT transitions, delta-encoding the
 transition times, or a build-time zone subset — is reached. **Not deleted**,
@@ -571,8 +605,11 @@ table, `tests/probe/README.md`'s table and several decisions cite by name, and
 P-5 says a probe is never deleted for the same reason those citations exist.
 
 **Settled at 0.0.2**, which builds the runner. **Nothing waits on it**: no
-probe changes either way, and the entry in the manifest is true about the
-nineteen today.
+probe changes either way, and the entry in the manifest is true about the 25
+<!-- [[sweep: probe_exit=25]] --> today. *(That word was `nineteen` until cycle
+0.0.6 — a settled question's prose is history and is normally frozen, but this
+sentence is in the PRESENT tense about the tree as it is now, so it is a claim
+and not a record. TM-142.)*
 
 ---
 
@@ -588,8 +625,8 @@ nineteen today.
 > worse defect found while checking whether it had: `NITPICK-TYPE-046` does not
 > fire inside a generic body, so a *bare* read of an owning element — no
 > `move` at all — is accepted, links, runs, and produces two owners of one
-> heap body. Reproduction by path, deliberately unnumbered because `O-N` is
-> the workbench registry's namespace:
+> heap body. **It is now numbered: O-N19**, issued by the orchestrator from
+> the workbench registry and carried below. Reproduction:
 > **`tests/probe/defect/generic_owning_copy/`**. Reproduced at all four pins
 > this workbench has used, so it is not a regression at `aaffb87`.
 >
@@ -638,6 +675,73 @@ element lifetime at the instantiation.
 **Recommendation:** fix the demand walk so a vacancy symbol referenced by a
 generic instantiation is registered. Until then the restriction stands and is
 checked rather than trusted.
+
+---
+
+### O-N18 — `.len` on a fixed-size array `T[N]` is accepted by the frontend and cannot be lowered — **FIXED UPSTREAM in the compiler's 1.5.2e, NOT YET AT OUR PIN**
+
+**Raised** from this repository at cycle 0.0.4; **numbered O-N18** in the
+workbench registry (`../../meta/OPEN_QUESTIONS.md`); **accepted by the compiler
+as its DEF-22** and **fixed in its cycle 1.5.2e**, which is ahead of our pin
+`aaffb87`.
+
+**Reproduction:** `tests/probe/defect/fixed_array_len/case1_local_array_len.npk`,
+with two controls in that directory's README — a slice `.len`, which lowers,
+and the same array indexed without `.len`, which lowers. At our pin `npkc`
+refuses the file with `NITPICK-EMIT-002`, whose own text says the program is
+correct and the compiler is at fault.
+
+**Why it carries a recorded verdict rather than an `expect-error:` marker**
+(`harness/run.py`'s `EXPECT_EXEMPT`): asserting the refusal would turn the bug
+into a committed expectation and go red on the day it is fixed. The entry
+records `npkc` instead, and `check_exemptions_live` re-derives that on every
+run (TM-137).
+
+> **EXPECT THIS TO FIRE AT THE NEXT RE-PIN, AND IT IS THE MECHANISM WORKING.**
+> When the pin moves past 1.5.2e, `case1_local_array_len.npk` will go from
+> `npkc` to `run:0` and `check_exemptions_live` will FAIL with *"expired
+> exemption"*. **That is the landing, not a regression.** The right response is
+> to give the file `// expect-exit: 0`, delete its `EXPECT_EXEMPT` entry — at
+> which point `run_defect_corpus` picks it up as an ordinary asserted member
+> (TM-141) — and strike this question through with the pin that fixed it. It is
+> exactly what happened to O-N17's two entries at `aaffb87`.
+
+**Live consequence in the library:** `src/core/bytes.npk`'s decimal writers
+never ask their scratch array its length; they use `NTIME_DIGITS_MAX`, which is
+better style anyway (`src/core/limits.npk`).
+
+---
+
+### O-N19 — `NITPICK-TYPE-046` is not enforced inside a generic function body — **ACCEPTED BY THE COMPILER AS A SOUNDNESS HOLE, with the author**
+
+**Raised** from this repository at cycle 0.0.5 while checking whether O-N17's
+fix lifted TM-132's restriction; **numbered O-N19** in the workbench registry;
+**accepted as a soundness hole in the checker**, and the decision about it sits
+with the author.
+
+**What it is.** `T:answer = s[i]` at an owning `T` — a COPY of an owner, which
+`NITPICK-TYPE-046` exists to refuse — is accepted inside a generic body at exit
+0, links, and runs. The identical statement with `string` written out IS
+refused. So the check attaches to the concrete spelling and not to the
+instantiated type.
+
+**Reproduction:** `tests/probe/defect/generic_owning_copy/`, five cases and a
+control. `case1` is the bare copy (`run:0`, and exiting 0 is the defect);
+`case2` is the concrete twin (`NITPICK-TYPE-046`, which is the control that
+makes `case1` a finding); `case4` reads through the second owner after the
+first has dropped and exits **170**, the allocator's `0xAA` poison (D-183).
+
+**What it cost this library**, which is why it is carried here and not only in
+the registry: `vec_pop<T>` shipped at cycle 0.0.4 as exactly `case1`'s
+statement — a duplicate owner on the public surface, under a green suite, with
+a comment beside it claiming TYPE-046 refused such a copy. The `move` is
+written now (`src/core/vec.npk`), and **TM-132's restriction of `Vec<T>` to a
+non-owning `T` stands on this defect** rather than on O-N17 (`SAFETY.md` S-18d,
+TM-136).
+
+**Two entries in `EXPECT_EXEMPT` carry its verdict** (`case1` at `run:0`,
+`case4` at `run:170`) for the same reason O-N18's does, and both will fire when
+the check lands.
 
 ---
 

@@ -207,7 +207,7 @@ and nothing to race — and it is ZONE_MODEL.md Z-7 and Z-8's premise.
 NOT SHOWN here, and deliberately: that thirty thousand rows behave the
 same way.  That was observed once, during the original probe 04 run on
 2026-09-03, and re-deriving it costs 281 s and 30.9 GiB of RSS.  It is
-recorded in meta/roadmap/0.0/0.0.0.md as a ONE-TIME OBSERVATION on that
+recorded in meta/roadmap/done/0.0/0.0.0.md as a ONE-TIME OBSERVATION on that
 basis.  The reason to believe it anyway is not the observation but the
 mechanism: the emission form is chosen by the same lowering path for
 any element count, and O-N4 is a cost defect, not a semantics one.

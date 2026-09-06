@@ -107,7 +107,7 @@ object and the binary do not move at all. Quote the object.
 
 ## The decision this feeds — ANSWERED
 
-`meta/roadmap/0.0/0.0.5.md` §3 has the thresholds, decided before the
+`meta/roadmap/done/0.0/0.0.5.md` §3 has the thresholds, decided before the
 measurement. **477.8 KiB is row one: TM-007 stands, O-X2 closes, O-Z1 is
 settled as "ship them all", and cycle 0.5 proceeds.** None of the fallbacks —
 dropping the pre-1900 LMT transitions, delta-encoding the transition times, or

@@ -1,21 +1,40 @@
-// `ntime`'s storage primitives — the PLACEHOLDER (0.0.1 P-7).
+// `ntime`'s storage primitives — THE LAYER NOTE. This was `src/core/`'s
+// placeholder (0.0.1 P-7) and the directory has been filled since cycle 0.0.4;
+// the file stays because the other five placeholders point AT it for the
+// explanation below, and because a layer note that a reader meets before the
+// code is worth one file.
 //
-// EMPTY ON PURPOSE, AND NOT EMPTY-AND-ABSENT. An empty directory is invisible
-// to the harness's `parse` sweep (`meta/specs/BUILD.md` §3), and the sweep is
-// what stops the grammar being quietly made partial. This file gives the sweep
-// something to open. It is REPLACED at the cycle below, never deleted.
+// WHY A PLACEHOLDER EXISTS AT ALL — the paragraph the siblings cite. An empty
+// directory is invisible to the harness's `parse` sweep
+// (`meta/specs/BUILD.md` §3), and the sweep is what stops the grammar being
+// quietly made partial; a placeholder gives the sweep something to open. It is
+// REPLACED by the cycle named in its own header, never deleted — and since
+// cycle 0.0.6 `check_layering` asserts the other half mechanically: every layer
+// B-17 names holds at least one `.npk`, so a directory whose placeholder was
+// deleted rather than replaced is a named failure and not a smaller
+// denominator (D1).
 //
-// WHAT FILLS IT: `Vec<T>`, `Bytes` and `limits.npk`, per `BUILD.md` §5's rules
-// B-12 and B-13 — one growable sequence, one byte sink, one file of named
-// bounds, and NO second container.
-// WHEN: cycle 0.0.4 (`meta/roadmap/0.0/0.0.4.md`).
+// WHAT FILLED THIS ONE, at cycle 0.0.4: `vec.npk` (`Vec<T>`, nine functions),
+// `bytes.npk` (`Bytes`, eleven) and `limits.npk` (thirteen named bounds), per
+// `BUILD.md` §5's rules B-12 and B-13 — one growable sequence, one byte sink,
+// one file of named bounds, and NO second container. **This header said "It is
+// REPLACED at the cycle below" and "WHEN: cycle 0.0.4" for two subcycles after
+// 0.0.4 was done** (F3), which reads as work outstanding.
 //
 // WHAT IT MAY IMPORT: NOTHING (`BUILD.md` B-17). `core` is the base of the
 // layering and every other module points at it. An import here is a layering
 // violation by construction, and `check_layering` will say so from 0.0.3.
 //
-// THE OBLIGATION THAT ARRIVES WITH THE CODE: `Vec<T>.items` and `Bytes`' body
-// are BARE POINTERS, which this language does not bounds-check (TM-108,
-// `SAFETY.md` S-17b). The accessor pair is the only bound there is, so every
-// accessor checks `0 <= i` as well as `i < count` — in CODE, not in a comment.
+// THE OBLIGATION THAT ARRIVED WITH THE CODE, and how it was discharged:
+// `Vec<T>.items` and `Bytes`' body are BARE POINTERS, which this language does
+// not bounds-check (TM-108, `SAFETY.md` S-17b). Every accessor lays a
+// length-carrying `#wild_slice` over the block and indexes THAT, so the guard
+// is the compiler's own `emit_bounds_guard` and one unsigned compare rejects
+// both ends (TM-129, S-17c). `check_raw_index` reports zero raw indexes in the
+// library.
+//
+// AND THE OBLIGATION NO GATE HERE CAN DISCHARGE (S-18e, TM-139): a view from
+// `bytes_view` is invalidated by growth, and a use-after-free is found by a
+// WRONG ANSWER rather than by a leak gate. Read `bytes.npk`'s `bytes_view`
+// before holding one.
 mod:core;

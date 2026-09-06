@@ -110,7 +110,11 @@ pub fixed int64:NTIME_NANOS_PER_SEC = 1000000000i64;
 // THE WIDEST DECIMAL MAGNITUDE ANY INTEGER IN THIS LIBRARY HAS. `uint64`'s
 // maximum, 18 446 744 073 709 551 615, is 20 digits; `int64` MIN's magnitude is
 // 19 digits and its sign is pushed separately. So a 20-byte scratch array holds
-// every case, and `src/core/bytes.npk` sizes its stack buffer with this name.
+// every case, and `src/core/bytes.npk` sizes its stack buffer with this name --
+// `uint8[NTIME_DIGITS_MAX]:digits`, at both sites, since cycle 0.0.6. It said
+// so from 0.0.4 and it was not true until then: both sites read `uint8[20]`
+// and this file's whole point -- "every one of them, in this file and nowhere
+// else" -- was defeated at the one place it named (D2).
 //
 // IT IS ALSO WHY THAT BUFFER NEVER ASKS ITS OWN LENGTH. `.len` on a fixed-size
 // array is accepted by the frontend and CANNOT BE LOWERED at this pin --

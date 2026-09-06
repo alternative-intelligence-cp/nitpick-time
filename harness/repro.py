@@ -30,7 +30,7 @@ IT HAS BEEN SEEN TO FAIL. A check that has never failed has never been shown to
 work, so this one was run once against a deliberately non-deterministic
 generator -- a `fixed` table whose row order came from unsorted `set` iteration
 -- and reported the first differing byte. The transcript is in
-`meta/roadmap/0.0/0.0.2.md`.
+`meta/roadmap/done/0.0/0.0.2.md`.
 """
 
 import os

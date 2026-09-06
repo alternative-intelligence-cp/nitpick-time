@@ -89,7 +89,28 @@ legitimately references `@npk_failsafe`, because the prelude's trap paths are
 emitted into every root and the handler is the program's. So both halves are
 derived from the linked artefact's own ELF symbol table: **what the runtime
 provides** (its global defined symbols) ∪ **what the runtime requires of the
-program** (its own undefined symbols). 113 symbols at pin `0dfddac`.
+program** (its own undefined symbols). **113 symbols, measured at pin `0dfddac`
+and again at `aaffb87`.**
+
+**AND THE NUMBER TO EXPECT ELSEWHERE IS 112, WHICH IS NOT A DISAGREEMENT
+(E3).** The compiler's own reconciliation, recorded on the workbench board,
+calls the allowlist *"the runtime's exports: 112 entries with `main`"*. Both
+are right about different lists, and the difference is one symbol:
+`defined_globals(npkrt.o)` is **111** at both pins; **+ `main` = 112**, which is
+the compiler's; **+ `npk_failsafe` = 113**, which is ours, because a library
+object legitimately references the handler and the sentence above is about a
+LIBRARY object rather than about the runtime. Stating the 112 here is what
+stops the number travelling as a contradiction.
+
+**Rule B-2b2 (TM-140) — the toolchain's version is matched against the WHOLE
+`--version` output, not its first line.** The three tools print three different
+banner shapes and one of them does not contain "LLVM" at all, which is why the
+match is on the dotted number; **it is also not always on line 1.** The
+Ubuntu-vendored build this workbench has puts it there; the upstream release
+tarball CI installs is built without `PACKAGE_VENDOR` and prints
+`LLVM (http://llvm.org/):` first, with the number on line two. A first-line
+match would have failed the first CI run this repository ever had — and would
+have failed it as *"the SELF-CHECK failed"*, three levels from the cause.
 
 **Rule B-2c (TM-118) — the scan cannot see a syscall, and is not a purity
 result.** `npk_sys6` is the runtime's own syscall trampoline and is in the
@@ -146,13 +167,14 @@ different refusal from "not implemented yet".** *"Not yet"* invites a later
 session to implement it; this says *not here*, and names `compile` with
 `kind = "positive"` as the thing to write instead. A runner that implemented
 `accept` would be offering the exact shape this rule exists to keep out of
-reach, and `meta/roadmap/0.0/0.0.3.md` §2 — which listed it among the stages to
+reach, and `meta/roadmap/done/0.0/0.0.3.md` §2 — which listed it among the stages to
 add — is the document that was wrong.
 
 **Rule B-4c (TM-119) — inside a `program` entry, the FILE'S OWN HEADER decides
 what kind of test it is. This is a deliberate divergence from `npkg`'s `kind`.**
 A `[[test]]` selects by **directory** and `kind` is per entry, so one entry over
-`tests/probe/` cannot be true about both the 19 files carrying `expect-exit:`
+`tests/probe/` cannot be true about both the 25 files carrying `expect-exit:`
+<!-- [[sweep: probe_exit=25]] -->
 and the 7 carrying `expect-error:` (O-X7). The runner therefore dispatches per
 file: `expect-error:` present makes it a **refusal** member — `npkc` must fail
 and the *set* of codes must equal the set named (B-7) — and `expect-exit:`
@@ -229,11 +251,14 @@ expectations name.
 `NITPICK-LEX-*` comes from the compiler's `src/frontend/diag_codes.npk` and
 `NITPICK-PARSE-*` from `parse_codes.npk`; every other family belongs to a later
 phase, so a file reported with one of those **necessarily parsed**. That is what
-lets the stage cover the twenty-six files here that must not compile — they are
+lets the stage cover the 15 files here that must not compile
+<!-- [[sweep: tests_error=15]] --> — they are
 refused at `TYPE-009`, `BORROW-001`, `BORROW-012`, `REACH-002` and `REACH-003`,
-all of which run only on something that parsed. Measured at pin `0dfddac`:
-**50 files = 36 parse cleanly + 13 parse and are refused later + 1 does not
-parse**, and the one is `probe02d_wide_literal_refused.npk`.
+all of which run only on something that parsed. Re-measured at pin `aaffb87`,
+cycle 0.0.6: **78 files = 62 parse cleanly + 15 parse and are refused later + 1
+does not parse** <!-- [[sweep: npk_total=78]] -->, and the one is
+`probe02d_wide_literal_refused.npk`. It read `50 = 36 + 13 + 1` for three
+subcycles after the tree stopped being that size, which is TM-142.
 
 **Rule B-8 — the harness is itself tested.** A self-check feeds it wrong
 expectations and requires it to report every one as a failure. A suite that
@@ -319,10 +344,23 @@ which at 447 entries beats a hash and has one invariant instead of four.
 basename** — the loader reports `NITPICK-RESOLVE-005` at line 1 otherwise, and
 says nothing about the name.
 
-**Rule B-15.** Public names carry the module's short prefix and nothing else
-carries it: `cal_`, `span_`, `zone_`, `fmt_`, `host_`. A `pub struct` takes
-PascalCase (`Timestamp`, `CivilDate`, `ZonedDateTime`); constants are
-`SCREAMING_SNAKE`.
+**Rule B-15 (amended at cycle 0.0.6 — F5).** Public names carry **their
+module's** short prefix and nothing else carries it: `vec_`, `bytes_`, `cal_`,
+`span_`, `zone_`, `fmt_`, `host_`. A `pub struct` takes PascalCase
+(`Timestamp`, `CivilDate`, `ZonedDateTime`, `Vec`, `Bytes`); constants are
+`SCREAMING_SNAKE` and, where they are named bounds, carry the LIBRARY's prefix
+`NTIME_` rather than a module's, because `src/core/limits.npk` owns them for
+the whole library (`check_constants_named`).
+
+*(The list read `cal_`, `span_`, `zone_`, `fmt_`, `host_` — one entry per
+directory that existed when it was written — and `src/core/` then shipped
+`vec_*`, `bytes_*` and `NTIME_*` and no `core_` at all. The rule was not
+amended and nothing checks it, so it quietly became a rule about five of the
+six layers. **The prefix is the MODULE's and not the directory's**, which is
+the sentence that makes `vec_`/`bytes_` correct rather than exceptions: `core/`
+holds three modules and each carries its own. Nothing checks B-15 today; a
+`check_public_prefix` is cycle 0.1's, when `src/cal/` gives it a second
+directory to be right about.)*
 
 **Rule B-16 — imports are relative today.** Until dependency roots are
 populated (§1), every internal import is `use "./x.npk".*;` or

@@ -68,7 +68,7 @@ TM-030. All settled. **Nothing in this cycle is blocked on a question.**
 
 ### 0.0.1 — the skeleton
 - [x] `src/lib.npk` exists and `pub use`s nothing yet (`use` is not transitive, so the surface is a deliberate list). Its header carries the shape the lines will take and the rule **one line per public name, never a `.*` glob** — a glob would silently re-export `host`'s impure five
-- [x] every `src/` subdirectory has a placeholder module that parses, so the `parse` stage has something to sweep — six, each naming its spec, its cycle and what it may import; `host/`'s carries the purity rule. All seven `src/` files compile at 844 793 B of IR, and `harness/run.py` **asserts the count is at least 7**, because a directory whose placeholder was deleted rather than replaced is invisible to the sweep
+- [x] every `src/` subdirectory has a placeholder module that parses, so the `parse` stage has something to sweep — six, each naming its spec, its cycle and what it may import; `host/`'s carries the purity rule. All seven `src/` files compile at 844 793 B of IR. ~~and `harness/run.py` **asserts the count is at least 7**~~ — **STRUCK AT 0.0.6, AND IT WAS NEVER TRUE (D1, TM-142).** No such assertion was in the tree: 0.0.2 replaced `run.py` rather than extending it and the minimum went with the old file, so the stated failure mode — *a directory whose placeholder was deleted rather than replaced is invisible to the sweep* — was live for four subcycles inside this ticked box. **A magic minimum was the wrong repair anyway**, since it goes stale the moment a directory is added. `check_layering` now asserts the rule the sentence was really about: **every layer B-17 names holds at least one module**, planted separately in the self-check because the fault is a file that is NOT there
 - [x] `nitpick.toml`'s `[[test]]` table has its first entries — `probe` (`program`, non-recursive so `support/` and `defect/` are excluded, with the reason written next to it) and `conformance` (`compile`/`positive`, **not** `accept`, TM-114). **O-X7 raised**: the `probe` entry cannot be true about all 26, because 7 carry `expect-error:` and the schema selects by directory, never by file
 - [x] a consumer program under `tests/conformance/` imports `src/lib.npk` by relative path and compiles — **and links and runs and exits 0**, measured. Its `.ll` is byte-identical to `probe11d_floor_only.npk`'s, so importing `ntime` today costs a consumer nothing; the negative control (one floor arm removed) is `NITPICK-REACH-002`
 - [~] CI: a workflow running `harness/run.py` on push, with LLVM 20.1.2 and the compiler built from a **pinned commit** — **written and validated locally, NOT YET SEEN GREEN.** `.github/workflows/ci.yml` pins compiler `0dfddac045bdab6abbd367b1ffb31de695b9bf22` and LLVM `20.1.2`, asserts both plus a clean checkout and the ladder's working directory, and reports the artefact digests against the workbench's rather than asserting cross-machine byte identity nobody has measured. The YAML parses and all six `run:` blocks pass `bash -n`. **The acceptance item says "green on a push" and 0.0.1 does not push** (`ROADMAP.md`: push at the end of a cycle), so this carries to the push that closes 0.0
@@ -134,7 +134,7 @@ TM-030. All settled. **Nothing in this cycle is blocked on a question.**
 - [x] **and the bound is CODE in every accessor, not only a comment** (TM-108, `SAFETY.md` S-17b) — **discharged by TM-129/S-17c, and NOT by two hand-written comparisons.** Each accessor lays a `#wild_slice` over `count` and indexes that, so the guard is the compiler's own `emit_bounds_guard`; one `icmp ult` rejects both ends, because `index_as_i64` sign-extends first. `vec_at_past_end`, `vec_set_past_end` and `vec_pop_empty` each **exit 94**, the negative case is `probe13c`, and `check_raw_index` now reports **0 raw-index sites in the whole library**. The original text follows: `vec_at`/`vec_set` and every `Bytes` accessor check **`0 <= i` as well as `i < count`** — an index derived from a narrower signed field can be negative, `i < count` accepts it, and the read goes backwards off the block. The negative case gets its own test
 - [x] the suite's programs exit 0, which asserts that **no `wild` allocation is live** at exit — `Vec<T>`'s block is `wild` (P-23), so an unpaired `vec_free` on any path is a trap rather than a pass (D-151)
 - [x] and, because that is the whole of what D-151 covers, a **memory assertion for the managed half** — **and the cap in this item is corrected by TM-131: `ulimit -v` sized *low* measures the loader, not the library.** `probe06c` and `/bin/true` flip at the same cap (2688→2816 KiB). The gate is ONE SHARED 64 MiB cap with opposite outcomes — 92 against 0 — plus the peak-RSS pair. Original text follows: a `Vec<string>` whose block is freed and whose elements are not retains its elements and **still exits 0** (TM-106, measured at 125 MiB over 2 000 000 elements). Until the instrument below exists, each owning-`T` container test runs a second time under a `ulimit -v` cap sized to fail if the elements are orphaned — the form TM-106 itself used, where the orphaning form gives `HeapOom` (exit 92) and the correct form exit 0
-- [ ] **the hook for the real gate.** The compiler's cycle 1.5.1b step 0 builds `NPK_HEAP_STATS`, an allocator-level instrument reporting `allocated`, `peak_live` and `count` for **managed** memory, plus a `cost` harness stage. Run on this repository's own two container probes it reported **`peak_live` 41 321 bytes against 400 101 320**. At the re-pin, this checklist item becomes a **`peak_live` assertion** with a stated bound per test, and the `ulimit -v` cap above is retired to a belt. Write the tests now so the bound is the only thing that has to be added.
+- [~] **the hook for the real gate. CARRIED INTO `../../0.1/0.1.0.md` §8 AT THE 0.0 CLOSE, verbatim and with the commissioning order written out** — `NPK_HEAP_STATS` is still not in pin `aaffb87`, so there is still nothing to assert against. It is this cycle's ONE unticked box and 0.0.6's checklist did not carry it forward, so it would have closed by falling off the list (F7). §8 also says what to do if it is still absent when 0.1 closes: carry the section into `0.2.0.md` verbatim. **It has now survived one close by being written down; it will not survive one by being remembered.** The compiler's cycle 1.5.1b step 0 builds `NPK_HEAP_STATS`, an allocator-level instrument reporting `allocated`, `peak_live` and `count` for **managed** memory, plus a `cost` harness stage. Run on this repository's own two container probes it reported **`peak_live` 41 321 bytes against 400 101 320**. At the re-pin, this checklist item becomes a **`peak_live` assertion** with a stated bound per test, and the `ulimit -v` cap above is retired to a belt. Write the tests now so the bound is the only thing that has to be added.
       **STILL OPEN AT 0.0.4, DELIBERATELY — `NPK_HEAP_STATS` is not in the
       pinned toolchain, so there is nothing here to assert against yet. The
       "write the tests now" half IS done:** `probe06b`/`probe06c`,
@@ -155,13 +155,14 @@ TM-030. All settled. **Nothing in this cycle is blocked on a question.**
 - [x] **not on this list, and it is the more consequential half:** TM-132's restriction was re-examined at the new pin because O-N17 is fixed. It **stays** — `NITPICK-TYPE-046` does not fire inside a generic body, `vec_pop<T>` had shipped a duplicate-owner read and now writes the `move`, and `vec_at<T>` at an owning `T` removes the element (TM-136, `tests/probe/defect/generic_owning_copy/`)
 - [x] **nor this:** O-N17's two `EXPECT_EXEMPT` entries had expired and the mechanism that promised to expire them checked only that the file existed. Both files now carry `// expect-exit: 0`, and `check_exemptions_live` re-derives every exemption's recorded verdict on every run (TM-137)
 
-### 0.0.6 — close
-- [ ] **delete `meta/scratch/tzdb_spike/`** (P-28) — or decide, with a reason in the record, that `TRANSCRIPT.txt` is worth keeping beside TM-135 and delete only the code
-- [ ] every probe verdict recorded, every forced spec amendment landed
-- [ ] the harness self-check green, the full run green
-- [ ] `meta/DECISIONS.md` updated with anything the probes settled
-- [ ] `0.1/0.1.0.md` written execution-grade before the cycle closes
-- [ ] cycle moved to `done/0.0/`
+### 0.0.6 — close — **DONE 2026-09-06**
+- [~] ~~**delete `meta/scratch/tzdb_spike/`**~~ (P-28) — **KEPT, both halves, with the reason in `0.0.6.md` §4.** 0.0.5's own checklist committed the generator *because a number whose program is not committed is a claim rather than evidence*, so deleting it reverses a decision taken one subcycle earlier and reduces TM-135's 475 006 to a claim. P-28's "throwaway" is discharged by NAMING it throwaway and keeping it out of `tools/`; the expensive part — the two-megabyte emitted `.npk` — was never committed
+- [x] every probe verdict recorded, every forced spec amendment landed — **and two had NOT landed**: probe 01's declaration-order verdict was cited to the wrong compiler decision (E2, D-051 for D-123) and probe 13b's `count`-versus-`cap` distinction was stated in S-17c as an absolute three live sites violate (F2). Both now in the specifications
+- [x] the harness self-check green, the full run green — **62 units, 62.1 s**, self-check first with 7 planted cases, 14 tree-check violations, 3 arm specimens and the verdict mechanisms
+- [x] `meta/DECISIONS.md` updated — **TM-138 … TM-145**, eight decisions, one per audit finding class
+- [x] `0.1/0.1.0.md` written execution-grade before the cycle closes — and **it caught a plan error while being written**: `CALENDAR.md` §3 declares NARROW fields (`int32:year`, `uint8:month`) and the first draft wrote `int64`. The specification is the authority (TM-002), so §2 now copies it verbatim and §3 carries the validate-then-narrow rule with `m = 268` as a named test case
+- [x] cycle moved to `done/0.0/`, `ROADMAP.md` updated, and **every reference fixed in the same commit** — the audit's B3 warned that two `CITATION_EXEMPT` keys are `meta/roadmap/0.0/…` paths and that `check_specs_current` reported rather than failed, so the move would have broken them in silence. It fails now (TM-145)
+- [x] **W-22: all 30 audit findings triaged** — `0.0.6.md` §1
 
 ## Gate
 
@@ -170,6 +171,23 @@ self-check proves the harness fails seven ways; `src/core/`'s primitives each
 have a suite; every probe has a recorded verdict with its consequences written
 into the specifications; and **the tzdb's real emitted size is a number in this
 repository** rather than an estimate.
+
+### MET, 2026-09-06, at pin `aaffb87` — re-read clause by clause rather than remembered
+
+| Clause | Evidence |
+|---|---|
+| a full `harness/run.py` green | `GREEN -- 62 unit(s), 0 failures; 5 pending, 62.1 s`, no flags |
+| the self-check proves the harness fails **seven** ways | `this runner has been shown able to fail 7 ways (V-14), of the 8 V-14 names` — case 6 is `PEND` until 0.5. **This clause was the only place in the repository with the right number**; five other sites said eight (C3, TM-142) and now read it from `selfcheck.PLANTED_CASES` |
+| `src/core/`'s primitives each have a suite | `vec.npk` → `vec_boundaries`, `vec_at_past_end`, `vec_set_past_end`, `vec_pop_empty`; `bytes.npk` → `bytes_put_int`, `bytes_growth`, **`bytes_view_lifetime`** (added at the close, TM-139); `limits.npk` → `limits_named` |
+| every probe has a recorded verdict with its consequences in the specifications | `0.0.0.md` §7, re-read at the close. **Two consequences had not landed** and are now in the specifications rather than in a comment or a roadmap file: probe 01's declaration-order rule was cited to D-051 instead of D-123 (E2), and probe 13b's `count`-versus-`cap` distinction was stated in S-17c as an absolute three live sites violate (F2) |
+| the tzdb's real emitted size is a number | **475 006 B** for the four tables and two pools, **489 310** with `POSIX_RULES`, against a ≈348 KiB estimate wrong in four independent ways (TM-135). Re-derived independently by the pre-close audit and it closes |
+
+**And one gate clause that had quietly stopped being at risk:** ~~O-N4~~ is
+discharged and was still marked **BLOCKING** in `meta/OPEN_QUESTIONS.md` at the
+close — re-measured here at 30 000 rows, **1.20 s and 26 900 KiB against
+281 s and 30.9 GiB**, with a 2 266 485 B `.ll` carrying all 30 000 rows so the
+speed is not bought by emitting less. Struck on this repository's own
+measurement, not on the board's report.
 
 ## Watch for
 

@@ -60,8 +60,8 @@ sibling libraries.
 
 | Cycle | Topic | Gated on |
 |---|---|---|
-| **0.0** | **Foundations** — the language probes, the harness, `src/core/` | — |
-| **0.1** | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep | 0.0 |
+| ~~**0.0**~~ | **Foundations** — the language probes, the harness, `src/core/` — **CLOSED 2026-09-06, archived at [`done/0.0/`](done/0.0/README.md)** | — |
+| **0.1** | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **NEXT; [`0.1/0.1.0.md`](0.1/0.1.0.md) is written execution-grade** | 0.0 ✓ |
 | **0.2** | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop | 0.1 |
 | **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double | 0.2 |
 | **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate | 0.2 |
@@ -92,6 +92,19 @@ estimate from the *system* database; 0.0 runs the generator's core loop far
 enough to emit a real table and report its size, so that TM-007's biggest
 practical risk is measured on day one rather than at 0.5. Nothing is committed
 from the spike but the number.
+
+**CLOSED 2026-09-06 at pin `aaffb87`, archived at
+[`done/0.0/`](done/0.0/README.md).** What it produced: 78 `.npk` in the tree,
+62 suite units green in 62 s, 13 live tree checks each seen red on a planted
+violation, 145 numbered decisions, and the tzdb measured at **475 006 B**
+against a 348 KiB estimate that was wrong in four independent ways (TM-135).
+
+**Two things it got wrong and found itself**, both use-after-frees on the
+public surface — `vec_pop<T>` (TM-136) and `bytes_view` (TM-139) — and both
+found by READING, under a green suite and an independent verification. The
+cycle's most durable output is why: **every gate this repository owns is a leak
+gate, and a use-after-free is a wrong answer.** `done/0.0/0.0.6.md` §3 is the
+findings list; `SAFETY.md` S-18e is the rule.
 
 ### 0.1 — The civil calendar
 `src/cal/`: `CivilDate`, `CivilTime`, `CivilDateTime`, `Weekday`, `Month`,

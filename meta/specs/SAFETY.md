@@ -403,18 +403,43 @@ added by decision when a consumer exists.
   reachable from caller-controlled bytes once `src/fmt/` parses.
 - **`VERIFICATION.md`'s `Vec<T>` `at`/`set` row** (index `< count`, by contract
   and by Z3) stops being a restatement of a language guarantee and becomes the
-  obligation that discharges this rule. *(That row states only `< count`; the
-  obligation is `0 <= i && i < count`, which is how `0.0.4.md` §2's table
-  writes it. Corrected there at cycle 0.0.4.)*
+  obligation that discharges this rule. *(That row stated only `< count` and the
+  obligation is `0 <= i && i < count`. This footnote said it had been "corrected
+  there at cycle 0.0.4" — in `0.0.4.md`, a roadmap execution record, which is
+  not the specification. A specification known to be wrong, left standing, with
+  the correction in a file nobody reads to find the rule, is F4. **The row in
+  `VERIFICATION.md` now carries the full obligation**, corrected at cycle 0.0.6,
+  and this footnote records that it once did not.)*
 
 **Rule S-17c (TM-129) — the accessor puts the language's OWN guard back, rather
 than reimplementing it.** Every `Vec<T>` accessor lays a length-carrying slice
 over the block and indexes that:
 
 ```nitpick
-T[]:s = #wild_slice<T>(v.items, v.count);   // over `count`, never over `cap`
+T[]:s = #wild_slice<T>(v.items, v.count);   // over `count` for a LIVE element
 pass s[i];
 ```
+
+**THE EXCEPTION IS `push`, AND IT IS PART OF THE RULE RATHER THAN A DEPARTURE
+FROM IT (F2, TM-143).** This code block read *"over `count`, never over `cap`"*
+until cycle 0.0.6, and three sites in the library lay the slice over `cap` —
+`vec_push` (`vec.npk:180`) and `bytes_push`/`bytes_extend`
+(`bytes.npk:97,109`). Each argues the exception in a source comment, and
+`CLAUDE.md` forbids amending a specification by a comment, so the rule is
+amended here instead. **The rule in full:**
+
+> A slice for READING or OVERWRITING a live element is laid over `count`. A
+> slice for APPENDING is laid over `cap`, because the valid index there is
+> `count` itself, which a slice over `count` rejects — and the preceding
+> `*_reserve` has just made `cap > count`, so the index is in range by
+> construction and the guard is the belt.
+
+A guard over `cap` in a READ accessor would accept an index into
+allocated-but-dead space, which is exactly the distinction `probe13b` exists to
+catch: it has room at `i == count` because `cap` is larger, and it still traps.
+That is the sentence the original absolute was protecting, and it survives
+intact — S-18c already carved `vec_push` out for the *drop* obligation on the
+same argument, so this makes the two carve-outs one carve-out.
 
 The index then takes the `TY_SLICE` branch and `emit_bounds_guard` runs, so the
 check is the compiler's and cannot drift from D-070. **One unsigned compare
@@ -540,29 +565,6 @@ a generic function has no scope in which a bare `T` may simply die. S-18's "so
 `exit 0` never trips D-151" is therefore a statement about the block alone —
 correct, and not the whole obligation.
 
-**Rule S-18d (TM-136) — THE RESTRICTION IS NOT ENFORCEABLE BY THE COMPILER,
-AND THAT IS WHY IT STAYS.** S-18b puts element lifetime at the instantiation
-and TM-132 restricted `Vec<T>` to a non-owning `T` because O-N17 blocked the
-generic drop path. **O-N17 is fixed** at pin `aaffb87` — all five reproduction
-cases link and run. The restriction stands anyway, on a measurement taken in
-the same hour: **`NITPICK-TYPE-046` does not fire inside a generic function
-body.** `T:answer = s[i]` at an owning `T` — a copy of an owner, which that
-diagnostic exists to refuse — is accepted at exit 0, links, runs, and produces
-two owners of one heap body; the identical statement with `string` written out
-is refused. Reading through the second owner after the first has dropped
-returns the allocator's `0xAA` poison, exit **170**
-(`tests/probe/defect/generic_owning_copy/`, reproduced at all four pins this
-workbench has used).
-
-So a `Vec<T>` advertised as safe at an owning `T` would rest on the author
-never writing a bare read, with **no compiler check and no leak gate behind
-it** — D-151 counts `wild` blocks and cannot see a managed body (TM-106). Two
-rows were already wrong when this was found: `vec_pop<T>` shipped the bare read
-and now writes the `move`, and **`vec_at<T>` at an owning `T` REMOVES the
-element** — `pass` of a place moves implicitly, `count` is untouched, and a
-second read of the same index returns a length-0 string (exit **11**). The last
-of those is the language behaving as specified; the first was ours.
-
 **Rule S-18c (TM-127) — OVERWRITING an element discards one too, so the
 obligation covers `vec_set` and not only the three that sound like it does.**
 S-18b and `0.0.4.md` §2 both name three entries that discard elements —
@@ -591,13 +593,91 @@ job.
 code are identical**: it writes at `count`, which is past the last live element
 by construction, so there is nothing there to discard.
 
-> **The remedy is not available generically today.** A generic `vec_set<T>`
-> that moves the outgoing element into a dying local is accepted by `npkc` at
-> exit 0 and refused by `llc` — `../OPEN_QUESTIONS.md` **O-N17**,
-> `tests/probe/defect/generic_element_move/`. So at an owning `T` a generic
-> `vec_set<T>` today either leaks or does not link, and both halves of the
-> committed pair are written at the instantiation, which is where this rule
-> already puts element lifetime.
+> **The remedy is still not available generically, and the REASON CHANGED at
+> cycle 0.0.5 (TM-136, S-18d below).** This paragraph read *"accepted by `npkc`
+> at exit 0 and refused by `llc` — O-N17"* until cycle 0.0.6, and **that was
+> false at pin `aaffb87`**: O-N17 is FIXED, all five of its reproduction cases
+> link and run, and S-18d fifty lines below said so while this said the
+> opposite. Both were live rules in the authority document (D3). What is true
+> now: the drop loop as `vec.npk` would spell it — one hoisted `#wild_slice`
+> binding with `move(s[i])` inside a `while` — is refused **`NITPICK-MOVE-001`**,
+> because moving out of an element invalidates the binding the element was
+> reached through and the next iteration reads it again. It is refused at
+> `T = int64` as well, so it is a move-tracker rule and not an ownership one.
+> Re-making the slice inside the loop body compiles, and so does
+> `move(v.items[i])` through the bare pointer, which S-17c forbids here because
+> it loses the bounds guard. So at an owning `T` a generic `vec_set<T>` today
+> either leaks or does not compile, and both halves of the committed pair are
+> written at the instantiation, which is where this rule already puts element
+> lifetime. `tests/probe/defect/generic_element_move/`.
+
+**Rule S-18d (TM-136) — THE RESTRICTION IS NOT ENFORCEABLE BY THE COMPILER,
+AND THAT IS WHY IT STAYS.** *(Placed after S-18c since cycle 0.0.6. It was
+above it for one subcycle, which is why the two paragraphs read as one
+argument and their disagreement about O-N17 was invisible — F6, and the
+cosmetic finding that made D3 possible.)* S-18b puts element lifetime at the instantiation
+and TM-132 restricted `Vec<T>` to a non-owning `T` because O-N17 blocked the
+generic drop path. **O-N17 is fixed** at pin `aaffb87` — all five reproduction
+cases link and run. The restriction stands anyway, on a measurement taken in
+the same hour: **`NITPICK-TYPE-046` does not fire inside a generic function
+body** — raised as **O-N19** and accepted by the compiler as a soundness hole
+in the checker (`../OPEN_QUESTIONS.md`). `T:answer = s[i]` at an owning `T` — a copy of an owner, which that
+diagnostic exists to refuse — is accepted at exit 0, links, runs, and produces
+two owners of one heap body; the identical statement with `string` written out
+is refused. Reading through the second owner after the first has dropped
+returns the allocator's `0xAA` poison, exit **170**
+(`tests/probe/defect/generic_owning_copy/`, reproduced at all four pins this
+workbench has used).
+
+So a `Vec<T>` advertised as safe at an owning `T` would rest on the author
+never writing a bare read, with **no compiler check and no leak gate behind
+it** — D-151 counts `wild` blocks and cannot see a managed body (TM-106). Two
+rows were already wrong when this was found: `vec_pop<T>` shipped the bare read
+and now writes the `move`, and **`vec_at<T>` at an owning `T` REMOVES the
+element** — `pass` of a place moves implicitly, `count` is untouched, and a
+second read of the same index returns a length-0 string (exit **11**). The last
+of those is the language behaving as specified; the first was ours.
+
+**Rule S-18e (TM-139) — A VIEW INTO A GROWABLE CONTAINER IS VALID UNTIL THE
+NEXT CALL THAT CAN GROW IT, AND NO GATE HERE CAN FIND A VIOLATION.**
+
+`bytes_view` returns a slice over the sink's body. `bytes_reserve` grows by
+allocating a fresh `buffer`, copying, and overwriting `b.body` — which **drops
+the old one** (the compiler's D-186). So a view taken before a growth points
+into released memory, and reading it returns the allocator's `0xAA` poison
+(D-183): measured at pin `aaffb87`, the byte comes back **170**.
+
+`bytes_view`'s own header claimed the opposite — *"valid exactly as long as the
+`Bytes` is"* — from cycle 0.0.4 until this rule was written, and **both it and
+`bytes_push` are on the public surface** (`src/lib.npk`). A consumer following
+that comment wrote a use-after-free that compiles, links, runs and reads poison.
+
+**THE STRUCTURAL POINT, WHICH IS WHY THIS IS A RULE AND NOT A COMMENT FIX.**
+It is the second use-after-free cycle 0.0 shipped on this library's own surface
+— `vec_pop<T>` at 0.0.4 was the first (S-18d) — and both were invisible for the
+same reason: **every gate this repository owns is a leak gate.** D-151's exit-0
+trap counts `wild` allocations and cannot see a managed body (TM-106);
+`check_raw_index` is about indexing; the undefined-symbol scan is blind to it;
+`check_purity` answers a different question. A leak is found by a gate. **A
+use-after-free is found by a WRONG ANSWER, so it is found by a test that reads,
+and by nothing else.** `tests/unit/bytes_view_lifetime.npk` is that test, with
+its control: a view held across forty NON-growing pushes reads back correctly,
+and the same program at a capacity that forces growth does not.
+
+**The obligation this puts on `src/fmt/` at cycle 0.3**, which is where views
+into a `Bytes` will actually be held:
+
+- a function that returns or stores a view states the invalidation rule at the
+  site, in the words above;
+- inside the library, **a `#wild_slice` binding is made AFTER the `*_reserve`
+  call in the same body, never before**. Both `src/core/` files obey it today —
+  `vec_push` and `bytes_push` call reserve first and then lay the slice — and
+  it is a lexical property a check can hold them to when there is a second file
+  that needs one;
+- `Vec<T>` does **not** have this shape and the reason is worth writing down
+  rather than rediscovering: `vec_reserve` reallocates identically, but **no
+  function in `vec.npk` returns a slice**, so there is no view for a caller to
+  hold. `vec_at<T>` returns by value.
 
 **Rule S-19.** The generated zone tables are `fixed` module state — read-only
 memory, no initialisation at startup, nothing to leak, and nothing to race.

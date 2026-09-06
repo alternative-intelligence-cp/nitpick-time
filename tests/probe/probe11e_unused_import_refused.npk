@@ -3,6 +3,16 @@
 // PROBE 11e — IS THE ARM OWED BY THE IMPORT, OR BY THE CALL? THIS FILE MUST
 // NOT COMPILE.
 //
+// THE FILE NAME IS WIDER THAN THE SUBJECT, AND IT IS KEPT (F8). "unused import
+// refused" reads as *an import nobody uses is refused*, which is NOT what
+// happens: the refusal is `NITPICK-REACH-002`, about an ARM this program owes
+// because of an import, and the import here IS used (`zone_count()` is called).
+// The distinction matters because `src/core/bytes.npk` once carried a
+// genuinely unused import and nothing said a word about it. The name is left
+// alone rather than corrected because it is cited by name in `nitpick.toml`'s
+// list of the refusal members and in two frozen roadmap records, and churning
+// those to improve a name is a worse trade than this paragraph.
+//
 // ASKS: `SAFETY.md` S-4's table is stated per MODULE -- "a consumer importing
 // only this owes N arms". A reader could reasonably take that as shorthand for
 // "a consumer that calls the failing functions owes N arms". This file settles

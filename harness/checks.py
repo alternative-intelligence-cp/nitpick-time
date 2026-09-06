@@ -38,6 +38,7 @@ import os
 import re
 
 import build as build_mod
+import stages
 
 # This repository's own root, from THIS file rather than from the working
 # directory. The named-exemption tables below are statements about THIS tree,
@@ -160,13 +161,25 @@ HOST_MAY_IMPORT = {"zone", "cal", "core"}
 
 
 def check_layering(tree, **_):
-    """Every `use` edge in `src/` against `BUILD.md` §6's diagram.
+    """`BUILD.md` §6's diagram against `src/` -- its EDGES and its NODES.
 
     THE WALK IS `build.reachable_sources` AND `build.imports_of`, the ones the
     build already uses. A second walker would diverge from the first, and the
     interesting case is exactly where a naive one goes wrong: a `use` cycle is
     LEGAL in this language (D-086) and is still a decomposition mistake, so the
     walk carries a seen-set rather than assuming a tree.
+
+    THE NODE HALF ARRIVED AT CYCLE 0.0.6 AND IT IS A REPAIR (TM-142). Cycle
+    0.0.1's acceptance list carried a TICKED item saying `run.py` "asserts the
+    count is at least 7, because a directory whose placeholder was deleted
+    rather than replaced is invisible to the sweep". No such assertion was in
+    the tree: 0.0.2 replaced `run.py` rather than extending it and the
+    minimum went with the old file, so the stated failure mode was live for
+    four subcycles inside a ticked box. A magic minimum would have been the
+    wrong repair anyway -- it goes stale the moment a directory is added --
+    so the rule is the one the sentence was really about: EVERY LAYER B-17
+    NAMES HAS AT LEAST ONE MODULE. A deleted placeholder is then a named
+    failure and not a smaller denominator.
     """
     files = src_files(tree)
     problems, edges = [], 0
@@ -224,13 +237,27 @@ def check_layering(tree, **_):
                     "the language (D-086) and is still a decomposition mistake."
                     % (rel, here, imp, there))
 
-    # The umbrella's reach, reported rather than asserted. It is 1 today because
-    # `src/lib.npk` re-exports nothing yet, and the six placeholders are
-    # therefore reached by no root at all -- which is exactly why the `parse`
-    # stage roots every file in the tree rather than trusting the module graph.
+    # THE NODES. Every layer B-17 names, plus `host`, must hold a module.
+    present = set(module_of(rel) for rel in files)
+    for layer in sorted(set(LAYER) | {"host"}):
+        if layer not in present:
+            problems.append(
+                "`src/%s/` holds no `.npk`. B-17's diagram names the layer, so "
+                "the diagram and the tree disagree -- and a directory whose "
+                "placeholder was DELETED rather than replaced is invisible to "
+                "every sweep that counts files, which is why this is an "
+                "assertion and not a denominator." % layer)
+
+    # The umbrella's reach, reported rather than asserted. It is 4 today --
+    # `src/lib.npk` plus the three `src/core/` modules it re-exports -- and the
+    # five remaining placeholders are reached by no root at all, which is
+    # exactly why the `parse` stage roots every file in the tree rather than
+    # trusting the module graph.
     reached = build_mod.reachable_sources(os.path.join(tree, "src", "lib.npk"))
-    headline = ("%d `use` edge(s) over %d file(s) in src/; the umbrella reaches "
-                "%d of them" % (edges, len(files), len(reached)))
+    headline = ("%d `use` edge(s) over %d file(s) in src/; %d of %d layer(s) "
+                "present; the umbrella reaches %d file(s)"
+                % (edges, len(files), len(present & (set(LAYER) | {"host"})),
+                   len(set(LAYER) | {"host"}), len(reached)))
     if not files:
         problems.append("check_layering opened 0 files under src/. A check "
                         "with an empty denominator reports green while "
@@ -434,8 +461,41 @@ _FIXED_TABLE = re.compile(
 _STRUCT_DECL = re.compile(r"^\s*(?:pub\s+)?struct:([A-Za-z_][A-Za-z0-9_]*)")
 
 
+def _absorb(out, cur, rel, lineno, text):
+    """Read `text` as struct-body text; return the struct still open, or None.
+
+    Fields are separated by `;` and the body ends at the first `}`, so this is
+    the same function for both spellings and there is only one place that knows
+    what a field looks like.
+    """
+    close = text.find("}")
+    body, closed = (text[:close], True) if close >= 0 else (text, False)
+    for field in body.split(";"):
+        field = field.strip()
+        if field and ":" in field:
+            out[cur].append((rel, lineno, field))
+    return None if closed else cur
+
+
 def _structs(tree, files):
-    """`{name: [(rel, lineno, field_text), ...]}` for every struct in `src/`."""
+    """`{name: [(rel, lineno, field_text), ...]}` for every struct in `src/`.
+
+    BOTH SPELLINGS, AND THE SINGLE-LINE ONE IS WHAT THIS REPOSITORY WRITES
+    (TM-138). Until cycle 0.0.6 this function did `continue` after matching a
+    declaration line, so the rest of THAT line -- which for a one-liner is
+    every field the type has -- was never read, and `cur` was never cleared
+    because the closing `};` had been on the same line. The following lines
+    were then attributed to the struct as fields until some later line began
+    `};`. Measured on this tree, `Vec` "had" four fields, all of them
+    `vec_init`'s statements, and `Bytes` two, and neither type's real fields
+    (`wild T->:items`, `buffer:body`) had ever been examined.
+
+    The check was still RED on the self-check's plant, because that plant is
+    written multi-line. A check that is red on the fixture its author imagined
+    and silent on the same fault in the form the tree uses is worse than no
+    check, and the plant beside it is now written BOTH ways (`selfcheck.py`
+    `PLANTED`).
+    """
     out = {}
     for rel in files:
         cur = None
@@ -444,25 +504,34 @@ def _structs(tree, files):
             if m:
                 cur = m.group(1)
                 out.setdefault(cur, [])
+                # The remainder of the declaration line, past its opening `{`.
+                # For `struct:X = {` that is empty and the body follows; for
+                # `struct:X = { a; b; };` it is the whole body.
+                rest = line[m.end():]
+                brace = rest.find("{")
+                rest = rest[brace + 1:] if brace >= 0 else ""
+                cur = _absorb(out, cur, rel, lineno, rest)
                 continue
             if cur is None:
                 continue
-            if line.strip().startswith("};"):
-                cur = None
-                continue
-            if ":" in line:
-                out[cur].append((rel, lineno, line.strip()))
+            cur = _absorb(out, cur, rel, lineno, line)
     return out
 
 
 def check_no_owning_fields(tree, **_):
     """Every value stored in a table declares no owning field.
 
-    NOTHING TO CHECK TODAY, AND THAT IS THE RIGHT ANSWER (P-20). `src/` holds
-    six placeholders and one umbrella; there is no table and no struct, so this
-    reports `0 of 0`. The check exists now so that cycle 0.1's zone tables meet
-    an instrument that already works, rather than one written the same week as
-    the thing it guards.
+    NO TABLE TO CHECK YET, AND THAT IS THE RIGHT ANSWER (P-20). `src/` holds
+    two real structs -- `Vec<T>` and `Bytes` -- and no `fixed` table, so this
+    reports `0 table(s) ... against 2 struct(s)`. The check exists now so that
+    cycle 0.1's zone tables meet an instrument that already works, rather than
+    one written the same week as the thing it guards.
+
+    "0 tables" AND "cannot see the fields" READ THE SAME IN THE HEADLINE, which
+    is how `_structs`' single-line blindness survived three cycles (TM-138).
+    They are different states and only one of them is now true: the two structs
+    are parsed, and the run log's `against 2 struct(s)` is a count of types
+    whose fields were actually read.
     """
     files = src_files(tree)
     structs = _structs(tree, files)
@@ -500,9 +569,15 @@ RAW_INDEX_OWNERS = {
     ".ptr[": "src/core/bytes.npk",
 }
 
+# A binding whose TYPE is a bare pointer: `wild T->:name`, in a declaration, a
+# field or a parameter. The name it binds is then a bare pointer wherever it is
+# used, and indexing it is unguarded however it was reached.
+_WILD_BINDING = re.compile(r"\bwild\s+[A-Za-z_][A-Za-z0-9_<>]*\s*->\s*:\s*"
+                           r"([A-Za-z_][A-Za-z0-9_]*)")
+
 
 def check_raw_index(tree, **_):
-    """No `.items[` outside `vec.npk`, no `.ptr[` outside `bytes.npk`.
+    """No index through a bare pointer in `src/` -- by FIELD or by BINDING.
 
     `Vec<T>.items` is a `wild T->` and `Bytes`' body is a `buffer` indexed
     through its `.ptr` -- BOTH are bare pointers to the emitter, and the
@@ -510,11 +585,39 @@ def check_raw_index(tree, **_):
     attaches to the TYPE, and `ExprIndexExpr` has four branches of which only
     the pointer one omits `emit_bounds_guard`). So the accessor pair is the
     only bound that exists, and this check is what keeps every index inside it.
+
+    THE FIELD HALF WAS THE WHOLE CHECK UNTIL CYCLE 0.0.6, AND IT WAS EVADABLE
+    IN ONE LINE (the audit's B1). Two literal substrings, `.items[` and
+    `.ptr[`, enumerate the KNOWN bare pointers by field name; they do not find
+    bare pointers. Bind one to a local and index the local:
+
+        wild int64->:p = v.items;
+        int64:x = p[v.count + 4i64];
+
+    Built at pin `aaffb87` that reads four elements past the live prefix, runs,
+    and exits with the wrong value -- and the check reported `0 raw-index
+    site(s)`. The library contains no such alias, so it was never a live defect;
+    it was the answer to "what would this miss", which is the question a check
+    of this shape has to survive.
+
+    So the binding half is here too: every `wild T->:name` in `src/` is
+    collected, and `name[` anywhere in the same file is a finding. That is
+    lexical and per-file, which is the honest limit -- **a bare pointer passed
+    to another function and indexed there under a different name is still not
+    covered.** Cycle 0.5 gets the widening, when `src/zone/` gives it a second
+    subject; the ceiling on the damage until then is that `src/` has exactly two
+    bare pointers and both are in the file that owns them.
     """
     files = src_files(tree)
-    problems, hits = [], 0
+    problems, hits, bindings = [], 0, 0
     for rel in files:
-        for lineno, line in code_lines(os.path.join(tree, rel)):
+        lines = code_lines(os.path.join(tree, rel))
+        bound = {}
+        for lineno, line in lines:
+            for m in _WILD_BINDING.finditer(line):
+                bound.setdefault(m.group(1), lineno)
+        bindings += len(bound)
+        for lineno, line in lines:
             for needle, owner in RAW_INDEX_OWNERS.items():
                 if needle in line:
                     hits += 1
@@ -526,8 +629,21 @@ def check_raw_index(tree, **_):
                             "wrong value, not a crash. Go through the accessor "
                             "in `%s`, which checks `0 <= i` as well as "
                             "`i < count`." % (rel, lineno, needle, owner))
+            for name, at in bound.items():
+                if re.search(r"\b%s\s*\[" % re.escape(name), line):
+                    hits += 1
+                    problems.append(
+                        "%s:%d indexes `%s`, which is bound as a BARE POINTER "
+                        "at %s:%d (`wild ... ->:%s`). The language does not "
+                        "bounds-check one (TM-108, S-17b), so this index is "
+                        "UNGUARDED and an out-of-range read is a wrong value "
+                        "rather than a crash. Lay a `#wild_slice` over the "
+                        "live count and index THAT, which is S-17c and puts "
+                        "the compiler's own `emit_bounds_guard` back."
+                        % (rel, lineno, name, rel, at, name))
     headline = ("%d raw-index site(s) over %d file(s) in src/, %d owner(s) "
-                "allowed" % (hits, len(files), len(RAW_INDEX_OWNERS)))
+                "allowed, %d bare-pointer binding(s) watched"
+                % (hits, len(files), len(RAW_INDEX_OWNERS), bindings))
     return Result("check_raw_index", headline, problems)
 
 
@@ -658,22 +774,29 @@ SPEC_SCAN_ROOT_FILES = ("CLAUDE.md", "CONTRIBUTING.md", "README.md",
 #
 # `(file, rule)` -> why. `(file, None)` exempts the whole file.
 CITATION_EXEMPT = {
-    ("meta/roadmap/0.0/0.0.0.md", "S-23"):
+    ("meta/roadmap/done/0.0/0.0.0.md", "S-23"):
         "it cites the SIBLING library's rule, and the sentence says so: "
         "\"The sibling `nitpick-regex`'s own S-23 table omits it too\". Every "
         "library in this ecosystem numbers its own `S-` rules, so the "
         "namespaces collide by design; a cross-repository citation is verified "
         "by reading that repository, and this one was.",
-    ("harness/selfcheck.py", None):
-        "it contains DELIBERATELY dangling citations as the fixtures that "
-        "prove this check reports one. A check whose own test fixtures appear "
-        "in its output every run is a check people learn to skim.",
-    ("meta/roadmap/0.0/0.0.3.md", "S-23"):
+    ("meta/roadmap/done/0.0/0.0.3.md", "S-23"):
         "cycle 0.0.3's execution record quotes the citation above while "
         "recording that this check found it on its first run and that it "
         "resolves in the sibling library. The finding is the entry directly "
         "above this one; this is the write-up of it.",
 }
+# THERE IS NO WHOLE-FILE EXEMPTION IN THIS TABLE ANY MORE, and that is a rule
+# rather than a coincidence (TM-145). `harness/selfcheck.py` had one, excused
+# for containing "DELIBERATELY dangling citations" as its fixtures -- and
+# `checks.py:737` marks a whole-file entry excused as long as the FILE EXISTS,
+# so the reason was never re-derived. That is TM-137's shape exactly, in the
+# mechanism written to prevent it, and it silently un-checked the eleven real
+# citations in that file. The fixtures are now ASSEMBLED from pieces
+# (`"TM-" + "999"`), so they are invisible to the scanner and no exemption is
+# needed. Reach for that first; a whole-file exemption is a hole that cannot
+# expire.
+#
 # And this file, which cannot explain an exemption without spelling the rule it
 # excuses. Per-rule rather than whole-file, so every OTHER citation in this file
 # is still resolved -- there are a dozen and they are the reasons the checks
@@ -762,21 +885,32 @@ def check_specs_current(tree, **_):
         reports.append("%s cited at %d site(s), first %s -- no `%s` declares it"
                        % (rule, len(where), where[0],
                           CITATION_SOURCES[rule.split("-")[0]][0]))
-    # THE OTHER DIRECTION (V-1c). An exemption that outlives what it excused is
-    # how the next dangling citation at that site gets excused without anyone
-    # deciding to excuse it.
+    # THE OTHER DIRECTION (V-1c), AND IT FAILS RATHER THAN REPORTS (TM-145).
+    # An exemption that outlives what it excused is how the next dangling
+    # citation at that site gets excused without anyone deciding to excuse it.
+    # This check REPORTS an unresolved citation on purpose -- a renumbering is
+    # not a reason to stop a build -- but a stale exemption is a different
+    # animal: it is V-1c's both-directions rule, which is a FAILURE everywhere
+    # else in this harness, and it is the one thing here a green run would
+    # otherwise hide. It matters concretely at a cycle close: two of this
+    # table's keys are `meta/roadmap/done/0.0/...` paths, and archiving the cycle
+    # moves them.
+    problems = []
     for key in sorted(exempt, key=lambda k: (k[0], k[1] or "")):
         if key not in excused:
-            reports.append(
+            problems.append(
                 "stale exemption: CITATION_EXEMPT names %s%s and nothing there "
-                "needed excusing" % (key[0],
-                                     "" if key[1] is None else " / " + key[1]))
+                "needed excusing. An exemption that outlives what it excused "
+                "silently excuses the next thing at that site (V-1c). If the "
+                "file MOVED -- a cycle archived into meta/roadmap/done/, say --"
+                " the key moves with it."
+                % (key[0], "" if key[1] is None else " / " + key[1]))
     headline = ("%d citation(s) over %d file(s); %d declared rule(s) across %d "
-                "document(s); %d unresolved"
+                "document(s); %d unresolved, %d stale exemption(s)"
                 % (cited, len(set(targets)),
                    sum(len(v) for v in declared.values()), len(declared),
-                   len(unresolved)))
-    return Result("check_specs_current", headline, [], reports)
+                   len(unresolved), len(problems)))
+    return Result("check_specs_current", headline, problems, reports)
 
 
 # ---------------------------------------------------------------------------
@@ -786,7 +920,149 @@ def check_specs_current(tree, **_):
 # LIVE: run on every full invocation, and each one FAILS the run.
 # `check_specs_current` is live and reports only -- its Result carries no
 # problems by construction.
+# ---------------------------------------------------------------------------
+# check_denominators -- TESTING.md V-1g / TM-142
+# ---------------------------------------------------------------------------
+
+# The directories no sweep in this repository enters. Kept here rather than in
+# `run.py` so that one walk answers for the runner and for this check; two
+# walks that could disagree about what "every `.npk` in the tree" means is the
+# defect this check exists to prevent, one level up.
+WALK_SKIP = {".git", ".internal", "build", "__pycache__"}
+
+# `[[sweep: name=N]]`. Deliberately ugly, deliberately greppable, and it
+# renders as nothing in markdown.
+_SWEEP_MARK = re.compile(r"\[\[sweep:\s*([a-z_]+)\s*=\s*(-?\d+)\s*\]\]")
+
+_TAGGABLE = (".md", ".py", ".toml", ".yml", ".yaml", ".npk", ".txt")
+
+
+def all_npk(root):
+    """Every `.npk` in the tree, repository-relative, sorted. ONE walk."""
+    found = []
+    for dirpath, dirs, names in os.walk(root):
+        dirs[:] = sorted(d for d in dirs if d not in WALK_SKIP)
+        for n in sorted(names):
+            if n.endswith(".npk"):
+                found.append(os.path.relpath(os.path.join(dirpath, n), root)
+                             .replace(os.sep, "/"))
+    return sorted(found)
+
+
+def denominators(tree, extra=None):
+    """The numbers the documents keep quoting, MEASURED. `{name: value}`.
+
+    Everything here is derived from the directory, so this check is a pure
+    function of a tree and can be commissioned like the rest (V-14c). The two
+    values that need the manifest -- how many files the `[[test]]` entries
+    select, and how many sources the library entry reaches -- are handed in by
+    `run.py` as `extra`, because computing them here would mean a second copy
+    of `select()`.
+    """
+    files = all_npk(tree)
+    src = [f for f in files if f.startswith("src/")]
+    tests = [f for f in files if f.startswith("tests/")]
+    probe = [f for f in tests
+             if f.startswith("tests/probe/") and f.count("/") == 2]
+    d = {
+        "npk_total": len(files),
+        "npk_src": len(src),
+        "npk_tests": len(tests),
+        "npk_elsewhere": len(files) - len(src) - len(tests),
+        "probe_dir": len(probe),
+        "defect_total": len([f for f in tests
+                             if f.startswith("tests/probe/defect/")]),
+        "support_total": len([f for f in tests
+                              if f.startswith("tests/probe/support/")]),
+    }
+    # THE MARKER SPLIT IS READ THROUGH `stages.read`, the same parser the suite
+    # dispatches on, so the count and the dispatch cannot disagree about what a
+    # header says -- which is TM-121's rule applied to a denominator.
+    for label, group in (("probe", probe), ("tests", tests)):
+        n_exit = n_error = n_none = 0
+        for rel in group:
+            try:
+                e = stages.read(tree, rel)
+            except stages.MarkerError:
+                n_none += 1
+                continue
+            if e.is_refusal:
+                n_error += 1
+            else:
+                n_exit += 1
+        d[label + "_exit"] = n_exit
+        d[label + "_error"] = n_error
+        d[label + "_nomarker"] = n_none
+    lib = os.path.join(tree, "src", "lib.npk")
+    if os.path.isfile(lib):
+        with open(lib, "r", encoding="utf-8", errors="replace") as fh:
+            d["lib_reexports"] = sum(1 for l in fh
+                                     if l.startswith("pub use "))
+    d.update(extra or {})
+    return d
+
+
+def check_denominators(tree, extra=None, **_):
+    """Every number TAGGED in a document equals what the sweep measures.
+
+    THE NUMBERS TRAVEL, AND NOTHING USED TO CATCH THEM (TM-142). The tree went
+    from 50 `.npk` to 78 across cycles 0.0.4 and 0.0.5, and ELEVEN sites in six
+    live files still carried the 0.0.3 figures -- `run.py`'s own header, two
+    docstrings in `stages.py`, `BUILD.md`, `TESTING.md`, `nitpick.toml` and
+    `OPEN_QUESTIONS.md`. The harness PRINTS every denominator on every run
+    (V-1b) and no document was ever diffed against the print, so a reader had
+    two numbers and no way to tell which was current.
+
+    THE MECHANISM IS NARROWER THAN "EVERY NUMBER IN EVERY DOCUMENT", AND THE
+    NAME SAYS SO. It cannot read prose; it checks the numbers somebody TAGGED
+    `[[sweep: name=N]]`. A new untagged number is not covered -- that is the
+    honest limit, and it is why the marker is ugly enough to notice in review.
+    What it does guarantee is that a tagged number cannot go stale in silence,
+    which is exactly what these eleven did.
+
+    It is the shape `check_error_budget` already uses on `SAFETY.md` §2: the
+    document is the thing read, the tree is the authority, and the diff is the
+    check.
+    """
+    known = denominators(tree, extra)
+    problems, tagged, files_seen = [], 0, 0
+    for dirpath, dirs, names in os.walk(tree):
+        dirs[:] = sorted(d for d in dirs if d not in WALK_SKIP)
+        for n in sorted(names):
+            if not n.endswith(_TAGGABLE):
+                continue
+            path = os.path.join(dirpath, n)
+            rel = os.path.relpath(path, tree).replace(os.sep, "/")
+            files_seen += 1
+            with open(path, "r", encoding="utf-8", errors="replace") as fh:
+                for lineno, line in enumerate(fh, 1):
+                    for m in _SWEEP_MARK.finditer(line):
+                        name, claimed = m.group(1), int(m.group(2))
+                        tagged += 1
+                        if name not in known:
+                            problems.append(
+                                "%s:%d tags `%s`, which this sweep does not "
+                                "measure. A tag naming nothing is excused by "
+                                "nothing. Known: %s"
+                                % (rel, lineno, name,
+                                   ", ".join(sorted(known))))
+                        elif known[name] != claimed:
+                            problems.append(
+                                "%s:%d says %s = %d; the tree says %d. The "
+                                "tree is the authority (TM-002). Either the "
+                                "sentence is stale, or the tree grew a file "
+                                "nobody meant to add."
+                                % (rel, lineno, name, claimed, known[name]))
+    headline = ("%d tagged number(s) over %d file(s), against %d measured "
+                "denominator(s)" % (tagged, files_seen, len(known)))
+    res = Result("check_denominators", headline, problems)
+    res.reports.append("measured: %s"
+                       % "  ".join("%s=%d" % kv for kv in sorted(known.items())))
+    return res
+
+
 LIVE = (
+    check_denominators,
     check_layering,
     check_error_budget,
     check_constants_named,

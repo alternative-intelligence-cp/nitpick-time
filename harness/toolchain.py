@@ -13,7 +13,8 @@ it never invokes. Worse, the reverse: `llvm-config` could report the version of
 a DIFFERENT installation from the one on `PATH`. The three tools this harness
 actually runs are the three it asks.
 
-The version strings, measured at the pin:
+The version strings, measured at the pin on THIS workbench, whose LLVM is the
+Ubuntu-vendored build:
 
     llc --version      "Ubuntu LLVM version 20.1.2"
     opt --version      "Ubuntu LLVM version 20.1.2"
@@ -21,6 +22,22 @@ The version strings, measured at the pin:
 
 -- three different shapes, one of them not containing "LLVM" at all, so the
 match is on the dotted number and not on the surrounding words.
+
+AND THE NUMBER IS NOT ALWAYS ON LINE ONE (TM-140). This module read
+`out.splitlines()[0]` until cycle 0.0.6, which is narrower than the argument
+above and was about to fail the first CI run this repository ever had. CI
+installs the UPSTREAM release tarball, not Ubuntu's package, and upstream is
+built WITHOUT `PACKAGE_VENDOR`; `llvm/lib/Support/CommandLine.cpp` at tag
+`llvmorg-20.1.2` then prints
+
+    LLVM (http://llvm.org/):
+      LLVM version 20.1.2
+      Optimized build.
+
+-- so `llc` and `opt` from that tarball put the version on line TWO and a
+first-line match raises `ToolchainError`. `ld.lld` is unaffected either way.
+The match is therefore over the WHOLE output, and the banner reported is the
+line the number was found on, so the run log still names one line per tool.
 """
 
 import re
@@ -55,13 +72,20 @@ def _ask(tool):
     if p.returncode != 0:
         raise ToolchainError("%s --version exited %d:\n%s"
                              % (tool, p.returncode, out.rstrip()))
-    first = out.splitlines()[0] if out.splitlines() else ""
-    m = _VERSION.search(first)
-    if not m:
-        raise ToolchainError(
-            "%s --version printed a first line with no dotted version in it, "
-            "so the pin cannot be checked: %r" % (tool, first))
-    return m.group(1), first.strip()
+    # THE WHOLE OUTPUT, NOT LINE ONE (TM-140). See the module docstring: the
+    # upstream tarball's banner puts the number on line two. The banner
+    # reported back is the line the match came from, so a run log still shows
+    # one line per tool and shows WHICH line answered.
+    for line in out.splitlines():
+        m = _VERSION.search(line)
+        if m:
+            return m.group(1), line.strip()
+    raise ToolchainError(
+        "%s --version printed no dotted version anywhere in its output, so "
+        "the pin cannot be checked. Both known banner shapes carry one -- "
+        "Ubuntu's on line 1 (`Ubuntu LLVM version X.Y.Z`) and upstream's on "
+        "line 2 (`LLVM (http://llvm.org/):` then `  LLVM version X.Y.Z`). "
+        "The output was:\n%s" % (tool, out.rstrip()))
 
 
 def check(manifest):

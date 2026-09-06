@@ -17,7 +17,7 @@ than sampled. Where that is possible it is the gate, and §3 says where.
 
 | Stage | Answers |
 |---|---|
-| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **19 files of 50 that no other stage roots** |
+| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **30 files of 78 that no other stage roots** <!-- [[sweep: npk_total=78]] --> |
 | `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
 | `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
 | `check` | every documented refusal actually refuses, with exactly its code |
@@ -41,14 +41,17 @@ them found something on its first run.
 | `check_table_invariants` | every transition slice sorted and strictly increasing; every type index in range; every name-pool offset in range; the zone-name index lexicographically sorted |
 | `check_error_budget` | the count and names of public `error:` declarations against `SAFETY.md` §2's table |
 | `check_failsafe_arms` | the generated per-module arm list against programs that import each module and compile their `failsafe` |
-| `check_layering` | every `use` edge against `BUILD.md` §6's diagram |
-| `check_no_owning_fields` | every value stored in a table or array declares no owning field |
+| `check_layering` | `BUILD.md` §6's diagram against `src/` — its **edges** (every `use`) and its **nodes** (every layer the diagram names holds at least one module). The node half is D1's repair: cycle 0.0.1's acceptance claimed `run.py` "asserts the count is at least 7" and no such assertion was in the tree, so *"a directory whose placeholder was deleted rather than replaced is invisible to the sweep"* was live for four subcycles inside a ticked box |
+| `check_no_owning_fields` | every value stored in a table or array declares no owning field. **It could not see a SINGLE-LINE struct until cycle 0.0.6 and both of this repository's structs are one** (TM-138), so neither type's real fields had ever been examined while the check reported `0 of 0`; the self-check now plants the same violation in both spellings |
 | `check_int128_sites` | `int128` appears at exactly the three sites `SPAN_MODEL.md` §5 names, and nowhere else |
 | `check_constants_named` | no bound outside `src/core/limits.npk`; no magic 86400, 146097, 719468 or 1000000000 outside the algorithm module that owns it |
 | `check_no_format_string` | no function anywhere takes a pattern `string` and interprets it — `FORMAT_MODEL.md` F-5's rule, made checkable |
-| `check_raw_index` | no `.items[` outside `src/core/vec.npk` and no `.ptr[` outside `src/core/bytes.npk`. `Vec<T>.items` and `Bytes`' buffer body are **bare pointers**, which the language does not bounds-check (TM-108, `SAFETY.md` S-17b), so the accessor pair is the only bound there is |
-| `check_expect_headers` | **the tree partitioned three ways, with the denominator printed** (TM-115): every `.npk` is under `src/` (judged by "it compiles"), or under `tests/` with an `expect-` marker of its own or a NAMED exemption, or it is unowned — and unowned is a failure. The exemption list is diffed in both directions, so an exemption naming a file that is gone fails too |
-| `check_specs_current` | **reports, does not fail**: spec citations that no longer resolve |
+| `check_raw_index` | **no index through a bare pointer in `src/`, by FIELD or by BINDING.** `Vec<T>.items` and `Bytes`' buffer body are bare pointers, which the language does not bounds-check (TM-108, `SAFETY.md` S-17b), so the accessor pair is the only bound there is. It was two literal substrings until cycle 0.0.6 and was **evadable in one line** — bind the pointer to a local and index the local, which was built at `aaffb87`, ran, and read four elements past the live prefix while the check reported `0 sites` (TM-144). Every `wild T->:name` in a file is now watched. **The limit is stated: it is lexical and per-file**, so a bare pointer passed to another function and indexed there is still not covered; cycle 0.5 gets the widening |
+| `check_expect_headers` | **the tree partitioned three ways, with the denominator printed** (TM-115): every `.npk` is under `src/` (judged by "it compiles"), or under `tests/` with an `expect-` marker of its own or a NAMED exemption, or it is unowned — and unowned is a failure. The exemption list is diffed in both directions, so an exemption naming a file that is gone fails too. **It says a marker is WELL-FORMED and nothing about whether it is TRUE**; that is `check_exemptions_live`'s and `run_defect_corpus`'s job, and the gap between the two readings was TM-141 |
+| `check_exemptions_live` (TM-137) | **every exemption's recorded VERDICT, re-derived from the file on every run.** An exemption's reason is a claim about what the compiler does, and the compiler moves. The superseded mechanism checked only that the named file still existed: O-N17 landed, two files went from stopping at `llc` to running clean, the suite stayed green and nothing said a word |
+| `run_defect_corpus` (TM-141) | **every `expect-` marker under `tests/probe/defect/`, asserted.** The `probe` entry is non-recursive by design, so the suite selected 0 of these 24 files and 21 committed expectations — the whole regression corpus for four discharged compiler defects — were evaluated by nothing. The inversion was sharp: the 3 files EXEMPT from having an expectation had their verdict re-derived every run, and the 21 that HAD one did not |
+| `check_denominators` (TM-142) | **every number TAGGED `[[sweep: name=N]]` against what the tree measures.** The tree went from 50 `.npk` to 78 and eleven sites in six live files still carried the 0.0.3 figures. The harness PRINTS every denominator on every run (V-1b) and no document was diffed against the print. **The mechanism is narrower than "every number": it checks the tagged ones**, and an untagged number is not covered — which is why the marker is ugly enough to notice in review |
+| `check_specs_current` | **reports** spec citations that no longer resolve — a renumbering is not a reason to stop a build — and **FAILS on a stale exemption** (TM-145). Those are different animals: a stale exemption is V-1c's both-directions rule, a failure everywhere else in this harness, and the one thing here a green run would otherwise hide. It matters at a cycle close, when archiving `meta/roadmap/<cycle>/` moves the paths two of its keys name. **There is no whole-file entry in its table, as a rule**: `checks.py` marks one excused as long as the file EXISTS, so its reason is never re-derived — TM-137's shape inside the mechanism written to prevent it |
 
 **Rule V-1.** `check_purity` and `check_int128_sites` are the two that matter
 most, because they guard the two claims this library makes that are easy to
@@ -56,13 +59,27 @@ break by accident and hard to notice: that it is reproducible, and that its
 arithmetic does not silently overflow.
 
 **Rule V-1a (TM-126) — a check runs from the cycle it can be written, and its
-pending siblings are PRINTED.** Nine of the fourteen above are live as of cycle
-0.0.3, several over a subject that is currently empty — which is the right
-answer, and is what makes the check exist on the day the first table type is
-written rather than be invented in the same week as the thing it guards. The
-other four print on every run as `PEND`, each naming **the cycle that turns it
-on and why it cannot run today**, because a family whose gaps are invisible is a
-family nobody completes:
+pending siblings are PRINTED.** The table above has **17** rows: **13 are live**
+as of cycle 0.0.6 and **4 print on every run as `PEND`**, and `13 + 4 = 17`
+closes. Several of the live ones run over a subject that is currently empty —
+which is the right answer, and is what makes the check exist on the day the
+first table type is written rather than be invented in the same week as the
+thing it guards.
+
+*(**The arithmetic did not close until cycle 0.0.6**, and that is C2. This rule
+read "nine of the fourteen above are live", against a fourteen-row table with
+four pending: `9 + 4 = 13`. The row that fell out of the count was
+`check_expect_headers`, which `run.py` runs as step 4 rather than as a tree
+check — and it is the same row V-14c was false about. A rule's own arithmetic
+is the cheapest place to notice that a family has a member nobody is counting.
+The 13 live are `checks.LIVE`'s 9 — including `check_denominators` — plus
+`check_failsafe_arms`, `check_expect_headers`, `check_exemptions_live` and
+`run_defect_corpus`, the last three of which `run.py` drives outside step 5
+because they need a toolchain or a manifest.)*
+
+The four pending each name **the cycle that turns it on and why it cannot run
+today**, because a family whose gaps are invisible is a family nobody
+completes:
 
 | Pending | Live from | Why not now |
 |---|---|---|
@@ -108,6 +125,31 @@ The marker block is contiguous from line 1 and a marker-shaped line below it
 **fails** rather than being ignored. The case that matters is not the prose
 already in this tree; it is the `// stress: 40` somebody adds mid-file next
 year, believing it took effect.
+
+**Rule V-1g (TM-141) — EVERY EXPECTATION IN THE TREE IS EVALUATED, and "in a
+bucket" is not "evaluated".** V-1f is about a marker in the wrong place; this
+is about a marker in the right place that nothing reads. `tests/probe/defect/`
+holds 24 `.npk`: 3 are named in `EXPECT_EXEMPT` and have their verdict
+re-derived every run, and the other **21 carried an `expect-exit:` or
+`expect-error:` marker that no stage asserted** — the entire regression corpus
+for O-N9, O-N10, O-N11 and TM-137. `check_expect_headers` checked the markers
+were well-formed; the `probe` entry is non-recursive and selected none of them;
+`run_parse` compares only the diagnostic's phase family. §1's description of the
+coverage — *"under `tests/` with an `expect-` marker of its own or a NAMED
+exemption"* — read as coverage and was, for those 21, membership in a bucket
+nobody evaluated. **The arithmetic is printed on every run and asserted:
+24 = 3 exempt + 21 asserted.**
+
+**Rule V-1h (TM-142) — a derived number in a document is TAGGED or it is
+history.** Eleven sites in six live files carried denominators from cycle 0.0.3
+after the tree had grown from 50 `.npk` to 78 — `run.py`'s own docstring,
+`stages.py` twice, `BUILD.md`, this document, `nitpick.toml` three times and
+`OPEN_QUESTIONS.md`. Every one was reachable from the runner's own printed
+output and nothing compared them. A number that describes the tree as it is now
+carries `[[sweep: name=N]]` and `check_denominators` diffs it against the sweep;
+a number inside a roadmap execution record is **history and is correctly
+frozen**, and is not tagged. The distinction is tense: present tense is a claim,
+past tense is a record.
 
 ---
 
@@ -249,6 +291,14 @@ expectations and requires it to report every one as a failure:
    addition, because `npkc` exit 0 is not well-formedness (B-4b, TM-112) and
    V-14's seven do not cover it.
 
+**SEVEN OF THE EIGHT ARE PLANTED, AND THE RUNNER SAYS SEVEN.** Case 6 is
+`PEND` until cycle 0.5, so *"this runner has been shown able to fail eight
+ways"* — printed on every run, and repeated in `run.py`'s header, `CLAUDE.md`,
+`harness/README.md` and the CI workflow — was an overstatement for three
+cycles (C3). `0.0/README.md`'s Gate said **seven** and was the only place that
+had it right. The number is now derived from `selfcheck.PLANTED_CASES` rather
+than typed, in every one of those places that still states it.
+
 **Rule V-14b — every case carries a CONTROL, in the same run.** Each case's
 scratch tree holds a correct twin of the faulted file, and the case asserts a
 `PASS` for it beside the `FAIL`. Without that, a red proves only that
@@ -257,14 +307,39 @@ self-check satisfied by a broken harness is worse than none. It is 0.0.2 §5.3's
 own argument (*a red that came from the mechanism rather than from the fault
 would prove nothing*) made a rule.
 
-**Rule V-14c (TM-126) — every check in §2 is commissioned the same way.** The
-tree checks are pure functions of a directory, so the self-check plants one
-violation per check and requires each to find it, then runs it over a clean
-control and requires silence. This costs milliseconds and no compilation, and it
-is what makes *"written"* and *"working"* different words. **A check that has
-never failed has never been shown to work**, and "written but not run" is the
-weakest state an instrument can be in — weaker than absent, because absence is
-visible.
+**Rule V-14c (TM-126, amended by TM-141) — every LIVE check in §2 is
+commissioned, and the exceptions are named here rather than left to be
+discovered.** The tree checks are pure functions of a directory, so the
+self-check plants one violation per check and requires each to find it, then
+runs it over a clean control and requires silence. This costs milliseconds and
+no compilation, and it is what makes *"written"* and *"working"* different
+words. **A check that has never failed has never been shown to work**, and
+"written but not run" is the weakest state an instrument can be in — weaker
+than absent, because absence is visible.
+
+**This rule said "every check in §2" and was FALSE when it said it (A5).**
+`check_expect_headers` was in §2's table and planted nowhere — the row TM-115
+was written to create. `check_exemptions_live`, the mechanism 0.0.5 built to fix
+TM-137, was in neither §2 nor the self-check. So of the two instruments that
+found cycle 0.0's two worst faults, one was undocumented and neither had ever
+been driven. Cycle 0.0.6 made the sentence true rather than softening it:
+
+| Commissioned by | What it drives |
+|---|---|
+| `selfcheck.PLANTED` | the 9 tree checks of `checks.LIVE`, one planted violation and one clean control each |
+| `selfcheck.part_b` directly | `check_layering`'s **node** half — the fault is a file that is NOT there, which no `PLANTED` row can express |
+| `selfcheck.part_b_specs_current` | `check_specs_current`, which reports and never fails, so it is shown REPORTING |
+| `selfcheck.part_c` (`CALIBRATION`) | `check_failsafe_arms`, against `NITPICK-REACH-003`'s own identity list on three modules with known bills |
+| `selfcheck.part_d` | `run._verdict` on three specimens; `check_exemptions_live` on a MOVED verdict; `run_defect_corpus` on an `expect-exit:` wrong by one; `check_expect_headers` on all three of its branches |
+
+**The four `PEND` rows are the named exception**, and they are exempt for the
+reason each states: there is nothing in the tree for them to be red about.
+
+**And the parameters exist for this and for nothing else.** `EXPECT_EXEMPT`,
+the defect directory and the exemption list are arguments rather than module
+constants, because a check that can only be pointed at a corpus where
+everything already passes cannot be shown to fail. The instrument that was
+built because a check had never failed had itself never failed.
 
 **Rule V-14d — the S-6 arm generator is commissioned against the compiler.**
 `check_failsafe_arms` computes an arm bill from source and diffs it against the
@@ -274,6 +349,19 @@ an identity and never raises it: **4**, the floor), `probe11_arms_lib` (raises
 one: **5**) and `probe11_calc_lib` (declares none and costs **8**, the floor
 plus its own arithmetic). Those three are TM-107's three constraints, one each,
 and the numbers are re-measured on every run rather than remembered.
+
+**Rule V-14e (TM-141) — the specification's list and the harness's list are
+one list, or they are two lists that drift.** §2's table, `checks.LIVE`,
+`checks.PENDING` and the checks `run.py` drives outside step 5 are four
+statements of one family and **nothing diffs them** (D4). They agree today —
+re-read row by row at cycle 0.0.6 — and the cost of them disagreeing is
+exactly A5: a row can go missing from the count (C2) and a mechanism can exist
+with no row (`check_exemptions_live` for a whole subcycle) and the run stays
+green either way. **A `check_check_registry` is cycle 0.1's**, deferred and not
+declined: it needs `TESTING.md` §2 to have a machine-readable shape, which is a
+change to this document's form rather than to its content, and this cycle's
+close was not the place to make one. Until then V-1a's arithmetic is the
+belt — it is what caught the missing row.
 
 **Rule V-15.** The self-check runs **first** in every full invocation, and its
 failure is **fatal** — nothing below it runs. A harness that has not proven it

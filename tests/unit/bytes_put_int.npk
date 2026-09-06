@@ -3,7 +3,7 @@
 // `put_int` AT `int64` MIN -- AND THIS FILE WAS WRITTEN BEFORE `bytes.npk`
 // EXISTED, which is P-26's requirement and not a stylistic note. Run against an
 // absent `src/core/bytes.npk` on 2026-09-05 it failed to compile, with `npkc`
-// exit 1 and NO `.ll` written; that transcript is in `meta/roadmap/0.0/0.0.4.md`
+// exit 1 and NO `.ll` written; that transcript is in `meta/roadmap/done/0.0/0.0.4.md`
 // §7. The implementation was written afterwards, to this file.
 //
 // WHY THIS TEST AND NOT ANOTHER. `put_int` has exactly one input that breaks

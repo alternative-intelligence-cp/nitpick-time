@@ -1,0 +1,132 @@
+// expect-exit: 0
+//
+// `bytes_view`'s VIEW IS INVALIDATED BY GROWTH, AND THIS FILE IS THE PAIR THAT
+// SHOWS BOTH HALVES OF THE RULE (TM-139).
+//
+// WHY IT EXISTS. Until cycle 0.0.6 `bytes_view`'s header said the view "is
+// valid exactly as long as the `Bytes` is". That is false: `bytes_reserve`
+// grows by allocating a fresh `buffer`, copying, and OVERWRITING `b.body`,
+// which drops the old one (D-186, `bytes.npk`'s "the overwrite that drops the
+// old body"). A view taken before the growth points into the released block.
+// `bytes_view` and `bytes_push` are both on the public surface (`src/lib.npk`),
+// so a consumer following that comment wrote a use-after-free that COMPILES,
+// LINKS, RUNS, and reads the allocator's `0xAA` poison (D-183).
+//
+// NOTHING IN THE GATES SAW IT, AND THAT IS THE STRUCTURAL POINT (S-18e).
+// `check_raw_index` reports 0 sites; `check_purity` is about something else;
+// D-151's exit-0 trap counts `wild` blocks and a `buffer` is MANAGED (TM-106);
+// the symbol scan cannot see it. EVERY GATE THIS REPOSITORY OWNS IS A LEAK
+// GATE, and a use-after-free is found by a WRONG ANSWER. So it is found by a
+// test that reads, which is this file. It is the second one this cycle --
+// `vec_pop<T>` at 0.0.4 was the first (TM-136).
+//
+// THE CONTROL IS NOT DECORATION. A file that only showed the stale read would
+// prove that a use-after-free is possible and would say nothing about when a
+// view may be used -- which is the half a caller needs. §1 holds a view across
+// forty pushes that do NOT grow and reads it back correctly, and asserts that
+// no growth happened, so its green is evidence about the rule rather than
+// about luck.
+//
+// WHAT §2 ASSERTS, AND WHY IT IS `!=` RATHER THAN `== 170`. The rule is "the
+// stale view no longer reads the sink's bytes", not "freed memory contains
+// 0xAA". Measured at pin `aaffb87` the byte read back IS 170, D-183's poison,
+// and that number is in `0.0.6.md`'s record; asserting it here would make this
+// a test of the allocator, and a later pin that changed the poison would
+// redden a file whose subject is this library's lifetime rule. `!=` reddens
+// only if the old block is still readable as itself -- which would mean
+// `bytes_reserve` had NOT released it, and that is a `Bytes` defect either
+// way.
+mod:bytes_view_lifetime;
+
+use "../../src/core/bytes.npk".*;
+
+fixed uint8:A = 65u8;      // the byte written before the view is taken
+fixed uint8:B = 66u8;      // the byte written after it
+fixed int64:HELD = 8i64;   // bytes under the held view
+fixed int64:PUSHES = 40i64;
+
+func:main = int32(cstring[]:_~argv) {
+    // =======================================================================
+    // 1. THE CONTROL -- capacity is never exceeded, so nothing reallocates
+    //    and the view stays good. This is what the corrected comment promises.
+    // =======================================================================
+    Bytes:b = raw bytes_init(64i64);
+    int64:i = 0i64;
+    while (i < HELD) { drop bytes_push(@b, A); i = i + 1i64; }
+
+    int64:cap_before = b.body.cap;
+    uint8[]:v = raw bytes_view(@b);
+    if (v.len != HELD)                          { exit 10i32; }
+    if (v[0i64] != A)                           { exit 11i32; }
+
+    i = 0i64;
+    while (i < PUSHES) { drop bytes_push(@b, B); i = i + 1i64; }
+
+    // THE CONTROL'S OWN CONTROL. 8 + 40 = 48 <= 64, so `bytes_reserve` must
+    // have returned early every time. If capacity moved here the section
+    // below would be measuring the same thing as section 2 and its green
+    // would mean nothing.
+    if (b.body.cap != cap_before)               { exit 12i32; }
+    if (raw bytes_len(@b) != HELD + PUSHES)     { exit 13i32; }
+
+    // The held view is still the live prefix it was taken over.
+    if (v.len != HELD)                          { exit 14i32; }
+    if (v[0i64] != A)                           { exit 15i32; }
+    if (v[HELD - 1i64] != A)                    { exit 16i32; }
+
+    // =======================================================================
+    // 2. THE SAME PROGRAM, ONE CAPACITY DIFFERENT -- growth is forced, and
+    //    the view taken before it is stale.
+    // =======================================================================
+    Bytes:c = raw bytes_init(2i64);
+    i = 0i64;
+    while (i < 2i64) { drop bytes_push(@c, A); i = i + 1i64; }
+
+    int64:cap_small = c.body.cap;
+    uint8[]:w = raw bytes_view(@c);
+    if (w.len != 2i64)                          { exit 20i32; }
+    // VALID HERE, BEFORE ANY GROWTH -- so the read below is about the growth
+    // and not about a view that never worked.
+    if (w[0i64] != A)                           { exit 21i32; }
+
+    i = 0i64;
+    while (i < PUSHES) { drop bytes_push(@c, B); i = i + 1i64; }
+
+    // Growth must actually have happened, or section 2 is section 1 again.
+    if (c.body.cap == cap_small)                { exit 22i32; }
+
+    // THE SINK ITSELF IS INTACT. Growth copies, so a view taken NOW is
+    // correct -- the defect is the stale handle, never the container.
+    uint8[]:fresh = raw bytes_view(@c);
+    if (fresh.len != 2i64 + PUSHES)             { exit 23i32; }
+    if (fresh[0i64] != A)                       { exit 24i32; }
+    if (fresh[2i64] != B)                       { exit 25i32; }
+
+    // AND THE OLD VIEW IS NOT THE SINK ANY MORE. This read is the
+    // use-after-free itself, written down on purpose in the one file that
+    // documents it. Everything else in this library must obey the rule the
+    // header of `bytes_view` now states.
+    if (w[0i64] == A)                           { exit 26i32; }
+
+    // NOTHING IS FREED HERE (P-24, TM-133). Both sinks are over a managed
+    // `buffer` and their scope-exit drop is the reclaim; there is no
+    // `bytes_free` to call. `exit 0` therefore says nothing about this file's
+    // managed memory -- D-151 watches `wild` blocks (TM-106) -- and this file
+    // does not claim otherwise.
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (DivByZero)      { exit 97i32; },
+        (DivOverflow)    { exit 98i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

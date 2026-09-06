@@ -15,7 +15,7 @@
 //        121 against the predicted 321 would have concluded the fix was
 //        broken. It is not; the prediction was mistyped.
 //
-// Obtained by running the four-step recipe of `meta/roadmap/0.0/0.0.0.md` §2
+// Obtained by running the four-step recipe of `meta/roadmap/done/0.0/0.0.0.md` §2
 // against the pinned toolchain.
 //
 // This file is no longer a defect reproduction. It is the REGRESSION CASE for

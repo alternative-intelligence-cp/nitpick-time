@@ -1029,7 +1029,7 @@ this library actually writes, still compiles and runs at exit 0. The ask
 > view is then a borrow of that binding, checked like any other (D-249)`
 
 TM-109, `SAFETY.md` S-22, `OPEN_QUESTIONS.md`, `view_escape/README.md`,
-`roadmap/0.4/README.md` and `roadmap/0.0/0.0.0.md` all stated the opposite,
+`roadmap/0.4/README.md` and `roadmap/done/0.0/0.0.0.md` all stated the opposite,
 because DEF-3's *plan* ended "`check_codes_tested` needs nothing new (no new
 code)" and the plan was overtaken by its own step 2. **Why the code was needed
 at all, which the plan had not foreseen:** DEF-3's other refusals are all
@@ -1263,7 +1263,7 @@ commit: the dead path and the vanished quotation are removed, the prelude
 location and D-247's ownership are stated, and the measurement above is what
 the paragraph now rests on. `tests/probe/probe06_generic_vec.npk`'s three
 citations (lines 14, 92 and 107 as they stood) are corrected in place, because
-they are comments. `meta/roadmap/0.0/README.md`'s live checklist line is
+they are comments. `meta/roadmap/done/0.0/README.md`'s live checklist line is
 corrected.*
 
 **Two sites are deliberately NOT corrected**, and this decision is where a
@@ -1273,7 +1273,7 @@ grep for the dead path is meant to land:
   never rewritten (`CLAUDE.md`; the compiler's D-085/D-202 pattern). TM-108's
   reasoning is about a sentence that was *narrow and read as broad*, and its
   citation was true when it was written.
-- **`meta/roadmap/0.0/0.0.0.md:1350`**, a closed subcycle's execution record.
+- **`meta/roadmap/done/0.0/0.0.0.md:1350`**, a closed subcycle's execution record.
   A record says what was known then. Rewriting it would destroy the only
   evidence of what 0.0.0 actually had in front of it.
 
@@ -1492,7 +1492,7 @@ finding where the description and the compiler disagree. Four of the five
 correct something this repository had already written down.
 
 ### TM-117 — there is no separate compilation, so a program links with the runtime and nothing else
-**2026-09-05. Measured** at pin `0dfddac`. **Corrects `meta/roadmap/0.0/0.0.2.md`
+**2026-09-05. Measured** at pin `0dfddac`. **Corrects `meta/roadmap/done/0.0/0.0.2.md`
 P-16 and its §2 pipeline diagram.**
 
 **What was written.** 0.0.2's plan drew the last step of the pipeline as
@@ -1551,7 +1551,7 @@ missing feature rather than a defect.
 
 ### TM-118 — the runtime allowlist is derived from `npkrt.o`, not from `npkrt.ll`, and the scan cannot see a syscall
 **2026-09-05. Measured** at pin `0dfddac`. **Corrects `BUILD.md` B-2 and
-`meta/roadmap/0.0/0.0.2.md` P-14.**
+`meta/roadmap/done/0.0/0.0.2.md` P-14.**
 
 **What was written.** Both said the undefined-symbol scan's allowlist is *"every
 `define` in `runtime/npkrt.ll` plus `main`"*.
@@ -1604,7 +1604,7 @@ cycle 0.0.3's.
 `npkc` wrapper that renamed one call target in the emitted IR: the run went red
 at the library build and again at the program, naming
 `ntime_c_helper_that_does_not_exist`, exit 1. The transcript is in
-`meta/roadmap/0.0/0.0.2.md`.
+`meta/roadmap/done/0.0/0.0.2.md`.
 
 *Alternatives declined:*
 
@@ -1828,7 +1828,7 @@ point — the marker alone would leave two of them open:
 
 ### TM-123 — the `parse` stage asks `$NPKC` and reads the CODE FAMILY, because there is no parse-only mode
 **2026-09-05. Measured** at pin `0dfddac`. **Corrects `BUILD.md` §3 and
-`meta/roadmap/0.0/0.0.3.md` §2**, both of which name the compiler's
+`meta/roadmap/done/0.0/0.0.3.md` §2**, both of which name the compiler's
 `tools/parse_check` as this stage's tool.
 
 **What the plan assumed.** That the three frontend tools — `tools/parse_check`,
@@ -1898,7 +1898,7 @@ membership and cannot silently un-cover a file.
 ### TM-124 — `accept` is DECLINED, not unimplemented, and the manifest says which
 **2026-09-05.** Carries `BUILD.md` B-4b and TM-114 into the runner.
 
-**The tension.** `meta/roadmap/0.0/0.0.3.md` §2 lists `accept` among the stages
+**The tension.** `meta/roadmap/done/0.0/0.0.3.md` §2 lists `accept` among the stages
 this subcycle adds. `BUILD.md` §3 marks it *"(not used by this library)"* and
 B-4b explains at length why, and `TESTING.md` §1 says *"the stage exists
 upstream; this library does not use it"*. **The specifications are the
@@ -1950,7 +1950,7 @@ what it is.
   that depends on nobody reaching for it under deadline is not a rule.
 
 ### TM-126 — a tree check is COMMISSIONED, not merely written; `check_purity` and `check_host_isolation` go live now
-**2026-09-05. Supersedes the dormancy half of `meta/roadmap/0.0/0.0.3.md` P-21**
+**2026-09-05. Supersedes the dormancy half of `meta/roadmap/done/0.0/0.0.3.md` P-21**
 — which said `check_purity` and `check_host_isolation` are *"written now and
 dormant"*, to go live at cycle 0.3 when `src/host/` exists.
 
@@ -2007,9 +2007,20 @@ meets one of them at a time.
 
 ---
 
-### TM-127 — OVERWRITING a `Vec<T>` element discards one, so `vec_set` is the FOURTH entry that owes an element drop
+### TM-127 — OVERWRITING a `Vec<T>` element discards one, so `vec_set` is the FOURTH entry that owes an element drop — **SETTLED; its reading of O-N17 is superseded by TM-136**
+
+> **Read TM-136 next.** This decision's blockquote — *"the remedy is not
+> available generically today"* — rests on O-N17, which is **FIXED** at pin
+> `aaffb87`. The conclusion survives and the reason changed: the drop loop as
+> `vec.npk` spells it is `NITPICK-MOVE-001`, and `NITPICK-TYPE-046` does not
+> fire inside a generic body (O-N19). *(Note added at cycle 0.0.6 — D5. Zero
+> of this file's 68 `TM-` headings carried a forward pointer, though
+> `CLAUDE.md` names the pattern and the compiler follows it in 11 of its
+> 266. A reader arriving here got the superseded reason with nothing to
+> follow.)*
+
 **2026-09-05, cycle 0.0.4. Extends TM-106 and amends `SAFETY.md` S-18b and
-`meta/roadmap/0.0/0.0.4.md` §2's note**, both of which name three
+`meta/roadmap/done/0.0/0.0.4.md` §2's note**, both of which name three
 element-discarding entries and there are four.
 
 **What the documents said.** `0.0.4.md` §2: *"Three of those entries discard
@@ -2075,8 +2086,8 @@ the defect blocks one row of one table, not a layer.
 
 ### TM-128 — the element-drop pair's "under 768 KiB" is not reproducible; the bound is a 3 MiB address space, and 2 MiB is the machine's floor
 **2026-09-05, cycle 0.0.4. Corrects a number carried by `SAFETY.md` S-18b (1),
-`meta/roadmap/0.0/README.md` (1), `meta/roadmap/0.0/0.0.4.md` §6 (1),
-`tests/probe/probe06_generic_vec.npk` (2) and `meta/roadmap/0.0/0.0.0.md` (2)**
+`meta/roadmap/done/0.0/README.md` (1), `meta/roadmap/done/0.0/0.0.4.md` §6 (1),
+`tests/probe/probe06_generic_vec.npk` (2) and `meta/roadmap/done/0.0/0.0.0.md` (2)**
 — and the arithmetic is written out because this decision first stated it
 wrongly:
 
@@ -2344,7 +2355,15 @@ happens when it is run at every point rather than at the ends.
   conclusion drawn from them does not survive the two extra rows. Recording
   agreement would have carried the wrong gate forward under a confirmation.
 
-### TM-132 — O-N17 blocks FIVE rows of the `Vec<T>` table and not one, because all five are one primitive; the library ships `Vec<T>` at a NON-OWNING `T` and says so
+### TM-132 — O-N17 blocks FIVE rows of the `Vec<T>` table and not one, because all five are one primitive; the library ships `Vec<T>` at a NON-OWNING `T` and says so — **SETTLED; the RESTRICTION stands, its REASON is superseded by TM-136**
+
+> **Read TM-136 next.** The restriction to a non-owning `T` is unchanged and
+> is now stronger, not weaker: O-N17 is fixed and the restriction rests on
+> **O-N19** — `NITPICK-TYPE-046` unenforced inside a generic body, which no
+> compiler check and no leak gate can catch. This is the decision a reader
+> reaches when asking *why is `Vec<T>` restricted*, so the forward pointer
+> matters most here (D5, added at cycle 0.0.6).
+
 **2026-09-05, cycle 0.0.4. Establishes the extent of O-N17, amends `SAFETY.md`
 S-18c and `0.0.4.md` §2's API table, and settles what `src/core/vec.npk` ships.**
 
@@ -2417,7 +2436,7 @@ header beside the reproduction path.
   generic `vec_clear<T>` that does not drop.
 
 ### TM-133 — `Bytes` has NO `free`, and the plan's operation list is corrected
-**2026-09-05, cycle 0.0.4. Corrects `meta/roadmap/0.0/0.0.4.md` §3, which lists
+**2026-09-05, cycle 0.0.4. Corrects `meta/roadmap/done/0.0/0.0.4.md` §3, which lists
 `free` among `Bytes`' operations.**
 
 **What the plan said.** §3: *"`init`, `push`, `extend`, `extend_str`,
@@ -2808,3 +2827,497 @@ there turns `run:0` into `npkc` and fails the entry.
   suite to it.
 - **Re-derive the verdict but only warn.** Printing is what "green because it
   never ran" looks like. The check fails.
+
+---
+
+### TM-138 — a check commissioned on ONE spelling is commissioned on none: `check_no_owning_fields` could not see a single-line struct, and both of this repository's structs are one
+**2026-09-06, cycle 0.0.6. Amends `harness/checks.py` `_structs` and adds a
+second plant to `harness/selfcheck.py`. From the pre-close audit, finding A1.**
+
+**What was believed.** `check_no_owning_fields` is `ZONE_MODEL.md` Z-7's stated
+gate on the row types — `src/core/vec.npk`'s header says it *"enforces rather
+than trusts"* — and it was commissioned at cycle 0.0.3 with a planted violation
+and a clean control, which is `TESTING.md` V-14c's rule.
+
+**What is true.** `_structs` did `continue` after matching a declaration line,
+so the rest of THAT line was never read. For
+
+```
+pub struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };
+pub struct:Bytes = { buffer:body; int64:len; };
+```
+
+— **both of this repository's structs** — every field was skipped, `cur` was
+never cleared because the closing `};` had been on the same line, and the
+following lines were attributed to the type as fields. Measured: `Vec` "had"
+four fields, all of them `vec_init`'s statements, and `Bytes` two. **Neither
+type's real fields had ever been examined.** Run against the same violation
+written both ways:
+
+```
+multi-line (the self-check's fixture)   -> 1 problem(s)
+single-line (the tree's own form)       -> 0 problem(s)
+```
+
+**Why it was invisible.** The headline read `0 table(s) ... against 2
+struct(s)`, and *"there is no table to check"* and *"the fields cannot be seen"*
+print the same line. The check's own docstring said `src/` held *"six
+placeholders and one umbrella; there is no table and no struct"*, which had been
+false since cycle 0.0.4.
+
+**The decision.** *`_structs` parses fields on the declaration line and
+terminates on that line's `};`, through one `_absorb` helper so there is a
+single definition of what a field looks like. And `PLANTED` carries the same
+violation TWICE — multi-line and single-line — because a fix commissioned on
+one spelling would repeat the original error exactly.*
+
+**The general rule, which is the durable half.** A plant is written in the form
+the fixture's author finds natural, and the tree is written in the form the
+tree's author finds natural, and those are not always the same form. **When a
+check is lexical, plant every spelling the tree actually uses.** This is the
+third instrument in this repository whose NAME described a property while its
+MECHANISM covered something narrower (TM-115, TM-137, this).
+
+*Alternatives declined:*
+
+- **Parse `src/` with a real parser instead.** There is none available to a
+  Python check; `npkc` has no parse-only mode (TM-123) and emits no AST.
+- **Require structs to be written multi-line.** A house rule to make a check
+  work is the check working on the rule rather than on the tree.
+
+---
+
+### TM-139 — `bytes_view`'s view is invalidated by growth; the comment said the opposite, and a use-after-free on the public surface is found by a WRONG ANSWER and by no gate here
+**2026-09-06, cycle 0.0.6. Amends `src/core/bytes.npk`, adds `SAFETY.md`
+S-18e and `tests/unit/bytes_view_lifetime.npk`. From the pre-close audit,
+finding A2 — the finding the audit said to read first.**
+
+**What the code said.** `bytes_view`'s header, written at cycle 0.0.4 and
+untouched at 0.0.5: *"THE BORROW OUTLIVES NOTHING IT SHOULD NOT: the slice
+refers to the sink's body, so it is valid exactly as long as the `Bytes` is."*
+
+**What is true.** `bytes_reserve` grows by allocating a fresh `buffer`, copying,
+and overwriting `b.body` — which **drops the old one** (D-186, and the line is
+marked *"THE OVERWRITE THAT DROPS THE OLD BODY"* 150 lines above the claim).
+The view is valid as long as the `Bytes` is **and is not grown**, and
+`bytes_push`, `bytes_extend`, `bytes_extend_str`, `bytes_put_uint`,
+`bytes_put_int` and `bytes_reserve` all grow it.
+
+**Measured at pin `aaffb87`**, two programs differing only in the initial
+capacity:
+
+```
+cap 64, no growth, view held across 40 pushes   run exit 0, the view reads 65
+cap  2, growth forced, otherwise identical      the stale view reads 170
+```
+
+**170 is the allocator's `0xAA` free poison** (D-183) — measured directly by a
+variant that exits with the byte.
+
+**`bytes_view` and `bytes_push` are both public** (`src/lib.npk`), so a consumer
+following that comment wrote a use-after-free that compiles, links, runs and
+reads poison.
+
+**The decision.** *The comment is the defect and is corrected to state the
+invalidation rule; the rule is `SAFETY.md` **S-18e** so `src/fmt/` inherits it
+at cycle 0.3; and `tests/unit/bytes_view_lifetime.npk` holds both halves — a
+view across forty NON-growing pushes read back correctly, with the capacity
+asserted not to have moved, and the same program at a capacity that forces
+growth.*
+
+**Why the test asserts `!=` and not `== 170`.** The rule is "the stale view no
+longer reads the sink's bytes", not "freed memory contains `0xAA`". Asserting
+170 would make a unit test of this library into a test of the allocator, and a
+later pin that changed the poison would redden a file whose subject is a
+lifetime rule. The measured 170 is recorded here and in the file's header
+instead.
+
+**THE STRUCTURAL FINDING, WHICH IS WORTH MORE THAN THE FIX.** This is the
+**second** use-after-free cycle 0.0 shipped on this library's own public surface
+— `vec_pop<T>` at 0.0.4 was the first (TM-136) — and both passed review, a
+green suite and an independent verification. The reason is one sentence:
+**every gate this repository owns is a LEAK gate.** D-151's exit-0 trap counts
+`wild` allocations and cannot see a managed body (TM-106); `check_raw_index` is
+about indexing; the undefined-symbol scan is blind; `check_purity` answers a
+different question. **A leak is found by a gate. A use-after-free is found by a
+wrong answer** — so it is found by a test that READS, and by nothing else. Both
+of cycle 0.0's were found by a reader and neither by a run.
+
+**And the question asked in the same pass, because the answer is not "no" by
+luck.** `Vec<T>` has the identical reallocation shape — `vec_reserve` does
+`dalloc(v.items)` and rebinds — and does **not** have this defect, because **no
+function in `vec.npk` returns a slice**; `vec_at<T>` returns by value. Inside
+both files every `#wild_slice` binding is made AFTER the `*_reserve` call in the
+same body. S-18e states that ordering as the rule for `src/fmt/`.
+
+*Alternatives declined:*
+
+- **Make `bytes_view` safe.** It cannot be, without a lifetime the language does
+  not have. The honest surface is a documented rule and a test.
+- **Remove `bytes_view` from the public surface.** Every formatter needs it, and
+  removing a public name is a MAJOR version (TM-013).
+- **Put the demonstration under `tests/probe/defect/`.** That directory is for
+  COMPILER defects. This was ours.
+
+---
+
+### TM-140 — the version banner is not always on line one, and CI had never run to say so
+**2026-09-06, cycle 0.0.6. Amends `harness/toolchain.py` and
+`.github/workflows/ci.yml`. From the pre-close audit, findings A3 and A4 —
+one commit, because the push that closes this cycle is the first CI run in this
+repository's history.**
+
+**A3, what the mechanism did.** `toolchain.py` took `out.splitlines()[0]` and
+required a dotted version in it. Its own docstring argued *"the match is on the
+dotted number and not on the surrounding words"* — which is the right argument,
+and the mechanism was narrower than the argument: it was also on the first line
+only.
+
+**Why that matters exactly here.** This workbench has the **Ubuntu-vendored**
+LLVM, whose banner is `Ubuntu LLVM version 20.1.2` on line 1. CI installs the
+**upstream release tarball**, which is built without `PACKAGE_VENDOR`; read at
+LLVM's own source at tag `llvmorg-20.1.2`,
+`llvm/lib/Support/CommandLine.cpp` then prints `LLVM (http://llvm.org/):` first
+and the number on line **two**. So `llc` and `opt` from that tarball would have
+raised `ToolchainError` on the first CI run — and the failure would have
+surfaced three levels from its cause, as *"the SELF-CHECK failed"*, because
+every inner run dies at step 3 having written no unit verdicts.
+
+**A4, the pin.** `.github/workflows/ci.yml` pinned compiler
+`0dfddac045bdab6abbd367b1ffb31de695b9bf22` under a comment claiming it was
+*"`../BOARD.md`'s pinned toolchain"*. The board moved to `aaffb87` on
+2026-09-05 and this file did not. **A workflow that has never run cannot go
+red**, which is the whole reason both of these survived.
+
+**The decision.** *Match the dotted version against the WHOLE `--version`
+output and report the line it was found on, so a run log still names one line
+per tool and names which line answered. And bump `NITPICK_COMMIT`,
+`NITPICK_COMMIT_SHORT` and both workbench digests to `aaffb87`'s in the same
+commit.*
+
+**Commissioned in three directions before it was believed**: a shim printing
+the upstream banner is accepted at `20.1.2` with the banner reported as
+`LLVM version 20.1.2`; this machine's Ubuntu banner still answers `Ubuntu LLVM
+version 20.1.2`; and a tool printing no dotted version anywhere still raises,
+with both known banner shapes named in the message.
+
+**The full sha was READ, not reconstructed** — `git -C ../nitpick rev-parse
+aaffb87` gives `aaffb8768dd60b61b7a82cdf5b4736d40deac8fb`, and `aaffb87` is an
+ancestor of the compiler's pushed `origin/main`, so CI's checkout will find it.
+The digests are the workbench's own `SHA256SUMS`: `npkc` 7 346 792 B
+`a3b0dadc…`, `npkrt.o` 55 576 B `c9ddbcff…` — the second byte-identical to the
+`0dfddac` pin's, which is why only one of the two lines changed.
+
+**Pin portability was measured before the bump, not assumed**: the audit built
+the library and every runnable suite member at `0dfddac`, including
+`vec_pop<T>`'s new `move`, which had never been compiled there. The content was
+portable; what was wrong was the pin and the comment.
+
+---
+
+### TM-141 — the files EXEMPT from having an expectation were checked and the files that HAD one were not
+**2026-09-06, cycle 0.0.6. Adds `run.run_defect_corpus`, `TESTING.md` V-1g and
+two §2 rows, and `selfcheck.py` part D. Amends V-14c. From the pre-close audit,
+findings A5 and B2.**
+
+**The inversion, which is the whole finding.** `tests/probe/defect/` holds 24
+`.npk`. **Three** are named in `EXPECT_EXEMPT` and have their verdict
+re-derived on every run by `check_exemptions_live` (TM-137). The other **21
+carry an `expect-exit:` or `expect-error:` marker that nothing asserted** —
+`derive_payload_enum/case2` at 121 and `case3` at 107 (O-N10),
+`view_escape/case1…case5` at `NITPICK-BORROW-001` (O-N9),
+`missing_failsafe/case1` and `case3` at `NITPICK-REACH-003` (O-N11),
+`generic_element_move/case1` and `case5` at 0 (the TM-137 fix), and four more.
+**That is this repository's entire regression corpus for four discharged
+compiler defects, asserting nothing.**
+
+**How it stayed invisible.** `nitpick.toml`'s `probe` entry is non-recursive by
+design and selected 0 of the 24; `check_expect_headers` checks a marker is
+WELL-FORMED and never whether it is TRUE; `run_parse` compares only the
+diagnostic's phase family. `TESTING.md` §1 described the coverage as *"under
+`tests/` with an `expect-` marker of its own or a NAMED exemption"*, which reads
+as coverage and was, for 21 files, **membership in a bucket nobody evaluated**.
+It is also why the stale CI pin (TM-140) was survivable: `case1` and `case5`'s
+brand-new `// expect-exit: 0`, which would have been wrong at `0dfddac`, were
+inert.
+
+**The second half — the two instruments that found this cycle's worst faults
+had never been driven.** `V-14c` said *"every check in §2 is commissioned the
+same way"* and that was false twice: `check_expect_headers` is in §2's table and
+was planted **nowhere** — the row TM-115 exists to create — and
+`check_exemptions_live`, built at 0.0.5, was in **neither** §2 nor the
+self-check. `0.0.5.md` records it as *"commissioned green at 6 of 6, and red
+with one verdict changed"* — by hand, in one session, which is the state
+`selfcheck.py`'s own docstring condemns: *"three instruments had been
+commissioned by hand there, and three checks is not a runner."*
+
+**The decision.** *Every `expect-` marker under `tests/probe/defect/` is
+asserted on every full run, by walking the directory rather than by one
+`[[test]]` entry per subdirectory — so a NEW subdirectory is covered the day it
+is created, which is the property that failed. The arithmetic is printed and
+asserted: **24 = 3 exempt + 21 asserted**. And `check_exemptions_live`,
+`run_defect_corpus` and `check_expect_headers` take their list as a PARAMETER,
+so `selfcheck.py` part D can hand each one a planted fault and require the red,
+then the same input unfaulted and require silence.*
+
+**V-14c is made true rather than softened.** It now names its commissioner per
+row and names the four `PEND` rows as the exception. A rule that says "every"
+and means "most" teaches a reader to discount the document.
+
+*Alternatives declined:*
+
+- **A `[[test]]` entry per `defect/` subdirectory.** Six entries stating one
+  coverage rule, which can drift apart, and a seventh directory would be
+  uncovered until somebody remembered.
+- **`recursive = true` on the `probe` entry.** It would also sweep
+  `tests/probe/support/`, three library modules with no `main`, which must never
+  be run — and the schema has no such key, refused by name.
+- **Assert only the `expect-exit:` half.** The eight refusal members are the
+  regression corpus for O-N9 and O-N11, which is the half most likely to move
+  under a re-pin.
+
+---
+
+### TM-142 — a derived number in a live document is TAGGED and diffed against the sweep, or it is history
+**2026-09-06, cycle 0.0.6. Adds `checks.check_denominators` and `TESTING.md`
+V-1h; corrects eleven sites in six files. From the pre-close audit, finding C1,
+with C2 … C6 and D1 as the same defect in six other spellings.**
+
+**What happened.** The tree went from 50 `.npk` at cycle 0.0.3 to 78 at 0.0.6.
+**Eleven sites in six live files still carried the 0.0.3 figures** — `run.py`'s
+own docstring (`50 = 1 + 27 + 3 + 19`), `stages.py` twice, `BUILD.md` twice,
+`TESTING.md`, `nitpick.toml` three times and `OPEN_QUESTIONS.md`. The harness
+**prints every denominator on every run** (V-1b) and no document was ever
+diffed against the print, so a reader had two numbers and no way to tell which
+was current.
+
+**The same defect in six other places, all found by the same audit:** V-1a's
+arithmetic did not close (`9 + 4 = 13` against a 14-row table — C2, and the row
+that fell out was the one V-14c was false about); *"this runner has been shown
+able to fail eight ways"*, printed on every run and repeated in four documents,
+is **seven** (C3, and the cycle Gate was the only place that had it right);
+`manifest.py` said `BUILD.md` §3 lists nine stages and the table has eight
+(C4); `harness/README.md`'s cost table was 184 s against a measured 62 s and
+`CLAUDE.md` pointed readers at it (C5); six live sites still said the library
+computes nothing (C6); and a **ticked** acceptance item claimed `run.py`
+*"asserts the count is at least 7"* when no such assertion was in the tree —
+0.0.2 replaced `run.py` rather than extending it and the minimum went with the
+old file (D1).
+
+**The decision.** *A number that describes the tree as it is now carries
+`[[sweep: name=N]]` and `check_denominators` diffs it against a measured sweep
+on every run. A number inside a roadmap execution record is HISTORY, is
+correctly frozen, and is not tagged. The distinction is tense: present tense is
+a claim, past tense is a record.*
+
+**The mechanism is narrower than "every number in every document" and the name
+says so.** It cannot read prose; it checks the numbers somebody tagged. An
+untagged number is not covered — that is the honest limit, and it is why the
+marker is ugly enough to notice in review. 18 numbers are tagged today against
+16 measured denominators.
+
+**Where a number could be DERIVED instead of tagged, it now is**, which is
+strictly better: `run.py`'s "fail N ways" reads `selfcheck.PLANTED_CASES`, the
+self-check's plant counts read `len(PLANTED)`, and the fixture count in the
+plants themselves is `1 + len(LAYERS)` rather than a typed 7.
+
+**D1's repair is an assertion and not a minimum.** A magic "at least 7" goes
+stale the moment a directory is added. The rule the sentence was really about is
+*every layer B-17 names holds at least one module*, so `check_layering` now
+checks its diagram's **nodes** as well as its edges — and a deleted placeholder
+is a named failure rather than a smaller denominator. It is planted separately
+from `PLANTED`, because the fault is a file that is NOT there and no row of that
+table can express one.
+
+**And it caught its own documentation on the first run**: the comment explaining
+why the self-check must not spell a tag out spelled one out.
+
+*Alternatives declined:*
+
+- **Stop writing derived numbers in prose.** The numbers are what make the prose
+  worth reading; `50 = 1 + 27 + 3 + 19` is an argument, not decoration.
+- **Generate the numbers into the documents.** A generated document is one
+  nobody edits, and these paragraphs are edited.
+- **A check that reads the numbers out of prose untagged.** Eleven sites, eight
+  spellings, two of them spelled in words. It would be wrong in both directions
+  and no reader could predict it.
+
+---
+
+### TM-143 — a specification known to be wrong is amended in the SPECIFICATION, not in a roadmap file and not in a source comment
+**2026-09-06, cycle 0.0.6. Amends `SAFETY.md` S-17c and S-18c's blockquote,
+reorders S-18c/S-18d, corrects `VERIFICATION.md`'s `Vec<T>` row and `BUILD.md`
+B-15. From the pre-close audit, findings D3, F2, F4, F5 and F6.**
+
+**Four instances of one habit.** `CLAUDE.md` says a wrong specification *"is
+amended by a decision recorded in `meta/DECISIONS.md`, in the same commit —
+never by editing the text and moving on, and never by a comment."* The audit
+found the second half broken four ways:
+
+- **D3 — `SAFETY.md` contradicted itself about O-N17, fifty lines apart.**
+  S-18d (line 543) said *"O-N17 is fixed at pin `aaffb87` — all five
+  reproduction cases link and run"*; S-18c's blockquote said *"the remedy is
+  not available generically today … O-N17"*. **Both were live rules in the
+  authority document** and the second was false at the pin. The correct current
+  statement is TM-136's: the generic remedy is unavailable for a DIFFERENT
+  reason, `NITPICK-MOVE-001` on the hoisted-slice loop.
+- **F6 — and S-18d was placed ABOVE S-18c**, which is why the two paragraphs
+  read as one argument and their disagreement was invisible. Cosmetic, and it is
+  the cosmetic finding that made D3 possible. They are now in order.
+- **F2 — S-17c's code block read `// over `count`, never over `cap`` and three
+  sites in the library lay the slice over `cap`** (`vec_push`, `bytes_push`,
+  `bytes_extend`), each arguing the exception in a source comment. S-17c now
+  states the rule in full: over `count` for a READ or an OVERWRITE, over `cap`
+  for an APPEND, because the valid index there is `count` itself. S-18c already
+  carved `vec_push` out for the drop obligation on the same argument, so the two
+  carve-outs are now one.
+- **F4 — `VERIFICATION.md`'s `Vec<T>` `at`/`set` row stated `index < count`**,
+  which `SAFETY.md` S-17b already said was incomplete, with the correction
+  recorded in `0.0.4.md` — **a roadmap execution record, which is not the
+  specification**. The row now carries `0 <= i && i < count`.
+- **F5 — `BUILD.md` B-15's prefix list was `cal_`, `span_`, `zone_`, `fmt_`,
+  `host_`**, one per directory that existed when it was written, and
+  `src/core/` then shipped `vec_*`, `bytes_*` and `NTIME_*` and no `core_`.
+  The rule is amended to say the prefix is the **module's**, not the
+  directory's, which makes `vec_`/`bytes_` correct rather than exceptions.
+
+**The decision.** *Amend the specification, in the specification, in the commit
+that finds the error, and record the amendment here. A roadmap file is where a
+correction is EXPLAINED; it is not where a rule lives. A source comment
+arguing an exception to a stated rule is an unrecorded amendment.*
+
+**The general shape, which is why these are one decision rather than five.**
+Each was a document that had been superseded in a session's head and in a
+neighbouring file, and in every case the superseding statement existed and was
+correct — TM-136, `0.0.4.md` §2, three source comments. **Nothing was unknown;
+the knowledge had simply not been written where the rule was.** That is the
+cheapest class of defect to prevent and the hardest to notice, because every
+individual session was right.
+
+**B-15 is not checked and that is stated rather than implied.** A
+`check_public_prefix` is cycle 0.1's, when `src/cal/` gives it a second
+directory to be right about. A rule with no mechanism is not a rule this
+repository trusts, and saying so is the difference between a gap and a lie.
+
+---
+
+### TM-144 — `check_raw_index` enumerated the KNOWN bare pointers by field name; it did not find bare pointers, and the evasion is one line
+**2026-09-06, cycle 0.0.6. Widens `harness/checks.py` `check_raw_index` and
+adds a plant. From the pre-close audit, finding B1 — the answer to the brief's
+class question, "what else can the gates not see".**
+
+**What the check was.** Two literal substrings:
+
+```python
+RAW_INDEX_OWNERS = {".items[": "src/core/vec.npk", ".ptr[": "src/core/bytes.npk"}
+```
+
+**The evasion, built and run at pin `aaffb87`:**
+
+```
+wild int64->:p = v.items;
+int64:x = p[v.count + 4i64];
+```
+
+`npkc` 0, `llc` 0, `ld` 0, run **13** — the program's own "the value read is
+not 10", four elements past the live prefix, read, no trap. And on that
+spelling `check_raw_index` reported *"0 raw-index site(s) over 2 file(s) in
+src/, 2 owner(s) allowed"*.
+
+**It was never a live defect** — the library contains no such alias, and
+`check_raw_index` genuinely reports 0 because there are 0. It is the answer to
+*"what would this miss"*, which is the question a check of this shape has to
+survive: **it enumerates the bare pointers it was told about, by field name. It
+does not find bare pointers.** A new `wild X->` field at cycle 0.5 called
+anything else is uncovered by construction, and nothing notices a bare pointer
+with no entry.
+
+**The decision.** *Collect every `wild T->:name` binding in a `src/` file —
+declaration, field or parameter — and fail on `name[` in the same file. Keep
+the field half beside it. The plant is the evasion itself, and its control is
+the SAME binding not indexed, because `wild T->` locals are ordinary in
+`vec.npk` (`mem`, `fresh`) and a check that fired on the binding rather than on
+the index would fail this repository's own code.*
+
+**THE LIMIT IS STATED RATHER THAN IMPLIED, which is the point of the whole
+audit finding.** The new half is lexical and per-file. **A bare pointer passed
+to another function and indexed there under a different name is still not
+covered.** The widening is cycle 0.5's, when `src/zone/` gives it a second
+subject; until then the ceiling on the damage is that `src/` has exactly two
+bare pointers and both live in the file that owns them, which
+`check_no_owning_fields` can now actually see (TM-138).
+
+**And the second, smaller instance in the same family, DEFERRED with its
+cycle.** `SAFETY.md` S-17c says the slice goes over `count` and nothing checks
+the length argument of `#wild_slice`. A future accessor laying the slice over
+`cap` gets a guard that accepts allocated-but-dead space — the distinction
+`probe13b` exists to make, and `probe13b` is a probe about the language rather
+than a check over `src/`. There are three legitimate `cap` sites today (the
+appending ones, S-17c as amended by TM-143), so the check would need to know
+which functions append, and inventing that rule at a close is how a check comes
+out narrower than its name. **Cycle 0.1**, with `src/cal/` beside it.
+
+---
+
+### TM-145 — a WHOLE-FILE exemption cannot expire, so there is none; and a stale exemption FAILS the run rather than reporting
+**2026-09-06, cycle 0.0.6. Amends `harness/checks.py` `CITATION_EXEMPT` and
+`check_specs_current`, and `harness/selfcheck.py`'s fixtures. From the
+pre-close audit, finding B3.**
+
+**The audit swept every list in this repository with `EXPECT_EXEMPT`'s shape —
+six named tables over 79 tracked files — and read all six.** Four are clean and
+one, `selfcheck.CALIBRATION`, is called exemplary because its three numbers are
+re-measured against `NITPICK-REACH-003` every run. `CITATION_EXEMPT` had two
+problems.
+
+**One: the whole-file entry could never expire.** `checks.py`'s loop reads
+
+```python
+if (rel, None) in exempt:
+    excused.add((rel, None)); continue
+```
+
+so `("harness/selfcheck.py", None)` was marked excused **as long as the file
+existed**. Its reason — *"it contains DELIBERATELY dangling citations"* — was
+never re-derived. **That is TM-137's shape exactly, inside the mechanism
+written to prevent it**: the check verified that the file was there, not that
+its reason still held. It also silently un-checked the eleven REAL citations in
+that file (V-14, V-15, D-179, D-237, TM-107, TM-112, TM-120, TM-126, S-1,
+S-4b, B-10) — and the same table's own text argues against exactly this one
+entry up, for `checks.py`: *"Exempting the whole file would stop the dozen REAL
+citations in it being checked."*
+
+**The fix is not a better exemption; it is not needing one.** The fixtures are
+assembled from pieces — `"TM-" + "999"` — so nothing in the file matches the
+scanner, the exemption is deleted, and that file's real citations are checked
+like everybody else's. **Reach for that shape first.** It is the same move
+`check_denominators`' plants use (TM-142), and both caught the comment
+explaining them, which spelled the fixture out to say it must not be spelled
+out.
+
+**Two: the close was about to break two entries in silence.** `CITATION_EXEMPT`
+is keyed on repository-relative **paths**, two of its keys were
+`meta/roadmap/done/0.0/0.0.0.md` and `meta/roadmap/done/0.0/0.0.3.md`, and this
+subcycle's step 7 moves that directory to `meta/roadmap/done/0.0/`. After the
+move both keys name nothing — and `check_specs_current` **reported and never
+failed**, so the run would have stayed green with two exemptions excusing
+files that no longer exist at those paths.
+
+**The decision.** *`check_specs_current` keeps REPORTING an unresolved citation
+— a renumbering is not a reason to stop a build, which is why it was written
+that way — and FAILS on a stale exemption. Those are different animals: a
+stale exemption is V-1c's both-directions rule, which is a failure everywhere
+else in this harness, and it is the one thing here that a green run would
+otherwise hide. The message names the archive case, because a cycle close is
+when it will fire.*
+
+**And there is no whole-file entry in the table any more, as a rule.** A
+per-rule exemption states what it excuses and stops excusing it when the thing
+is gone; a whole-file one is a hole with no expiry condition at all.
+
+**Not adopted, and named so it is not re-proposed as new:** a check diffing
+`checks.PENDING` against `TESTING.md` §2's pending table, and §2's rows against
+`checks.LIVE`. It is the right instrument and it needs §2 to have a
+machine-readable shape, which is a change to that document's form. `TESTING.md`
+V-14e carries it as **cycle 0.1's**, with V-1a's arithmetic as the belt until
+then — that arithmetic is what caught the missing row (C2).

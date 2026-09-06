@@ -3,8 +3,9 @@
 THE HEADER IS THE AUTHORITY (B-5), AND FROM THIS CYCLE IT ALSO DECIDES WHAT KIND
 OF TEST A FILE IS (O-X7, TM-119). A `[[test]]` entry selects by DIRECTORY and
 never by file, so one `program` entry over `tests/probe/` cannot be true about
-both the nineteen files carrying `expect-exit:` and the seven carrying
-`expect-error:`. It dispatches per file instead:
+both the 25 files carrying `expect-exit:` [[sweep: probe_exit=25]] and the 7
+carrying `expect-error:` [[sweep: probe_error=7]]. It dispatches per file
+instead:
 
     expect-error:  present  ->  a REFUSAL member. `npkc` must fail, and the SET
                                of codes it reports must EQUAL the set the header
@@ -359,10 +360,11 @@ def parse_verdict(bld, rel, e):
 
     THE RULE IS ONE LINE AND ITS CONSEQUENCE IS NOT OBVIOUS: a file must parse
     UNLESS its own header names a parse-phase code. That is what lets the stage
-    cover the twenty-six files in this tree that must NOT compile -- they are
-    refused at TYPE-009, BORROW-012, REACH-002 and REACH-003, all of which are
-    phases that only run on something that parsed. Exactly one file in the tree
-    is expected not to parse, and the check is that it is exactly that one.
+    cover the 15 files in this tree [[sweep: tests_error=15]] that must NOT
+    compile -- they are refused at TYPE-009, BORROW-001, BORROW-012, REACH-002,
+    REACH-003 and EMIT-002, all of which are phases that only run on something
+    that parsed. Exactly one file in the tree is expected not to parse, and the
+    check is that it is exactly that one.
     """
     want_refusal = bool(e) and any(
         code.startswith(PARSE_FAMILIES) for code in e.errors)

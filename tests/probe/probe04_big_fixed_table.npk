@@ -25,7 +25,7 @@
 //
 // THAT HALF IS EVIDENCED NEXT DOOR, NOT HERE. Running the four commands above
 // against THIS file costs 281 s and 30.9 GiB (O-N4), so it has been done once,
-// on 2026-09-03, and `meta/roadmap/0.0/0.0.0.md` §7 records it explicitly as a
+// on 2026-09-03, and `meta/roadmap/done/0.0/0.0.0.md` §7 records it explicitly as a
 // ONE-TIME OBSERVATION that nobody should re-derive casually. The same four
 // commands against `probe04b_emission_shape.npk` -- the identical declaration
 // at 300 rows -- cost 0.16 s, and their full output is committed verbatim in

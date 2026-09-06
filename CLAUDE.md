@@ -19,13 +19,16 @@ TM-007 stands and O-X2 and O-Z1 close.
 `limits.npk` (thirteen named bounds, each with the rule that set it). The
 umbrella re-exports **35** names, one line each. The other five directories are
 still placeholders that parse and are **replaced, not deleted**, by the cycle
-named in each header. `harness/` is the runner `BUILD.md` describes — nine
-stages, ten modules — and a full invocation is **40 units green in about
-42 s** at pin `aaffb87`. It was **241 s** at `0dfddac`; the compiler's 1.5.2d
-close made every emitted module carry only the prelude functions it references,
-and that is the whole of the difference — same 40 units, same verdicts.
+named in each header — and `src/core/core.npk` survives as that directory's
+LAYER NOTE, which is what the five point at. `harness/` is the runner
+`BUILD.md` describes — nine stages, ten modules — and a full invocation is
+**62 units green in about 62 s** at pin `aaffb87`. It was **241 s** at
+`0dfddac` on the same content; the compiler's 1.5.2d close made every emitted
+module carry only the prelude functions it references, which took it to 43 s,
+and cycle 0.0.6 put ~19 s back by asserting 21 more units.
 
-**Two things to know before touching `src/core/`.**
+**THREE things to know before touching `src/core/`, and the third is the one
+cycle 0.0 paid most for.**
 
 - **`Vec<T>` is for a NON-OWNING `T`** (TM-132, and the reason changed at
   0.0.5 — TM-136). **O-N17 is FIXED** at pin `aaffb87`; the restriction stays
@@ -42,12 +45,27 @@ and that is the whole of the difference — same 40 units, same verdicts.
 - **The bounds guard is the compiler's, not ours** (TM-129, S-17c). Each
   accessor lays a `#wild_slice` over `count` and indexes that, so
   `emit_bounds_guard` runs and one unsigned compare rejects both ends. The
-  library now contains **no raw bare-pointer index at all**.
+  library now contains **no raw bare-pointer index at all**. The slice is over
+  `cap` in the three APPENDING sites and that is part of the rule, not an
+  exception to it (S-17c, amended at 0.0.6).
+- **A `bytes_view` view is invalidated by GROWTH** (TM-139, S-18e). It is valid
+  until the next call that can grow the sink and no longer; reading it after
+  one returns **170**, the allocator's poison. `bytes_view`'s header claimed
+  the opposite from 0.0.4 to 0.0.6 and both it and `bytes_push` are public.
+  **The structural half is the durable lesson: every gate this repository owns
+  is a LEAK gate, and a use-after-free is found by a WRONG ANSWER.** Cycle 0.0
+  shipped two of them — this and `vec_pop<T>` — and both were found by reading,
+  under a green suite. `tests/unit/bytes_view_lifetime.npk` is the pair.
 
 **What 0.0.3 added, and the first item is the one that matters.**
 `harness/selfcheck.py` runs **first** in every full invocation (`TESTING.md`
-V-15) and plants eight faults, nine tree-check violations and three arm-bill
-specimens, requiring a red run that names each and a green control beside it.
+V-15) and plants **seven** of V-14's eight faults — case 6 is `PEND` until 0.5
+and prints as pending — plus 14 tree-check violations, three arm-bill
+specimens, and (since 0.0.6) the verdict mechanisms of TM-137 and TM-141,
+requiring a red run that names each and a green control beside it. *(Every one
+of those numbers is now derived from the code rather than typed here; "eight
+faults" was printed on every run for three cycles and only the cycle Gate had
+it right — C3.)*
 Before it, three of the harness's checks had been commissioned by hand and that
 was three checks, not a runner. Then: the `parse`, `check`, `golden` and `sweep`
 stages; `--quick`; and nine live tree checks.

@@ -101,25 +101,44 @@ against the summary line rather than left to review.
 
 ## What a green run does NOT mean
 
-- **Not that the library works.** There is none yet; `src/` is placeholders.
-  The first computation is `src/core/` at 0.0.4.
-- **Not that the tree checks have anything to check.** Nine are live and most
-  report `0` over a small denominator, which is the right answer and is why the
-  denominator is always printed (V-1b). Four print as `PEND` with the cycle that
-  turns them on.
-- **Not that CI is green.** This repository pushes at a cycle's end.
+- **Not that the WHOLE library works.** `src/core/` is real code since cycle
+  0.0.4 and the suite is evidence about it; the other five `src/` directories
+  are still placeholders, so nothing here dates anything. *(This read "there is
+  none yet; `src/` is placeholders" for two subcycles after `src/core/` landed
+  — C6.)*
+- **Not a MEMORY result for the managed half.** D-151's exit-0 trap counts
+  `wild` allocations and a `buffer` is managed (TM-106), so a green run says
+  nothing about `Bytes` (`SAFETY.md` S-18b).
+- **Not that a view into a `Bytes` is used correctly.** Every gate here is a
+  leak gate and a use-after-free is a WRONG ANSWER (S-18e, TM-139). Two shipped
+  in cycle 0.0 and both were found by reading, not by a gate.
+- **Not that the tree checks have anything to check.** Thirteen are live and
+  several report `0` over a small denominator, which is the right answer and is
+  why the denominator is always printed (V-1b). Four print as `PEND` with the
+  cycle that turns them on.
+- **Not that CI is green.** Until cycle 0.0.6 this repository had never pushed,
+  so the workflow had never run; the 0.0 close is its first.
 
-## Cost, measured at cycle 0.0.3 on the workbench
+## Cost, re-measured at cycle 0.0.6 at pin `aaffb87`
 
 | Step | Wall |
 |---|---|
-| self-check (8 cases, 9 planted violations, 3 arm specimens) | 78.3 s |
-| tree checks | 4.2 s |
-| parse (50 files) | 40.1 s |
-| library + repro + suite (27 units) | ~61 s |
-| **full invocation** | **184 s** |
+| self-check (7 planted cases, 14 tree-check violations, 3 arm specimens, the verdict mechanisms) | ~34 s |
+| tree checks | < 1 s |
+| parse (78 files) | ~7 s |
+| defect corpus (21 units) | ~9 s |
+| library + repro + suite (41 units) | ~12 s |
+| **full invocation** | **62 s** |
 
-78.3 + 4.2 + 40.1 + 61.4 = 184.0. The floor under all of it is TM-117's: every
-root re-emits the prelude, 844 793 B of IR for a library that computes nothing,
-so a `npkc` invocation on anything that compiles costs ~0.8 s and the run makes
-about 130 of them. One that does *not* compile costs 0.03 s.
+**It was 184 s at cycle 0.0.3 and this table said so until 0.0.6 — a factor of
+four out, over denominators (50 files, 27 units) that had also moved (C5).**
+Two things changed and they pull opposite ways. The compiler's 1.5.2d close
+made every emitted module carry only the prelude functions it references, which
+took a full invocation from **241 s to 43 s** at unchanged content — that is
+the whole of the speed-up, same units, same verdicts. Cycle 0.0.6 then added 21
+defect-corpus units, one unit test, six placeholder modules per self-check
+scratch tree and a fourth self-check part, which put ~19 s back.
+
+The floor under all of it is still TM-117's: every root re-emits the prelude,
+so a `npkc` invocation on anything that compiles costs a fixed amount and the
+run makes about 200 of them. One that does *not* compile costs ~0.03 s.

@@ -1,0 +1,231 @@
+// `Vec<T>` -- `ntime`'s one growable sequence (`BUILD.md` B-12, TM-005).
+//
+// THE SHAPE IS THE COMPILER'S `List<T>`; THE TYPE IS OURS, and B-10 is why: a
+// library must not import a compiler's internals. There is no prelude `Vec<T>`
+// to import in any case -- `SAFETY.md` S-17b measured that, and the prelude's
+// `List<T>` is now compiler-known and OWNING (the compiler's D-247), which this
+// type is not. So none of the prelude's element handling applies here and all
+// of it is this file's job.
+//
+// ===========================================================================
+// THE RESTRICTION, WHICH IS THE FIRST THING TO READ (TM-132, O-N17)
+// ===========================================================================
+//
+// `Vec<T>` IS FOR A NON-OWNING `T`. Every function below is correct at a `T`
+// that owns nothing -- an integer, a float, an enum without a payload, a struct
+// of those. At an OWNING `T` (a `string`, a `buffer`, another `Vec`) this type
+// does not discharge its element-lifetime obligation, and the reason is a
+// COMPILER DEFECT that is raised and not worked around:
+//
+//   O-N17 -- a GENERIC function that MOVES OUT OF an indexed element, at an
+//   OWNING `T`, emits a call to an undefined `@npk.vacant.<dty>`. `npkc`
+//   accepts it at exit 0 and writes the `.ll`; `llc` then refuses the IR and
+//   writes no object. Reproduction, five cases and their controls:
+//   `../../tests/probe/defect/generic_element_move/`.
+//
+// FIVE OF THE NINE OPERATIONS BELOW ARE BUILT ON ONE BLOCKED PRIMITIVE --
+// `T:x = move(v.items[i])` inside a generic function -- namely `vec_pop`,
+// `vec_set`, `vec_clear`, `vec_truncate` and `vec_free`. At a non-owning `T`
+// none of them needs it and all nine link and run; at an owning `T` the
+// element-drop path cannot be written generically at this pin. It is NOT
+// approximated here: `SAFETY.md` S-18b puts element lifetime AT THE
+// INSTANTIATION, and the sanctioned concrete spellings are measured and
+// committed -- `probe06_generic_vec.npk`'s `free_names` and `probe12b`'s
+// `vec_set_string`.
+//
+// WHY THAT IS NOT A WORKAROUND (W-11). No function here is bent around the
+// bug; each is the one that would have been written anyway. `0.0.4.md` §2
+// required each element-discarding entry to have *"an element-drop path for an
+// owning `T` OR a stated restriction to non-owning ones"* -- written before the
+// defect was known. The defect removed the first option. **What would have been
+// a workaround** is a generic `vec_clear<T>` that quietly does not drop: it
+// would leak at an owning `T`, PASS `exit 0` because D-151 cannot see a managed
+// body (TM-106), and read later as a design choice nobody would question.
+//
+// `ntime` NEEDS NO OWNING `T`. `Layout`'s vector (`FORMAT_MODEL.md` §3) is a
+// payload-free enum but for `Literal(uint16)`, and the zone tables hold OFFSETS
+// into a name pool precisely so no row owns anything -- which
+// `check_no_owning_fields` enforces rather than trusts.
+//
+// ===========================================================================
+// THE BOUNDS GUARD (TM-129, `SAFETY.md` S-17c)
+// ===========================================================================
+//
+// `items` is a `wild T->` -- A BARE POINTER, WHICH THIS LANGUAGE DOES NOT
+// BOUNDS-CHECK (TM-108). `ExprIndexExpr` calls `emit_bounds_guard` on
+// `TY_SLICE`, `TY_ARRAY` and `TY_SIMD` and NOT on `TY_POINTER`, so an
+// out-of-range `v.items[i]` is A WRONG VALUE, NOT A CRASH.
+//
+// So every accessor here lays a length-carrying slice over the block and
+// indexes THAT, and the check becomes the compiler's own:
+//
+//     T[]:s = #wild_slice<T>(v.items, v.count);
+//     pass s[i];
+//
+// ONE UNSIGNED COMPARE COVERS BOTH ENDS. `emit_bounds_guard` emits `icmp ult`
+// -- unsigned -- and `index_as_i64` sign-extends first, so a negative index
+// becomes a huge unsigned value and the same compare rejects it. A hand-written
+// `i >= 0` beside it would be dead code (measured: `probe13c` traps at `i ==
+// -1` with no such comparison anywhere in the accessor).
+//
+// THE SLICE IS LAID OVER `count` FOR READS AND WRITES OF LIVE ELEMENTS, AND
+// OVER `cap` ONLY IN `vec_push`, whose valid index is `count` itself. A guard
+// over `cap` would accept an index into allocated-but-dead space, which is the
+// distinction `probe13b` exists to catch: it has room at `i == count` because
+// `cap` is larger, and it still traps.
+//
+// AND IT COSTS A CONSUMER NOTHING: `NITPICK-REACH-003` bills a program using
+// this accessor six identities and bills the bare-pointer accessor THE SAME
+// SIX. The guard makes the `OutOfBounds` arm honest; it does not add it.
+//
+// THE ONLY RAW `.items[` IN THE LIBRARY ARE IN THIS FILE, and
+// `check_raw_index` fails the run on any other -- which is what keeps every
+// index inside the accessor pair.
+mod:vec;
+
+// The three fields, in this order, matching `BUILD.md` B-12 exactly.
+// `Ord` derives in declaration order (D-051), so field order is semantic even
+// where nothing derives today.
+pub struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };
+
+// `ensures answer.count == 0 && answer.cap >= 1`
+//
+// (`VERIFICATION.md` P-1: contracts are written as comments in the syntax they
+// will take at 1.5. `answer` and not `result` -- `result` is a reserved
+// `VerificationKeyword`, TM-130/B-18.)
+//
+// A REQUEST OF ZERO OR LESS BECOMES ONE, rather than an error or a null block.
+// `alloc(0)` would give a block no element can be written to while `cap` said
+// otherwise, and this type has no error identity to raise (`SAFETY.md` S-4:
+// `core` declares none, and the budget is three with a ceiling).
+pub func:vec_init<T> = Vec<T>(int64:cap) never fails {
+    int64:n = cap;
+    if (n < 1i64) { n = 1i64; }
+    // `n * #size_of<T>()` is where this module's `IntOverflow` arm comes from,
+    // and D-210 traps rather than wrapping -- so a caller asking for an absurd
+    // capacity gets a trap and not a short block silently sized modulo 2^64.
+    wild int8->:mem = alloc(n * #size_of<T>());
+    pass Vec{ items: mem =>! wild T->, count: 0i64, cap: n };
+};
+
+// `ensures v.cap >= v.count + need`
+//
+// GROWTH DOUBLES, so a run of pushes is amortised linear rather than quadratic.
+// The new capacity is at least `count + need` and at least twice the old, which
+// makes `vec_push`'s loop O(1) amortised without a special case for the first
+// element.
+pub func:vec_reserve<T> = NIL(Vec<T>->:v, int64:need) never fails {
+    int64:want = v.count + need;
+    if (v.cap >= want) { pass NIL; }
+    int64:n = v.cap * 2i64;
+    if (n < want) { n = want; }
+    wild int8->:mem = alloc(n * #size_of<T>());
+    wild T->:fresh = mem =>! wild T->;
+    // COPYING IS A COPY AND NOT A MOVE, which is what confines this function to
+    // a non-owning `T` -- TYPE-046 makes an owning value move-only, and the
+    // move spelling is O-N17's blocked primitive. Both slices are laid over the
+    // live element count, so both ends of the copy are guarded.
+    T[]:from = #wild_slice<T>(v.items, v.count);
+    T[]:into = #wild_slice<T>(fresh, v.count);
+    int64:i = 0i64;
+    while (i < v.count) {
+        into[i] = from[i];
+        i = i + 1i64;
+    }
+    dalloc(v.items =>! wild int8->);
+    v.items = fresh;
+    v.cap = n;
+    pass NIL;
+};
+
+// `ensures v.count == old(v.count) + 1`
+//
+// `vec_push` IS THE ONE ELEMENT-WRITING OPERATION THAT OWES NO DROP, and the
+// reason must be stated because the line of code is identical to `vec_set`'s
+// (TM-127, `SAFETY.md` S-18c): it writes AT `count`, which is past the last
+// live element by construction, so there is nothing there to discard.
+pub func:vec_push<T> = NIL(Vec<T>->:v, move T:x) never fails {
+    drop vec_reserve(v, 1i64);
+    // OVER `cap`, uniquely in this file: the valid index here is `count`
+    // itself, which a slice over `count` would reject. `vec_reserve` above has
+    // just made `cap > count`, so this index is in range by construction and
+    // the guard is the belt.
+    T[]:room = #wild_slice<T>(v.items, v.cap);
+    room[v.count] = move(x);
+    v.count = v.count + 1i64;
+    pass NIL;
+};
+
+// `requires i >= 0 && i < v.count`
+//
+// RETURNS BY VALUE, so this is for a scalar `T`: at an owning `T` a copy is
+// refused by TYPE-046, and such a family reads through `v.items[i]` at the site
+// that knows the element's shape. That is the compiler's own note on `List<T>`
+// and the reason there is no generic `list_at` there either.
+pub func:vec_at<T> = T(Vec<T>->:v, int64:i) never fails {
+    T[]:s = #wild_slice<T>(v.items, v.count);
+    pass s[i];
+};
+
+// `requires i >= 0 && i < v.count`
+//
+// AT AN OWNING `T` THIS OWES AN ELEMENT DROP AND CANNOT DISCHARGE IT (TM-127,
+// TM-132). Overwriting discards the element that was there, and a `wild T->`
+// element does not drop for you -- `wild` is the manual regime. The correct
+// spelling moves the outgoing element into a dying local first, and that is
+// O-N17's blocked primitive when written generically. At a non-owning `T`, the
+// type this file is for, there is nothing to drop and this is complete.
+pub func:vec_set<T> = NIL(Vec<T>->:v, int64:i, move T:x) never fails {
+    T[]:s = #wild_slice<T>(v.items, v.count);
+    s[i] = move(x);
+    pass NIL;
+};
+
+// `requires v.count > 0`
+//
+// Measured out of range: with `count == 0` the slice is empty and the index
+// `-1` traps `OutOfBounds` rather than reading backwards off the block.
+pub func:vec_pop<T> = T(Vec<T>->:v) never fails {
+    T[]:s = #wild_slice<T>(v.items, v.count);
+    T:answer = s[v.count - 1i64];
+    v.count = v.count - 1i64;
+    pass answer;
+};
+
+// `ensures v.count == min(n, old(v.count))`
+//
+// At a non-owning `T` dropping the tail is exactly lowering `count`. At an
+// owning `T` it would additionally owe a drop per discarded element (S-18c),
+// which is the blocked path above.
+pub func:vec_truncate<T> = NIL(Vec<T>->:v, int64:n) never fails {
+    if (n < 0i64) { v.count = 0i64; pass NIL; }
+    if (n < v.count) { v.count = n; }
+    pass NIL;
+};
+
+// `ensures v.count == 0`
+pub func:vec_clear<T> = NIL(Vec<T>->:v) never fails {
+    v.count = 0i64;
+    pass NIL;
+};
+
+// `ensures v.cap == 0 && v.count == 0`
+//
+// THE CONTRACT SAYS `cap == 0` AND NOT `items == NULL`, because this body does
+// not null the pointer and a contract that claims more than the code does is
+// the defect this repository amends specifications over. `0.0.4.md` §2's table
+// wrote `v.items == NULL`; corrected here and in that table at cycle 0.0.4.
+// `cap == 0` is the ownership bit that matters, and it is what a later
+// `vec_free` of the same value would read.
+//
+// EVERY SCOPE THAT MADE A `Vec` CALLS THIS, or `exit 0` traps under D-151 --
+// which watches `wild` allocations, and this block is one. THAT GUARANTEE IS
+// ABOUT THE BLOCK ALONE (TM-106, S-18b): D-151 cannot see a managed body, so an
+// unemptied `Vec<string>` would pass `exit 0` and still leak. It is the reason
+// this type is restricted to a non-owning `T` rather than trusted at any `T`.
+pub func:vec_free<T> = NIL(Vec<T>->:v) never fails {
+    dalloc(v.items =>! wild int8->);
+    v.count = 0i64;
+    v.cap = 0i64;
+    pass NIL;
+};

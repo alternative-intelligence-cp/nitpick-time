@@ -396,14 +396,53 @@ added by decision when a consumer exists.
 - **Signedness is half the check.** `count` is `int64`; an index derived from a
   narrower signed field can be negative, `i < count` accepts it, and the read
   goes backwards off the block. Every accessor checks `0 <= i` as well as
-  `i < count`.
+  `i < count` — **and TM-129 says how, which is not two comparisons.**
 - **An unchecked index is a WRONG ANSWER, not a crash**, which inverts the
   failure mode §1 advertises. In a date library that is a wrong offset for one
   zone, or a formatted field taken from an unrelated heap word — silent, and
   reachable from caller-controlled bytes once `src/fmt/` parses.
 - **`VERIFICATION.md`'s `Vec<T>` `at`/`set` row** (index `< count`, by contract
   and by Z3) stops being a restatement of a language guarantee and becomes the
-  obligation that discharges this rule.
+  obligation that discharges this rule. *(That row states only `< count`; the
+  obligation is `0 <= i && i < count`, which is how `0.0.4.md` §2's table
+  writes it. Corrected there at cycle 0.0.4.)*
+
+**Rule S-17c (TM-129) — the accessor puts the language's OWN guard back, rather
+than reimplementing it.** Every `Vec<T>` accessor lays a length-carrying slice
+over the block and indexes that:
+
+```nitpick
+T[]:s = #wild_slice<T>(v.items, v.count);   // over `count`, never over `cap`
+pass s[i];
+```
+
+The index then takes the `TY_SLICE` branch and `emit_bounds_guard` runs, so the
+check is the compiler's and cannot drift from D-070. **One unsigned compare
+covers both ends**: `emit_bounds_guard` emits `icmp ult i64`, and
+`index_as_i64` sign-extends a narrower index first, so — in the compiler's own
+words — *"a negative index of any width becomes a huge unsigned value and ONE
+unsigned compare rejects both `negative` and `past the end`."* A hand-written
+`i >= 0` beside it would be dead code.
+
+Committed and measured at pin `0dfddac`:
+`tests/probe/probe13_vec_bounds_guard.npk` (in range, exit 0),
+`probe13b_vec_index_past_end.npk` (`i == count` with room at that index —
+**exit 94**), `probe13c_vec_index_negative.npk` (`i == -1` — **exit 94**, with
+no `i >= 0` anywhere in the accessor), and
+`probe13d_vec_bare_pointer_unchecked.npk` — the control, which does the same
+read through `v.items[i]` and **exits 0 having returned a planted sentinel from
+past the end**. Until `probe13d` this rule rested on a reading of the emitter
+and nothing here had ever run an out-of-range `Vec` index.
+
+> **And the arm bill cannot tell the two spellings apart, which is why this
+> went unnoticed.** `NITPICK-REACH-003` bills a consumer of the guarded
+> accessor six identities — `Unreachable`, `HeapOom`, `HeapBadRequest`,
+> `WildLeak`, `IntOverflow`, `OutOfBounds` — and bills the **bare-pointer**
+> accessor **the same six**. So the reachability analysis arms `OutOfBounds`
+> for an index that emits no guard at all: every consumer of an unguarded `Vec`
+> is compelled to write an arm for a trap that *cannot fire*, while the read it
+> is meant to protect returns a wrong value in silence. Adding the guard makes
+> that arm honest; it does not add it.
 
 **And the nuance that makes this a claim about *this* library.** There is **no
 compiler-prelude `Vec<T>` at all.** No `struct:Vec` exists anywhere in the
@@ -446,16 +485,47 @@ on every path, so `exit 0` never trips D-151.
 block is freed, and `exit 0` does not check it.** D-151 watches `wild`
 allocations; a `string`'s body is **managed**. So a `Vec<string>` whose block is
 freed and whose elements are not is a leak that exits 0 — measured at cycle
-0.0.0 and **re-measured unchanged at the 2026-09-04 re-pin**: 125 184 KiB
-retained over 2 000 000 elements, and `HeapOom` (exit 92) under a 64 MiB
-address-space cap, while the corrected form completes the same two million
-iterations in **under 768 KiB** of address space. The committed pair is
+0.0.0, re-measured unchanged at the 2026-09-04 re-pin, and **re-measured again
+at pin `0dfddac` on 2026-09-05**: 125 184 KiB retained over 2 000 000 elements,
+and `HeapOom` (exit 92) under a 64 MiB address-space cap. The committed pair is
 `tests/probe/probe06b_element_leak.npk` and `probe06c_element_drop.npk`, which
-differ in one line. **Quote the address-space bound and not a peak-RSS figure**:
-`/usr/bin/time -f %M` reports `0 KiB` for these static binaries — it does so
-for a four-line program too — so the "0 KiB" this rule carried until the re-pin
-was a broken gauge rather than a measurement. Each element is moved into a
-scope that ends:
+differ in one line.
+
+**The remedy half's cost, corrected (TM-128).** This rule read *"completes the
+same two million iterations in **under 768 KiB** of address space"*, and that
+figure is **not reproducible**: at `ulimit -v 768` — and at 1024, and at 2048 —
+the program does not exec at all, and neither does `/bin/true`, which fails the
+same way with *"failed to map segment from shared object"*. **About 2 MiB is
+this machine's exec floor for any process**, so no run can be "clean at 768".
+The measured bound is:
+
+| | peak RSS | exit at `ulimit -v 65536` |
+|---|---|---|
+| leaking half | 125 184 KiB | **92**, `HeapOom` |
+| corrected half | **1 660 KiB** | **0** |
+
+**And the column that is NOT here is the correction (TM-131).** This rule
+briefly carried a "smallest clean `ulimit -v`" of **3 072** for the corrected
+half. That number is the machine's and not the library's: bisected point by
+point, `probe06c` and **`/bin/true`** return the same exit at every cap and both
+flip between **2688 and 2816 KiB**. So a low `ulimit -v` cannot measure this
+program at all, and *"clean at 3 MiB"* is a gate `/bin/true` also passes.
+**Quote the two columns above** — one shared 64 MiB cap with opposite outcomes,
+and the peak-RSS pair — and take any address-space bound with a `/bin/true`
+control **at the same cap**.
+
+**Both figures may now be quoted, and that is a change too.** This rule used to
+say *"quote the address-space bound and not a peak-RSS figure"*, because
+`/usr/bin/time -f %M` reported `0 KiB` for these static binaries. It does not
+report 0 for these: the gauge under-reports a *small* RSS, not this one. The two
+numbers now check each other — 125 184 − 1 660 = 123 524 KiB over 2 000 000
+orphaned elements is ≈ 63 bytes each, which is a 35-byte body in a 64-byte size
+class — and a corroboration is worth more than a rule against one of the
+numbers. **Take any address-space bound with a `/bin/true` control at the same
+cap**, because below about 2 MiB every exit code on this machine is the
+loader's.
+
+Each element is moved into a scope that ends:
 
 ```nitpick
 while (i < v.count) {
@@ -469,6 +539,42 @@ each instantiation: moving an element out needs a destination of type `T`, and
 a generic function has no scope in which a bare `T` may simply die. S-18's "so
 `exit 0` never trips D-151" is therefore a statement about the block alone —
 correct, and not the whole obligation.
+
+**Rule S-18c (TM-127) — OVERWRITING an element discards one too, so the
+obligation covers `vec_set` and not only the three that sound like it does.**
+S-18b and `0.0.4.md` §2 both name three entries that discard elements —
+`vec_free`, `vec_clear`, `vec_truncate` — and `vec_set` is a fourth. It is the
+least visible of the four precisely because the other three sound destructive
+and it sounds like a replacement.
+
+Measured with the committed pair `tests/probe/probe12_set_overwrite_leak.npk`
+and `probe12b_set_overwrite_drop.npk`, which differ in one statement and **both
+exit 0**: 2 000 000 overwrites of one occupied `Vec<string>` slot retain
+**125 184 KiB** and take `HeapOom` under a 64 MiB cap, while the form that moves
+the outgoing element into a dying scope first finishes in **1 596 KiB** and is
+clean down to a 3 MiB cap.
+
+**This is the `wild` qualifier behaving as specified, not a compiler defect**,
+and two controls establish it against the contrary reading of the compiler's
+D-186 (*"overwriting an owning field or managed element drops the old value"*):
+the same overwrites into a **local binding** cost 1 660 KiB and drop correctly,
+while the same overwrites written **directly at the site** with no call
+anywhere cost the full 125 184 KiB. The property is the destination's — a
+*managed* element drops, a `wild T->` element does not, because `wild` is the
+manual regime — which is the same sentence that makes `vec_free` the caller's
+job.
+
+**`vec_push` is exempt, and the reason must be stated because the two lines of
+code are identical**: it writes at `count`, which is past the last live element
+by construction, so there is nothing there to discard.
+
+> **The remedy is not available generically today.** A generic `vec_set<T>`
+> that moves the outgoing element into a dying local is accepted by `npkc` at
+> exit 0 and refused by `llc` — `../OPEN_QUESTIONS.md` **O-N17**,
+> `tests/probe/defect/generic_element_move/`. So at an owning `T` a generic
+> `vec_set<T>` today either leaks or does not link, and both halves of the
+> committed pair are written at the instantiation, which is where this rule
+> already puts element lifetime.
 
 **Rule S-19.** The generated zone tables are `fixed` module state — read-only
 memory, no initialisation at startup, nothing to leak, and nothing to race.

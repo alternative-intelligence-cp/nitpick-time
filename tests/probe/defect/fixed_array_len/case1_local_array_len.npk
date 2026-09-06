@@ -1,0 +1,64 @@
+// NO `expect-` MARKER IS SPELLABLE, and this one is a REFUSAL rather than a
+// link failure, so the reason differs from `generic_element_move/`: `npkc`
+// exits 1 and writes no `.ll`, which `expect-error:` COULD describe -- but the
+// code it would name is `NITPICK-EMIT-002`, and that diagnostic's own text
+// says the program is correct and the compiler is wrong. Asserting it as an
+// expected refusal would make the defect into a committed expectation and the
+// suite would go red on the day it is FIXED, silently rewarding the bug.
+// Named in `harness/run.py`'s `EXPECT_EXEMPT` with that reason.
+//
+// THE DEFECT. `.len` on a FIXED-SIZE ARRAY (`T[N]`) is accepted by the frontend
+// and cannot be lowered by the emitter. Found 2026-09-05 at pin `0dfddac` by
+// cycle 0.0.4, writing `put_uint`'s allocation-free digit buffer.
+//
+//   $ $NPKC case1_local_array_len.npk -o case1.ll
+//   NITPICK-EMIT-002 ...:N:M: the emitter could not lower this, although the
+//   frontend accepted it; a defect in the compiler rather than in this program
+//   -- report it with the construct at this position
+//     exit=1   artefact: NO .ll
+//
+// THE DIAGNOSTIC ASKS TO BE REPORTED, in those words. That is why this is
+// recorded rather than merely avoided.
+//
+// THE CONTROLS, all at the same pin, each status beside its artefact:
+//
+//   local  `uint8[20]`, `.len`             npkc=1, NO .ll   EMIT-002
+//   module `fixed uint8[3]`, `.len`        npkc=1, NO .ll   EMIT-002
+//   SLICE  `uint8[]`, `.len`               npkc=0, wrote    -- the control
+//   local  `uint8[20]`, indexed, NO `.len` npkc=0, wrote    -- the control
+//
+// So it is `.len` ON THE ARRAY TYPE specifically, at either storage class, and
+// not indexing and not slices. `src/core/bytes.npk` uses a fixed array for its
+// digit buffer and NEVER asks its length -- the length is `NTIME_DIGITS_MAX`,
+// a named constant, which is what a reader should see anyway.
+//
+// NOT YET NUMBERED. The orchestrator assigns open-question ids; this subcycle's
+// predecessor assigned one itself and collided with a settled question in
+// another repository, which cost a correction across ten sites. Cited by PATH
+// until an id is issued.
+mod:case1_local_array_len;
+
+func:probe = int64() never fails {
+    uint8[20]:digits = [0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8];
+    digits[0i64] = 7u8;
+    // THE LINE. Everything above lowers; this does not.
+    pass digits.len;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    if (raw probe() != 20i64) { exit 10i32; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

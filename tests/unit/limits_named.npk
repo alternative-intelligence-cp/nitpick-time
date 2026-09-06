@@ -1,0 +1,93 @@
+// expect-exit: 0
+//
+// THE NAMED BOUNDS, AND THE RELATIONS BETWEEN THEM.
+//
+// `check_constants_named` enforces that every bound lives in `limits.npk` and
+// that no magic number is spelled twice. IT CANNOT CHECK THAT THE NUMBERS ARE
+// RIGHT -- it is a lexical check over the tree, and a transposed digit passes
+// it. This file is the other half: it asserts the ARITHMETIC RELATIONS that
+// `CALENDAR.md` §2 states, so a wrong literal is a red run rather than a wrong
+// date in cycle 0.6.
+//
+// IT IS NOT THE RECOMPUTATION TEST. `limits.npk`'s header and `0.0.4.md` §4
+// both say cycle 0.1 adds a test that RECOMPUTES the four range constants from
+// the calendar algorithm. That is strictly stronger and it needs the calendar,
+// which does not exist yet. This file checks the relations the constants must
+// satisfy among THEMSELVES, which needs nothing -- and it is stated as the
+// weaker guarantee it is.
+mod:limits_named;
+
+use "../../src/core/limits.npk".*;
+
+// `uint64`'s maximum, AS A CONSTANT -- and the first draft of this file wrote
+// it as a statement inside `main` and exited 93. D-148 gives `0u64 - 1u64` as
+// the spelling and does not say it must be constant-folded; written as a
+// runtime expression it underflows and D-210 traps `IntOverflow`. This file
+// tripped over that MINUTES AFTER `bytes_put_int.npk` recorded it, which is the
+// argument for the constant being named once, here and there, rather than the
+// expression being re-typed wherever the value is wanted.
+fixed uint64:U64_MAX = 0u64 - 1u64;
+
+func:main = int32(cstring[]:_~argv) {
+    // ---- CALENDAR.md §2: the total-days figure ---------------------------
+    // 2 932 896 - (-4 371 588) + 1 = 7 304 485, the number §2's table gives
+    // and the size of cycle 0.1's exhaustive sweep.
+    if (NTIME_DAY_MAX - NTIME_DAY_MIN + 1i64 != 7304485i64) { exit 10i32; }
+
+    // ---- CALENDAR.md §2: seconds are days x 86 400 -----------------------
+    if (NTIME_SECS_MIN != NTIME_DAY_MIN * NTIME_SECS_PER_DAY) { exit 11i32; }
+    // MAX is the LAST SECOND of the last day, not its midnight -- which is why
+    // it ends 799 and not 400. Getting this wrong loses a day at the top of
+    // the range and nothing else, which is the kind of error a relation
+    // catches and an eyeball does not.
+    if (NTIME_SECS_MAX
+        != NTIME_DAY_MAX * NTIME_SECS_PER_DAY + NTIME_SECS_PER_DAY - 1i64) {
+        exit 12i32;
+    }
+
+    // ---- CALENDAR.md C-4: the year range is symmetric --------------------
+    if (NTIME_YEAR_MIN != 0i64 - NTIME_YEAR_MAX)          { exit 13i32; }
+    if (NTIME_YEAR_MAX != 9999i64)                        { exit 14i32; }
+
+    // ---- ZONE_MODEL.md Z-19: +/-18:00 ------------------------------------
+    if (NTIME_OFFSET_MIN != 0i64 - NTIME_OFFSET_MAX)      { exit 15i32; }
+    // 18 hours expressed through the day constant rather than as 64 800 again,
+    // so this line cannot drift from `NTIME_SECS_PER_DAY`.
+    if (NTIME_OFFSET_MAX != 18i64 * (NTIME_SECS_PER_DAY / 24i64)) { exit 16i32; }
+
+    // ---- SAFETY.md S-16: the unit conversions ----------------------------
+    if (NTIME_SECS_PER_DAY != 24i64 * 60i64 * 60i64)      { exit 17i32; }
+    if (NTIME_NANOS_PER_SEC != 1000i64 * 1000i64 * 1000i64) { exit 18i32; }
+
+    // ---- the two that are simply their rules' numbers ---------------------
+    if (NTIME_PARSE_MAX != 128i64)                        { exit 19i32; }
+    if (NTIME_PATH_MAX != 4096i64)                        { exit 20i32; }
+
+    // ---- NTIME_DIGITS_MAX really is wide enough for uint64 ----------------
+    // 20 digits. Asserted by counting them off the constant rather than by
+    // restating 20: divide by ten until nothing is left.
+    uint64:u = U64_MAX;                  // the CONSTANT, never the expression
+    int64:digits = 0i64;
+    while (u > 0u64) {
+        u = u / 10u64;
+        digits = digits + 1i64;
+    }
+    if (digits != NTIME_DIGITS_MAX)                       { exit 21i32; }
+
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (DivByZero)      { exit 97i32; },
+        (DivOverflow)    { exit 98i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

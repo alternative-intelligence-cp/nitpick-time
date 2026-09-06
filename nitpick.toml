@@ -131,6 +131,35 @@ path  = "tests/probe"
 #             (TM-122). Until then `--quick` has nothing to skip and says so
 #             with the number.
 
+# THE UNIT TESTS. Stage `program`, added at cycle 0.0.4 with the first library
+# code -- `src/core/`. Before 0.0.4 this directory was EMPTY and had no entry,
+# which is the rule stated at the top of this table: an entry naming a directory
+# with nothing in it reports green while checking nothing.
+#
+# NOT `recursive`, exactly as `probe` is not, and for the same reason: the plain
+# glob is `tests/unit/*.npk` and it EXCLUDES `tests/unit/sweep/`, which is still
+# empty and whose own entry arrives at cycle 0.1 with the civil round-trip sweep
+# (`TESTING.md` V-2, V-3). `recursive = true` here would sweep an empty
+# directory into a `program` entry and fail for a reason that is not the
+# library's.
+#
+# SEVEN FILES AT 0.0.4, and the split is NAMED rather than counted, because a
+# count taken from the command instead of from the names is how the probe entry
+# went wrong once (see above). Written out so the arithmetic can be checked:
+#
+#     7 = 4 at `expect-exit: 0`  (bytes_growth, bytes_put_int, limits_named,
+#                                 vec_boundaries)
+#       + 3 at `expect-exit: 94` (vec_at_past_end, vec_pop_empty,
+#                                 vec_set_past_end)
+#
+# The three 94s are `OutOfBounds` from the TM-129 guard, one per accessor path
+# that can be indexed out of range: read, write, and pop-from-empty. They are
+# separate files because a program that exits 0 cannot also take a trap.
+[[test]]
+name  = "unit"
+stage = "program"
+path  = "tests/unit"
+
 # THE CONSUMER. Stage `compile`, `kind = "positive"` -- which in the compiler's
 # vocabulary means "compiles, links, runs, and exits with the expected code",
 # NOT "was accepted". The distinction is this repository's own O-N11: `npkc`

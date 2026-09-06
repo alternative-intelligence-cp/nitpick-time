@@ -1,0 +1,91 @@
+// NO `expect-` MARKER IS SPELLABLE FOR THIS FILE, AND THAT IS THE DEFECT.
+// `npkc` ACCEPTS it at exit 0 and `llc` then refuses the IR, so there is
+// neither an exit code nor a diagnostic to expect. It is named in
+// `harness/run.py`'s `EXPECT_EXEMPT` with that reason, which is the only
+// honest bucket the sweep has for it (TM-115, V-1c). When the defect lands
+// the marker becomes `// expect-exit: 0`, the exemption goes, and the sweep's
+// both-directions diff makes removing it compulsory rather than optional.
+//
+// THE DEFECT (O-N17, raised 2026-09-05 at pin `0dfddac`).
+//
+// A GENERIC function that MOVES OUT OF an indexed element, instantiated at an
+// OWNING `T`, emits a call to a `@npk.vacant.<dty>` helper whose body is never
+// defined:
+//
+//     npkc  -> exit 0, writes the .ll
+//     llc   -> exit 1, "use of undefined value '@npk.vacant.1876'"
+//
+// The emitted IR, verbatim, from the `T = string` instantiation:
+//
+//     %t6  = getelementptr { ptr, i64, i64 }, ptr %t4, i64 %t5
+//     %t7  = load { ptr, i64, i64 }, ptr %t6
+//     store { ptr, i64, i64 } zeroinitializer, ptr %t6
+//     call void @"npk.vacant.1876"(ptr %t6)          ; <- no `define` anywhere
+//
+// The LAYOUT is substituted correctly -- the `getelementptr` is over
+// `{ptr,i64,i64}`, a `string` -- so only the vacancy helper's type id is
+// wrong or unregistered. `@npk.drop.1876` is never referenced either, and no
+// body for 1876 is emitted; the module defines five `npk.vacant.*` bodies and
+// makes five `npk.vacant.*` calls, and the two sets differ by this one.
+//
+// THE COMPILER'S OWN INVARIANT SAYS THIS CANNOT HAPPEN. Read at the pin,
+// `src/backend/ir/ir_types.npk`, `drop_type_register`'s header (D-225):
+//
+//     ONE REGISTRATION LIST, TWO BODIES PER ENTRY (D-225). Every registered
+//     type gets both a `@"npk.drop.<dty>"` and a `@"npk.vacant.<dty>"` [...]
+//     the pair is the invariant, and splitting the registration is what keeps
+//     them from drifting apart.
+//
+// and `vacant_fn_sym` calls `drop_type_register` before returning the symbol,
+// precisely so a referenced symbol is a registered one. So the reference here
+// reached the IR by a route that did not register the type -- cited by SYMBOL
+// rather than by line, because our pin and the compiler's tree differ.
+//
+// WHY IT WAS NEVER HIT BEFORE, WHICH IS THE PART WORTH KEEPING. The prelude's
+// `List<T>` -- the shape `BUILD.md` B-12 says has "been exercised across
+// twenty-two families" -- has exactly THREE public functions at this pin:
+// `list_init`, `list_reserve`, `list_push`. There is no `list_pop`, no
+// `list_at`, no `list_set` and no `list_free`. Every move OUT of an element in
+// the compiler's own tree is in a CONCRETE function -- `src/frontend/
+// diagnostics.npk`'s `Diagnostic:cur = move(list.items[i])` over a
+// `List<Diagnostic>` -- which is `case2` below, and which links. So the
+// exercised shape is push-only, and `0.0.4.md` §2's `vec_pop<T>` is the first
+// consumer of the unexercised half.
+//
+// WHAT IT BLOCKS HERE: `vec_pop<T>` at an owning `T`, and with it the cycle
+// checklist's "exercised at both `T` shapes" for that one function.
+// Everything else in `0.0.4.md` §2's table is unaffected -- `case4` shows the
+// move IN is fine, and `case3` shows a scalar `T` is fine.
+mod:case1_generic_move_out;
+
+struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };
+
+// The one function under test. Nothing else in this file is load-bearing.
+func:vec_pop<T> = T(Vec<T>->:v) never fails {
+    v.count = v.count - 1i64;
+    pass move(v.items[v.count]);
+};
+
+func:main = int32(cstring[]:_~argv) {
+    wild int8->:mem = alloc(2i64 * #size_of<string>());
+    Vec<string>:b = Vec{ items: mem =>! wild string->, count: 0i64, cap: 2i64 };
+    b.items[0i64] = string_concat("Europe/", "Kyiv");
+    b.count = 1i64;
+    string:owned = raw vec_pop(@b);
+    if (string_byte_length(owned) != 11i64) { exit 12i32; }
+    dalloc(b.items =>! wild int8->);
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

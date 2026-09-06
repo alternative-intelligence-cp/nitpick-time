@@ -1,0 +1,46 @@
+// expect-exit: 0
+//
+// CONTROL for `case1_generic_move_out.npk`: a GENERIC function at an OWNING
+// `T` that moves INTO an indexed element rather than out of one. It links and
+// runs.
+//
+// THE DIRECTION IS THE FAULT LINE, and this is what says so. `vec_push<T>` --
+// which `tests/probe/probe06_generic_vec.npk` has exercised green since cycle
+// 0.0.0 -- is exactly this shape, so a reader who knows probe 06 passes might
+// reasonably conclude generic element access at an owning `T` is fine. It is
+// not: writing in is fine, reading out is `case1`.
+mod:case4_generic_move_in;
+
+struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };
+
+func:vec_push<T> = NIL(Vec<T>->:v, move T:x) never fails {
+    v.items[v.count] = move(x);
+    v.count = v.count + 1i64;
+    pass NIL;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    wild int8->:mem = alloc(2i64 * #size_of<string>());
+    Vec<string>:b = Vec{ items: mem =>! wild string->, count: 0i64, cap: 2i64 };
+    drop vec_push(@b, string_concat("Europe/", "Kyiv"));
+    if (string_byte_length(b.items[0i64]) != 11i64) { exit 12i32; }
+    // The element is emptied by hand at the instantiation, which is S-18b's
+    // rule and the only shape `case1` leaves available.
+    string:owned = move(b.items[0i64]);
+    discard(string_byte_length(owned));
+    dalloc(b.items =>! wild int8->);
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

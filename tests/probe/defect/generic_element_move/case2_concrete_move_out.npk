@@ -1,0 +1,46 @@
+// expect-exit: 0
+//
+// CONTROL for `case1_generic_move_out.npk`: the SAME move out of the SAME
+// element of the SAME owning type, written in a CONCRETE function instead of a
+// generic one. It links and runs.
+//
+// This is the shape the compiler's own tree uses -- `src/frontend/
+// diagnostics.npk` binds `Diagnostic:cur = move(list.items[i])` over a
+// `List<Diagnostic>` inside an ordinary function -- and it is why O-N17 is
+// latent: the exercised half of the shape is the half that works.
+//
+// So the difference between this file and `case1` is ONE WORD, `<T>`, and that
+// word is the whole reproduction.
+mod:case2_concrete_move_out;
+
+struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };
+
+// CONCRETE: `Vec<string>`, not `Vec<T>`.
+func:vec_pop_string = string(Vec<string>->:v) never fails {
+    v.count = v.count - 1i64;
+    pass move(v.items[v.count]);
+};
+
+func:main = int32(cstring[]:_~argv) {
+    wild int8->:mem = alloc(2i64 * #size_of<string>());
+    Vec<string>:b = Vec{ items: mem =>! wild string->, count: 0i64, cap: 2i64 };
+    b.items[0i64] = string_concat("Europe/", "Kyiv");
+    b.count = 1i64;
+    string:owned = raw vec_pop_string(@b);
+    if (string_byte_length(owned) != 11i64) { exit 12i32; }
+    dalloc(b.items =>! wild int8->);
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

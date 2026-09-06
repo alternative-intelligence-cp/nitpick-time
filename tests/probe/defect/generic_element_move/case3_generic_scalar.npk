@@ -1,0 +1,48 @@
+// expect-exit: 0
+//
+// CONTROL for `case1_generic_move_out.npk`: the SAME GENERIC function, at a
+// SCALAR `T`. It links and runs.
+//
+// A scalar type has no drop and therefore no vacancy helper to be missing, so
+// this half of the instantiation space is unaffected. Read together with
+// `case2`, the two controls place the fault exactly: it needs the function to
+// be GENERIC and the element type to be OWNING, and neither alone.
+//
+// It also bounds the damage for `0.0.4`: `vec_pop<T>` is usable at every
+// scalar `T`, which is every instantiation `ntime`'s own design has --
+// `Layout`'s `Vec<FmtPart>` (`FORMAT_MODEL.md` §3) has no owning payload, and
+// the zone tables hold offsets into a name pool for `check_no_owning_fields`'s
+// reason. That is why O-N17 blocks a planned API row rather than the library.
+mod:case3_generic_scalar;
+
+struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };
+
+// Byte-identical to `case1`'s, including the name.
+func:vec_pop<T> = T(Vec<T>->:v) never fails {
+    v.count = v.count - 1i64;
+    pass move(v.items[v.count]);
+};
+
+func:main = int32(cstring[]:_~argv) {
+    wild int8->:mem = alloc(2i64 * #size_of<int64>());
+    Vec<int64>:b = Vec{ items: mem =>! wild int64->, count: 0i64, cap: 2i64 };
+    b.items[0i64] = 11i64;
+    b.count = 1i64;
+    int64:got = raw vec_pop(@b);
+    if (got != 11i64) { exit 12i32; }
+    dalloc(b.items =>! wild int8->);
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

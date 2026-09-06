@@ -1,0 +1,111 @@
+// expect-exit: 0
+//
+// PROBE 12b -- the REMEDY half of probe 12, made reproducible.
+//
+// ASKS: the same 2 000 000 overwrites of one occupied `Vec<string>` slot as
+// `probe12_set_overwrite_leak.npk`, with the old element moved out into a
+// scope that ends before the new one is written -- what does it cost?
+//
+// MATTERS BECAUSE the fix is ORDINARY CODE and not a language gap, and because
+// BOTH HALVES EXIT 0, so the exit code cannot tell them apart -- only the
+// memory can. That is the same shape as `probe06b`/`probe06c` and it is the
+// reason `0.0.4.md`'s acceptance says to assert the CAP and not the exit code.
+//
+// Measured 2026-09-05 at pin `0dfddac`:
+//
+//   probe12  (overwritten in place)     125 184 KiB   exit 0;  capped: exit 92
+//   probe12b (outgoing moved out)          1 596 KiB   exit 0;  capped: exit 0
+//
+// "capped" is `ulimit -v 65536`. The full bisection is in `probe12`'s header;
+// the remedy half is clean down to a 3 MiB address space, below which nothing
+// on this machine execs at all.
+//
+// RUN IT AS: /usr/bin/time -f "%e s  %M KiB" <binary>
+// AND AS:    ( ulimit -v 65536 ; <binary> ) ; echo $?
+//
+// THE DIFF AGAINST ITS TWIN IS ONE STATEMENT, in `vec_set` below: the old
+// element is moved into `T:old`, a local whose scope is the function body, and
+// it dies when that body ends. Nothing else in the two files differs.
+//
+// WHY BOTH HALVES ARE CONCRETE (`Vec<string>`) RATHER THAN GENERIC, WHICH IS
+// ITSELF A FINDING. The first draft of the remedy half was a generic
+// `vec_set<T>` that moved the outgoing element into a local. It does not
+// compile: `npkc` accepts it at exit 0 and `llc` refuses the IR with
+// `use of undefined value '@npk.vacant.1881'` -- O-N17,
+// `defect/generic_element_move/`. So at an owning `T` a generic `vec_set<T>`
+// TODAY either leaks (this file's shape) or does not link (the remedy's), and
+// there is no third spelling. That HELD `vec_pop<T>`'s row, and it is why
+// this pair is written at the instantiation, which is where `SAFETY.md` S-18b
+// already puts element lifetime.
+mod:probe12b_set_overwrite_drop;
+
+struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };
+
+func:vec_init_string = Vec<string>(int64:cap) never fails {
+    int64:n = cap;
+    if (n < 1i64) { n = 1i64; }
+    wild int8->:mem = alloc(n * #size_of<string>());
+    pass Vec{ items: mem =>! wild string->, count: 0i64, cap: n };
+};
+
+// THE OBLIGATION, DISCHARGED. The outgoing element is moved into a local that
+// dies at the end of this body, and only then is the new one written. This is
+// the whole diff against `probe12_set_overwrite_leak.npk`.
+//
+// THE LOCAL IS NOT NAMED `old`, AND THAT COST A COMPILE. `old` is a RESERVED
+// WORD -- a `VerificationKeyword` beside `prove`, `requires`, `ensures`,
+// `result` and `pure` (the compiler's D-221, `LEXICAL_REFERENCE.md`; its token
+// is `KwOld`) -- and it is the natural name for exactly this local. The
+// diagnostic does not say so: `T:old = ...` gives
+// `NITPICK-PARSE-001 ...:47:6: expected `;`, found `:`` pointing at the COLON,
+// and a second one at the closing paren, so it reads as punctuation trouble.
+// Ten of these were measured one by one at pin `0dfddac` and all ten are
+// refused as local names; `BUILD.md` §7's table now carries them (TM-130).
+func:vec_set_string = NIL(Vec<string>->:v, int64:i, move string:x) never fails {
+    string:outgoing = move(v.items[i]);
+    v.items[i] = move(x);
+    discard(string_byte_length(outgoing));
+    pass NIL;
+};
+
+func:vec_free_string = NIL(Vec<string>->:v) never fails {
+    dalloc(v.items =>! wild int8->);
+    v.count = 0i64;
+    v.cap = 0i64;
+    pass NIL;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    Vec<string>:b = raw vec_init_string(1i64);
+    // 20 + 15 = 35 bytes on the managed heap, once, to occupy the slot.
+    b.items[0i64] = string_concat("Australia/Lord_Howe_", "Europe/Kyiv_xyz");
+    b.count = 1i64;
+    int64:i = 0i64;
+    while (i < 2000000i64) {
+        // THE REMEDY: `vec_set` empties the slot before it fills it.
+        drop vec_set_string(@b, 0i64, string_concat("Australia/Lord_Howe_", "Europe/Kyiv_xyz"));
+        i = i + 1i64;
+    }
+    // Empty the slot properly at the end, so the ONLY difference from the twin
+    // is what happens inside the loop.
+    string:last = move(b.items[0i64]);
+    discard(string_byte_length(last));
+    b.count = 0i64;
+    drop vec_free_string(@b);
+    // Exits 0 exactly as `probe12` does. The exit code is the same; the memory
+    // is not. That equality is the point of the pair.
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

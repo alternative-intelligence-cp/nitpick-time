@@ -1,0 +1,272 @@
+// `Bytes` -- an owning byte sink, and the thing every formatter writes into
+// (`BUILD.md` B-12, TM-005).
+//
+// WHY IT EXISTS: `string_concat` ALLOCATES PER CALL, and formatting a million
+// rows should allocate a handful of times, not a million. The compiler measured
+// exactly that shape as quadratic in `npkg`'s first full run -- seventeen
+// minutes of fifty-six spent in the kernel. So the sink grows by doubling and
+// the decimal writer touches no allocator at all.
+//
+// ===========================================================================
+// IT IS OVER `buffer`, NOT `wild` -- AND THAT IS THE OPPOSITE CHOICE FROM
+// `Vec<T>` (P-24)
+// ===========================================================================
+//
+// A `Bytes` is per-call scratch that a formatter fills and a caller consumes; a
+// `Vec<T>` is a container the caller keeps. So the managed regime's scope-exit
+// drop is right here and there is nothing to pair -- and the difference between
+// the two files is that difference, not an inconsistency.
+//
+// THEREFORE THERE IS NO `bytes_free`, AND ITS ABSENCE IS THE DESIGN.
+// `0.0.4.md` §3 listed `free` among this type's operations; that list is wrong
+// and is corrected by TM-133. `TYPE_REFERENCE.md` §23 says it in as many
+// words: `buffer_free` is *"deliberately NOT landed -- the managed drop IS the
+// free; manual reclaim is the `wild` regime's spelling"*. A `bytes_free` here
+// could only be a no-op, and a no-op named `free` is worse than no function:
+// it teaches a caller to pair something that needs no pairing, and it would
+// read as the `Vec<T>` obligation applying here, which is exactly what P-24
+// says it does not.
+//
+// THE GROWTH PATH RELIES ON D-186 AND IT IS MEASURED, NOT ASSUMED. Overwriting
+// the `body` field drops the old buffer: 4096 rounds of allocate-copy-overwrite
+// at 64 KiB each -- 256 MiB of churn -- peaks at 1 660 KiB. That measurement
+// matters because TM-127 found the CONTRARY behaviour one field-kind away: a
+// `wild T->` ELEMENT does NOT drop when overwritten, because `wild` is the
+// manual regime. Three points on that axis are now measured and they agree
+// with the specification:
+//
+//     managed local binding   drops   (TM-127 control A,  1 660 KiB)
+//     managed struct field    drops   (this file's path,  1 660 KiB)
+//     `wild T->` element      DOES NOT drop  (TM-127,   125 184 KiB)
+//
+// ===========================================================================
+// BOUNDS
+// ===========================================================================
+//
+// `body.ptr` IS A BARE POINTER and the language does not bounds-check one
+// (TM-108, `SAFETY.md` S-17b) -- the same fact that governs `Vec<T>.items`. So
+// every read and write here goes through a length-carrying slice laid over
+// `len` (or over `cap` where the target is the free space), and the guard
+// becomes the compiler's own (TM-129, S-17c). `check_raw_index` fails the run
+// on a `.ptr[` anywhere but this file.
+mod:bytes;
+
+use "./limits.npk".*;
+
+// `len` IS THE LIVE PREFIX and `body.cap` is the allocation. They are separate
+// because `buffer_new(n)` gives `len == cap == n` -- the buffer's own `len` is
+// its allocation size, not the number of bytes written, so this struct carries
+// the written count itself.
+pub struct:Bytes = { buffer:body; int64:len; };
+
+// `ensures answer.len == 0 && answer.body.cap >= 1`
+pub func:bytes_init = Bytes(int64:cap) never fails {
+    int64:n = cap;
+    if (n < 1i64) { n = 1i64; }
+    pass Bytes{ body: buffer_new(n), len: 0i64 };
+};
+
+// `ensures b.body.cap >= b.len + need`
+//
+// DOUBLING, which is what makes a run of pushes amortised linear rather than
+// quadratic. The new capacity is at least twice the old and at least what was
+// asked for, so `bytes_push` needs no special case for the first byte.
+pub func:bytes_reserve = NIL(Bytes->:b, int64:need) never fails {
+    int64:want = b.len + need;
+    if (b.body.cap >= want) { pass NIL; }
+    int64:n = b.body.cap * 2i64;
+    if (n < want) { n = want; }
+    buffer:fresh = buffer_new(n);
+    uint8[]:from = #wild_slice<uint8>(b.body.ptr, b.len);
+    uint8[]:into = #wild_slice<uint8>(fresh.ptr, b.len);
+    int64:i = 0i64;
+    while (i < b.len) {
+        into[i] = from[i];
+        i = i + 1i64;
+    }
+    // THE OVERWRITE THAT DROPS THE OLD BODY (D-186), measured above.
+    b.body = move(fresh);
+    pass NIL;
+};
+
+// `ensures b.len == old(b.len) + 1`
+pub func:bytes_push = NIL(Bytes->:b, uint8:x) never fails {
+    drop bytes_reserve(b, 1i64);
+    // OVER `cap`, because the target index is `len` itself -- the same
+    // distinction `vec_push` makes, and for the same reason.
+    uint8[]:room = #wild_slice<uint8>(b.body.ptr, b.body.cap);
+    room[b.len] = x;
+    b.len = b.len + 1i64;
+    pass NIL;
+};
+
+// `ensures b.len == old(b.len) + src.len`
+//
+// ONE RESERVE FOR THE WHOLE RUN, not one per byte: appending an n-byte slice
+// must not be n doublings.
+pub func:bytes_extend = NIL(Bytes->:b, uint8[]:src) never fails {
+    drop bytes_reserve(b, src.len);
+    uint8[]:room = #wild_slice<uint8>(b.body.ptr, b.body.cap);
+    int64:i = 0i64;
+    while (i < src.len) {
+        room[b.len + i] = src[i];
+        i = i + 1i64;
+    }
+    b.len = b.len + src.len;
+    pass NIL;
+};
+
+// `ensures b.len == old(b.len) + string_byte_length(src)`
+//
+// BYTES, NOT CHARACTERS. `FORMAT_MODEL.md` F-17: every character in every
+// format this library emits is ASCII, and this function does not decode.
+pub func:bytes_extend_str = NIL(Bytes->:b, string:src) never fails {
+    // `string_bytes` HANDS BACK A `uint8[]` VIEW of the string's body, so this
+    // is the byte-slice case and not a second copy of it. A `string` is
+    // `{ptr, len, cap}` over `char8`, and going through the view keeps the
+    // bounds guard on both sides rather than indexing `src.ptr` raw.
+    drop bytes_extend(b, string_bytes(src));
+    pass NIL;
+};
+
+// ===========================================================================
+// THE DECIMAL WRITERS (P-25, P-26)
+// ===========================================================================
+
+// ALLOCATION-FREE, AND THAT IS THE WHOLE POINT OF IT (P-25). Every format this
+// library emits contains numbers, and `int_to_string` allocates a `string` per
+// call. The digits go backwards into a stack array and are then appended, so
+// the only allocation on this path is the sink's own amortised growth.
+//
+// THE SCRATCH ARRAY NEVER ASKS ITS OWN LENGTH: `.len` on a fixed-size array is
+// accepted by the frontend and cannot be lowered at this pin
+// (`NITPICK-EMIT-002`, `../../tests/probe/defect/fixed_array_len/`). The bound
+// is `NTIME_DIGITS_MAX`, which is the better spelling regardless.
+//
+// 20 BYTES IS EXACTLY ENOUGH: `uint64`'s maximum is 20 digits.
+pub func:bytes_put_uint = NIL(Bytes->:b, uint64:v) never fails {
+    uint8[20]:digits = [0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8,
+                        0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8];
+    int64:n = 0i64;
+    uint64:x = v;
+    // ZERO IS THE CASE EVERY DIGIT LOOP GETS WRONG FIRST TIME: the loop below
+    // is `while (x > 0)`, which writes nothing at all for `v == 0`.
+    if (x == 0u64) {
+        digits[0i64] = 48u8;
+        n = 1i64;
+    }
+    while (x > 0u64) {
+        uint64:d = x % 10u64;
+        // `=>!` AND NOT `=>`: there is no checked narrowing in this language
+        // (TM-105) -- the checked form at this narrowing is refused outright by
+        // `NITPICK-TYPE-009`. TM-105 requires the range check to be written
+        // here instead, and it is written by CONSTRUCTION: `d` is `x % 10u64`,
+        // so `d` is in [0, 9] and `48 + d` is in [48, 57], which is `'0'`..`'9'`
+        // and cannot leave `uint8`.
+        digits[n] = 48u8 + (d =>! uint8);
+        x = x / 10u64;
+        n = n + 1i64;
+    }
+    drop bytes_reserve(b, n);
+    // Backwards, because the digits were produced least-significant first.
+    int64:i = n;
+    while (i > 0i64) {
+        i = i - 1i64;
+        drop bytes_push(b, digits[i]);
+    }
+    pass NIL;
+};
+
+// CORRECT AT `int64` MIN, AND ITS TEST WAS WRITTEN FIRST (P-26).
+// `tests/unit/bytes_put_int.npk` is that test; it was run against an absent
+// `src/core/bytes.npk` and failed to compile before this function existed.
+//
+// THE OBVIOUS IMPLEMENTATION IS A CRASH ON ONE INPUT:
+//
+//     if (v < 0i64) { v = -v; }        // IntOverflow at int64 MIN
+//
+// Negating -9 223 372 036 854 775 808 overflows, and D-210 makes plain integer
+// arithmetic TRAP rather than wrap. So the naive formatter does not print a
+// wrong number at MIN; the program dies. `SAFETY.md` S-12: state the range and
+// check before the trap.
+//
+// THIS ONE NEVER CHANGES THE VALUE'S SIGN. The magnitude loop divides a
+// NEGATIVE running value and negates each single digit, which is safe because
+// one digit is in [0, 9]. It rests on the two operator facts `probe07` asserts
+// in this repository's own suite: signed `/` truncates toward zero, and `%`
+// takes the DIVIDEND's sign. So for negative `x`, `x % 10i64` is in [-9, 0] and
+// `0 - (x % 10i64)` is in [0, 9] -- with no intermediate anywhere near a
+// boundary. If either operator fact ever changed, `probe07` goes red before
+// this function does.
+pub func:bytes_put_int = NIL(Bytes->:b, int64:v) never fails {
+    if (v >= 0i64) {
+        // Non-negative, so the widening to `uint64` is exact and the shared
+        // digit loop does the rest.
+        drop bytes_put_uint(b, v =>! uint64);
+        pass NIL;
+    }
+    drop bytes_push(b, 45u8);                       // '-'
+    uint8[20]:digits = [0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8,
+                        0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8];
+    int64:n = 0i64;
+    int64:x = v;                                     // stays negative throughout
+    while (x < 0i64) {
+        int64:d = 0i64 - (x % 10i64);                // in [0, 9], never MIN
+        digits[n] = 48u8 + (d =>! uint8);
+        x = x / 10i64;
+        n = n + 1i64;
+    }
+    drop bytes_reserve(b, n);
+    int64:i = n;
+    while (i > 0i64) {
+        i = i - 1i64;
+        drop bytes_push(b, digits[i]);
+    }
+    pass NIL;
+};
+
+// ===========================================================================
+// READING AND FINISHING
+// ===========================================================================
+
+// `ensures answer == b.len`
+pub func:bytes_len = int64(Bytes->:b) never fails {
+    pass b.len;
+};
+
+// A BORROWED VIEW OF THE LIVE PREFIX -- over `len`, never over `cap`, so the
+// uninitialised tail is not visible through it.
+//
+// THE BORROW OUTLIVES NOTHING IT SHOULD NOT: the slice refers to the sink's
+// body, so it is valid exactly as long as the `Bytes` is. `probe10`'s family
+// and `tests/probe/defect/view_escape/` are this repository's record of where
+// the language does and does not catch a view escaping its owner.
+pub func:bytes_view = uint8[](Bytes->:b) never fails {
+    pass #wild_slice<uint8>(b.body.ptr, b.len);
+};
+
+// AN OWNED `string` OF THE LIVE PREFIX. This is the one operation here that
+// allocates by design, and it is the handover: the caller wanted text.
+//
+// THE SINK IS NOT EMPTIED BY IT. `take` copies out; a caller that wants to
+// reuse the sink calls `bytes_clear`. Emptying here would make the name a lie
+// in the other direction -- `take` reads as "give me what you have", not "and
+// forget it".
+pub func:bytes_take = string(Bytes->:b) never fails {
+    // `string_from_bytes(ptr, len)` -- POINTER AND LENGTH, not a slice. It
+    // copies, which is what makes the answer owned and independent of this
+    // sink's next growth.
+    pass string_from_bytes(b.body.ptr, b.len);
+};
+
+// `ensures b.len == 0`
+//
+// THE ALLOCATION IS KEPT, which is why this exists beside `bytes_init`: a
+// formatter reusing one sink across a million rows wants the capacity back
+// without a new buffer. Nothing is dropped, because the bytes are `uint8` and
+// own nothing -- unlike `Vec<T>`, where the same operation owes an element
+// drop at an owning `T` (TM-127, S-18c).
+pub func:bytes_clear = NIL(Bytes->:b) never fails {
+    b.len = 0i64;
+    pass NIL;
+};

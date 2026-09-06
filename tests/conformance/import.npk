@@ -4,8 +4,9 @@
 // and does nothing else.
 //
 // WHAT IT ASSERTS, AND IT IS NOT "the library works". It asserts that the
-// PUBLIC SURFACE IS IMPORTABLE. Today the surface is empty, and importing an
-// empty surface is exactly the test: this file goes on compiling as names are
+// PUBLIC SURFACE IS IMPORTABLE. It was written when the surface was EMPTY --
+// importing an empty surface was exactly the test -- and at 0.0.4 the surface
+// became 35 names from `src/core/`: this file goes on compiling as names are
 // added to `src/lib.npk`, and the day it does NOT, the surface changed in a
 // way that breaks every consumer -- which is a MAJOR version by TM-013 and had
 // better be a deliberate act rather than a discovery.
@@ -35,18 +36,48 @@ func:main = int32(cstring[]:_~argv) {
     exit 0i32;
 };
 
-// The four unconditional floor arms and the wildcard, which is
-// `tests/probe/probe11d_floor_only.npk`'s set exactly. That this compiles
+// THE MOVE PREDICTED BY THIS COMMENT HAS HAPPENED, AT CYCLE 0.0.4, AND THE
+// PREVIOUS TEXT IS KEPT SO THE BEFORE-AND-AFTER IS ONE READ.
+//
+// It used to say: *"The four unconditional floor arms and the wildcard, which
+// is `tests/probe/probe11d_floor_only.npk`'s set exactly. That this compiles
 // UNCHANGED is the measurement: importing `ntime`'s umbrella today costs a
 // consumer NOTHING beyond the floor. The number is expected to move as modules
-// gain `error:` declarations and arithmetic -- `SAFETY.md` S-4's totals column
-// is generated at cycle 0.1 -- and this file is where the move will first show.
+// gain `error:` declarations and arithmetic -- and this file is where the move
+// will first show."*
+//
+// IT SHOWED HERE FIRST, EXACTLY AS WRITTEN. `src/core/` landed, the umbrella
+// went from re-exporting nothing to re-exporting 35 names, and this file was
+// the only unit in the suite to go red -- `NITPICK-REACH-002` naming four arms
+// by hand. **The bill for importing `ntime`'s public surface is now EIGHT:**
+//
+//     8 = 4 (S-4b's floor: HeapBadRequest, HeapOom, Unreachable, WildLeak)
+//       + 1 IntOverflow   -- `n * #size_of<T>()` in `vec_init`, `bytes_reserve`
+//       + 1 OutOfBounds   -- the TM-129 index guards in both accessors
+//       + 1 DivByZero     -- `put_uint`'s `% 10` and `/ 10`
+//       + 1 DivOverflow   -- the same two operators
+//
+// STILL ZERO `error:` DECLARATIONS: all four additions are ARITHMETIC and
+// INDEXING, not identities. `check_error_budget` reports 0 of 3 declared, and
+// the budget is untouched. That is TM-107 exactly -- an import's arm bill is
+// its `fail` sites PLUS its arithmetic, charged per MODULE -- and it is why
+// this file still contains no arithmetic of its own: every one of these four
+// was bought by the IMPORT.
+//
+// AND `DivByZero`/`DivOverflow` ARE FOR TRAPS THAT CANNOT FIRE HERE: the only
+// divisor in `src/core/` is the literal `10`. The bill is what the front end
+// thinks can reach the handler, not what can. The same gap, in the other
+// direction, is what `SAFETY.md` S-17c records about `OutOfBounds`.
 func:failsafe = int32(Error:e) {
     pick (e) {
         (HeapBadRequest) { exit 91i32; },
         (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
         (Unreachable)    { exit 95i32; },
         (WildLeak)       { exit 96i32; },
+        (DivByZero)      { exit 97i32; },
+        (DivOverflow)    { exit 98i32; },
         (*)              { exit 99i32; }
     }
     exit 9i32;

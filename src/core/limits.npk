@@ -1,0 +1,120 @@
+// `ntime`'s named bounds -- EVERY ONE OF THEM, IN THIS FILE AND NOWHERE ELSE.
+//
+// `check_constants_named` (cycle 0.0.3) enforces both halves of that sentence:
+// a `fixed` name ending `_MIN`/`_MAX`/`_LIMIT`/`_BOUND` declared anywhere else
+// under `src/` is a finding, and so is a magic number spelled outside the
+// module that owns it. The check reads `SAFETY.md` S-16 and `CALENDAR.md` §4
+// for the ownership, not a copy of them -- so if a later cycle gives another
+// module its own arithmetic, S-16 and the check's owner map are amended in ONE
+// commit, which is the whole contract of that check family.
+//
+// EVERY CONSTANT CARRIES THE RULE THAT SET IT. A bound whose provenance is not
+// written beside it is a bound nobody can review against the range it is
+// supposed to enforce, which is the reason this file exists rather than each
+// module holding its own.
+//
+// THE RANGE CONSTANTS ARE COMPUTED, NOT ESTIMATED (`CALENDAR.md` §2 says so in
+// as many words), and cycle 0.1 adds a test that RECOMPUTES the four of them
+// from the calendar algorithm rather than trusting these literals. Until that
+// test exists the relations are written out here so a reader can check them by
+// hand -- which is the weaker guarantee, and it is stated as weaker:
+//
+//     NTIME_DAY_MAX - NTIME_DAY_MIN + 1  =  2932896 + 4371588 + 1  =  7304485
+//                                        =  CALENDAR.md §2's "total days"
+//     NTIME_SECS_MIN =  NTIME_DAY_MIN * 86400 = -4371588 * 86400 = -377705203200
+//     NTIME_SECS_MAX =  NTIME_DAY_MAX * 86400 + 86399
+//                    =  2932896 * 86400 + 86399  =  253402300799
+//
+// All three check out against `CALENDAR.md` §2's table as written.
+//
+// WHY THE MOST NEGATIVE VALUES ARE SPELLED THE WAY THEY ARE. A plain negative
+// decimal literal is fine here -- `-9999i64` scans and links, measured at pin
+// `0dfddac` -- because none of these is a type's *most negative* value. D-148
+// only forces construction at the extremes of a width (and for `uint64` above
+// 2^63-1, whose maximum is `0u64 - 1u64`). No constant in this file is there.
+mod:limits;
+
+// ---------------------------------------------------------------------------
+// Parsing and paths
+// ---------------------------------------------------------------------------
+
+// `FORMAT_MODEL.md` F-16 (TM-030) -- parsing is bounded and non-recursive:
+// every parser is a straight-line scan over a `uint8[]` with a stated maximum
+// input length. No time text is longer than this.
+pub fixed int64:NTIME_PARSE_MAX = 128i64;
+
+// `HOST.md` H-15 -- `readlink` is syscall 89 and its buffer is this many bytes.
+// The kernel does not NUL-terminate the result and the returned length is the
+// authority; a truncated result is not-found rather than a shorter name.
+pub fixed int64:NTIME_PATH_MAX = 4096i64;
+
+// ---------------------------------------------------------------------------
+// The supported date range -- `CALENDAR.md` C-4 (TM-014) and §2
+// ---------------------------------------------------------------------------
+
+// C-4: `year in [-9999, +9999]`, and EVERY CONSTRUCTOR CHECKS IT. The range is
+// this width because 7.3 million days is exhaustively testable in seconds, so
+// "every date round-trips" is a gate rather than an aspiration.
+pub fixed int64:NTIME_YEAR_MIN = -9999i64;
+pub fixed int64:NTIME_YEAR_MAX = 9999i64;
+
+// §2, day number with epoch 1970-01-01 = 0. These are the day numbers of
+// -9999-01-01 and +9999-12-31.
+pub fixed int64:NTIME_DAY_MIN = -4371588i64;
+pub fixed int64:NTIME_DAY_MAX = 2932896i64;
+
+// §2, `Timestamp.secs` at the two ends of the same range. MIN is midnight on
+// the first supported day; MAX is the last second of the last supported day,
+// which is why it ends 86399 rather than 00000.
+pub fixed int64:NTIME_SECS_MIN = -377705203200i64;
+pub fixed int64:NTIME_SECS_MAX = 253402300799i64;
+
+// ---------------------------------------------------------------------------
+// Fixed offsets -- `ZONE_MODEL.md` Z-19
+// ---------------------------------------------------------------------------
+
+// Z-19: a fixed offset is a `ZoneId` too, valid in [-64 800, +64 800] -- that
+// is +/-18:00, the range IANA and RFC 3339 permit.
+//
+// BOTH ENDS ARE NAMED, and `0.0.4.md` §4's table listed only the MAX. Z-19
+// states a two-sided range and every other range in this file is a MIN/MAX
+// pair, so naming one end and negating it at each use site would make this the
+// only asymmetric bound here -- and `-NTIME_OFFSET_MAX` at a call site is a
+// magic number's worth of arithmetic that `check_constants_named` cannot see.
+// Recorded in `0.0.4.md`'s execution record as a deliberate addition.
+pub fixed int64:NTIME_OFFSET_MIN = -64800i64;
+pub fixed int64:NTIME_OFFSET_MAX = 64800i64;
+
+// ---------------------------------------------------------------------------
+// Unit conversions -- `SAFETY.md` S-16
+// ---------------------------------------------------------------------------
+
+// NOT `_MIN`/`_MAX` NAMES, AND DELIBERATELY SO: these are conversion factors
+// rather than bounds, and `check_constants_named`'s `_BOUND_DECL` pattern
+// matches only the bound suffixes. They live here anyway because S-16 names
+// 86400 and 1000000000 as numbers a date library gets wrong by copying, and
+// `CONSTANT_OWNER` maps both to `cal` -- with module `core` permitted, which is
+// what lets this file hold them. A SECOND literal copy in `cal` or `span` is a
+// finding, and that is the point.
+//
+// 86400 IS NOT ALWAYS A DAY to a caller who has heard of leap seconds; it is
+// the number of SI seconds in a day in this library's model, which does not
+// represent leap seconds. `TIME_MODEL.md` is the authority on that choice.
+pub fixed int64:NTIME_SECS_PER_DAY = 86400i64;
+pub fixed int64:NTIME_NANOS_PER_SEC = 1000000000i64;
+
+// ---------------------------------------------------------------------------
+// Formatting scratch -- `BUILD.md` B-12 (`put_uint` is allocation-free)
+// ---------------------------------------------------------------------------
+
+// THE WIDEST DECIMAL MAGNITUDE ANY INTEGER IN THIS LIBRARY HAS. `uint64`'s
+// maximum, 18 446 744 073 709 551 615, is 20 digits; `int64` MIN's magnitude is
+// 19 digits and its sign is pushed separately. So a 20-byte scratch array holds
+// every case, and `src/core/bytes.npk` sizes its stack buffer with this name.
+//
+// IT IS ALSO WHY THAT BUFFER NEVER ASKS ITS OWN LENGTH. `.len` on a fixed-size
+// array is accepted by the frontend and CANNOT BE LOWERED at this pin --
+// `NITPICK-EMIT-002`, reproduced in
+// `../../tests/probe/defect/fixed_array_len/`, whose diagnostic asks to be
+// reported. Naming the bound is better style in any case: a reader sees why 20.
+pub fixed int64:NTIME_DIGITS_MAX = 20i64;

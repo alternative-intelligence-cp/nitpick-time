@@ -1,0 +1,87 @@
+// expect-exit: 0
+//
+// PROBE 13d -- THE CONTROL, AND THE MOST IMPORTANT FILE OF THE FOUR. The same
+// out-of-range read as `probe13b`, through the BARE POINTER, returns a wrong
+// value and DOES NOT TRAP.
+//
+// `expect-exit: 0` IS THE ASSERTION, and it asserts two things at once: that
+// no trap fired, and -- because the value is checked against a planted
+// sentinel -- that the read really happened and really returned the wrong
+// answer. An `exit 0` that merely meant "did not crash" would be much weaker;
+// this one means "read memory it had no business reading, and gave the caller
+// that byte pattern as an element".
+//
+// WHY IT MATTERS THAT THIS IS COMMITTED. Until now `SAFETY.md` S-17b and
+// TM-108 rested on a READING of the compiler's emitter -- `ExprIndexExpr` has
+// four branches and only the `TY_POINTER` one omits `emit_bounds_guard` -- and
+// nothing in this repository had ever RUN an out-of-range `Vec` index. That
+// reading was right, and it was still a reading. `PLAYBOOK.md`'s own rule for
+// this is "before citing a mechanism as the cause of a behaviour, produce the
+// behaviour"; four lines and one command produce it, so here they are.
+//
+// THE PLANT. `cap` is 4 and all four slots are written, then `count` is set to
+// 3 by pushing three times. Index 3 is therefore INSIDE the allocation and
+// OUTSIDE the vector, and it holds `-9999i64`, which no element does. So:
+//
+//   probe13b (through the guard)      exit 94, OutOfBounds
+//   probe13d (through the pointer)    exit 0, and the caller gets -9999
+//
+// Same index, same block, same run. The difference is one line in `vec_at`.
+mod:probe13d_vec_bare_pointer_unchecked;
+
+struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };
+
+func:vec_init<T> = Vec<T>(int64:cap) never fails {
+    int64:n = cap;
+    if (n < 1i64) { n = 1i64; }
+    wild int8->:mem = alloc(n * #size_of<T>());
+    pass Vec{ items: mem =>! wild T->, count: 0i64, cap: n };
+};
+
+func:vec_push<T> = NIL(Vec<T>->:v, move T:x) never fails {
+    v.items[v.count] = move(x);
+    v.count = v.count + 1i64;
+    pass NIL;
+};
+
+// THE UNGUARDED ACCESSOR -- `probe13b`'s with the slice line removed. This is
+// the shape `check_raw_index` exists to keep out of every file but
+// `src/core/vec.npk`, and the shape TM-129 refuses even there.
+func:vec_at_unchecked<T> = T(Vec<T>->:v, int64:i) never fails {
+    pass v.items[i];
+};
+
+func:main = int32(cstring[]:argv) {
+    Vec<int64>:a = raw vec_init::<int64>(4i64);
+    // Plant the sentinel in the fourth slot BEFORE `count` reaches it, so the
+    // value read past the end is known rather than whatever `alloc` left.
+    a.items[3i64] = -9999i64;
+    drop vec_push(@a, 10i64);
+    drop vec_push(@a, 20i64);
+    drop vec_push(@a, 30i64);
+    if (a.count != 3i64)                             { exit 10i32; }
+
+    int64:past = a.count + argv.len - 1i64;                       // == 3 here
+    int64:got = raw vec_at_unchecked(@a, past);
+
+    // NO TRAP HAPPENED -- reaching this line is half the finding.
+    // AND THE VALUE IS THE SENTINEL -- which is the other half: the read went
+    // through and handed back a number that is not an element of this vector.
+    if (got != -9999i64)                             { exit 11i32; }
+
+    dalloc(a.items =>! wild int8->);
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

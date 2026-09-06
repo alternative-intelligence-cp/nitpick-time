@@ -1,0 +1,114 @@
+// expect-exit: 0
+//
+// `Bytes` GROWTH IS AMORTISED LINEAR, AND THIS FILE MEASURES IT RATHER THAN
+// ASSERTING IT (`0.0.4.md` §6, §5 step 3: "the million-byte append with a
+// BOUNDED REALLOCATION COUNT").
+//
+// HOW IT IS MEASURED WITHOUT A CLOCK. `src/host/` is the only impure module and
+// this is a unit test, so there is no timer to call. The instrument is the
+// thing that actually decides the complexity: THE NUMBER OF REALLOCATIONS.
+// `body.cap` changes exactly when the sink reallocates, so watching it across a
+// million single-byte pushes counts them exactly.
+//
+// THE BOUND, WRITTEN OUT SO IT CAN BE CHECKED. Doubling from capacity 1:
+//
+//     1, 2, 4, 8, ... 2^20 = 1 048 576 >= 1 000 000
+//
+// so at most 21 reallocations, and the total bytes copied is under 2n rather
+// than n^2/2. A LINEAR-GROWTH BUG (`cap = cap + k`) would give 1 000 000 / k
+// reallocations and copy ~n^2/2k bytes -- for k = 1 that is 5 x 10^11 byte
+// copies, which does not finish in a test suite. So the assertion below
+// distinguishes the two implementations by a factor of ten thousand, and it is
+// an assertion about the ALGORITHM rather than about this machine's speed --
+// which is what makes it safe to run in CI on hardware nobody has measured.
+//
+// WHY NOT ASSERT A WALL TIME. It would be a measurement of the machine. The
+// harness already reports per-file seconds, so a pathological regression shows
+// there too; this file asserts the invariant that CAUSES the time.
+mod:bytes_growth;
+
+use "../../src/core/bytes.npk".*;
+
+fixed int64:N = 1000000i64;
+fixed int64:REALLOC_CEILING = 21i64;
+
+func:main = int32(cstring[]:_~argv) {
+    Bytes:b = raw bytes_init(1i64);
+    if (b.body.cap < 1i64)                     { exit 10i32; }
+
+    int64:reallocs = 0i64;
+    int64:seen_cap = b.body.cap;
+    int64:i = 0i64;
+    while (i < N) {
+        drop bytes_push(@b, 65u8);
+        if (b.body.cap != seen_cap) {
+            reallocs = reallocs + 1i64;
+            seen_cap = b.body.cap;
+        }
+        i = i + 1i64;
+    }
+
+    if (raw bytes_len(@b) != N)                { exit 11i32; }
+    // THE MEASUREMENT, AS AN ASSERTION. A linear-growth implementation reaches
+    // this line with `reallocs` in the hundreds of thousands, if it reaches it.
+    if (reallocs > REALLOC_CEILING)            { exit 12i32; }
+    // AND THE OTHER DIRECTION, which matters just as much: a sink that never
+    // reallocated would mean the first `buffer_new` had already over-allocated,
+    // and the ceiling above would pass for the wrong reason.
+    if (reallocs < 1i64)                       { exit 13i32; }
+    if (b.body.cap < N)                        { exit 14i32; }
+
+    // The contents survived every reallocation -- the copy is the part of
+    // growth that fails silently.
+    uint8[]:v = raw bytes_view(@b);
+    if (v.len != N)                            { exit 15i32; }
+    if (v[0i64] != 65u8)                       { exit 16i32; }
+    if (v[N - 1i64] != 65u8)                   { exit 17i32; }
+    if (v[N / 2i64] != 65u8)                   { exit 18i32; }
+
+    // ---- `extend` reserves ONCE for the whole run, not once per byte -------
+    Bytes:c = raw bytes_init(1i64);
+    int64:before = c.body.cap;
+    drop bytes_extend(@c, v);                  // a million bytes in one call
+    if (raw bytes_len(@c) != N)                { exit 19i32; }
+    // One call, so at most one growth step: `cap` went up exactly once.
+    if (c.body.cap < N)                        { exit 20i32; }
+    if (before >= N)                           { exit 21i32; }
+
+    // ---- clear keeps the allocation, which is why it exists ---------------
+    int64:kept = c.body.cap;
+    drop bytes_clear(@c);
+    if (raw bytes_len(@c) != 0i64)             { exit 22i32; }
+    if (c.body.cap != kept)                    { exit 23i32; }
+
+    // ---- take copies out, and does not empty the sink ---------------------
+    Bytes:d = raw bytes_init(1i64);
+    drop bytes_extend_str(@d, "2026-09-05");
+    string:s = raw bytes_take(@d);
+    if (string_byte_length(s) != 10i64)        { exit 24i32; }
+    if (!(raw s.eq("2026-09-05")))             { exit 25i32; }
+    if (raw bytes_len(@d) != 10i64)            { exit 26i32; }
+
+    // NOTHING IS FREED HERE, AND THAT IS P-24. `Bytes` is over `buffer`, which
+    // is MANAGED: the scope-exit drop is the reclaim and there is no
+    // `bytes_free` to call (TM-133). If this file leaked, `exit 0` would still
+    // not catch it -- D-151 watches `wild` allocations and a `buffer` is not
+    // one -- which is exactly why the growth path's drop was MEASURED at 256
+    // MiB of churn rather than trusted.
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (DivByZero)      { exit 97i32; },
+        (DivOverflow)    { exit 98i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

@@ -7,13 +7,28 @@ Guidance for Claude Code sessions working in this repository.
 `ntime` — a date, time and time-zone library for **Nitpick**, the
 safety-critical systems language at `../../nitpick`.
 
-**Status, after cycle 0.0.3: a skeleton with a harness that has been shown able
-to fail.** `src/` holds `lib.npk`, the empty umbrella, and one placeholder
-module per directory that parses and is **replaced, not deleted**, by the cycle
-named in its header. `tests/conformance/import.npk` imports the umbrella, links
-and runs. `harness/` is the runner `BUILD.md` describes — nine stages, ten
-modules — and a full invocation is 27 units green in about **184 s**. **No
-library code computes anything yet**; the first is `src/core/` at 0.0.4.
+**Status, after cycle 0.0.4: the first library code.** `src/core/` holds
+`vec.npk` (`Vec<T>`, nine functions), `bytes.npk` (`Bytes`, eleven) and
+`limits.npk` (thirteen named bounds, each with the rule that set it). The
+umbrella re-exports **35** names, one line each. The other five directories are
+still placeholders that parse and are **replaced, not deleted**, by the cycle
+named in each header. `harness/` is the runner `BUILD.md` describes — nine
+stages, ten modules — and a full invocation is **40 units green in about
+241 s**.
+
+**Two things to know before touching `src/core/`.**
+
+- **`Vec<T>` is for a NON-OWNING `T`** (TM-132). At an owning `T` the
+  element-drop path cannot be written generically at this pin: **O-N17** makes
+  `T:x = move(v.items[i])` inside a generic function emit a call to an
+  undefined `@npk.vacant.<dty>`, which `npkc` accepts at exit 0 and `llc`
+  refuses. That is five of the nine rows. It is recorded, not worked around —
+  element lifetime at an owning `T` goes **at the instantiation**, where
+  `SAFETY.md` S-18b already puts it.
+- **The bounds guard is the compiler's, not ours** (TM-129, S-17c). Each
+  accessor lays a `#wild_slice` over `count` and indexes that, so
+  `emit_bounds_guard` runs and one unsigned compare rejects both ends. The
+  library now contains **no raw bare-pointer index at all**.
 
 **What 0.0.3 added, and the first item is the one that matters.**
 `harness/selfcheck.py` runs **first** in every full invocation (`TESTING.md`
@@ -130,6 +145,14 @@ The substitutes this library uses, so the tree stays consistent: **`gran`** for
 a rounding granularity, **`hi`**/**`lo`** for range bounds, **`rem`** for a
 modulus result, **`zone_off`** for a fixed offset in seconds, **`bound`** for a
 limit, **`src`** for an input byte slice, **`sink`** for an output `Bytes`.
+
+**And the ten VERIFICATION keywords, none of which was in any table here until
+cycle 0.0.4** (TM-130, `BUILD.md` B-18): `prove`, `assert_static`, `requires`,
+`ensures`, `acquires`, `gives`, `invariant`, **`old`**, **`result`**, `pure`.
+All ten measured refused as local names at pin `0dfddac`. The last three are
+the compiler's D-221, and `old` and `result` are the dangerous pair, because
+this library's own contract syntax uses them — `ensures v.count == old(v.count)`
+— so you meet them as things to write. Use **`outgoing`** and **`answer`**.
 
 And **`stack`**, which is not in this library's own list and is the one that
 costs an hour: it is a memory qualifier beside `wild`, and using it as a local

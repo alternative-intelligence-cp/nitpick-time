@@ -77,6 +77,34 @@ EXPECT_EXEMPT = {
     "tests/probe/support/probe11_silent_lib.npk":
         "the same: a support module that declares no error at all, the control "
         "for TM-107's per-module arm bill",
+    "tests/probe/defect/generic_element_move/case1_generic_move_out.npk":
+        "O-N17's reproduction, and NO MARKER IS SPELLABLE FOR IT: `npkc` "
+        "ACCEPTS it at exit 0 and writes the .ll, and `llc` then refuses the "
+        "IR with `use of undefined value '@npk.vacant.1876'`. So "
+        "`expect-error:` is false (nothing refused it) and `expect-exit:` is "
+        "false (it never links). The expectation lives in that directory's "
+        "TRANSCRIPT.txt until the defect lands, at which point this entry "
+        "fails the both-directions diff until somebody deletes it and gives "
+        "the file its `// expect-exit: 0` -- which is the mechanism that "
+        "makes the gap close itself rather than be remembered",
+    "tests/probe/defect/generic_element_move/case5_generic_drop_loop.npk":
+        "the same defect in a second shape, and the shape that establishes its "
+        "EXTENT (TM-132): case1 moves an element out AND RETURNS it, this one "
+        "moves them out AND DROPS THEM IN A LOOP, which is the "
+        "vec_clear/vec_truncate/vec_free shape. Same `npkc` 0 / `llc` 1, same "
+        "`use of undefined value '@npk.vacant.<dty>'`, so no marker is "
+        "spellable for it either. It leaves with case1 and by the same "
+        "mechanism",
+    "tests/probe/defect/fixed_array_len/case1_local_array_len.npk":
+        "a SECOND compiler defect, found at 0.0.4: `.len` on a fixed-size "
+        "array `T[N]` is accepted by the frontend and cannot be lowered "
+        "(`NITPICK-EMIT-002`). `expect-error:` would be spellable here -- "
+        "`npkc` DOES refuse it -- and is WRONG ANYWAY: EMIT-002's own text "
+        "says the program is correct and the compiler is at fault, so "
+        "asserting the refusal would turn the bug into a committed "
+        "expectation and go RED on the day it is fixed. The controls (a slice "
+        "`.len`, and the same array indexed without `.len`) are in that "
+        "directory's README",
 }
 
 # The directories a `.npk` may not live in and be missed: none. This walk is

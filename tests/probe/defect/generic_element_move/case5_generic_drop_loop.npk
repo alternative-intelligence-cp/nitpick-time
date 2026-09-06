@@ -1,0 +1,92 @@
+// NO `expect-` MARKER, AND NONE IS SPELLABLE -- the same bucket as `case1`, for
+// the same reason, and named in `harness/run.py`'s `EXPECT_EXEMPT` with it.
+// `npkc` ACCEPTS this at exit 0 and writes the `.ll`; `llc` then refuses the
+// IR. So `expect-error:` is false and `expect-exit:` is false. The expectation
+// lives in `TRANSCRIPT.txt` until O-N17 lands, at which point the exemption's
+// both-directions diff makes removing it compulsory rather than optional.
+//
+// THE EXTENT OF O-N17 (added 2026-09-05, TM-132). `case1` moves an element OUT
+// AND RETURNS IT -- the `vec_pop<T>` shape. This file moves elements out AND
+// DROPS THEM IN A LOOP -- the `vec_clear<T>` / `vec_truncate<T>` /
+// `vec_free<T>` shape, and it is `probe06_generic_vec.npk`'s `free_names`
+// written GENERICALLY instead of at `Vec<string>`.
+//
+// IT MATTERS BECAUSE IT IS A DIFFERENT SHAPE WITH THE SAME FAULT. Until this
+// case, O-N17 was recorded as blocking ONE row of `0.0.4.md` §2's nine-row API
+// table (`vec_pop<T>`). It blocks FIVE, because all five are built on one
+// primitive -- `T:x = move(v.items[i])` inside a GENERIC function at an OWNING
+// `T` -- and the loop is not a different primitive, only a different caller.
+//
+// Measured at pin `0dfddac`, each status beside the artefact it produced, with
+// a NON-OWNING control for every owning case:
+//
+//   owning T (string)                      npkc      llc            run
+//     move out and return    (pop)         0, .ll    1, NO OBJECT   --
+//     move out and overwrite (set)         0, .ll    1, NO OBJECT   --
+//     move out and drop, loop (this file)  0, .ll    1, NO OBJECT   --
+//     move out and drop, countdown (trunc) 0, .ll    1, NO OBJECT   --
+//   non-owning T (int64), SAME SOURCE
+//     all of the above                     0, .ll    0, object      0
+//
+// So the fault needs GENERIC and OWNING and MOVE-OUT, exactly as `case1`..`4`
+// establish, and it does NOT need the element to be returned. The diagnostic is
+// the same one: `use of undefined value '@npk.vacant.<dty>'`.
+mod:case5_generic_drop_loop;
+
+struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };
+
+func:vec_init<T> = Vec<T>(int64:cap) never fails {
+    int64:n = cap;
+    if (n < 1i64) { n = 1i64; }
+    wild int8->:mem = alloc(n * #size_of<T>());
+    pass Vec{ items: mem =>! wild T->, count: 0i64, cap: n };
+};
+
+func:vec_push<T> = NIL(Vec<T>->:v, move T:x) never fails {
+    v.items[v.count] = move(x);
+    v.count = v.count + 1i64;
+    pass NIL;
+};
+
+// THE BLOCKED SHAPE. `probe06_generic_vec.npk`'s `free_names` is this function
+// with `T` replaced by `string` throughout, and THAT one compiles, links and
+// runs -- which is the whole of the finding. The local is `dying` and not
+// `old`, because `old` is a reserved `VerificationKeyword` (TM-130, B-18).
+func:vec_clear<T> = NIL(Vec<T>->:v) never fails {
+    int64:i = 0i64;
+    while (i < v.count) {
+        T:dying = move(v.items[i]);
+        discard(dying);
+        i = i + 1i64;
+    }
+    v.count = 0i64;
+    pass NIL;
+};
+
+func:vec_free<T> = NIL(Vec<T>->:v) never fails {
+    dalloc(v.items =>! wild int8->);
+    v.count = 0i64;
+    v.cap = 0i64;
+    pass NIL;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    Vec<string>:a = raw vec_init::<string>(2i64);
+    drop vec_push(@a, string_concat("Europe/", "Kyiv"));
+    drop vec_clear(@a);
+    drop vec_free(@a);
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

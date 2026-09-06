@@ -1,0 +1,42 @@
+// expect-exit: 94
+//
+// OUT OF RANGE, AND IT MUST TRAP: popping an EMPTY vector, where the guard sees `count - 1 == -1` and one UNSIGNED compare rejects it.
+//
+// `94` IS `OutOfBounds`, from this file's own `failsafe`. The value being
+// asserted is that the guard FIRES -- TM-129/S-17c. Without it the read would
+// return a wrong value at exit 0, which is what `probe13d` demonstrates and
+// what makes this a test worth having rather than a restatement of D-070.
+//
+// THE CAPACITY IS LARGER THAN THE COUNT so there is real, allocated memory at
+// the offending index. A guard over `cap` would pass; the guard is over
+// `count`.
+mod:vec_pop_empty;
+
+use "../../src/core/vec.npk".*;
+
+func:main = int32(cstring[]:argv) {
+    Vec<int64>:v = raw vec_init::<int64>(8i64);
+    drop vec_push(@v, 10i64);
+    drop vec_push(@v, 20i64);
+    // Derived from `argv.len` so neither leg can fold the index to a constant
+    // and decide the guard at compile time.
+    if (argv.len < 1i64) { exit 10i32; }
+    drop vec_clear(@v); discard(raw vec_pop(@v));
+    // NOT REACHED. If it is, the guard did not fire and the accessor returned
+    // or wrote past the live prefix -- the exact failure S-17b describes.
+    drop vec_free(@v);
+    exit 11i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

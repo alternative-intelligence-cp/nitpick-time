@@ -1,0 +1,152 @@
+// expect-exit: 0
+//
+// `put_int` AT `int64` MIN -- AND THIS FILE WAS WRITTEN BEFORE `bytes.npk`
+// EXISTED, which is P-26's requirement and not a stylistic note. Run against an
+// absent `src/core/bytes.npk` on 2026-09-05 it failed to compile, with `npkc`
+// exit 1 and NO `.ll` written; that transcript is in `meta/roadmap/0.0/0.0.4.md`
+// §7. The implementation was written afterwards, to this file.
+//
+// WHY THIS TEST AND NOT ANOTHER. `put_int` has exactly one input that breaks
+// the obvious implementation, and it is reachable from ordinary data:
+//
+//     if (v < 0i64) { v = -v; }        // <-- a CRASH at int64 MIN
+//
+// Negating −9 223 372 036 854 775 808 overflows, and D-210 makes plain
+// integer `+ - *` TRAP rather than wrap (`SAFETY.md` §1's table). So the naive
+// formatter does not print a wrong number at MIN -- it takes `IntOverflow` and
+// the program dies. `SAFETY.md` S-12: every range is stated and checked BEFORE
+// the trap; the trap is the belt.
+//
+// THE IMPLEMENTATION UNDER TEST ACCUMULATES IN THE NEGATIVE DIRECTION, so the
+// value never changes sign and there is nothing to overflow. That is why the
+// magnitude loop divides a NEGATIVE running value and negates each digit, which
+// looks like the long way round until you try it at MIN.
+//
+// `int64` MIN IS SPELLED `-MAX - 1` and not as a literal, because
+// `9223372036854775808i64` is one past `int64`'s range and the LEXER refuses
+// it -- `NITPICK-LEX-004`, which `probe02d_wide_literal_refused.npk` is the
+// committed case for. So the constant below is built by arithmetic that is
+// itself in range at every step.
+mod:bytes_put_int;
+
+use "../../src/core/bytes.npk".*;
+
+fixed int64:I64_MAX = 9223372036854775807i64;
+
+// `uint64`'s MAXIMUM, AND IT MUST BE A CONSTANT -- which D-148 does not say.
+// `LEXICAL_REFERENCE.md` D-148 gives `0u64 - 1u64` as the spelling for "uint64
+// above 2^63-1", and that is correct HERE, as a `fixed` initialiser, where it
+// is constant-folded: measured at pin `0dfddac`, this value divides by 2 to
+// `int64`'s maximum and leaves 5 modulo 10, which is 18 446 744 073 709 551 615.
+//
+// WRITTEN AS A RUNTIME STATEMENT THE SAME EXPRESSION TRAPS. `uint64:u = 0u64 -
+// 1u64;` inside a function body takes `IntOverflow` and the program dies --
+// D-210 makes plain integer arithmetic trap, and an unsigned `0 - 1` underflows.
+// Both halves were measured with the un-foldable form (`0u64 - argv.len`) as the
+// control. So the documented spelling is a CONSTANT spelling, and this file
+// found that by exiting 93 on its first green compile.
+fixed uint64:U64_MAX = 0u64 - 1u64;
+
+// The two answers, as bytes, so the comparison is against text and not against
+// a re-implementation of the thing being tested.
+func:expect = int32(Bytes->:b, string:want, int32:code) never fails {
+    uint8[]:got = raw bytes_view(b);
+    uint8[]:wanted = string_bytes(want);
+    if (got.len != wanted.len) { pass code; }
+    int64:i = 0i64;
+    while (i < got.len) {
+        if (got[i] != wanted[i]) { pass code; }
+        i = i + 1i64;
+    }
+    pass 0i32;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    int64:i64_min = (0i64 - I64_MAX) - 1i64;
+
+    // ---- THE CASE THIS FILE EXISTS FOR ----------------------------------
+    // If `put_int` negates, this line does not return: it traps IntOverflow
+    // and `failsafe` exits 93. A wrong ANSWER would reach the compare below;
+    // a crash never gets there. Both are failures and they are distinguishable.
+    Bytes:a = raw bytes_init(4i64);
+    drop bytes_put_int(@a, i64_min);
+    int32:bad = raw expect(@a, "-9223372036854775808", 10i32);
+    if (bad != 0i32) { exit bad; }
+
+    // ---- MIN's NEIGHBOUR, so a fencepost in the magnitude loop shows -----
+    Bytes:b = raw bytes_init(4i64);
+    drop bytes_put_int(@b, i64_min + 1i64);
+    bad = raw expect(@b, "-9223372036854775807", 11i32);
+    if (bad != 0i32) { exit bad; }
+
+    // ---- MAX, the positive end ------------------------------------------
+    Bytes:c = raw bytes_init(4i64);
+    drop bytes_put_int(@c, I64_MAX);
+    bad = raw expect(@c, "9223372036854775807", 12i32);
+    if (bad != 0i32) { exit bad; }
+
+    // ---- ZERO, which every digit loop gets wrong the first time ----------
+    Bytes:d = raw bytes_init(4i64);
+    drop bytes_put_int(@d, 0i64);
+    bad = raw expect(@d, "0", 13i32);
+    if (bad != 0i32) { exit bad; }
+
+    // ---- the small negatives, where the sign and the digits meet ---------
+    Bytes:e = raw bytes_init(4i64);
+    drop bytes_put_int(@e, -1i64);
+    bad = raw expect(@e, "-1", 14i32);
+    if (bad != 0i32) { exit bad; }
+
+    Bytes:f = raw bytes_init(4i64);
+    drop bytes_put_int(@f, -10i64);
+    bad = raw expect(@f, "-10", 15i32);
+    if (bad != 0i32) { exit bad; }
+
+    // ---- APPENDING, because `put_int` writes into a sink that has bytes --
+    // A formatter calls it mid-buffer, so "writes the right digits" is not
+    // enough; it must not disturb what is already there.
+    Bytes:g = raw bytes_init(4i64);
+    drop bytes_extend_str(@g, "n=");
+    drop bytes_put_int(@g, i64_min);
+    drop bytes_extend_str(@g, ";");
+    bad = raw expect(@g, "n=-9223372036854775808;", 16i32);
+    if (bad != 0i32) { exit bad; }
+
+    // ---- and `put_uint` at its own end, which shares the digit loop ------
+    Bytes:h = raw bytes_init(4i64);
+    drop bytes_put_uint(@h, U64_MAX);               // D-148: constructed, and CONSTANT
+    bad = raw expect(@h, "18446744073709551615", 17i32);
+    if (bad != 0i32) { exit bad; }
+
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        // 93 IS THE INTERESTING FAILURE. If this program ever exits 93 the
+        // implementation went back to negating, and the input was MIN.
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        // EIGHT ARMS, NOT SIX -- and this pair was PREDICTED before it was
+        // met. `defect/generic_element_move/TRANSCRIPT.txt` Part C measured a
+        // `vec.npk` consumer at six and wrote: *"which predicts that
+        // `src/core/bytes.npk` will bill EIGHT, since `put_uint` divides by
+        // 10"*. It does, and `NITPICK-REACH-002` named both by hand here:
+        //
+        //     8 = 4 (S-4b's floor) + IntOverflow + OutOfBounds
+        //                          + DivByZero   + DivOverflow
+        //
+        // The divisor is the literal `10`, which cannot be zero -- so both
+        // arms are for traps that cannot fire on this path, which is TM-107's
+        // per-MODULE granularity doing what it does. `(*)` counts for nothing
+        // (D-179), so they are named.
+        (DivByZero)      { exit 97i32; },
+        (DivOverflow)    { exit 98i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

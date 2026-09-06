@@ -1,0 +1,65 @@
+// expect-exit: 94
+//
+// PROBE 13c -- the guard fires on a NEGATIVE index, which is the half of the
+// check `SAFETY.md` S-17b calls out by name: "Signedness is half the check."
+//
+// An index derived from a narrower SIGNED field can be negative; `i < count`
+// accepts it, and the read goes backwards off the block into the allocator's
+// own bookkeeping. S-17b requires every accessor to check `0 <= i` as well.
+//
+// WHAT MAKES THIS PROBE WORTH ITS LINES: the accessor contains NO `i >= 0`
+// COMPARISON, and the trap fires anyway. `emit_bounds_guard` emits a single
+// `icmp ult i64` -- UNSIGNED -- after `index_as_i64` has sign-extended, so -1
+// becomes 0xFFFF_FFFF_FFFF_FFFF and fails the same compare that catches
+// `past the end`. One compare, both ends. That is why TM-129 prefers the
+// slice to two hand-written comparisons: the second of them would be dead
+// code that a reader would nevertheless have to maintain.
+mod:probe13c_vec_index_negative;
+
+struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };
+
+func:vec_init<T> = Vec<T>(int64:cap) never fails {
+    int64:n = cap;
+    if (n < 1i64) { n = 1i64; }
+    wild int8->:mem = alloc(n * #size_of<T>());
+    pass Vec{ items: mem =>! wild T->, count: 0i64, cap: n };
+};
+
+func:vec_push<T> = NIL(Vec<T>->:v, move T:x) never fails {
+    v.items[v.count] = move(x);
+    v.count = v.count + 1i64;
+    pass NIL;
+};
+
+func:vec_at<T> = T(Vec<T>->:v, int64:i) never fails {
+    T[]:s = #wild_slice<T>(v.items, v.count);
+    pass s[i];
+};
+
+func:main = int32(cstring[]:argv) {
+    Vec<int64>:a = raw vec_init::<int64>(4i64);
+    drop vec_push(@a, 10i64);
+    drop vec_push(@a, 20i64);
+    drop vec_push(@a, 30i64);
+
+    // i == -1, computed from `argv.len` so it is not a foldable constant.
+    int64:past = 0i64 - argv.len;                                // == -1 here
+    // THE TRAP. Nothing below this line runs.
+    discard(raw vec_at(@a, past));
+
+    dalloc(a.items =>! wild int8->);
+    exit 20i32;                    // reached only if the guard did NOT fire
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

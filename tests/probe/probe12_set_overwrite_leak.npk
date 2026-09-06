@@ -1,0 +1,136 @@
+// expect-exit: 0
+//
+// NOT A PROBE IN THE ORDINARY SENSE. This file exits 0 and that IS the
+// finding, exactly as `probe06b_element_leak.npk` does -- and it is a SECOND,
+// DIFFERENT way to orphan an element that no gate in this language notices.
+//
+// PROBE 12 -- OVERWRITING an occupied `Vec<T>` element discards the old one,
+// and `v.items[i] = move(x)` does not drop it.
+//
+// ASKS: `0.0.4.md` §2's note names THREE entries that discard elements --
+// `vec_free`, `vec_clear` and `vec_truncate` -- and says each needs an
+// element-drop path for an owning `T`. Is that list complete?
+//
+// IT IS NOT. `vec_set` overwrites an element, which discards exactly one, and
+// it is missing from that list, from `SAFETY.md` S-18b's statement of the same
+// rule, and from TM-106. Measured 2026-09-05 at pin `0dfddac`, 2 000 000
+// overwrites of one occupied `Vec<string>` slot:
+//
+//   overwritten in place, outgoing element orphaned   125 184 KiB   exit 0
+//   outgoing element moved out into a dying scope       1 596 KiB   exit 0
+//
+// and, because a peak-RSS number is arguable and an exit code is not, the same
+// pair under a shrinking address-space cap:
+//
+//   ulimit -v      131072   65536   32768    8192    3072    2048
+//   probe12             0      92      92      92      92     127
+//   probe12b            0       0       0       0       0     127
+//
+// 92 is `HeapOom`, the runtime's own arm. THE 2048 ROW IS NOT A RESULT: at
+// that cap `/bin/true` also fails to exec ("failed to map segment from shared
+// object"), so 127 is the machine's floor and not the program's. Read the
+// 3072 row as the answer: the remedy half completes 2 000 000 iterations
+// inside a 3 MiB address space and the leaking half does not.
+//
+// THE TWIN IS `probe12b_set_overwrite_drop.npk`, which differs in the ONE
+// STATEMENT that moves the old element into a scoped local before writing.
+// Read them side by side; the diff is the finding.
+//
+// RUN IT AS: /usr/bin/time -f "%e s  %M KiB" <binary>
+// AND AS:    ( ulimit -v 65536 ; <binary> ) ; echo $?
+//
+// WHY IT IS NOT A COMPILER DEFECT, WHICH TOOK TWO CONTROLS TO ESTABLISH. The
+// compiler's D-186 is titled "overwriting an owning field or managed element
+// drops the old value", so the first reading was that this contradicts it.
+// It does not:
+//
+//   CONTROL A -- the same 2 000 000 overwrites into a LOCAL BINDING
+//                (`s = string_concat(...)`)                1 660 KiB, exit 0
+//                under a 64 MiB cap                        exit 0
+//   CONTROL B -- the same overwrites written DIRECTLY at the site, with no
+//                function call anywhere            125 184 KiB, exit 92 capped
+//
+// A binding drops. A `wild T->` element does not, whether it is written
+// through a generic function, through a concrete one, or inline. D-186's
+// "managed element" is a MANAGED one; `Vec<T>.items` is `wild`, which is the
+// MANUAL regime, and the manual regime does not drop for you -- which is the
+// same sentence that makes `vec_free` the caller's job. So this is the `wild`
+// qualifier behaving exactly as specified, and the obligation is the library's.
+//
+// THE BLAST RADIUS IS WIDER THAN `vec_set`. Any assignment to `v.items[i]`
+// over an occupied slot discards an element: `vec_set`, and any future
+// in-place update. `vec_push` is SAFE for a different reason -- it writes at
+// `count`, which is past the last live element by construction -- and that
+// distinction is worth keeping, because it is not visible in the two lines of
+// code, which are identical.
+//
+// WHY BOTH HALVES ARE CONCRETE (`Vec<string>`) RATHER THAN GENERIC, WHICH IS
+// ITSELF A FINDING. The first draft of the remedy half was a generic
+// `vec_set<T>` that moved the outgoing element into a local. It does not
+// compile: `npkc` accepts it at exit 0 and `llc` refuses the IR with
+// `use of undefined value '@npk.vacant.1881'` -- O-N17,
+// `defect/generic_element_move/`. So at an owning `T` a generic `vec_set<T>`
+// TODAY either leaks (this file's shape) or does not link (the remedy's), and
+// there is no third spelling. That HELD `vec_pop<T>`'s row, and it is why
+// this pair is written at the instantiation, which is where `SAFETY.md` S-18b
+// already puts element lifetime.
+mod:probe12_set_overwrite_leak;
+
+struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };
+
+func:vec_init_string = Vec<string>(int64:cap) never fails {
+    int64:n = cap;
+    if (n < 1i64) { n = 1i64; }
+    wild int8->:mem = alloc(n * #size_of<string>());
+    pass Vec{ items: mem =>! wild string->, count: 0i64, cap: n };
+};
+
+// THE LINE UNDER TEST. The outgoing element is discarded and nothing drops it.
+func:vec_set_string = NIL(Vec<string>->:v, int64:i, move string:x) never fails {
+    v.items[i] = move(x);
+    pass NIL;
+};
+
+func:vec_free_string = NIL(Vec<string>->:v) never fails {
+    dalloc(v.items =>! wild int8->);
+    v.count = 0i64;
+    v.cap = 0i64;
+    pass NIL;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    Vec<string>:b = raw vec_init_string(1i64);
+    // 20 + 15 = 35 bytes on the managed heap, once, to occupy the slot.
+    b.items[0i64] = string_concat("Australia/Lord_Howe_", "Europe/Kyiv_xyz");
+    b.count = 1i64;
+    int64:i = 0i64;
+    while (i < 2000000i64) {
+        // THE LEAK: the slot takes the new element and the old one is orphaned.
+        drop vec_set_string(@b, 0i64, string_concat("Australia/Lord_Howe_", "Europe/Kyiv_xyz"));
+        i = i + 1i64;
+    }
+    // Empty the slot properly at the end, so the ONLY difference from the twin
+    // is what happens inside the loop.
+    string:last = move(b.items[0i64]);
+    discard(string_byte_length(last));
+    b.count = 0i64;
+    drop vec_free_string(@b);
+    // D-151 asserts no `wild` allocation is live -- and the block WAS paired,
+    // so this exits 0. Two million managed bodies are still live and the gate
+    // is silent about all of them. That is TM-106's mechanism, reached through
+    // a door TM-106 did not name.
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

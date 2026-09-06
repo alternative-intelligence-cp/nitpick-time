@@ -1,0 +1,114 @@
+// expect-exit: 0
+//
+// EVERY `Vec<T>` ACCESSOR AT ITS BOUNDARIES -- the IN-RANGE half.
+// `0.0.4.md` §6 requires `i == 0`, `i == count-1` and `i == count` for every
+// accessor. The first two are here; `i == count` must TRAP, and a program that
+// exits 0 cannot also take a trap, so each out-of-range case is its own file:
+// `vec_at_past_end.npk`, `vec_set_past_end.npk`, `vec_pop_empty.npk`.
+//
+// THE CAPACITY IS DELIBERATELY LARGER THAN THE COUNT throughout, so that
+// `i == count` is an index WITH ROOM BEHIND IT. A guard laid over `cap` would
+// accept it and return allocated-but-dead memory; the guard is laid over
+// `count` and rejects it. That distinction is the whole of TM-129 and it is
+// invisible unless `cap > count`.
+mod:vec_boundaries;
+
+use "../../src/core/vec.npk".*;
+
+func:main = int32(cstring[]:argv) {
+    // cap 8, count 3 -- five spare slots behind the last live element.
+    Vec<int64>:v = raw vec_init::<int64>(8i64);
+    if (v.count != 0i64)                       { exit 10i32; }
+    if (v.cap < 1i64)                          { exit 11i32; }
+
+    drop vec_push(@v, 100i64);
+    drop vec_push(@v, 200i64);
+    drop vec_push(@v, 300i64);
+    if (v.count != 3i64)                       { exit 12i32; }
+
+    // ---- vec_at at 0, interior, and count-1 -----------------------------
+    if (raw vec_at(@v, 0i64) != 100i64)        { exit 13i32; }
+    if (raw vec_at(@v, 1i64) != 200i64)        { exit 14i32; }
+    if (raw vec_at(@v, 2i64) != 300i64)        { exit 15i32; }
+
+    // The index derived from `argv.len` so `opt -O2` cannot fold the guard
+    // away -- the harness runs this same file through the optimised leg.
+    int64:last = v.count - argv.len;                        // == 2
+    if (raw vec_at(@v, last) != 300i64)        { exit 16i32; }
+
+    // ---- vec_set at 0 and count-1 ---------------------------------------
+    drop vec_set(@v, 0i64, 111i64);
+    drop vec_set(@v, 2i64, 333i64);
+    if (raw vec_at(@v, 0i64) != 111i64)        { exit 17i32; }
+    if (raw vec_at(@v, 2i64) != 333i64)        { exit 18i32; }
+    if (v.count != 3i64)                       { exit 19i32; }   // set never grows
+
+    // ---- vec_pop from count-1 down to 0 ---------------------------------
+    if (raw vec_pop(@v) != 333i64)             { exit 20i32; }
+    if (v.count != 2i64)                       { exit 21i32; }
+    if (raw vec_pop(@v) != 200i64)             { exit 22i32; }
+    if (raw vec_pop(@v) != 111i64)             { exit 23i32; }
+    if (v.count != 0i64)                       { exit 24i32; }
+
+    // ---- vec_truncate, including the n > count and n < 0 edges -----------
+    drop vec_push(@v, 1i64);
+    drop vec_push(@v, 2i64);
+    drop vec_push(@v, 3i64);
+    drop vec_truncate(@v, 99i64);              // longer than the vector
+    if (v.count != 3i64)                       { exit 25i32; }
+    drop vec_truncate(@v, 2i64);
+    if (v.count != 2i64)                       { exit 26i32; }
+    if (raw vec_at(@v, 1i64) != 2i64)          { exit 27i32; }
+    drop vec_truncate(@v, -5i64);              // negative clamps to empty
+    if (v.count != 0i64)                       { exit 28i32; }
+
+    // ---- vec_clear ------------------------------------------------------
+    drop vec_push(@v, 7i64);
+    drop vec_clear(@v);
+    if (v.count != 0i64)                       { exit 29i32; }
+
+    // ---- GROWTH: capacity 1 to 100 000, which `0.0.4.md` §5 step 2 names --
+    // Also the amortised-linear assertion for `Vec`: doubling from 1 to
+    // 100 000 is at most 17 reallocations, and a linear-growth bug would make
+    // this loop quadratic and visible in the harness's per-file timing.
+    Vec<int64>:g = raw vec_init::<int64>(1i64);
+    int64:i = 0i64;
+    while (i < 100000i64) {
+        drop vec_push(@g, i);
+        i = i + 1i64;
+    }
+    if (g.count != 100000i64)                  { exit 30i32; }
+    if (g.cap < 100000i64)                     { exit 31i32; }
+    // Spot-check that growth preserved the contents rather than merely the
+    // count -- the reallocation copy is the part that goes wrong silently.
+    if (raw vec_at(@g, 0i64) != 0i64)          { exit 32i32; }
+    if (raw vec_at(@g, 99999i64) != 99999i64)  { exit 33i32; }
+    if (raw vec_at(@g, 50000i64) != 50000i64)  { exit 34i32; }
+
+    // ---- vec_reserve is idempotent when it need not grow ------------------
+    int64:cap_before = g.cap;
+    drop vec_reserve(@g, 1i64);
+    if (g.cap != cap_before)                   { exit 35i32; }
+
+    drop vec_free(@g);
+    drop vec_free(@v);
+    if (v.cap != 0i64)                         { exit 36i32; }
+    if (g.cap != 0i64)                         { exit 37i32; }
+    // BOTH `vec_free`s ARE REQUIRED, and not for tidiness: `Vec`'s block is a
+    // `wild` allocation, so a missed one traps `WildLeak` at `exit 0` under
+    // D-151. That is the gate `0.0.4.md` §6 names -- FOR THE BLOCK ALONE.
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

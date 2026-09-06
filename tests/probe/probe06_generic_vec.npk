@@ -73,6 +73,20 @@
 // iterations in UNDER 768 KiB (clean at 768, `HeapOom` at 512), and the
 // leaking half needs between 64 and 128 MiB. Those are the numbers to quote.
 //
+// >> CORRECTED 2026-09-05 AT PIN `0dfddac` (TM-128, TM-131). THE PARAGRAPH
+// >> ABOVE IS LEFT AS IT WAS WRITTEN AND IS WRONG IN ITS REMEDY-HALF NUMBERS.
+// >> "Clean at 768, HeapOom at 512" is not reproducible: at `ulimit -v` 768
+// >> and 512 this program does not exec at all -- exit 127, "failed to map
+// >> segment from shared object" -- and NEITHER DOES `/bin/true`. The floor
+// >> is between 2688 and 2816 KiB and it is the LOADER's, not this program's:
+// >> bisected point by point, `probe06c` and `/bin/true` return the SAME exit
+// >> at every cap, so `ulimit -v` cannot measure this program's requirement.
+// >> The peak RSS can, and it is 1 660 KiB -- `%M` under-reports a small RSS
+// >> but does not report 0 for this one.
+// >> THE NUMBERS TO QUOTE ARE: peak RSS 125 184 KiB (leaking) against 1 660
+// >> KiB (corrected), and exit 92 against exit 0 at ONE shared cap of
+// >> `ulimit -v 65536`. The leaking half's figures above are UNCHANGED.
+//
 // AND THE PAIR IS NOW COMMITTED, which it was not before: this measurement
 // lived in scratch on 2026-09-03 and only the numbers were committed, so at
 // the re-pin there was nothing to re-run and the pair had to be rebuilt from
@@ -158,6 +172,11 @@ func:vec_free<T> = NIL(Vec<T>->:v) never fails {
 // re-pin: this is the difference between 125 MiB and under 768 KiB -- and
 // between `HeapOom` and exit 0 under a 64 MiB cap, which is the half of the
 // statement that does not depend on a gauge.
+// >> CORRECTED 2026-09-05 (TM-128, TM-131): "under 768 KiB" is wrong, for the
+// >> reason in this file's header note; read it as 1 660 KiB peak RSS. THE
+// >> SECOND HALF OF THIS SENTENCE IS THE HALF THAT SURVIVED -- `HeapOom`
+// >> against exit 0 at one 64 MiB cap is the discriminating measurement, and
+// >> it is now the gate `0.0.4.md` asserts.
 func:free_names = NIL(Vec<string>->:v) never fails {
     int64:i = 0i64;
     while (i < v.count) {

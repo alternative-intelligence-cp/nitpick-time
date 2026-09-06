@@ -2004,3 +2004,506 @@ meets one of them at a time.
   which is exactly how an instrument arrives broken on the day it is needed.
 - **Run them but do not commission them.** That is the state 0.0.2 ended in and
   named in its own §6: three checks commissioned by hand is not a runner.
+
+---
+
+### TM-127 — OVERWRITING a `Vec<T>` element discards one, so `vec_set` is the FOURTH entry that owes an element drop
+**2026-09-05, cycle 0.0.4. Extends TM-106 and amends `SAFETY.md` S-18b and
+`meta/roadmap/0.0/0.0.4.md` §2's note**, both of which name three
+element-discarding entries and there are four.
+
+**What the documents said.** `0.0.4.md` §2: *"Three of those entries discard
+elements and none of their postconditions says so — `vec_free`, `vec_clear` and
+`vec_truncate`."* S-18b states the same obligation against the same three, and
+`probe06_generic_vec.npk`'s header lists the same three.
+
+**The fourth is `vec_set`,** and it is the least visible of them: `vec_free`,
+`vec_clear` and `vec_truncate` all *sound* like they discard something, and
+`vec_set` sounds like it replaces one. It discards the element that was there,
+and nothing drops it.
+
+**Measured, 2 000 000 overwrites of one occupied `Vec<string>` slot at pin
+`0dfddac`, with the committed pair `tests/probe/probe12_set_overwrite_leak.npk`
+and `probe12b_set_overwrite_drop.npk`, which differ in one statement and BOTH
+EXIT 0:**
+
+| | peak RSS | `ulimit -v 65536` | `ulimit -v 3072` |
+|---|---|---|---|
+| overwritten in place | 125 184 KiB | **exit 92**, `HeapOom` | exit 92 |
+| outgoing moved out first | 1 596 KiB | exit 0 | exit 0 |
+
+**It is NOT a compiler defect, and two controls are what established that** —
+the first reading was that it contradicts the compiler's D-186, whose title is
+*"overwriting an owning field or managed element drops the old value"*:
+
+- **Control A** — the same 2 000 000 overwrites into a **local binding**
+  (`s = string_concat(…)`): **1 660 KiB**, clean under a 64 MiB cap. A binding
+  drops its old body, exactly as D-186 says and as `PLAYBOOK.md` records.
+- **Control B** — the same overwrites written **directly at the site**, no
+  function call anywhere: **125 184 KiB**, `HeapOom` under the cap — identical
+  to the leaking half.
+
+So the property belongs to the **destination**, not to the call: D-186's
+*managed* element drops and a `wild T->` element does not, because `wild` is
+the manual regime and the manual regime does not drop for you. That is the same
+sentence that makes `vec_free` the caller's job, and TM-106 is its other half.
+
+**The decision.** *Every operation that overwrites or discards a `Vec<T>`
+element owes an element drop at an owning `T` — `vec_free`, `vec_clear`,
+`vec_truncate` **and `vec_set`**, and any later in-place update. `vec_push` is
+exempt and the reason is worth stating, because the two lines of code are
+identical: it writes at `count`, which is past the last live element by
+construction, so there is nothing there to discard.*
+
+**And the remedy is not available generically today** (O-N17): a generic
+`vec_set<T>` that moves the outgoing element into a dying local is accepted by
+`npkc` at exit 0 and refused by `llc`. Both halves of the committed pair are
+therefore written at the instantiation (`Vec<string>`), which is where S-18b
+already puts element lifetime — and which is why `vec_pop<T>`'s row is HELD
+(blocked on O-N17, see `0.0.4.md` §2) rather than the subcycle choosing between
+a `vec_set` that leaks and one that does not link. The rest of 0.0.4 was built:
+the defect blocks one row of one table, not a layer.
+
+*Alternatives declined:*
+
+- **Treat it as a restatement of TM-106 and add nothing.** TM-106 is about a
+  container being *freed*; a reader applying it to `set` has to make an
+  inference the document does not offer, and the three-entry list actively
+  discourages it by being explicit and short.
+- **Say it in a comment on `vec_set`.** `CLAUDE.md`: a specification that turns
+  out to be wrong is amended by a decision, never by a comment.
+
+### TM-128 — the element-drop pair's "under 768 KiB" is not reproducible; the bound is a 3 MiB address space, and 2 MiB is the machine's floor
+**2026-09-05, cycle 0.0.4. Corrects a number carried by `SAFETY.md` S-18b (1),
+`meta/roadmap/0.0/README.md` (1), `meta/roadmap/0.0/0.0.4.md` §6 (1),
+`tests/probe/probe06_generic_vec.npk` (2) and `meta/roadmap/0.0/0.0.0.md` (2)**
+— and the arithmetic is written out because this decision first stated it
+wrongly:
+
+    7 sites in 5 files = 1 + 1 + 1 + 2 + 2
+
+**This entry originally said "six sites in five files", which does not equal its
+own enumeration.** Re-derived 2026-09-05 by the subcycle's second worker: the
+sweep `grep -rn '768 KiB\|at 768\|768,\|under 768\|768 K'` over the whole
+working tree outside `.git` and `.internal` returns **15 candidates**, and
+because the property is *"asserts the old figure as a live claim"* rather than a
+lexical one, **reading is the verdict**: **6 assert it** (the 7 above less
+`SAFETY.md`, corrected in the same diff that wrote this decision) and **9 are
+this correction's own text** — 15 = 6 + 9. One unrelated hit, the timestamp
+`-2041768800i64` in `probe04b_emission_shape.npk`, is excluded by the pattern
+and named here so the exclusion is reviewable rather than silent.
+
+**The claim.** *"The corrected half completes 2 000 000 iterations in UNDER 768
+KiB (clean at 768, `HeapOom` at 512)."* It was measured at pin `94874ce` and the
+0.0.4 dispatch asked for it to be re-measured rather than inherited.
+
+**What re-measuring found, at pin `0dfddac`, on `probe06c_element_drop`:**
+
+    ulimit -v   131072  65536  32768  8192  4096  3072  2048  1024   768
+    exit             0      0      0     0     0     0   127   127   127
+
+**and the control that says what the 127s mean:** `/bin/true` under the same
+caps also fails to exec — *"failed to map segment from shared object"* — at
+2048, 1024 and 768, and succeeds at 4096. **So ~2 MiB is this machine's exec
+floor for any process, and a run "clean at 768" is not something this mechanism
+can produce.** The 512 figure is below the same floor.
+
+**The corrected numbers,** and they are *better* than the ones they replace,
+because one of them was never a measurement at all:
+
+| | peak RSS | smallest clean `ulimit -v` |
+|---|---|---|
+| `probe06b_element_leak` | 125 184 KiB | 131 072 (92 at 65 536) |
+| `probe06c_element_drop` | **1 660 KiB** | **3 072** |
+
+**The leaking half is unchanged to the kilobyte** — 125 184 KiB, `HeapOom` at a
+64 MiB cap — so S-18b's finding stands and only its remedy-side bound moves.
+
+**And the peak-RSS figure for the remedy half is now real.** S-18b says to quote
+the address-space bound and not a peak RSS, because `/usr/bin/time -f %M`
+reported **0 KiB** for these static binaries at the earlier pin. It does not
+report 0 here: it reports 1 660 KiB, and 1 596 KiB for TM-127's twin. The gauge
+under-reports a *small* RSS; it does not under-report this one. So both figures
+can now be quoted, and the arithmetic between them is checkable:
+
+    125 184 − 1 660 = 123 524 KiB retained over 2 000 000 orphaned elements
+                    ≈ 63 bytes each, for a 35-byte body in a 64-byte size class
+
+which is the corroboration the old pair of numbers could not offer, since one
+of them was zero.
+
+**The decision.** *Quote **peak RSS 1 660 KiB and a 3 MiB address-space cap**
+for the remedy half, never "under 768 KiB". Any future address-space bound in
+this repository is taken with a `/bin/true` control at the same cap, because
+below about 2 MiB every exit code on this machine is the loader's.*
+
+**How the six sites are corrected, which differs by what the file is.** The two
+specification-and-plan sites (`SAFETY.md` S-18b, `0.0.4.md` §6) and the cycle
+checklist take the new numbers with this decision cited. The two record sites in
+`0.0.0.md` and the two in `probe06_generic_vec.npk`'s header keep their original
+text and gain a **dated note** saying what it previously said and how the
+correction was obtained — `PLAYBOOK.md`'s rule, that a correction to a committed
+transcript is *added* and never *substituted*.
+
+*Alternatives declined:*
+
+- **Silently update the number everywhere.** It would leave two committed
+  transcripts asserting they faithfully record a run that reported something
+  else, which is the specific failure that rule exists to prevent.
+- **Record it as "unchanged, probably".** The dispatch asked for a
+  re-measurement precisely because "probably unchanged" is what the re-pin
+  discipline refuses, and here the assumption would have been wrong.
+
+### TM-129 — the accessor reinstates the language's OWN bounds guard with `#wild_slice`, rather than two hand-written comparisons
+**2026-09-05, cycle 0.0.4. Settles the mechanism `SAFETY.md` S-17b and cycle
+0.0's checklist require, and amends S-17b to say HOW its `0 <= i` half is
+discharged.**
+
+**The obligation.** S-17b: `Vec<T>.items` is a bare pointer, `ExprIndexExpr`
+emits `emit_bounds_guard` on `TY_SLICE`, `TY_ARRAY` and `TY_SIMD` and not on
+`TY_POINTER`, so *"the accessor pair is the only bounds check that exists"* —
+and *"Signedness is half the check … Every accessor checks `0 <= i` as well as
+`i < count`."* The obvious implementation is two `if`s.
+
+**The decision.** *Every `Vec<T>` accessor lays a length-carrying slice over the
+block and indexes that:*
+
+```nitpick
+func:vec_at<T> = T(Vec<T>->:v, int64:i) never fails {
+    T[]:s = #wild_slice<T>(v.items, v.count);
+    pass s[i];
+};
+```
+
+*The slice is laid over `count`, never over `cap`.*
+
+**Four things measured before choosing it, at pin `0dfddac`, committed as
+`tests/probe/probe13_vec_bounds_guard.npk` and its three twins:**
+
+1. **It traps past the end** — `probe13b`, `i == count` with room at that index
+   because `cap` is larger: **exit 94**, `OutOfBounds`.
+2. **It traps on a negative index** — `probe13c`, `i == -1`: **exit 94**, and
+   the accessor contains **no `i >= 0` comparison at all**. The mechanism is
+   read out of the compiler rather than inferred: `emit_bounds_guard` emits a
+   single `icmp ult i64` — *unsigned* — and `index_as_i64` sign-extends first,
+   so the compiler's own comment applies verbatim: *"a negative index of any
+   width becomes a huge unsigned value and ONE unsigned compare rejects both
+   `negative` and `past the end` (D-070)."* **So S-17b's two halves are
+   discharged by one compare, and the second hand-written `if` would be dead
+   code a reader still had to maintain.**
+3. **The unguarded spelling really does return a wrong value** — `probe13d`,
+   the same read through `v.items[i]` with a sentinel planted in the slot past
+   `count`: **exit 0, and the sentinel comes back as an element.** Until this
+   probe, TM-108 and S-17b rested on a *reading* of the emitter and nothing in
+   this repository had ever run an out-of-range `Vec` index.
+4. **It costs a consumer nothing** — and this is the measurement that removes
+   the only argument against it. `NITPICK-REACH-003` bills a program importing
+   a `vec.npk` with the guarded accessor **six** identities, and one with the
+   bare-pointer accessor **the same six**:
+
+       6 = 4 (S-4b's floor) + 1 (IntOverflow, from `n * #size_of<T>()`)
+                            + 1 (OutOfBounds, from the index)
+
+**And item 4 is worth more than the decision it settles.** The reachability
+analysis arms `OutOfBounds` for a **bare pointer** index — for which no guard is
+emitted at all — so every consumer of an unguarded `Vec` is compelled to write
+an arm for a trap that *cannot fire*, while the read it is meant to protect
+returns a wrong value in silence. **The arm bill, which is the one artefact a
+library author reads when asking what can go wrong, is byte-identical between
+the safe spelling and the unsafe one.** That is why TM-108 went unnoticed as
+long as it did, and it is the same name-versus-mechanism shape as the `exit 0`
+leak gate and the undefined-symbol scan. Adding the guard makes the arm honest;
+it does not add it.
+
+**It works from an imported module, not only from a root** — measured, because
+`src/core/vec.npk` will be imported and `#wild_slice` is documented
+`wild`-context-only: a two-file consumer built end to end returns **exit 94**
+from an out-of-range `vec_at`.
+
+*Alternatives declined:*
+
+- **Two explicit comparisons.** They are what the checklist literally describes,
+  and they are a second implementation of D-070 that can drift from it. One of
+  the two would also be provably dead (item 2), and dead code that looks
+  load-bearing is worse than none.
+- **`fail` an error identity on an out-of-range index.** `core` declares no
+  error (`SAFETY.md` S-4) and the budget is three with a ceiling (S-2); an
+  accessor is not where a fourth identity gets spent, and a precondition
+  violation is a caller's bug rather than a runtime condition.
+- **Return a fallback value.** It converts a caller's bug into a wrong answer,
+  which is precisely the failure mode S-17b exists to remove.
+
+### TM-130 — the ten `VerificationKeyword` spellings are reserved, and none of them was in any table here
+**2026-09-05, cycle 0.0.4. Adds them to `BUILD.md` §7 and `CLAUDE.md`.**
+
+**How it was found.** A local named `old` — the natural name for the element
+`vec_set` is about to discard — refused to parse, and the diagnostic named the
+punctuation rather than the name:
+
+    NITPICK-PARSE-001 …:47:6: expected `;`, found `:`
+    NITPICK-PARSE-001 …:47:28: expected `;`, found `)`
+
+pointing at the **colon** in `T:old = move(…)`. This is the `stack` failure
+mode `PLAYBOOK.md` §10 records — *"it does not fail where you wrote it"* — with
+a different keyword and the same hour available to lose.
+
+**The full set, measured one at a time** at pin `0dfddac` by declaring
+`int64:<name> = 1i64;` and reading `npkc`'s status beside its artefact. **All
+ten are refused, 10 of 10:**
+
+`prove` · `assert_static` · `requires` · `ensures` · `acquires` · `gives` ·
+`invariant` · `old` · `result` · `pure`
+
+They are `LEXICAL_REFERENCE.md`'s `VerificationKeyword` production; `old`,
+`result` and `pure` were added by the compiler's **D-221** at its 1.5.1, whose
+own note records that adding them renamed *"two locals and one field"* in the
+compiler itself. `old`'s token is `KwOld` and `result`'s is `KwResultValue`.
+
+**What made it worth a decision rather than a fix.** **Nine of the ten appear in
+no reserved-word table anywhere in this ecosystem**, and none of the ten appears
+in either of this repository's two — `BUILD.md` §7's table (0 of 10) or
+`CLAUDE.md`'s list (0 of 10). Only `gives` is listed, in `PLAYBOOK.md` §10.
+
+**And two of them are actively invited by this library's own documents.**
+`0.0.4.md` §2's API table writes `ensures v.count == old(v.count)`, and
+`VERIFICATION.md` P-3 writes `ensures (result.year >= YEAR_MIN …)`. So a reader
+meets `old` and `result` **as things to write**, in the contracts this cycle is
+required to write as comments, and has no way to learn from these documents that
+they cannot also be locals. The words are not merely reserved; they are reserved
+*and* prominent *and* undocumented, which is the combination that costs an hour.
+
+**The decision.** *`BUILD.md` §7's table and `CLAUDE.md` carry all ten, with the
+substitutions this library uses: **`outgoing`** for a value being replaced,
+**`answer`** for a computed result, and `prev`/`dying` where they read better.
+A verification keyword is never a local name here.*
+
+*Alternatives declined:*
+
+- **List only `old`, the one that bit.** `state-impact-and-full-extent`: the
+  next session hits `result`, which is likelier still.
+- **Wait for the compiler's 1.5 to make them live and list them then.** They are
+  live *as tokens* now, at this pin, which is the only thing that decides
+  whether a file compiles.
+
+### TM-131 — `ulimit -v` cannot measure the remedy half AT ALL, because its bound and `/bin/true`'s are the same bound; the element-drop gate is the LEAKING half's refusal and the peak-RSS pair
+**2026-09-05, cycle 0.0.4. Refines TM-128, which is confirmed in every figure
+it states, and corrects the inference TM-128 and `0.0.4.md` §6 draw from it.**
+
+**What TM-128 established, re-measured independently here and reproduced to the
+kilobyte** at pin `0dfddac`, each status paired with the artefact or gauge it
+produced:
+
+| | peak RSS | exit at `-v 65536` |
+|---|---|---|
+| `probe06b_element_leak` | **125 184 KiB** | **92**, `HeapOom` |
+| `probe06c_element_drop` | **1 660 KiB** | **0** |
+
+**What TM-128 did not test, and what it changes.** TM-128 bisected
+`3072 → 2048` and found `/bin/true` failing below ~2 MiB, and concluded *"the
+bound is a 3 MiB address space"*. Bisecting the gap shows the two curves are
+**the same curve**:
+
+    cap (KiB)   2560  2688  2816  2944  3008  3072
+    /bin/true    127   127     0     0     0     0
+    probe06c     127   127     0     0     0     0
+
+**At every cap tested, `probe06c` and `/bin/true` return the SAME exit code**,
+and both cross between **2688 and 2816 KiB**. So 3 MiB is not a fact about
+`probe06c`; it is a fact about this machine's loader. `probe06c`'s own
+requirement is **≤ 2816 KiB and not measurable by this mechanism**, which the
+peak RSS corroborates: 1 660 KiB is *below the floor at which anything execs*.
+
+**The decision, and it is about what the gate asserts.** *"`probe06c` is clean
+at a 3 MiB cap" is not an assertion about `probe06c`* — `/bin/true` passes it
+too, and so would a `probe06c` that had been silently emptied. **A gate that a
+trivially correct program and a trivially empty one both pass is not a gate.**
+So the element-drop pair is asserted by the two things that do discriminate:
+
+1. **`probe06b` takes exit 92 at `ulimit -v 65536` and `probe06c` takes exit
+   0 at the same cap.** One cap, two programs, opposite outcomes, and 64 MiB is
+   twenty-three times the loader floor so neither result is the loader's.
+2. **The peak-RSS pair, 125 184 KiB against 1 660 KiB**, whose difference is
+   checkable against the thing being leaked:
+
+       125 184 − 1 660 = 123 524 KiB over 2 000 000 orphaned elements
+                       ≈ 63 bytes each, for a 35-byte body in a 64-byte class
+
+*Never quote a low `ulimit -v` as a program's bound without the `/bin/true`
+control **at the same cap**, and if the control fails with it, the number
+measures the machine.* TM-128 already required the control; this entry is what
+happens when it is run at every point rather than at the ends.
+
+*Alternatives declined:*
+
+- **Leave the 3 MiB figure as the gate and note the caveat.** The figure would
+  stay in the acceptance as something to assert, and the next worker asserts it,
+  and it passes for a reason unrelated to the library. That is the same
+  name-versus-mechanism failure as the `exit 0` leak gate and the arm bill —
+  the third in this repository, and the second found in this subcycle.
+- **Report it as agreeing with TM-128 and move on.** The figures do agree; the
+  conclusion drawn from them does not survive the two extra rows. Recording
+  agreement would have carried the wrong gate forward under a confirmation.
+
+### TM-132 — O-N17 blocks FIVE rows of the `Vec<T>` table and not one, because all five are one primitive; the library ships `Vec<T>` at a NON-OWNING `T` and says so
+**2026-09-05, cycle 0.0.4. Establishes the extent of O-N17, amends `SAFETY.md`
+S-18c and `0.0.4.md` §2's API table, and settles what `src/core/vec.npk` ships.**
+
+**What was believed.** O-N17 was raised, and ratified at re-dispatch, as
+blocking **one row** of `0.0.4.md` §2's nine-row table — `vec_pop<T>` — on the
+argument that *"the defect blocks one row of one table, not a layer of the
+library"*. That argument's conclusion survives. Its premise does not.
+
+**What the primitive actually is.** Not "popping". It is
+
+    T:x = move(v.items[i]);        // inside a GENERIC function, at an OWNING T
+
+and **five of the nine rows are built on it** — `vec_pop` returns the moved
+value, `vec_set` overwrites after it, and `vec_clear`, `vec_truncate` and
+`vec_free` each drop in a loop around it. A loop is a different *caller*, not a
+different primitive.
+
+**Measured at pin `0dfddac`, every owning case with a non-owning control built
+from the SAME source text, each status beside its artefact:**
+
+| shape | `T` | `npkc` | `llc` | link+run |
+|---|---|---|---|---|
+| move out and return (`vec_pop`) | `string` | 0, `.ll` | **1, NO OBJECT** | — |
+| move out and overwrite (`vec_set`) | `string` | 0, `.ll` | **1, NO OBJECT** | — |
+| move out and drop, loop (`vec_clear`) | `string` | 0, `.ll` | **1, NO OBJECT** | — |
+| move out and drop, countdown (`vec_truncate`) | `string` | 0, `.ll` | **1, NO OBJECT** | — |
+| **all four, same source** | **`int64`** | **0** | **0, object** | **0, exit 0** |
+
+Every owning failure is the same diagnostic, `use of undefined value
+'@npk.vacant.<dty>'`. The controls are what make the boundary exact rather than
+suspected: **generic × owning × move-out, and no two of the three.**
+
+**So the four rows that are UNAFFECTED are `vec_init`, `vec_reserve`,
+`vec_push` and `vec_at`** — and `vec_push` is unaffected for TM-127's reason,
+that it writes past the last live element and so moves nothing out.
+
+**The decision.** *`src/core/vec.npk` ships all nine rows **at a non-owning
+`T`**, which is every use `ntime` has. `vec_pop<T>` ships too — it is correct at
+a non-owning `T` and that is the only `T` this library instantiates. What is
+**not** shipped, and is recorded as blocked rather than approximated, is the
+**element-drop path at an owning `T`**: `SAFETY.md` S-18b already puts element
+lifetime **at the instantiation**, and the sanctioned spellings are
+`probe06_generic_vec.npk`'s `free_names` and `probe12b`'s `vec_set_string`,
+both concrete and both measured clean.*
+
+**Why this is a restriction and not a workaround (W-11).** The distinction is
+whether library code is bent around the bug. None is: every function here is the
+one that would have been written anyway, and the restriction was **already one
+of the two options the plan offered** — `0.0.4.md` §2 required each
+element-discarding entry to have *"an element-drop path for an owning `T` **or a
+stated restriction to non-owning ones**"*, written before this defect was known.
+The defect removes the first option; it did not invent the second. **What would
+have been a workaround** is a generic `vec_clear<T>` that silently does not drop,
+shipped without saying so — leaking at an owning `T`, passing `exit 0` because
+D-151 cannot see a managed body (TM-106), and reading later as a design choice.
+
+**The restriction is CHECKED and not merely stated**, which is the difference
+between this and a house rule: `check_no_owning_fields` already refuses an
+owning field in a table, and `src/core/vec.npk` carries the restriction in its
+header beside the reproduction path.
+
+*Alternatives declined:*
+
+- **Hold all five rows and ship four.** It would leave `Vec<T>` without
+  `vec_free`, so no `Vec` could be released at all, and D-151 would trap `exit
+  0` on every program that made one. The defect would have taken the layer.
+- **Report agreement with the one-row reading.** Two shapes were tested before
+  the reading was questioned and both failed; a third (`vec_set`) was asserted
+  by TM-127 and had never been run. Confirming "one row" would have shipped a
+  generic `vec_clear<T>` that does not drop.
+
+### TM-133 — `Bytes` has NO `free`, and the plan's operation list is corrected
+**2026-09-05, cycle 0.0.4. Corrects `meta/roadmap/0.0/0.0.4.md` §3, which lists
+`free` among `Bytes`' operations.**
+
+**What the plan said.** §3: *"`init`, `push`, `extend`, `extend_str`,
+`put_uint`, `put_int`, `len`, `view` …, `take` …, `clear`, `free`."*
+
+**Why `free` cannot exist.** `Bytes`' body is a `buffer`, and the compiler's
+`TYPE_REFERENCE.md` §23 lists `buffer_free` among the things **deliberately not
+landed**: *"the managed drop IS the free; manual reclaim is the `wild` regime's
+spelling"*. There is no reclaim function to call, so a `bytes_free` could only
+be a no-op.
+
+**And a no-op named `free` is worse than no function.** It teaches a caller to
+pair something that needs no pairing, and — in a repository where `Vec<T>`'s
+`vec_free` is genuinely mandatory and a missed one traps `WildLeak` at `exit 0`
+— it would read as the same obligation applying to both types. That is exactly
+the distinction P-24 exists to draw: `Vec<T>` is `wild` and manual, `Bytes` is
+managed and automatic, and the two files differ because the regimes differ.
+
+**The reclaim path is MEASURED rather than assumed**, because TM-127 found the
+contrary behaviour one field-kind away. Overwriting the `body` field drops the
+old buffer: 4096 rounds of allocate-copy-overwrite at 64 KiB each — **256 MiB
+of churn — peaks at 1 660 KiB**. Three points on that axis are now measured and
+they agree with D-186 as written:
+
+| destination | overwritten | measured |
+|---|---|---|
+| managed local binding | **drops** | 1 660 KiB (TM-127 control A) |
+| **managed struct field** | **drops** | **1 660 KiB (this decision)** |
+| `wild T->` element | **does NOT drop** | 125 184 KiB (TM-127) |
+
+**The decision.** *`Bytes` declares no `free`, and `src/core/bytes.npk`'s header
+says why in the file rather than only here. `0.0.4.md` §3's list is corrected.*
+
+*Alternatives declined:*
+
+- **Ship a no-op `bytes_free` "for symmetry with `Vec`".** The symmetry is
+  false; the types are in different memory regimes and that is the design.
+- **Ship one that zeroes `len`.** That is `bytes_clear`, which exists and is
+  named for what it does.
+
+### TM-134 — `uint64`'s maximum is a CONSTANT spelling, not an expression; D-148 does not say so, and this cost a red run twice in one hour
+**2026-09-05, cycle 0.0.4. A language fact, measured at pin `0dfddac`, that the
+compiler's `LEXICAL_REFERENCE.md` states incompletely.**
+
+**What the document says.** D-148: *"Values outside the envelope are constructed,
+not spelled: `uint64` above 2⁶³−1 (`0u64 - 1u64` is the maximum) …"* And the
+envelope really is the **signed** 64-bit one regardless of suffix — measured:
+`9223372036854775807u64` scans, `9223372036854775808u64` is `NITPICK-LEX-004`,
+and so is `18446744073709551615u64`.
+
+**What it does not say.** *`0u64 - 1u64` works as a `fixed` initialiser and
+TRAPS as a runtime statement.* Measured both ways, with the un-foldable form
+(`0u64 - argv.len`) as the control:
+
+| spelling | result |
+|---|---|
+| `fixed uint64:U64_MAX = 0u64 - 1u64;` | **correct value** — verified `/2 == int64 MAX` and `%10 == 5` |
+| `uint64:u = 0u64 - 1u64;` in a body | **`IntOverflow`, exit 93** |
+| `0u64 - z` where `z` comes from `argv` | **`IntOverflow`, exit 93** |
+
+D-210 makes plain integer arithmetic trap, an unsigned `0 - 1` underflows, and
+only the constant-folded form never executes the subtraction. Both facts are
+correct on their own; the sentence that joins them is missing.
+
+**It cost a red run TWICE IN ONE HOUR**, which is why it is a decision and not a
+comment. `tests/unit/bytes_put_int.npk` exited 93 on its first green compile —
+and the diagnosis was briefly that `put_int` was negating at `int64` MIN, which
+is the failure that test exists to catch, so the wrong conclusion was the
+*available* one. Then `tests/unit/limits_named.npk`, written minutes after the
+first was fixed and documented, made the identical mistake.
+
+**The decision.** *Where this library wants `uint64`'s maximum it declares a
+`fixed` constant and uses the name. The expression is never written in a
+function body. Both test files carry the reason at the declaration.*
+
+**And the narrowing rule beside it, since they were met together:** there is no
+checked narrowing (TM-105), so `d =>! uint8` is the only spelling and TM-105
+requires the range check to be written by hand — in `bytes_put_uint` it is
+written **by construction**, `d = x % 10u64` giving `d ∈ [0,9]`, and the comment
+says so rather than leaving a bare `=>!`.
+
+*Alternatives declined:*
+
+- **Treat it as a compiler defect and stop.** It is not one: both behaviours
+  follow from decisions that are individually correct and documented. What is
+  wrong is a documentation gap in a sibling repository, which this library
+  records and reports rather than fixes.
+- **Use `9223372036854775807u64 * 2u64 + 1u64`.** It traps for the same reason,
+  and it is arithmetic a reader has to verify instead of a name.

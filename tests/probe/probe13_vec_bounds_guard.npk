@@ -1,0 +1,112 @@
+// expect-exit: 0
+//
+// PROBE 13 -- the accessor that puts `Vec<T>`'s bounds check BACK, and what it
+// costs. TM-129.
+//
+// ASKS: `SAFETY.md` S-17b says the language does not bounds-check `Vec<T>`,
+// because `ExprIndexExpr` calls `emit_bounds_guard` on `TY_SLICE`, `TY_ARRAY`
+// and `TY_SIMD` and not on `TY_POINTER`, and `wild T->:items` is a bare
+// pointer. The cycle checklist answers that by requiring every accessor to
+// check `0 <= i` and `i < count` in code. IS THERE A BETTER ANSWER THAN TWO
+// HAND-WRITTEN COMPARISONS -- namely, giving the emitter a type that carries a
+// length, so the check is the COMPILER's and cannot drift from D-070?
+//
+// ANSWER: YES. `#wild_slice<T>(v.items, v.count)` lays a `T[]` over the block,
+// and the index then takes the `TY_SLICE` branch. Measured at pin `0dfddac`:
+//
+//   in range (this file)              exit 0
+//   i == count  (`probe13b`)          exit 94  -- OutOfBounds
+//   i == -1     (`probe13c`)          exit 94  -- OutOfBounds
+//   the same reads through the BARE POINTER (`probe13d`)
+//                                     exit 0, WITH A WRONG VALUE RETURNED
+//
+// ONE UNSIGNED COMPARE COVERS BOTH ENDS, and that is read out of the compiler
+// rather than inferred from the two exit codes above. `emit_bounds_guard`
+// emits `icmp ult i64 <idx>, <len>` -- ULT, unsigned -- and `index_as_i64`
+// sign-extends a narrower index first. The compiler's own comment on that
+// function says it: "narrower indices sign-extend, so a negative index of any
+// width becomes a huge unsigned value and ONE unsigned compare rejects both
+// `negative` and `past the end` (D-070)". So S-17b's "every accessor checks
+// `0 <= i` as well as `i < count`" is DISCHARGED by this spelling, in one
+// compare rather than two, and `probe13c` is the proof that it is.
+//
+// AND IT COSTS A CONSUMER NOTHING, which is the measurement that settles it.
+// `NITPICK-REACH-003` bills a program importing a `vec.npk` with this accessor
+// SIX identities: Unreachable, HeapOom, HeapBadRequest, WildLeak, IntOverflow,
+// OutOfBounds. It bills a `vec.npk` with the BARE-POINTER accessor the same
+// six. The sets are equal, so the guard adds no arm -- the `OutOfBounds` arm
+// was already owed, for a trap that without the guard CANNOT FIRE. The
+// transcript is `defect/generic_element_move/TRANSCRIPT.txt` Part C.
+//
+// NOT ASKED HERE: whether the guard is free at run time. It is one predictable
+// compare per access and 1.5's `requires i >= 0 && i < v.count` is what elides
+// it (`VERIFICATION.md` §3, the D-218.9 payoff). Measuring a branch this cheap
+// against a prelude that costs 0.8 s per program would measure the prelude.
+mod:probe13_vec_bounds_guard;
+
+struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };
+
+func:vec_init<T> = Vec<T>(int64:cap) never fails {
+    int64:n = cap;
+    if (n < 1i64) { n = 1i64; }
+    wild int8->:mem = alloc(n * #size_of<T>());
+    pass Vec{ items: mem =>! wild T->, count: 0i64, cap: n };
+};
+
+func:vec_push<T> = NIL(Vec<T>->:v, move T:x) never fails {
+    v.items[v.count] = move(x);
+    v.count = v.count + 1i64;
+    pass NIL;
+};
+
+// THE ACCESSOR. The whole of TM-129 is the first of these two lines.
+func:vec_at<T> = T(Vec<T>->:v, int64:i) never fails {
+    T[]:s = #wild_slice<T>(v.items, v.count);
+    pass s[i];
+};
+
+func:vec_free<T> = NIL(Vec<T>->:v) never fails {
+    dalloc(v.items =>! wild int8->);
+    v.count = 0i64;
+    v.cap = 0i64;
+    pass NIL;
+};
+
+func:main = int32(cstring[]:argv) {
+    // cap 4, count 3: there is ROOM at index 3, and it is still out of range.
+    // That distinction is the one a `cap`-based check would get wrong, and it
+    // is why the slice is laid over `count` and never over `cap`.
+    Vec<int64>:a = raw vec_init::<int64>(4i64);
+    drop vec_push(@a, 10i64);
+    drop vec_push(@a, 20i64);
+    drop vec_push(@a, 30i64);
+    if (a.count != 3i64)                     { exit 10i32; }
+    if (a.cap < 4i64)                        { exit 11i32; }
+
+    // Both boundaries the checklist names, plus the interior.
+    if (raw vec_at(@a, 0i64) != 10i64)       { exit 12i32; }   // i == 0
+    if (raw vec_at(@a, 1i64) != 20i64)       { exit 13i32; }   // interior
+    if (raw vec_at(@a, 2i64) != 30i64)       { exit 14i32; }   // i == count-1
+
+    // The index is derived from `argv.len` so it is not a constant the
+    // optimiser can fold away -- the `opt -O2` leg runs this same file.
+    int64:last = a.count - argv.len;                            // == 2 here
+    if (raw vec_at(@a, last) != 30i64)       { exit 15i32; }
+
+    drop vec_free(@a);
+    if (a.cap != 0i64)                       { exit 16i32; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

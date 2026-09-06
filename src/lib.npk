@@ -44,3 +44,65 @@
 // application are the two exceptions, and this comment is the reason a reader
 // meets before `check_layering` enforces it at 0.0.3.
 mod:lib;
+
+// ===========================================================================
+// core -- the storage primitives (cycle 0.0.4). THE FIRST PUBLIC NAMES.
+// ===========================================================================
+//
+// ONE LINE PER PUBLIC NAME, NEVER A `.*` GLOB, and ordered by layer with the
+// base first -- which is `BUILD.md` B-17's diagram read left to right, so this
+// file's shape and the dependency graph's shape are the same shape.
+//
+// EVERY LINE HERE IS A COMMITMENT. By TM-013 a name on this list is a thing a
+// MAJOR version is needed to take away, so adding one is the moment to ask
+// whether it should be public at all -- which is the whole reason the umbrella
+// is written by hand rather than globbed.
+
+// `Vec<T>` -- FOR A NON-OWNING `T`. See `core/vec.npk`'s header and TM-132:
+// at an owning `T` the element-drop path cannot be written generically at this
+// pin (O-N17), and the restriction is stated rather than approximated.
+pub use "./core/vec.npk".Vec;
+pub use "./core/vec.npk".vec_init;
+pub use "./core/vec.npk".vec_reserve;
+pub use "./core/vec.npk".vec_push;
+pub use "./core/vec.npk".vec_at;
+pub use "./core/vec.npk".vec_set;
+pub use "./core/vec.npk".vec_pop;
+pub use "./core/vec.npk".vec_truncate;
+pub use "./core/vec.npk".vec_clear;
+pub use "./core/vec.npk".vec_free;
+
+// `Bytes` -- the byte sink every formatter writes into. NO `bytes_free`, and
+// its absence is the design (P-24, TM-133): the body is a managed `buffer` and
+// its scope-exit drop IS the reclaim.
+pub use "./core/bytes.npk".Bytes;
+pub use "./core/bytes.npk".bytes_init;
+pub use "./core/bytes.npk".bytes_reserve;
+pub use "./core/bytes.npk".bytes_push;
+pub use "./core/bytes.npk".bytes_extend;
+pub use "./core/bytes.npk".bytes_extend_str;
+pub use "./core/bytes.npk".bytes_put_uint;
+pub use "./core/bytes.npk".bytes_put_int;
+pub use "./core/bytes.npk".bytes_len;
+pub use "./core/bytes.npk".bytes_view;
+pub use "./core/bytes.npk".bytes_take;
+pub use "./core/bytes.npk".bytes_clear;
+
+// The named bounds. PUBLIC BECAUSE A CALLER CHECKING A RANGE BEFORE CALLING
+// needs the same numbers the library checks against -- `SAFETY.md` S-12 makes
+// every range stated and checked, and a caller that cannot read the bound has
+// to duplicate it, which is the second copy `check_constants_named` exists to
+// prevent.
+pub use "./core/limits.npk".NTIME_PARSE_MAX;
+pub use "./core/limits.npk".NTIME_PATH_MAX;
+pub use "./core/limits.npk".NTIME_YEAR_MIN;
+pub use "./core/limits.npk".NTIME_YEAR_MAX;
+pub use "./core/limits.npk".NTIME_DAY_MIN;
+pub use "./core/limits.npk".NTIME_DAY_MAX;
+pub use "./core/limits.npk".NTIME_SECS_MIN;
+pub use "./core/limits.npk".NTIME_SECS_MAX;
+pub use "./core/limits.npk".NTIME_OFFSET_MIN;
+pub use "./core/limits.npk".NTIME_OFFSET_MAX;
+pub use "./core/limits.npk".NTIME_SECS_PER_DAY;
+pub use "./core/limits.npk".NTIME_NANOS_PER_SEC;
+pub use "./core/limits.npk".NTIME_DIGITS_MAX;

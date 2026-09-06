@@ -375,12 +375,40 @@ these reads like an ordinary local name and is not:
 | `range` | the builtin generic type name |
 | `mod` | the module keyword — and "mod" is what a modulus wants to be called |
 | `Ordering` | the prelude's enum (which we want, and must not shadow) |
+| `old`, `result`, `pure` | **VERIFICATION keywords** (D-221) — and the first two are the natural names for a value being replaced and for a computed answer |
+| `prove`, `assert_static`, `requires`, `ensures`, `acquires`, `gives`, `invariant` | the rest of the same production |
+
+**Rule B-18 (TM-130) — the ten `VerificationKeyword` spellings are reserved as
+ordinary names, and the diagnostic will not tell you.** Measured one at a time
+at pin `0dfddac`, by declaring `int64:<name> = 1i64;`: **all ten refused, 10 of
+10** — `prove`, `assert_static`, `requires`, `ensures`, `acquires`, `gives`,
+`invariant`, `old`, `result`, `pure`. `old`'s token is `KwOld` and `result`'s
+is `KwResultValue`; the compiler's D-221 added the last three at its 1.5.1 and
+renamed two locals and a field in its own tree to make room.
+
+**`old` and `result` are the two that will actually bite here, and this
+library's own documents invite them.** `0.0.4.md` §2's API table writes
+`ensures v.count == old(v.count)` and `VERIFICATION.md` P-3 writes
+`ensures (result.year >= YEAR_MIN …)`, so a reader meets both **as things to
+write** — in the contract comments every cycle from 0.0.4 is required to
+produce — with nothing anywhere saying they cannot also be locals.
+
+**And it fails where you did not write it**, exactly as `stack` does:
+`T:old = move(v.items[i]);` gives
+
+    NITPICK-PARSE-001 …:47:6:  expected `;`, found `:`
+    NITPICK-PARSE-001 …:47:28: expected `;`, found `)`
+
+pointing at the **colon** and at a closing paren, so it reads as punctuation
+trouble rather than as a name. Cycle 0.0.4 met it in
+`tests/probe/probe12b_set_overwrite_drop.npk`.
 
 The names this library uses instead, fixed here so they are used consistently:
 **`gran`** for a rounding granularity, **`hi`** and **`lo`** for range bounds,
 **`rem`** for a modulus result, **`zone_off`** for a fixed offset in seconds,
 **`bound`** for a limit, **`src`** for an input byte slice, **`sink`** for an
-output `Bytes`.
+output `Bytes`, **`outgoing`** for a value being replaced, and **`answer`** for
+a computed result.
 
 ---
 

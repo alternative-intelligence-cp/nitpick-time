@@ -570,3 +570,74 @@ P-5 says a probe is never deleted for the same reason those citations exist.
 **Settled at 0.0.2**, which builds the runner. **Nothing waits on it**: no
 probe changes either way, and the entry in the manifest is true about the
 nineteen today.
+
+---
+
+### O-N17 — a generic function that MOVES OUT of an indexed element, at an owning `T`, calls an undefined `@npk.vacant.<dty>` — **BLOCKING one capability**
+
+**Raised 2026-09-05 by cycle 0.0.4, at pin `0dfddac`. Registered in the
+workbench's `meta/OPEN_QUESTIONS.md` and raised to the compiler session as a
+catalogue-quality report, explicitly not an interrupt.**
+
+`npkc` **accepts** the program at exit 0 and writes an 850 377-byte `.ll`;
+`llc` then **exits 1 and writes no object**:
+
+    use of undefined value '@npk.vacant.1876'
+
+**The reproduction is five cases with controls:**
+`tests/probe/defect/generic_element_move/`. `TRANSCRIPT.txt` prints every
+command's status **beside the artefact it should have produced** — which is how
+this was found at all, since a run recording only exit codes sees a clean
+`npkc` and stops. It is the **third** instance here of *"`npkc` exit 0 is not
+well-formedness"* (TM-112, DEF-5, this).
+
+**The fault needs all three of GENERIC, OWNING and MOVE-OUT, and no two of
+them** — `case2` (concrete), `case3` (scalar `T`) and `case4` (move *in*) all
+link and run.
+
+**Where it points, which is sharper than the error text.** All four original
+cases **define** the same five `npk.vacant.*` helpers; the three controls each
+**call three of those five**, every callee among the defined set; `case1`
+**calls four**, the fourth being `1876`, which it never defined. Written out:
+
+    case1:  5 defined = 3 called-and-defined + 2 defined-never-called
+            4 called  = 3 defined            + 1 UNDEFINED (1876)
+
+So the definition pass works and the **call site synthesises a `dty` the
+definition walk never visits** — the demand walk rather than the emitter. The
+paired `@npk.drop.1876` is referenced zero times.
+
+**Extent (TM-132): it blocks FIVE rows of `Vec<T>`, not one.** The primitive is
+`T:x = move(v.items[i])`, and `vec_pop`, `vec_set`, `vec_clear`, `vec_truncate`
+and `vec_free` are all built on it; `case5_generic_drop_loop.npk` is the loop
+shape. **`src/core/vec.npk` therefore ships at a NON-OWNING `T`**, stated in the
+file, which is every use `ntime` has. Not worked around: the element-drop path
+at an owning `T` is recorded as blocked, and `SAFETY.md` S-18b already puts
+element lifetime at the instantiation.
+
+**Recommendation:** fix the demand walk so a vacancy symbol referenced by a
+generic instantiation is registered. Until then the restriction stands and is
+checked rather than trusted.
+
+---
+
+## Ids reserved in the WORKBENCH registry, recorded here so they are not taken twice
+
+**This section defines nothing. It exists because cycle 0.0.4 filed a question
+under an id another repository already held, and the correction cost ten edits
+across ten files.** `O-N…` ids are allocated in the workbench's
+`meta/OPEN_QUESTIONS.md`, which is shared by every library — **not** in this
+file, which only re-states the ones `ntime` raised or depends on. **Before
+filing an `O-N`, read the workbench registry; do not take the next number after
+the highest one here.**
+
+### O-N12 — ~~`>>>` and `string_repeat`~~ — **NOT THIS REPOSITORY'S.** It is
+`nitpick-regex`'s settled question about `>>>` and `string_repeat` being
+documented in the compiler's specifications. Cycle 0.0.4 filed what is now
+**O-N17** under this number and had to correct every citation.
+`tests/probe/defect/generic_element_move/TRANSCRIPT.txt` names it in its own
+header note, which is why the id appears in this tree at all.
+
+### O-N16 — ~~reserved in the workbench~~ — **NOT THIS REPOSITORY'S.** Named
+here only because O-N17's provenance note states the range the shared registry
+had already used (O-N1…O-N16) at the moment O-N17 was assigned.

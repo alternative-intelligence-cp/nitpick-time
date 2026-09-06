@@ -1,0 +1,63 @@
+// expect-exit: 94
+//
+// PROBE 13b -- the guard fires PAST THE END. The negative twin of probe 13,
+// and the `i == count` boundary the cycle checklist names.
+//
+// `expect-exit: 94` IS THE ASSERTION: 94 is this repository's `OutOfBounds`
+// arm, so the exit code says the trap identity and not merely that something
+// went wrong. The block has room at index 3 (`cap` is 4) and `count` is 3, so
+// the read is INSIDE the allocation and outside the vector -- which is the
+// case a `cap`-based check would pass and the one this probe exists for.
+//
+// Its twin `probe13d_vec_bare_pointer_unchecked.npk` does the identical read
+// through the bare pointer and exits 0 with a wrong value. Read the two
+// together: they differ in one line and in what the language does about it.
+mod:probe13b_vec_index_past_end;
+
+struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };
+
+func:vec_init<T> = Vec<T>(int64:cap) never fails {
+    int64:n = cap;
+    if (n < 1i64) { n = 1i64; }
+    wild int8->:mem = alloc(n * #size_of<T>());
+    pass Vec{ items: mem =>! wild T->, count: 0i64, cap: n };
+};
+
+func:vec_push<T> = NIL(Vec<T>->:v, move T:x) never fails {
+    v.items[v.count] = move(x);
+    v.count = v.count + 1i64;
+    pass NIL;
+};
+
+func:vec_at<T> = T(Vec<T>->:v, int64:i) never fails {
+    T[]:s = #wild_slice<T>(v.items, v.count);
+    pass s[i];
+};
+
+func:main = int32(cstring[]:argv) {
+    Vec<int64>:a = raw vec_init::<int64>(4i64);
+    drop vec_push(@a, 10i64);
+    drop vec_push(@a, 20i64);
+    drop vec_push(@a, 30i64);
+
+    // `i == count`, computed from `argv.len` so it is not a foldable constant.
+    int64:past = a.count + argv.len - 1i64;                      // == 3 here
+    // THE TRAP. Nothing below this line runs.
+    discard(raw vec_at(@a, past));
+
+    dalloc(a.items =>! wild int8->);
+    exit 20i32;                    // reached only if the guard did NOT fire
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (OutOfBounds)    { exit 94i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};

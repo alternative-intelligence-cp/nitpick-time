@@ -1,0 +1,248 @@
+O-N17 -- a generic function that MOVES OUT OF an indexed element, at an OWNING
+`T`, emits a call to an undefined `@npk.vacant.<dty>`. Recorded 2026-09-05 at
+pin `0dfddac`, by `nitpick-time` cycle 0.0.4.
+
+TWO CORRECTIONS TO THIS FILE'S OWN HEADER, 2026-09-05, ADDED RATHER THAN
+SUBSTITUTED, because everything below PART A is a verbatim record and a record
+that quietly changes is not one:
+
+  1. THE ID. This file was written citing `O-N12`, and that number was already
+     taken -- it is `nitpick-regex`'s settled `>>>`/`string_repeat` question in
+     the workbench registry, which ran O-N1..O-N16. The correct id is `O-N17`,
+     assigned by the orchestrator, and every citation in this repository was
+     changed to it (10 sites in 10 files, one each, over a sweep of the 1035
+     files on disk outside `.git`). The commands, statuses, artefact sizes and
+     IR below are untouched.
+
+  2. "WHICH IT STOPPED" -- it did not. The header said cycle 0.0.4 stopped
+     here. The defect blocks ONE ROW of `0.0.4.md` §2's table (`vec_pop<T>` at
+     an owning `T`) and the subcycle continued through the rest of `Vec<T>`,
+     `Bytes` and `limits.npk`. `vec_pop<T>` is HELD -- not written another way
+     -- for the reason the README gives.
+
+READ THIS FIRST: THE STATUS AND THE ARTEFACT ARE PRINTED TOGETHER ON EVERY
+LINE, and that is not decoration. `npkc` here exits 0 AND writes an 850 377-byte
+`.ll`; the failure is one step later, in `llc`, which exits 1 and writes no
+object. A run that recorded only exit codes -- or only `npkc`'s -- would show a
+clean compile. This is the THIRD instance in this repository of "npkc exit 0 is
+not well-formedness" (TM-112, O-N11's DEF-5, and now this), and the first two
+were both found by asking what the command WROTE.
+
+  PART A -- the four cases, built end to end. `case1` is the defect; `case2`,
+           `case3` and `case4` are controls that isolate it to exactly one
+           combination, and all three link and run.
+  PART B -- the emitted IR at the fault, verbatim.
+  PART C -- the arm bill, from the `NITPICK-REACH-003` oracle, for both
+           accessor spellings. It is here because it is the measurement that
+           says adopting the guard costs a consumer nothing.
+
+WHAT THE CONTROLS ESTABLISH, stated as the two-by-two it is:
+
+                        | concrete function | generic function
+    ----------------------------------------------------------
+    scalar `T`          | (not recorded)    | case3  LINKS
+    owning `T`          | case2  LINKS      | case1  REFUSED by llc
+
+  and `case4` adds the direction: a generic function at an owning `T` that
+  moves INTO an element links and runs. So the fault needs all three of
+  GENERIC, OWNING, and MOVE-OUT, and no two of them.
+
+=======================================================================
+PART A -- the four cases
+=======================================================================
+
+$ $NPKC tests/probe/defect/generic_element_move/case1_generic_move_out.npk -o case1_generic_move_out.ll
+  exit=0   artefact: wrote case1_generic_move_out.ll, 850377 B
+
+$ llc -O0 -filetype=obj -relocation-model=static case1_generic_move_out.ll -o case1_generic_move_out.o
+llc: error: llc: /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/.internal/s2_004/tx/case1_generic_move_out.ll:23179:13: error: use of undefined value '@npk.vacant.1876'
+  call void @"npk.vacant.1876"(ptr %t15)
+            ^
+  exit=1   artefact: NO .o
+
+  [no object, so no link and no run -- that IS the defect]
+
+-----------------------------------------------------------------------
+
+$ $NPKC tests/probe/defect/generic_element_move/case2_concrete_move_out.npk -o case2_concrete_move_out.ll
+  exit=0   artefact: wrote case2_concrete_move_out.ll, 850394 B
+
+$ llc -O0 -filetype=obj -relocation-model=static case2_concrete_move_out.ll -o case2_concrete_move_out.o
+  exit=0   artefact: wrote case2_concrete_move_out.o, 531352 B
+
+$ ld.lld -static case2_concrete_move_out.o npkrt.o -o case2_concrete_move_out
+  exit=0   artefact: wrote case2_concrete_move_out, 506928 B
+
+$ env -i NTIME_HARNESS=1 ./case2_concrete_move_out
+  exit=0   (the header expects 0)
+
+-----------------------------------------------------------------------
+
+$ $NPKC tests/probe/defect/generic_element_move/case3_generic_scalar.npk -o case3_generic_scalar.ll
+  exit=0   artefact: wrote case3_generic_scalar.ll, 848696 B
+
+$ llc -O0 -filetype=obj -relocation-model=static case3_generic_scalar.ll -o case3_generic_scalar.o
+  exit=0   artefact: wrote case3_generic_scalar.o, 530792 B
+
+$ ld.lld -static case3_generic_scalar.o npkrt.o -o case3_generic_scalar
+  exit=0   artefact: wrote case3_generic_scalar, 506448 B
+
+$ env -i NTIME_HARNESS=1 ./case3_generic_scalar
+  exit=0   (the header expects 0)
+
+-----------------------------------------------------------------------
+
+$ $NPKC tests/probe/defect/generic_element_move/case4_generic_move_in.npk -o case4_generic_move_in.ll
+  exit=0   artefact: wrote case4_generic_move_in.ll, 850515 B
+
+$ llc -O0 -filetype=obj -relocation-model=static case4_generic_move_in.ll -o case4_generic_move_in.o
+  exit=0   artefact: wrote case4_generic_move_in.o, 531264 B
+
+$ ld.lld -static case4_generic_move_in.o npkrt.o -o case4_generic_move_in
+  exit=0   artefact: wrote case4_generic_move_in, 506848 B
+
+$ env -i NTIME_HARNESS=1 ./case4_generic_move_in
+  exit=0   (the header expects 0)
+
+-----------------------------------------------------------------------
+
+=======================================================================
+PART B -- the emitted IR at the fault, verbatim
+=======================================================================
+
+The `T = string` instantiation of `vec_pop<T>`, cut from
+`case1_generic_move_out.ll` around the refused line. The command that produced
+it, with its status beside its artefact:
+
+$ grep -n 'npk.vacant.1876' case1_generic_move_out.ll
+23179:  call void @"npk.vacant.1876"(ptr %t15)
+  exit=0   artefact: 1 matching line(s)
+
+$ sed -n '23167,23182p' case1_generic_move_out.ll
+  unreachable
+ovf.ok1:
+  store i64 %t7, ptr %t2
+  %t9 = load ptr, ptr %t0
+  %t10 = load %"npk.case1_generic_move_out.Vec<string>", ptr %t9
+  %t11 = extractvalue %"npk.case1_generic_move_out.Vec<string>" %t10, 0
+  %t12 = load ptr, ptr %t0
+  %t13 = load %"npk.case1_generic_move_out.Vec<string>", ptr %t12
+  %t14 = extractvalue %"npk.case1_generic_move_out.Vec<string>" %t13, 1
+  %t15 = getelementptr { ptr, i64, i64 }, ptr %t11, i64 %t14
+  %t16 = load { ptr, i64, i64 }, ptr %t15
+  store { ptr, i64, i64 } zeroinitializer, ptr %t15
+  call void @"npk.vacant.1876"(ptr %t15)
+  store { ptr, i64, i64 } %t16, ptr %t17
+  store i8 1, ptr %t18
+  %t19 = insertvalue { { ptr, i64, i64 }, i32 } zeroinitializer, { ptr, i64, i64 } %t16, 0
+  exit=0
+
+AND THE TWO SETS THAT SHOULD MATCH AND DO NOT. The compiler's own invariant
+(`src/backend/ir/ir_types.npk`, `drop_type_register`'s header, D-225) is that
+every registered type gets BOTH a `@npk.drop.<dty>` and a `@npk.vacant.<dty>`
+body, and `vacant_fn_sym` registers the type before it returns the symbol --
+so a referenced vacancy symbol is supposed to be a defined one.
+
+$ grep -c 'define internal void @"npk.vacant\.' case1_generic_move_out.ll   -> 5   (bodies DEFINED)
+$ grep -c 'call void @"npk.vacant\.'   case1_generic_move_out.ll   -> 5   (bodies CALLED)
+$ grep -c 'npk.drop.1876'                 case1_generic_move_out.ll   -> 0   (the PAIRED drop: never referenced either)
+
+  Equal counts, unequal sets: one defined body is never called and one called
+  body -- 1876 -- is never defined. A count alone would have looked fine, which
+  is why both were taken.
+
+=======================================================================
+PART C -- the arm bill for both accessor spellings (TM-129's evidence)
+=======================================================================
+
+WHY THIS IS HERE. `case1` above blocks one row of `0.0.4.md` §2's table; the
+rest of that table still has to be written, and the accessor is the row every
+other row leans on (`SAFETY.md` S-17b: the accessor pair is the only bound
+`Vec<T>` has). TM-129 settles its spelling. The one argument that could have
+gone against it is cost to a consumer, and this is the measurement that
+answers it: BOTH spellings bill the SAME SIX identities, so the guard is free.
+
+The two scratch modules, quoted in full so this is reproducible. They differ in
+`vec_at`'s body and nowhere else. NOT committed as probes because
+`harness/arms.py`'s `check_failsafe_arms` already generates exactly this
+program for every public module in `src/` on every run -- so the day
+`src/core/vec.npk` lands, this measurement is re-derived and ASSERTED by the
+suite rather than quoted from here.
+
+    # t2/core/vec.npk -- the guarded spelling
+    mod:vec;
+    pub struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };
+    pub func:vec_init<T> = Vec<T>(int64:cap) never fails {
+        int64:n = cap;
+        if (n < 1i64) { n = 1i64; }
+        wild int8->:mem = alloc(n * #size_of<T>());
+        pass Vec{ items: mem =>! wild T->, count: 0i64, cap: n };
+    };
+    pub func:vec_at<T> = T(Vec<T>->:v, int64:i) never fails {
+        T[]:s = #wild_slice<T>(v.items, v.count);      # <-- THE ONLY DIFFERENCE
+        pass s[i];
+    };
+    pub func:vec_free<T> = NIL(Vec<T>->:v) never fails {
+        dalloc(v.items =>! wild int8->);
+        v.count = 0i64; v.cap = 0i64; pass NIL;
+    };
+
+    # t3/core/vec.npk -- the unguarded spelling: `vec_at`'s body is one line
+    pub func:vec_at<T> = T(Vec<T>->:v, int64:i) never fails {
+        pass v.items[i];                               # <-- THE ONLY DIFFERENCE
+    };
+
+    # the consumer, identical for both, DELIBERATELY WITHOUT a `failsafe`,
+    # which is what makes NITPICK-REACH-003 list the bill (S-6b)
+    mod:consumer;
+    use "./core/vec.npk".*;
+    func:main = int32(cstring[]:argv) {
+        Vec<int64>:a = raw vec_init::<int64>(4i64);
+        a.items[0i64] = 11i64;
+        a.count = 1i64;
+        if (raw vec_at(@a, 0i64) != 11i64) { exit 10i32; }
+        if (argv.len > 0i64) { discard(raw vec_at(@a, 5i64)); }
+        drop vec_free(@a);
+        exit 0i32;
+    };
+
+$ $NPKC t2/consumer.npk -o t2/consumer.ll        # the GUARDED spelling
+NITPICK-REACH-003 .../t2/consumer.npk:4:1: `main` without `failsafe` (D-013): an executable supplies exactly one handler, the trap route calls it by name, and this program's would have to name every error that can reach it -- 6 identities: Unreachable, HeapOom, HeapBadRequest, WildLeak, IntOverflow, OutOfBounds -- with `(*)` beneath them but not in for them (D-179)
+  exit=1   artefact: NO .ll
+
+$ $NPKC t3/consumer.npk -o t3/consumer.ll        # the UNGUARDED spelling
+NITPICK-REACH-003 .../t3/consumer.npk:4:1: `main` without `failsafe` (D-013): an executable supplies exactly one handler, the trap route calls it by name, and this program's would have to name every error that can reach it -- 6 identities: Unreachable, HeapOom, HeapBadRequest, WildLeak, IntOverflow, OutOfBounds -- with `(*)` beneath them but not in for them (D-179)
+  exit=1   artefact: NO .ll
+
+THE SETS ARE EQUAL, AND THE ARITHMETIC IS WRITTEN OUT SO IT CAN BE CHECKED:
+
+    6 = 4 (S-4b's floor: Unreachable, HeapOom, HeapBadRequest, WildLeak)
+      + 1 (IntOverflow, from `n * #size_of<T>()` in `vec_init`)
+      + 1 (OutOfBounds, from the index)
+
+  and no `DivByZero`/`DivOverflow`, because `vec.npk` divides by nothing --
+  which is the per-module granularity S-4c describes, and which predicts that
+  `src/core/bytes.npk` will bill EIGHT, since `put_uint` divides by 10.
+
+AND HERE IS THE PART THAT IS WORTH MORE THAN THE DECISION IT SETTLES.
+
+**THE UNGUARDED SPELLING BILLS `OutOfBounds` TOO.** The reachability analysis
+arms it for a BARE POINTER index -- for which `ExprIndexExpr` emits no
+`emit_bounds_guard` at all (TM-108, S-17b) -- so every consumer of an
+unguarded `Vec` is compelled to write an arm for a trap that CANNOT FIRE,
+while the read it is supposed to protect returns a wrong value in silence.
+
+That is why TM-108 went unnoticed for as long as it did: the arm bill, which is
+the one artefact a library author reads when asking "what can go wrong here",
+is BYTE-IDENTICAL between the safe spelling and the unsafe one. It is the same
+shape as everything else in this family -- an instrument whose name says
+"what can reach the handler" while its mechanism says "what the front end
+thinks might". Adding the guard makes the arm honest; it does not add it.
+
+$ ( cd t2 && ... add a failsafe to the consumer and build it end to end )
+  npkc exit=0   artefact: wrote consumer.ll, 849859 B
+  llc  exit=0   artefact: wrote consumer.o, 531168 B
+  lld  exit=0   artefact: wrote consumer, 506704 B
+  run  exit=94  -- `OutOfBounds`, from `vec_at(@a, 5i64)` with count == 1.
+                   The guard fires from an IMPORTED MODULE, not only from a
+                   root, which is the form `src/core/vec.npk` will take.

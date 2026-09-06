@@ -140,6 +140,19 @@ exemption"* — read as coverage and was, for those 21, membership in a bucket
 nobody evaluated. **The arithmetic is printed on every run and asserted:
 24 = 3 exempt + 21 asserted.**
 
+**Rule V-1i (TM-146) — "every `.npk` in the tree" means THIS repository, and
+what the walk prunes is PRINTED.** A directory holding a `.git` entry is a
+separate repository and is not this tree; so is `.nitpick`, which is where CI
+checks the pinned compiler out, because `actions/checkout` cannot place a
+`path:` outside the workspace. Until cycle 0.0.6 every whole-tree sweep here
+walked it — hundreds of *"unowned .npk"*, a denominator wrong by hundreds, and
+the `parse` stage putting the compiler's own source in front of `npkc` one file
+at a time. **The pruned list is printed beside the denominator**, because
+*"78 files, 1 nested repository pruned"* and *"78 files"* are different
+statements and only the first can be checked. **Found by CI's first run and by
+nothing on the workbench**, which is the argument for pushing at a cycle's close
+rather than at convenience.
+
 **Rule V-1h (TM-142) — a derived number in a document is TAGGED or it is
 history.** Eleven sites in six live files carried denominators from cycle 0.0.3
 after the tree had grown from 50 `.npk` to 78 — `run.py`'s own docstring,

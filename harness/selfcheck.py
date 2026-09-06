@@ -712,14 +712,16 @@ PLANTED = [
 #   V14_CASES     what `TESTING.md` V-14 names -- seven, plus this repository's
 #                 own eighth (a program whose `failsafe` has been deleted).
 #   PLANTED_CASES what is actually planted: case 6 is PEND until cycle 0.5.
-#   TREE_PLANTS   `PLANTED`'s rows, plus `check_layering`'s node half (whose
-#                 fault is a file that is NOT there, so no row can express it)
-#                 and `check_specs_current` (which reports and never fails, so
-#                 it is driven separately). Every one has a control beside it,
+#   TREE_PLANTS   `PLANTED`'s rows, plus THREE that no row can express:
+#                 `check_layering`'s node half (the fault is a file that is NOT
+#                 there); the whole-tree walk's nested-repository pruning
+#                 (the subject is the WALK, not a check -- TM-146); and
+#                 `check_specs_current` (which reports and never fails, so it
+#                 is driven separately). Every one has a control beside it,
 #                 which is why the two numbers printed are equal.
 V14_CASES = 8
 PLANTED_CASES = 7
-TREE_PLANTS = len(PLANTED) + 2
+TREE_PLANTS = len(PLANTED) + 3
 
 
 def part_b(rep, base):
@@ -774,6 +776,42 @@ def part_b(rep, base):
             "check_layering fired on a tree holding every layer, so its red "
             "above is not evidence about the missing one.\n      it said: %s"
             % res.problems[0])
+
+    # A NESTED REPOSITORY IS NOT THIS TREE (TM-146), and no `PLANTED` row can
+    # express this either: the subject is the WALK, not a check. Found by CI's
+    # first run, which checks the pinned compiler out INSIDE the workspace at
+    # `.nitpick` -- every whole-tree sweep then walked the entire compiler.
+    # Both rules are driven: by name, and by shape (a directory holding `.git`).
+    where = _mini_tree(os.path.join(base, "planted", "nested"), [])
+    base_n = len(checks_mod.all_npk(where))
+    _write(os.path.join(where, ".nitpick", "src", "vendored.npk"),
+           "mod:vendored;\n")
+    _write(os.path.join(where, "elsewhere", ".git", "HEAD"), "ref: x\n")
+    _write(os.path.join(where, "elsewhere", "other.npk"), "mod:other;\n")
+    seen = len(checks_mod.all_npk(where))
+    pruned = checks_mod.nested_repos(where)
+    if seen != base_n:
+        problems.append(
+            "the whole-tree walk counted %d `.npk` with two nested "
+            "repositories present and %d without. A vendored checkout is not "
+            "this tree, and CI puts one at `.nitpick` (TM-146)."
+            % (seen, base_n))
+    for want in (".nitpick", "elsewhere"):
+        if want not in pruned:
+            problems.append(
+                "nested_repos did not name `%s`. The pruning must be REPORTED "
+                "or it is a silent skip, which is the thing V-1b is about.\n"
+                "      it named: %s" % (want, pruned or "nothing"))
+    # AND THE CONTROL: an ordinary directory is not pruned.
+    _write(os.path.join(where, "ordinary", "keep.npk"), "mod:keep;\n")
+    if "ordinary" in checks_mod.nested_repos(where):
+        problems.append(
+            "nested_repos pruned an ORDINARY directory, so its pruning above "
+            "is not evidence about a vendored checkout.")
+    if len(checks_mod.all_npk(where)) != base_n + 1:
+        problems.append(
+            "the walk did not pick up a `.npk` in an ordinary directory, so "
+            "the pruning is wider than a nested repository.")
     return problems
 
 

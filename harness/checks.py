@@ -930,6 +930,46 @@ def check_specs_current(tree, **_):
 # defect this check exists to prevent, one level up.
 WALK_SKIP = {".git", ".internal", "build", "__pycache__"}
 
+# AND A NESTED REPOSITORY IS NOT THIS TREE (TM-146). Found by CI's FIRST RUN,
+# which is the only place it could be found: `.github/workflows/ci.yml` checks
+# the pinned compiler out at `<workspace>/.nitpick`, because `actions/checkout`
+# cannot place a `path:` outside the workspace. Every whole-tree sweep here
+# then walked the entire compiler -- hundreds of `.npk` reported as
+# "unowned .npk", `npk_total` wrong by hundreds, and `run_parse` putting the
+# compiler's own source in front of `npkc` one file at a time.
+#
+# The rule is by SHAPE and not by name, because the next tool checked out
+# beside it will not be called `.nitpick`: a directory holding a `.git` entry
+# is a separate repository and is not this tree. `.nitpick` is named as well,
+# so a checkout made without `.git` (an export, a tarball) is caught too.
+#
+# AND THE PRUNING IS NEVER SILENT. `nested_repos()` returns what was pruned and
+# `run.py` prints it beside the denominator, because "78 files, 1 nested
+# repository pruned" and "78 files" are different statements and only the first
+# can be checked (V-1b).
+VENDORED = {".nitpick"}
+
+
+def _is_nested_repo(path, name):
+    return name in VENDORED or os.path.exists(os.path.join(path, ".git"))
+
+
+def nested_repos(root):
+    """Directories pruned as separate repositories, repo-relative and sorted."""
+    out = []
+    for dirpath, dirs, _names in os.walk(root):
+        keep = []
+        for d in sorted(dirs):
+            if d in WALK_SKIP:
+                continue
+            full = os.path.join(dirpath, d)
+            if _is_nested_repo(full, d):
+                out.append(os.path.relpath(full, root).replace(os.sep, "/"))
+            else:
+                keep.append(d)
+        dirs[:] = keep
+    return sorted(out)
+
 # `[[sweep: name=N]]`. Deliberately ugly, deliberately greppable, and it
 # renders as nothing in markdown.
 _SWEEP_MARK = re.compile(r"\[\[sweep:\s*([a-z_]+)\s*=\s*(-?\d+)\s*\]\]")
@@ -937,11 +977,19 @@ _SWEEP_MARK = re.compile(r"\[\[sweep:\s*([a-z_]+)\s*=\s*(-?\d+)\s*\]\]")
 _TAGGABLE = (".md", ".py", ".toml", ".yml", ".yaml", ".npk", ".txt")
 
 
+def _walk(root):
+    """`os.walk` with this repository's pruning: skipped dirs and nested repos."""
+    for dirpath, dirs, names in os.walk(root):
+        dirs[:] = sorted(d for d in dirs
+                         if d not in WALK_SKIP
+                         and not _is_nested_repo(os.path.join(dirpath, d), d))
+        yield dirpath, dirs, names
+
+
 def all_npk(root):
     """Every `.npk` in the tree, repository-relative, sorted. ONE walk."""
     found = []
-    for dirpath, dirs, names in os.walk(root):
-        dirs[:] = sorted(d for d in dirs if d not in WALK_SKIP)
+    for dirpath, _dirs, names in _walk(root):
         for n in sorted(names):
             if n.endswith(".npk"):
                 found.append(os.path.relpath(os.path.join(dirpath, n), root)
@@ -1026,8 +1074,7 @@ def check_denominators(tree, extra=None, **_):
     """
     known = denominators(tree, extra)
     problems, tagged, files_seen = [], 0, 0
-    for dirpath, dirs, names in os.walk(tree):
-        dirs[:] = sorted(d for d in dirs if d not in WALK_SKIP)
+    for dirpath, _dirs, names in _walk(tree):
         for n in sorted(names):
             if not n.endswith(_TAGGABLE):
                 continue

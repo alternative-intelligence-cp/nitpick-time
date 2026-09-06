@@ -3321,3 +3321,69 @@ is gone; a whole-file one is a hole with no expiry condition at all.
 machine-readable shape, which is a change to that document's form. `TESTING.md`
 V-14e carries it as **cycle 0.1's**, with V-1a's arithmetic as the belt until
 then — that arithmetic is what caught the missing row (C2).
+
+---
+
+### TM-146 — CI's FIRST RUN found two defects nothing on this machine could: the whole-tree walk enters the compiler checkout, and the log capture never ran
+**2026-09-06, cycle 0.0.6, after the close commit was pushed. Amends
+`harness/checks.py`'s walk, `.github/workflows/ci.yml`'s harness step, and adds
+a self-check case. Not from the audit — from the run.**
+
+**The push that closes cycle 0.0 was this repository's first CI run**, run
+[`34014136095`](https://github.com/alternative-intelligence-cp/nitpick-time/actions/runs/34014136095)
+on `f950ae4`. **It went red**, and that is the finding rather than a failure of
+the close: the acceptance item had said *"written and validated locally, NOT
+YET SEEN GREEN"* since cycle 0.0.1, and TM-140 had just fixed two things that
+could only bite there. Two more were waiting.
+
+**Defect 1 — a nested repository is not this tree, and every sweep walked one.**
+`.github/workflows/ci.yml` checks the pinned compiler out at
+`<workspace>/.nitpick`, because `actions/checkout` cannot place a `path:`
+outside the workspace. `WALK_SKIP` was `{.git, .internal, build, __pycache__}`,
+so **every whole-tree sweep in this harness then walked the entire compiler**:
+`check_expect_headers` reports hundreds of *"unowned .npk"*, `check_denominators`
+is wrong by hundreds, and `run_parse` puts the compiler's own source in front of
+`npkc` one file at a time. Reproduced here by creating `.nitpick/` with two
+`.npk` in it: `all_npk` went 78 → 80 and `check_denominators` reported four
+problems.
+
+**The rule is by SHAPE and not only by name**, because the next tool checked out
+beside it will not be called `.nitpick`: **a directory holding a `.git` entry is
+a separate repository and is not this tree.** `.nitpick` is named as well, so a
+checkout made without `.git` — an export, a tarball — is caught too.
+
+**And the pruning is never silent.** `nested_repos()` returns what was pruned
+and the step-4 line prints it beside the denominator, because *"78 files, 1
+nested repository pruned"* and *"78 files"* are different statements and only
+the first can be checked (V-1b). A skip nobody can see is the shape this whole
+cycle is about.
+
+**Defect 2 — the log capture had never run, and its comment said it had.**
+The harness step opens `set -uo pipefail` under a comment reading *"NOT
+`set -e`: the runner's exit status is CAPTURED"*. **GitHub's default shell for a
+`run:` block is `/usr/bin/bash -e {0}`** — `-e` is already on when the script
+starts and `set -uo pipefail` does not clear it. So when the harness exited 1,
+the shell died on that line: `status=$?` never ran, `cat "$log"` never ran, and
+the step reported **exit 1 with no output at all**. Diagnosing defect 1 needed
+the log the mechanism existed to print. `set +e` is now explicit.
+
+**Both are the class this cycle has been finding all day — a mechanism whose
+description is wider than its behaviour — and NEITHER was reachable from this
+machine.** The audit swept 165 files and could not have found them; the harness
+is green here and stays green. **They are what a first CI run buys**, and they
+are the argument for the ecosystem's rule that a cycle pushes at its close
+rather than at its convenience: the two defects had been sitting in a workflow
+that had been "written and validated locally" for five subcycles.
+
+*Alternatives declined:*
+
+- **Check the compiler out outside the workspace.** `actions/checkout` refuses a
+  `path:` outside `$GITHUB_WORKSPACE`; a hand-rolled `git clone` into
+  `$RUNNER_TEMP` would work and would move the pin assertion off the action
+  that guarantees it. The tree should be robust to a vendored checkout anyway —
+  a developer with the compiler cloned beside their work has the same problem.
+- **Add `.nitpick` to `.gitignore` and walk `git ls-files`.** It IS effectively
+  ignored, and the walk is deliberately not `git ls-files`: the sweep's whole
+  value is that it finds a `.npk` nobody committed, which is how the
+  `tests/probe/defect/missing_failsafe/` files were found with no marker at all
+  (TM-115).

@@ -50,8 +50,10 @@
 # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
 # V-15): SEVEN of V-14's eight faults planted in scratch trees -- case 6 is
 # `PEND` until cycle 0.5 and prints as pending rather than passing -- each
-# requiring a RED run that names it AND a green control beside it; then ten
-# planted violations across the tree checks; then the S-6 arm generator diffed
+# requiring a RED run that names it AND a green control beside it; then one
+# planted violation per tree check -- more than one where a check has two
+# spellings or a branch no plant can express -- each with a clean control
+# beside it; then the S-6 arm generator diffed
 # against the compiler's own `NITPICK-REACH-003` identity list; then the
 # verdict mechanisms of TM-137 and TM-141 driven red. It runs FIRST and its
 # failure is fatal, so
@@ -255,9 +257,25 @@ jobs:
       # grew from four hardcoded checks to nine stages underneath it.
       - name: Run the harness
         run: |
-          # NOT `set -e`: the runner's exit status is CAPTURED, on its own line,
-          # with no pipeline between it and the command. `$?` after a pipeline
-          # is the last command's status, and a `| tee` here would report tee's.
+          # `set +e` EXPLICITLY, AND IT IS NOT REDUNDANT (TM-146). The runner's
+          # exit status is CAPTURED, on its own line, with no pipeline between
+          # it and the command -- `$?` after a pipeline is the last command's
+          # status, and a `| tee` here would report tee's.
+          #
+          # THIS LINE READ `set -uo pipefail` AND THE COMMENT SAID "NOT
+          # `set -e`", AND THE COMMENT WAS FALSE. GitHub's default shell for a
+          # `run:` block is `/usr/bin/bash -e {0}` -- `-e` is already on when
+          # the script starts, and `set -uo pipefail` does not clear it. So on
+          # the FIRST CI run this repository ever had, the harness exited 1 and
+          # the shell died on that line: `status=$?` never ran, `cat "$log"`
+          # never ran, and the step reported exit 1 with NO OUTPUT AT ALL. The
+          # log capture this block exists for did not exist.
+          #
+          # It is the same defect this workflow is full of comments about --
+          # a mechanism whose description is wider than its behaviour -- and it
+          # could only be found by running, which is why the first run was
+          # worth having even though it was red.
+          set +e
           set -uo pipefail
           log="$RUNNER_TEMP/harness.log"
           python3 harness/run.py > "$log" 2>&1

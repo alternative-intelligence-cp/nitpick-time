@@ -292,9 +292,14 @@ def check_expect_headers(rep, root, exempt_list=None):
         except stages.MarkerError as err:
             bad.append((rel, err))
 
+    nested = checks_mod.nested_repos(root)
     rep.say("[4/%d] expect- header sweep -- %d .npk in the tree = %d src/ + %d "
-            "tests/ + %d elsewhere" % (STEPS, len(files), len(in_src),
-                                       len(in_tests), len(orphan)))
+            "tests/ + %d elsewhere%s"
+            % (STEPS, len(files), len(in_src), len(in_tests), len(orphan),
+               "" if not nested else
+               "; %d nested repositor%s pruned: %s"
+               % (len(nested), "y" if len(nested) == 1 else "ies",
+                  ", ".join(nested))))
     rep.say("      of the %d under tests/: %d with a valid header, %d exempt of "
             "%d named, %d rejected" % (len(in_tests), len(covered), len(exempt),
                                        len(exempt_list), len(bad)))

@@ -60,15 +60,21 @@ cycle 0.0 paid most for.**
 **What 0.0.3 added, and the first item is the one that matters.**
 `harness/selfcheck.py` runs **first** in every full invocation (`TESTING.md`
 V-15) and plants **seven** of V-14's eight faults — case 6 is `PEND` until 0.5
-and prints as pending — plus 14 tree-check violations, three arm-bill
-specimens, and (since 0.0.6) the verdict mechanisms of TM-137 and TM-141,
-requiring a red run that names each and a green control beside it. *(Every one
-of those numbers is now derived from the code rather than typed here; "eight
-faults" was printed on every run for three cycles and only the cycle Gate had
-it right — C3.)*
+and prints as pending — plus at least one violation per tree check, three
+arm-bill specimens, and (since 0.0.6) the verdict mechanisms of TM-137 and
+TM-141 and the whole-tree walk's nested-repository pruning (TM-146). Each
+requires a red run that names it and a green control beside it, and the run
+prints both counts. *(The counts are derived from the code rather than typed
+here; "eight faults" was printed on every run for three cycles and only the
+cycle Gate had it right — C3.)*
 Before it, three of the harness's checks had been commissioned by hand and that
 was three checks, not a runner. Then: the `parse`, `check`, `golden` and `sweep`
-stages; `--quick`; and nine live tree checks.
+stages; `--quick`; and nine live tree checks — **thirteen today**: plus
+`check_exemptions_live` (0.0.5, TM-137), `check_denominators` and
+`run_defect_corpus` (0.0.6, TM-141/TM-142), and `check_expect_headers`, which
+existed all along and **was never in the count** — the row `TESTING.md` V-14c's
+"every check is commissioned" was false about, found by V-1a's own arithmetic
+not closing.
 
 ## Before starting a session here
 

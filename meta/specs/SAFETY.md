@@ -71,7 +71,7 @@ import-scoped:
 
 | Module | Declares | Identity arms a consumer importing only this owes | TOTAL arms, MEASURED at pin `c3bdae2` (at `aaffb87`) |
 |---|---|---|---|
-| `ntime/lib.npk` — **the umbrella**, the import a consumer writes | — (re-exports) | one arm today (`cal`'s) | **12** (—) — generated since cycle 0.1.0b (TM-155): the floor of six, `cal.ETimeValue`, the four arithmetic arms, and `DecreasesViolated` from `src/core/bytes.npk`'s measured loops |
+| `ntime/lib.npk` — **the umbrella**, the import a consumer writes | — (re-exports) | one arm today (`cal`'s) | **13** (—) — generated since cycle 0.1.0b (TM-155): the floor of six, `cal.ETimeValue`, the four arithmetic arms, `DecreasesViolated` from `src/core/bytes.npk`'s measured loops, and — since cycle 0.1.0c (TM-156, TM-159) — `LimitViolated` from the `ListLen` on `src/core/`'s sealed lengths. It was **12** until then |
 | `ntime/core.npk` | — | nothing | **6** (4) — the floor; `core` is not yet reachable as its own public module, and its code is billed through the umbrella's row |
 | `ntime/cal.npk` | `ETimeValue` | one arm | **11** (9) — measured 2026-09-06 and 2026-09-25 |
 | `ntime/span.npk` | — (raises `cal`'s) | one arm | placeholder; **6** (4) today, and the number is meaningless until cycle 0.2 gives the module a body |
@@ -146,8 +146,12 @@ reachability analysis, 61 of them, before writing them here. TM-155.)*
 | plain-integer `+ - *` | `IntOverflow` | cycle 0.0.0 |
 | an index | `OutOfBounds` | cycle 0.0.0 |
 | **a loop's `decreases` clause** | **`DecreasesViolated`** | cycle 0.1.0b, at `c3bdae2`: 20 of this tree's 61 roots, every one through this tree's own loops (the compiler's D-304) |
+| **a `limit<R>` on a field** (or on a parameter or a local) — armed at its WRITES | **`LimitViolated`** | cycle 0.1.0c, at `c3bdae2`: the nine roots that consume `src/core/vec.npk` or `bytes.npk`, whose lengths carry the prelude's `ListLen` since that cycle (the compiler's D-308; TM-156, TM-159) |
 
 `unbounded`, the other clause D-304 admits, checks nothing and arms nothing.
+The generator's `limit` rule over-approximates in one direction: a `limit<`
+on a field its module never writes would be billed and not demanded, and
+`check_failsafe_arms` reports that in both directions (TM-159).
 
 A miniature of `cal` that declares **no error at all** cost an importing program
 whose own text contains no arithmetic **four extra arms**, and the twin that
@@ -459,6 +463,16 @@ added by decision when a consumer exists.
   fails on any `.items[` outside `src/core/vec.npk` or any `.ptr[` outside
   `src/core/bytes.npk`. That check belongs on cycle 0.0.3's list beside
   `check_layering`.
+  *(Amended at cycle 0.1.0c, TM-156: **for `Vec` the pair is now the
+  LANGUAGE's rule, and for `Bytes` it is still the library's.** `Vec<T>.items`
+  is `hidden` — the compiler's D-314 — so outside `src/core/vec.npk` the bare
+  pointer cannot even be read: `v.items[0i64]` is `NITPICK-TYPE-080` at compile
+  time (`tests/probe/probe16b_vec_items_read_refused.npk`), and the tree check's
+  `.items[` half is a belt behind the compiler. `Bytes`' `body` is `sealed`, not
+  hidden, and D-313 lets a write THROUGH a sealed pointer field pass, so a
+  consumer's `b.body.ptr[i] = x` still compiles and runs, unchecked, measured
+  at `c3bdae2` — `check_raw_index`'s `.ptr[` half covers `src/` and nothing
+  covers a consumer. That gap is the workbench's question 9, with the author.)*
 - **Signedness is half the check.** `count` is `int64`; an index derived from a
   narrower signed field can be negative, `i < count` accepts it, and the read
   goes backwards off the block. Every accessor checks `0 <= i` as well as
@@ -536,6 +550,19 @@ and nothing here had ever run an out-of-range `Vec` index.
 > is compelled to write an arm for a trap that *cannot fire*, while the read it
 > is meant to protect returns a wrong value in silence. Adding the guard makes
 > that arm honest; it does not add it.
+
+*(Amended at cycle 0.1.0c, TM-156.)* **Since `items` is `hidden`, this rule's
+guarded accessors are the ONLY index into a `Vec` another module can spell** —
+the bare-pointer read `probe13d` makes on its own look-alike `Vec` is
+`NITPICK-TYPE-080` on this library's, measured at `c3bdae2`. Inside
+`src/core/vec.npk` the rule is still this document's discipline, since the
+declaring module sees its own hidden field. For `Bytes` nothing changed at the
+accessors, and a consumer can still index `body.ptr` directly (S-17b's
+amendment above). And `count`, `cap` and `len` now carry the prelude's
+`ListLen`, checked after every write: in a plain build that is one more check
+correct code never trips, and in the verified build it makes every read of the
+lengths a fact the slice producers' `bounds` rows can use (S-4b's `limit` row
+is the arm it costs).
 
 **And the nuance that makes this a claim about *this* library.** There is **no
 compiler-prelude `Vec<T>` at all.** No `struct:Vec` exists anywhere in the

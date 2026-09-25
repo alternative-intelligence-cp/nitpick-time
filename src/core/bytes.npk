@@ -49,6 +49,31 @@
 // `len` (or over `cap` where the target is the free space), and the guard
 // becomes the compiler's own (TM-129, S-17c). `check_raw_index` fails the run
 // on a `.ptr[` anywhere but this file.
+//
+// SINCE CYCLE 0.1.0c (TM-156) BOTH FIELDS ARE `sealed`, AND `len` CARRIES THE
+// PRELUDE'S `ListLen`. A consumer may READ `b.len` and `b.body.cap` and may
+// write neither: `b.len = 2i64` outside this module is `NITPICK-TYPE-079`
+// (`../../tests/probe/probe16c_bytes_len_write_refused.npk`), and so is any
+// replacement of `body`. `len` is checked against `ListLen` after every write,
+// in every build, trapping `LimitViolated` -- an arm every consumer of this
+// module now owes, and one only this file can ever trip, since nothing outside
+// can write the field. `body` is sealed and NOT hidden, because tests and the
+// umbrella's consumers read `b.body.cap`, and hiding it would refuse them.
+//
+// WHAT THE SEAL DOES NOT STOP, SAID HERE SO NOBODY READS IT AS MORE THAN IT IS.
+// `sealed` keeps the FIELD's own bytes -- the `buffer` header -- and the
+// compiler's D-313 says in as many words that a write THROUGH a sealed pointer
+// field writes the pointee and passes. So a consumer can still write
+// `b.body.ptr[i] = x`. Measured at `c3bdae2`: a consumer's `b.body.ptr[0i64] =
+// 65u8` compiles, links and runs, and `bytes_view` then reads 65 where the sink
+// had written 97; and the index is a bare pointer's (TM-108), so a write at
+// `b.body.cap` -- one byte past the allocation -- runs at exit 0 with no trap.
+// The seal protects `len` and the header; it does not protect the bytes.
+// `hidden` on `body`, plus an accessor for what the tests read, is the
+// narrowing that would -- the workbench's question 9, with the author, and not
+// this file's to take by itself (cycle 0.1.0c's record). A whole-struct copy
+// is NOT a second door here, as it is for `Vec<T>`: `Bytes:c = b;` is refused
+// `NITPICK-TYPE-046`, because a `buffer` field makes the struct move-only.
 mod:bytes;
 
 use "./limits.npk".*;
@@ -57,7 +82,13 @@ use "./limits.npk".*;
 // because `buffer_new(n)` gives `len == cap == n` -- the buffer's own `len` is
 // its allocation size, not the number of bytes written, so this struct carries
 // the written count itself.
-pub struct:Bytes = { buffer:body; int64:len; };
+//
+// THE QUALIFIERS ARE CYCLE 0.1.0c's (TM-156), in the one order that parses --
+// `sealed limit<ListLen> int64:len`; the reverse is `NITPICK-PARSE-001`, as
+// `vec.npk` records. The field is `body` -- the workbench board's item 13
+// calls it `buf`, which is the sibling `nitpick-regex`'s name. `bytes_reserve`'s
+// `b.body = move(fresh);` is a write from INSIDE this module and stays legal.
+pub struct:Bytes = { sealed buffer:body; sealed limit<ListLen> int64:len; };
 
 // `ensures answer.len == 0 && answer.body.cap >= 1`
 pub func:bytes_init = Bytes(int64:cap) never fails {
@@ -148,6 +179,10 @@ pub func:bytes_extend_str = NIL(Bytes->:b, string:src) never fails {
 // accepted by the frontend and cannot be lowered at this pin
 // (`NITPICK-EMIT-002`, `../../tests/probe/defect/fixed_array_len/`, O-N18). The
 // bound is `NTIME_DIGITS_MAX`, which is the better spelling regardless.
+// (Dated note, cycle 0.1.0c: "at this pin" was `aaffb87`'s. O-N18 LANDED at
+// `c3bdae2` -- `fixed_array_len/case1` links and runs at exit 0 and is
+// asserted so (TM-154) -- so the reason given is history and the named bound
+// is now the whole reason. Found by reading; 0.1.0b's prose sweep missed it.)
 //
 // AND SINCE CYCLE 0.0.6 THE ARRAY IS SIZED BY THAT NAME AND NOT BY `20` (D2).
 // It read `uint8[20]:digits` at both sites while `limits.npk` said *"and

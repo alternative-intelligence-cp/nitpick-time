@@ -1,4 +1,44 @@
-// expect-exit: 0
+// expect-error: NITPICK-TYPE-079
+//
+// PROBE 15 — CAN A CONSUMER BUILD AN UNREAL `CivilDate` BY STRUCT LITERAL,
+// BYPASSING THE VALIDATING CONSTRUCTOR? NO, SINCE COMPILER `c3bdae2`. From
+// cycle 0.1.0 to 0.1.0b this file was the standing proof that it could; from
+// cycle 0.1.0c it is the REGRESSION TEST of the seal that stopped it.
+//
+// ===========================================================================
+// NOW — refused at `c3bdae2` (cycle 0.1.0c, `CALENDAR.md` C-8c, TM-157)
+// ===========================================================================
+//
+// Every field of `CivilDate` is `sealed` (the compiler's D-313): read
+// anywhere, written only by code in `cal`. THE BODY BELOW IS UNCHANGED, and its
+// first statement is refused once for each field the literal names:
+//
+//   NITPICK-TYPE-079 …: `CivilDate.year` is `sealed` (D-313): it is read
+//   anywhere and written only by the module that declares `CivilDate`, and
+//   this struct literal is outside it -- call a function of that module,
+//   which keeps what the seal protects
+//   … and the same for `CivilDate.month` and `CivilDate.day` — three in all.
+//
+// THE REFUSAL OF THIS BODY IS THE ASSERTION. The marker names the code and the
+// harness requires the set of codes reported to EQUAL it (B-7), so a compiler
+// that stopped sealing these fields turns this file red by compiling it — and
+// one that refused it for any other reason turns it red by naming another
+// code. `probe16d` pins the other write form, a field assignment, and
+// `probe16e` the positive twin: reads still work, without which a compiler
+// that refused EVERY access to a sealed field would pass this file too.
+//
+// THIS IS THE DAY THE HEADER BELOW PREDICTED, and it arrived by the mechanism
+// it named: *"If a future compiler grows per-field visibility … this file stops
+// compiling — and that is the notification that C-8b can be narrowed and
+// `check_civil_literal` can be retired."* C-8c narrows C-8b, and TM-158
+// retires the check. The one route that remains is `wild` storage
+// reinterpreted by `=>!` — the language's opt-out for every checked property,
+// measured at `c3bdae2` in cycle 0.1.0c's record and stated in C-8c.
+//
+// ===========================================================================
+// WAS — the bypass, measured at `aaffb87` (cycle 0.1.0, TM-148). The header as
+// it stood, kept whole; its marker then read `expect-exit: 0`.
+// ===========================================================================
 //
 // PROBE 15 — CAN A CONSUMER BUILD AN UNREAL `CivilDate` BY STRUCT LITERAL,
 // BYPASSING THE VALIDATING CONSTRUCTOR? YES. This file is the standing proof.

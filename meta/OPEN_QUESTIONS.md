@@ -250,7 +250,28 @@ than remembered.
 **What is deliberately NOT assumed while this is open.** Probes 09 and 10 — the
 borrow-edge probes, which are what found this — are **held**, because their
 shape is exactly what a "block" answer would change.
-### O-N8 — `npkc` merges a sibling file when a root file's `mod:` name mismatches
+### ~~O-N8 — `npkc` merges a sibling file when a root file's `mod:` name mismatches~~ — **DISCHARGED: FIXED since pin `94874ce` by the compiler's D-248, verified here 2026-09-25 at every kept pin (TM-160)**
+
+> **Discharged on this repository's own measurement, and the entry had been
+> stale at four of this repository's five pins.** The six-line pair at the foot of
+> [`../tests/probe/defect/README.md`](../tests/probe/defect/README.md), `npkc
+> beta.npk` with the sibling present, at every pin this workbench keeps:
+>
+> | Pin | Verdict |
+> |---|---|
+> | `950bb1d` — cycle 0.0.0, where this was found | exit 0, `.ll` written with **two** `define i32 @main` — the defect |
+> | `94874ce`, `0dfddac`, `aaffb87`, `3d15ac9`, `c3bdae2` | exit 1, no `.ll`, **`NITPICK-RESOLVE-012`** — *"a file's header names the file"* |
+>
+> That is the ask below, met by the compiler's **D-248**, which landed at its
+> 1.5.1b step 1 and reached this repository with the `94874ce` re-pin on
+> 2026-09-04. Without the sibling the refusal is the same code, and the
+> matching-header control compiles. This entry went on describing a live
+> defect through three more re-pins after that one (`3d15ac9` was never this
+> repository's pin); cycle 0.1.0b's note below was the first to
+> see it, and the workbench registry struck it on 2026-09-25. The compiler's
+> own suite pins the refusal (`tests/modules/rejection/header_mismatch.npk`).
+> The entry is kept as written.
+
 **Met by accident at cycle 0.0.0, 2026-09-03**, while staging probe 04 under
 the wrong filename, and it is why a one-second compile appeared to take three
 hundred. A root file whose `mod:` name differs from its basename is accepted

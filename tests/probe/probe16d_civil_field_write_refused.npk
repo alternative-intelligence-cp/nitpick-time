@@ -1,0 +1,53 @@
+// expect-error: NITPICK-TYPE-079
+//
+// PROBE 16d — A CONSUMER CANNOT OVERWRITE A FIELD OF A VALID `CivilDate`. The
+// second write form of the seal `probe15` pins the first of.
+//
+// ASKS: given a real date from `civil_date`, may a consumer turn it into an
+// unreal one by assigning a field — month 13, here?
+//
+// MATTERS BECAUSE `probe15` refuses only the STRUCT LITERAL. A seal that
+// stopped construction and allowed mutation would let every `CivilDate` the
+// library ever returned be edited into February 30th afterwards, and C-8c's
+// guarantee — the TYPE holds only real dates outside `cal` — would be a
+// guarantee about construction alone.
+//
+// ANSWER, measured at `c3bdae2` (cycle 0.1.0c, C-8c, TM-157): NO. Every field
+// of `CivilDate` is `sealed` (the compiler's D-313), so `a.month = 13u8` below
+// is `NITPICK-TYPE-079`, exactly once. THE REFUSAL IS THE ASSERTION (B-7).
+// `probe16e` reads the same field from outside, which is the half that must
+// still work.
+mod:probe16d_civil_field_write_refused;
+
+use "../../src/cal/cal.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    CivilDate:a = civil_date(2026i64, 9i64, 25i64) ?! ETimeValue;
+    a.month = 13u8;
+    exit 0i32;
+};
+
+// A SUPERSET of what `NITPICK-REACH-002` asks, deliberately (`SAFETY.md` S-6b,
+// constraint 3: a superset compiles). If a later compiler reordered its phases
+// so that the reach analysis ran before the check this file asserts, a
+// failsafe naming exactly the demanded arms could add a stray `REACH-002` to
+// the refusal; this one cannot.
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
+        (LimitViolated)     { exit 109i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

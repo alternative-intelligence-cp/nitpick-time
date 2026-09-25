@@ -191,7 +191,7 @@ what kind of test it is. This is a deliberate divergence from `npkg`'s `kind`.**
 A `[[test]]` selects by **directory** and `kind` is per entry, so one entry over
 `tests/probe/` cannot be true about both the 26 files carrying `expect-exit:`
 <!-- [[sweep: probe_exit=26]] -->
-and the 8 carrying `expect-error:` (O-X7). The runner therefore dispatches per
+and the 13 carrying `expect-error:` (O-X7; 8 until cycle 0.1.0c). The runner therefore dispatches per
 file: `expect-error:` present makes it a **refusal** member — `npkc` must fail
 and the *set* of codes must equal the set named (B-7) — and `expect-exit:`
 present makes it a **run** member. **Both markers is a failure; neither is a
@@ -200,8 +200,8 @@ membership rules inside a stage, so this is an extension rather than a new
 mechanism; ours refuses where the compiler's skips, because a skip is how a
 suite reports green while checking nothing. **The migration cost is stated
 here** so the day `npkg` can build a library (O-N1, O-B1) it is a known item:
-either `npkg` grows the same rule, or the seven files move to a directory of
-their own.
+either `npkg` grows the same rule, or the refusal files — thirteen at cycle
+0.1.0c, seven when this rule was written — move to a directory of their own.
 
 **Four further stages exist upstream and are deliberately absent here**, each
 to be added by the cycle that can honour it rather than sit dormant:
@@ -267,13 +267,14 @@ expectations name.
 `NITPICK-LEX-*` comes from the compiler's `src/frontend/diag_codes.npk` and
 `NITPICK-PARSE-*` from `parse_codes.npk`; every other family belongs to a later
 phase, so a file reported with one of those **necessarily parsed**. That is what
-lets the stage cover the 19 files here that must not compile
-<!-- [[sweep: tests_error=19]] --> — they are
+lets the stage cover the 24 files here that must not compile
+<!-- [[sweep: tests_error=24]] --> — they are
 refused at `PARSE-001`, `LEX-004`, `PARSE-002`, `TYPE-009`, `TYPE-046`,
-`BORROW-001`, `BORROW-012`, `REACH-002` and `REACH-003`, and every family after
-the first three runs only on something that parsed. Re-measured at pin
-`c3bdae2`, cycle 0.1.0b: **83 files = 64 parse cleanly + 17 parse and are
-refused later + 2 do not parse** <!-- [[sweep: npk_total=83]] -->, and the two
+`TYPE-079`, `TYPE-080`, `BORROW-001`, `BORROW-012`, `REACH-002` and
+`REACH-003`, and every family after the first three runs only on something
+that parsed. Re-measured at pin `c3bdae2`, cycle 0.1.0c: **88 files = 64 parse
+cleanly + 22 parse and are refused later + 2 do not parse**
+<!-- [[sweep: npk_total=88]] -->, and the two
 are `probe02d_wide_literal_refused.npk` (LEX-004, PARSE-002) and
 `probe14_error_payload_refused.npk` (PARSE-001, TM-147). It read
 `50 = 36 + 13 + 1` for three subcycles after the tree stopped being that size,
@@ -281,7 +282,10 @@ which is TM-142; and at `aaffb87`, cycle 0.1.0, it read `66 + 15 + 2`, with 16
 files that must not compile and `EMIT-002` in place of `TYPE-046`. The
 difference is O-N18 and O-N19 landing (TM-154): three `generic_owning_copy`
 files became asserted `TYPE-046` refusals, and `fixed_array_len/case1` stopped
-being refused at all.
+being refused at all. At cycle 0.1.0b it read `83 = 64 + 17 + 2` with 19 that
+must not compile; cycle 0.1.0c's seals (TM-156, TM-157) turned `probe15` into a
+`TYPE-079` refusal and added four refusal probes and one that runs, which is
+the `+ 5` in each of the two sums.
 
 **AND THE TWO NUMBERS IN THAT PARAGRAPH ARE DIFFERENT SETS** — worth one
 sentence, because earlier versions had two sixteens, and before that two
@@ -293,7 +297,8 @@ rooted that produced a non-parse diagnostic*, whatever their header says. At
 `fixed_array_len/case1`, refused `EMIT-002` with no marker because it was
 exempt — so 16 and 15 overlapped in fourteen. At `c3bdae2` that file compiles,
 and the second set is exactly the first minus its two files that do not parse
-at all: **19 = 17 + 2**. **Ask what was counted, not who miscounted.**
+at all: **19 = 17 + 2**, and **24 = 22 + 2** at cycle 0.1.0c, whose five new
+refusals are in both sets. **Ask what was counted, not who miscounted.**
 
 **Rule B-8 — the harness is itself tested.** A self-check feeds it wrong
 expectations and requires it to report every one as a failure. A suite that
@@ -355,11 +360,19 @@ and the trap error identities. Every module has it bound with no import.
 **Rule B-12 (TM-005).** `ntime` declares its own storage primitives, in
 `src/core/`:
 
-- **`Vec<T>`** — `{ wild T->:items; int64:count; int64:cap; }`, the compiler's
-  `List<T>` in shape because that shape is right and has been exercised across
-  twenty-two families, and **ours** because a library must not import a
-  compiler's internals (B-10).
-- **`Bytes`** — an owning byte sink over `buffer`, with `push`, `extend`,
+- **`Vec<T>`** — `{ hidden wild T->:items; sealed limit<ListLen> int64:count;
+  sealed limit<ListLen> int64:cap; }`, the compiler's `List<T>` in shape
+  because that shape is right and has been exercised across twenty-two
+  families, and **ours** because a library must not import a compiler's
+  internals (B-10). *(The qualifiers are cycle 0.1.0c's, TM-156, and the
+  prelude `List`'s own — the compiler's D-313, D-314 and D-308: `items` is
+  touched by nothing outside `vec`, the two lengths are read anywhere and
+  written only there, and each length is checked against the prelude's
+  `ListLen` after every write. Until then the shape read `{ wild T->:items;
+  int64:count; int64:cap; }`.)*
+- **`Bytes`** — `{ sealed buffer:body; sealed limit<ListLen> int64:len; }`
+  since cycle 0.1.0c (TM-156; `body` sealed and not hidden, because its `cap`
+  is read across modules) — an owning byte sink over `buffer`, with `push`, `extend`,
   `extend_str`, `put_uint` (decimal, allocation-free) and `take`. Every
   formatter writes into one. It exists because `string_concat` allocates per
   call and formatting a million rows should allocate once — the compiler

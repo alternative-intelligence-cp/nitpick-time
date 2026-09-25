@@ -73,6 +73,10 @@ mod:lib;
 // where it is written. The restriction stands on the one reason left: four of
 // the nine operations owe an element drop at an owning `T` and perform none
 // (`SAFETY.md` S-18d).
+//
+// SINCE CYCLE 0.1.0c (TM-156) its `items` is `hidden` and its `count` and `cap`
+// are `sealed` under the prelude's `ListLen`: a consumer reads the two lengths
+// and touches nothing else, and owes `LimitViolated` for the check on them.
 pub use "./core/vec.npk".Vec;
 pub use "./core/vec.npk".vec_init;
 pub use "./core/vec.npk".vec_reserve;
@@ -94,6 +98,11 @@ pub use "./core/vec.npk".vec_free;
 // `put_int`, `reserve` -- and reading it afterwards returns the allocator's
 // poison, not the sink's bytes. Its header states the rule; this line is here
 // because a public surface is where a consumer looks first.
+//
+// SINCE CYCLE 0.1.0c (TM-156) `body` and `len` are `sealed` and `len` carries
+// `ListLen`. The seal keeps the header, NOT the bytes: a write THROUGH
+// `b.body.ptr` still passes (D-313), which `bytes.npk`'s header measures and
+// the workbench's question 9 carries to the author.
 pub use "./core/bytes.npk".Bytes;
 pub use "./core/bytes.npk".bytes_init;
 pub use "./core/bytes.npk".bytes_reserve;
@@ -167,6 +176,13 @@ pub use "./cal/cal.npk".Month;
 // -- measured at pin `aaffb87`, it compiles, links and runs at exit 0. The
 // guarantee is about every value THIS LIBRARY PRODUCES, and `check_civil_literal`
 // is what keeps the library itself inside it.
+//
+// SINCE CYCLE 0.1.0c THAT PARAGRAPH IS HISTORY, and C-8c (TM-157) is the rule:
+// every field of `CivilDate` and `CivilTime` is `sealed`, so the literal above
+// is `NITPICK-TYPE-079` in every module but `cal` (measured at `c3bdae2`), the
+// guarantee is the TYPE's again but for `wild` storage reinterpreted by `=>!`,
+// and `check_civil_literal` is retired because the compiler now checks what it
+// checked (TM-158).
 pub use "./cal/cal.npk".civil_date;
 pub use "./cal/cal.npk".civil_time;
 

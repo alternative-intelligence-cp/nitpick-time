@@ -1,0 +1,56 @@
+// expect-error: NITPICK-TYPE-080
+//
+// PROBE 16b — A CONSUMER CANNOT EVEN READ `Vec<T>.items`. The hidden bare
+// pointer, asserted by a refusal.
+//
+// ASKS: may code outside `src/core/vec.npk` index a `Vec`'s `items` directly?
+//
+// MATTERS BECAUSE `items` is a `wild T->` — a BARE POINTER, which the language
+// does not bounds-check (TM-108, `SAFETY.md` S-17b): `probe13d` measured an
+// out-of-range read through one returning a planted value at exit 0. Until
+// cycle 0.1.0c the only thing keeping every index inside the guarded accessors
+// was `check_raw_index`, a tree check over `src/` that no consumer ever meets.
+//
+// ANSWER, measured at `c3bdae2` (cycle 0.1.0c, TM-156): NO. `items` is
+// `hidden` (the compiler's D-314): neither read nor written outside the
+// declaring module, so `v.items[0i64]` below is `NITPICK-TYPE-080`, exactly
+// once — and the body would otherwise run correctly, since index 0 is the
+// element just pushed, so the refusal is about ACCESS and not about the
+// index. THE REFUSAL IS THE ASSERTION (B-7). `probe16e` is the positive twin
+// for the fields that stay readable.
+mod:probe16b_vec_items_read_refused;
+
+use "../../src/core/vec.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    Vec<int64>:v = raw vec_init::<int64>(4i64);
+    drop vec_push(@v, 7i64);
+    int64:x = v.items[0i64];
+    drop vec_free(@v);
+    if (x != 7i64) { exit 3i32; }
+    exit 0i32;
+};
+
+// A SUPERSET of what `NITPICK-REACH-002` asks, deliberately (`SAFETY.md` S-6b,
+// constraint 3: a superset compiles). If a later compiler reordered its phases
+// so that the reach analysis ran before the check this file asserts, a
+// failsafe naming exactly the demanded arms could add a stray `REACH-002` to
+// the refusal; this one cannot.
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
+        (LimitViolated)     { exit 109i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

@@ -61,6 +61,7 @@ func:failsafe = int32(Error:e) {
         (WildLeak)       { exit 96i32; },
         (StackExhausted) { exit 106i32; },
         (MachineFault)   { exit 107i32; },
+        (LimitViolated)  { exit 109i32; },
         (*)              { exit 99i32; }
     }
     exit 9i32;

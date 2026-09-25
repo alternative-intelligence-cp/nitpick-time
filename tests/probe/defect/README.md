@@ -9,10 +9,22 @@ records what the behaviour used to be.
 | What | Where | Blocking? |
 |---|---|---|
 | **O-N4** — `npkc` is quadratic in the size of one declaration | this file, and `big_fixed_array_cost.npk` | **yes**, for cycles 0.0.5 and 0.5 |
-| **O-N8** — a `mod:`/basename mismatch merges a sibling file at exit 0 | the foot of this file | no |
+| ~~**O-N8** — a `mod:`/basename mismatch merges a sibling file at exit 0~~ — **FIXED since pin `94874ce` by the compiler's D-248 (TM-160)** | the foot of this file | no |
 | **O-N9** — a `uint8[]` view escapes its owning frame | [`view_escape/`](view_escape/README.md) | no — a conformance rule, subject to Q-5 |
 | **O-N10** — `derive(Eq)` on a payload enum will not compile; `derive(Ord)` is silently wrong | [`derive_payload_enum/`](derive_payload_enum/README.md) | no — one type exposed, no rule needs it |
 | **O-N11** (accepted — the compiler's DEF-5) — a program with `main` and no `failsafe` compiles at exit 0 | [`missing_failsafe/`](missing_failsafe/README.md) | no — but it constrains cycle 0.0.3's harness |
+
+> **Read this table as cycle 0.0.0's, which is when it was written** (dated
+> note, cycle 0.1.0c). Its "Blocking?" column is the state at pin `950bb1d`,
+> and every defect in it has since been fixed and discharged here on this
+> repository's own measurement: O-N9 (TM-110), O-N10 (TM-111), O-N11 (TM-112),
+> O-N4 (re-measured at `aaffb87`, `../../../meta/OPEN_QUESTIONS.md`) and O-N8
+> (TM-160, the row above). Three later directories are not rows at all, and
+> each README carries its own status: [`generic_element_move/`](generic_element_move/README.md)
+> (O-N17, fixed at `aaffb87`, TM-136), [`generic_owning_copy/`](generic_owning_copy/README.md)
+> (O-N19) and [`fixed_array_len/`](fixed_array_len/README.md) (O-N18), both
+> fixed at `c3bdae2` (TM-154). Every reproduction that is a file is asserted by
+> its marker on every run (`run_defect_corpus`, TM-141).
 
 ---
 
@@ -251,7 +263,19 @@ with what `ntime` does in the meantime.
 
 ---
 
-## O-N8 — a second defect, met by accident
+## O-N8 — a second defect, met by accident — FIXED since pin `94874ce` (TM-160)
+
+> **DISCHARGED at cycle 0.1.0c, and it had been fixed at four of this
+> repository's five pins.** The
+> recipe below, run at every pin this workbench keeps (`npkc beta.npk` with
+> the sibling present): `950bb1d` — exit 0, `.ll` written with **two**
+> `define i32 @main`, the defect as found; `94874ce`, `0dfddac`, `aaffb87`,
+> `3d15ac9` and `c3bdae2` — exit 1, no `.ll`, **`NITPICK-RESOLVE-012`**, the
+> compiler's D-248 (*"a file's header names the file"*), which landed at its
+> 1.5.1b step 1 and reached this repository with the `94874ce` re-pin on
+> 2026-09-04. The same refusal without the sibling, and the matching-header
+> control compiles. The note below was the first to see it; this one says
+> since when. The section is kept as the record.
 
 > **At compiler `c3bdae2` the recipe below no longer reproduces** (measured at
 > cycle 0.1.0b, with the two new floor arms added to `ARMS` and without them):

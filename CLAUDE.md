@@ -7,7 +7,24 @@ Guidance for Claude Code sessions working in this repository.
 `ntime` — a date, time and time-zone library for **Nitpick**, the
 safety-critical systems language at `../../nitpick`.
 
-**Status, after cycle 0.1.0b: the adoption to compiler `c3bdae2`** (the close of
+**Status, after cycle 0.1.0c: the access properties.** `Vec<T>`'s `items` is
+`hidden` and its `count`/`cap` are `sealed limit<ListLen>`; `Bytes`' `body` and
+`len` are sealed and `len` carries `ListLen` (TM-156) — so outside `src/core/`
+the bare pointer cannot be named (`NITPICK-TYPE-080`) and the lengths cannot be
+written (`NITPICK-TYPE-079`). **Every field of `CivilDate` and `CivilTime` is
+sealed** (TM-157, `CALENDAR.md` C-8c): a consumer's struct literal or field
+write is `TYPE-079`, so C-8's guarantee is the TYPE's again for every module
+but `cal`, with `wild` storage reinterpreted by `=>!` the one opt-out.
+`check_civil_literal` is retired (TM-158), `probe15` is the seal's regression
+test, and `probe16`…`probe16e` pin the rest. **Nine roots owe `LimitViolated`**
+(109), and the umbrella's arm bill is **13**, generated with a `limit` rule
+(TM-159). **What the seal does not stop** is written where it bites: a
+consumer can still write THROUGH `b.body.ptr` (D-313), and a whole-struct copy
+of a `Vec` is a second handle on its block — the workbench's question 9, with
+the author. O-N8 is discharged (TM-160). A full invocation is **75 units
+green** at pin `c3bdae2`.
+
+**After cycle 0.1.0b: the adoption to compiler `c3bdae2`** (the close of
 its cycle 1.5). No new library behaviour; everything the new pin refused or
 made false, corrected. **Every one of the tree's 48 loops states `decreases`**
 (D-304) — 29 in the compiler's sweep tool's own proven shape and 19 by the
@@ -65,13 +82,19 @@ cycle 0.0 paid most for.**
   **`vec_at<T>` at an owning `T` REMOVES the element** — `pass` of a place
   moves implicitly — which is the language behaving as specified and is why
   element lifetime at an owning `T` goes **at the instantiation**, where
-  `SAFETY.md` S-18b and S-18d put it.
+  `SAFETY.md` S-18b and S-18d put it. **Since 0.1.0c `items` is `hidden` and
+  `count`/`cap` are `sealed limit<ListLen>`** (TM-156): nothing outside
+  `vec.npk` can index the pointer or write a length, and a write inside it
+  that breaks `ListLen` traps `LimitViolated`.
 - **The bounds guard is the compiler's, not ours** (TM-129, S-17c). Each
   accessor lays a `#wild_slice` over `count` and indexes that, so
   `emit_bounds_guard` runs and one unsigned compare rejects both ends. The
   library now contains **no raw bare-pointer index at all**. The slice is over
   `cap` in the three APPENDING sites and that is part of the rule, not an
-  exception to it (S-17c, amended at 0.0.6).
+  exception to it (S-17c, amended at 0.0.6). **Since 0.1.0c it is the
+  language's rule for `Vec` and still ours for `Bytes`:** a consumer's
+  `v.items[i]` is `NITPICK-TYPE-080`, while `b.body.ptr[i] = x` still compiles
+  through the seal (D-313) — question 9.
 - **A `bytes_view` view is invalidated by GROWTH** (TM-139, S-18e). It is valid
   until the next call that can grow the sink and no longer; reading it after
   one returns **170**, the allocator's poison. `bytes_view`'s header claimed
@@ -80,6 +103,8 @@ cycle 0.0 paid most for.**
   is a LEAK gate, and a use-after-free is found by a WRONG ANSWER.** Cycle 0.0
   shipped two of them — this and `vec_pop<T>` — and both were found by reading,
   under a green suite. `tests/unit/bytes_view_lifetime.npk` is the pair.
+  **Since 0.1.0c `body` and `len` are `sealed`, `len` under `ListLen`**
+  (TM-156): a consumer reads `b.len` and `b.body.cap` and writes neither.
 
 **What 0.0.3 added, and the first item is the one that matters.**
 `harness/selfcheck.py` runs **first** in every full invocation (`TESTING.md`
@@ -98,7 +123,11 @@ stages; `--quick`; and nine live tree checks — **thirteen today**: plus
 `run_defect_corpus` (0.0.6, TM-141/TM-142), and `check_expect_headers`, which
 existed all along and **was never in the count** — the row `TESTING.md` V-14c's
 "every check is commissioned" was false about, found by V-1a's own arithmetic
-not closing.
+not closing. *(It was FOURTEEN from cycle 0.1.0 to 0.1.0b — `check_civil_literal`
+joined — while this sentence said thirteen; and it is thirteen again since
+0.1.0c retired that check (TM-158). Re-derived from the run rather than
+carried: the `[5/9]` line reads `10 live` — `checks.LIVE`'s nine and
+`check_failsafe_arms` — and `run.py` drives the other three outside step 5.)*
 
 ## Before starting a session here
 

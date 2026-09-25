@@ -3475,6 +3475,14 @@ than a rediscovery.
   chosen without a caller is a name chosen without a requirement.
 
 ### TM-148 — the struct literal is an unchecked constructor the language will not let us remove, so C-8's guarantee is about the values this library PRODUCES
+> **SUPERSEDED IN PART by TM-157 (2026-09-25).** Its measurement stays true of
+> pin `aaffb87`. Its premise — *"there is no mechanism to prevent it"*, the
+> language having no per-field visibility — is false at compiler `c3bdae2`,
+> where a field may be `sealed` (the compiler's D-313): every field of
+> `CivilDate` and `CivilTime` is, the literal below is `NITPICK-TYPE-079` in
+> every module but `cal`, and `CALENDAR.md` C-8c narrows C-8b. The check it
+> introduced, `check_civil_literal`, is retired by TM-158. The text below is
+> left exactly as written.
 
 **2026-09-06, measured at pin `aaffb87`.** `CALENDAR.md` C-8 said *"There is no
 unchecked constructor: a `CivilDate` that exists is a date that exists, which
@@ -3795,3 +3803,210 @@ forced by what the compiler's `NITPICK-REACH-002` lines said over every root:
 consumers write, and its own exclusion named the condition for including it; a
 support specimen for rule 2 instead of the row — redundant, since the row is
 real code and fails without the rule.
+
+---
+
+# Cycle 0.1.0c — the access properties, ratified 2026-09-25
+
+Five decisions. The first four were drafted at planning
+(`meta/roadmap/0.1/0.1.0c.md` §5, PD-8 … PD-11, in that order); the fifth was
+asked for by the dispatch, which carried O-N8's discharge from the workbench
+registry. Each is recorded by the worker in the commit that makes the change it
+describes. Every measurement is at compiler `c3bdae2` unless it names another
+pin, and each is a program run in the subcycle's scratch, recorded with its
+command in `0.1.0c.md`'s execution record.
+
+### TM-156 — `Vec<T>` and `Bytes` carry the access properties: `items` hidden, the lengths sealed under `ListLen`
+
+**2026-09-25, cycle 0.1.0c (PD-8).** The workbench board's re-pin worklist
+item 13, decided on safety by the compiler seat with the author (*"keep our
+`Vec` and give it the three properties"*), using the compiler's D-314
+(`hidden`), D-313 (`sealed`) and D-308 (a field's own `limit`):
+
+```nitpick
+pub struct:Vec<T> = { hidden wild T->:items; sealed limit<ListLen> int64:count; sealed limit<ListLen> int64:cap; };
+pub struct:Bytes = { sealed buffer:body; sealed limit<ListLen> int64:len; };
+```
+
+*Measured, each a consumer program importing the one module:* `v.count = 3i64`
+and `v.cap = 64i64` — `NITPICK-TYPE-079`, once each; `v.items[0i64]` —
+`NITPICK-TYPE-080`; `b.len = 2i64` and `b.body = buffer_new(8i64)` —
+`TYPE-079`; a consumer's `Vec{ count: 0i64, cap: 0i64 }` — `TYPE-079` twice and
+`TYPE-027` for the field it cannot name; and `v.count`, `v.cap`, `b.len` and
+`b.body.cap` read — compiles, runs, exit 0. `probe16`, `probe16b`, `probe16c`
+and `probe16e` assert four of these on every run.
+
+*The qualifier order is measured, not read:* `sealed limit<ListLen> int64:f`
+parses; `limit<ListLen> sealed int64:f` is `NITPICK-PARSE-001` "expected a
+type" at the column of `sealed` — although the compiler's `TYPE_REFERENCE.md`
+§9.1.2 example at the pin writes that order. `VERIFICATION_REFERENCE.md` §2.1
+writes the order that parses. A finding for the compiler side, not a defect
+this library stops for.
+
+*The bill, from `NITPICK-REACH-003`:* a program importing `src/core/vec.npk`
+owes **8 → 9**, `src/core/bytes.npk` **11 → 12**, the umbrella **12 → 13** —
+each the same set plus `LimitViolated`; `cal` stays **11**. The compile sweep
+names `LimitViolated` in exactly nine roots, every one a consumer of `vec` or
+`bytes`, and each now names it with this ecosystem's code, 109 (TM-152).
+
+*What it does NOT do, measured and handed on rather than decided here.* The
+workbench's question 9, raised by `nitpick-regex`'s planner, holds for this
+library: `sealed` keeps a field's own bytes, and D-313 lets a write THROUGH a
+sealed pointer field pass, so a consumer's `b.body.ptr[0i64] = 65u8` compiles,
+links and runs — `bytes_view` then reads 65 where the sink wrote 97 — and a
+write at `b.body.cap`, one byte past the allocation, runs at exit 0 with no
+trap. And a WHOLE-STRUCT copy of a `Vec` names no field at all:
+`Vec<int64>:w = v;` compiles, and after `vec_free(@v)`, `vec_at(@w, 0i64)`
+reads the allocator's `0xAA` poison (exit 170); `v = u;` compiles too. `Bytes`
+has no such door — `Bytes:c = b;` is `NITPICK-TYPE-046`, its `buffer` making
+it move-only. Both gaps are written into `src/core/bytes.npk`'s and
+`src/core/vec.npk`'s headers, and the question is the author's.
+
+*Alternatives declined:* a `VecLen` rule of our own — the prelude's `ListLen`
+is the bound the compiler's own length facts use, and a second copy is a second
+place to disagree; `$ > 0` — `NITPICK-TYPE-077`, a field's rule must admit the
+vacant value 0; `count`/`cap` hidden — they are read across modules and by
+tests; `items` merely sealed — a read of the bare pointer outside `vec` IS the
+unchecked index TM-108 closed by convention, and `hidden` makes it a compile
+error; `body` hidden now, which question 9 recommends — it refuses the reads
+tests and consumers make of `b.body.cap` until an accessor replaces them, and
+the dispatch said to land item 13 as this subcycle's plan decides and record
+the gap.
+
+### TM-157 — `CivilDate` and `CivilTime` seal every field, and `CALENDAR.md` gains C-8c
+
+**2026-09-25, cycle 0.1.0c (PD-9). Supersedes TM-148 in part.** TM-148's
+measurement — a consumer's `CivilDate{ year: 32000i32, month: 99u8, day: 99u8 }`
+compiling, linking and running at `aaffb87` — stays true of that pin. Its
+premise, that the language has no per-field visibility, is false at
+`c3bdae2`: D-313's `sealed` is read anywhere and written only by the declaring
+module. Every field of both types is sealed:
+
+```nitpick
+pub struct:CivilDate = { sealed int32:year; sealed uint8:month; sealed uint8:day; };
+pub struct:CivilTime = { sealed uint8:hour; sealed uint8:minute; sealed uint8:second; sealed uint32:nanos; };
+```
+
+*Measured:* `probe15`'s unchanged body is `NITPICK-TYPE-079` ×3, one per field
+named, which is the day its header was written to announce; `a.month = 13u8`
+on a constructed date — `TYPE-079` (`probe16d`); a `CivilTime{ hour: 24u8, … }`
+literal — `TYPE-079` ×4; `dt.date.month = 13u8` through an unsealed
+`CivilDateTime` — `TYPE-079`, a write reaching a sealed field through a path;
+`CivilDate:v;` then `v.month` — `NITPICK-ASSIGN-001` (D-010); every field read,
+`d.clone()`, `d.cmp(e)` and a `CivilDateTime` literal of two constructed values
+— compile and run. **The one route left is `wild` storage reinterpreted by
+`=>!`:** eight bytes from `alloc`, written through a `uint8` slice and read as
+a `wild CivilDate->`, give month 99 at exit 0 — the author's opt-out, as for
+every checked property, stated in C-8c rather than hidden.
+
+*So C-8 holds of the TYPE again for every module but `cal`* — C-8c, which
+narrows C-8b and leaves its text as the record. C-8b's second bullet stands
+(write downstream functions total), because it costs nothing and the opt-out
+exists; its first bullet goes with its check (TM-158). `CALENDAR.md` §3's code
+block carries the qualifiers, with a dated note, because `src/cal/cal.npk`
+copies that block verbatim. `CivilDateTime` is not sealed: its members can
+only have come from the constructors, and the seals hold through it.
+
+*And one site TM-148's count missed.* It found four live sites carrying the
+strong reading of C-8 over 177 tracked files. `civil_date`'s own comment was a
+fifth — *"skips the question … BECAUSE `CivilDate` CANNOT HOLD AN UNREAL ONE"*
+— false of a consumer from cycle 0.1.0 to 0.1.0b. The seal makes it true with
+two stated exceptions, `cal` itself and the `wild` opt-out, and the comment now
+says so beside the original sentence.
+
+*Alternatives declined:* `hidden` — the fields are read everywhere, and
+`tests/unit/civil_construct.npk` reads all seven; not sealing and keeping C-8b —
+it leaves unenforced a guarantee the language can now enforce, the
+house-rule-over-compiler shape this ecosystem refuses; a `limit` on `month` or
+`day` — `NITPICK-TYPE-077` requires the rule to admit 0, so `$ >= 1` cannot be
+written, and a rule that half-states C-4 is `VERIFICATION.md` P-7's warning.
+
+### TM-158 — `check_civil_literal` retires
+
+**2026-09-25, cycle 0.1.0c (PD-10).** Its property — no `CivilDate{` or
+`CivilTime{` literal in `src/` outside `src/cal/cal.npk` — is `NITPICK-TYPE-079`'s
+for every module but `cal`, consumers included, which is strictly more than the
+check could reach. Removed: the function and its section in
+`harness/checks.py`, its entry in `checks.LIVE`, its two planted violations
+and two controls in `harness/selfcheck.py` — the self-check now reads **16**
+planted and 16 controls, read from the run — and its row in `TESTING.md` §2,
+whose text V-1a's dated note quotes.
+
+*The search, with its denominator* (`git grep -n 'check_civil_literal' HEAD --
+':!meta/roadmap/done' ':!meta/roadmap/0.1/0.1.0b.md' ':!meta/roadmap/0.1/0.1.0c.md'
+':!meta/roadmap/0.1/0.1.1.md'`): **25 lines in 9 files** — the plan's 23 predates
+the two cycle-README lines its own commit added. **15 edited** (7 removed with
+the code, the `TESTING.md` row, the three live prose sites in `CALENDAR.md`
+C-8b, `src/lib.npk` and `probe15` — each kept as dated history beside its
+correction — and two in the cycle README), **9 history left as written**
+(TM-148, five in `0.1.0.md`, three of the cycle README's 0.1.0 lines), and **1**
+the cycle README's own 0.1.0c row, which describes this retirement.
+
+*Two counts were stale because of this check, and are true again because of
+its retirement:* `CLAUDE.md`'s "thirteen today" and `TESTING.md` V-1a's "17
+rows, 13 live" said so through cycles 0.1.0 and 0.1.0b while the family was
+fourteen. Each carries a dated note with the re-derivation — the run's `[5/9]`
+line reads `10 live`, and `run.py` drives three more outside step 5.
+
+*Alternative declined:* keep it as a belt — a tree check duplicating a compiler
+rule is a second statement of the rule that can be wrong on its own, and the
+probes that pin the rule (`probe15`, `probe16d`) are the stronger instrument
+because they run the compiler.
+
+### TM-159 — `limit<` in a module's code text arms `LimitViolated` in the S-6 generator
+
+**2026-09-25, cycle 0.1.0c (PD-11).** A fifth rule in `harness/arms.py`'s
+`_arith_arms` (`LIMIT_ARM`), beside TM-155's `decreases` rule: the compiler's
+D-308 checks a limited field after every write and traps `LimitViolated`, so a
+module whose code text carries `limit<` arms it in every consumer. **Calibrated
+by the umbrella row, measured both ways** by calling the generator's own
+`diff_bill` with and without the rule: with it, `src/lib.npk` computes 13 and
+`NITPICK-REACH-003` lists 13; without it the row is **SHORT by exactly
+`LimitViolated`**, and the six other rows are unchanged. `SAFETY.md` S-4b's
+machinery table gains the `limit` row and S-4's umbrella row reads 13.
+
+*An over-approximation in one direction only:* the compiler arms the identity
+at the WRITES, so a `limit<` on a field its module never writes would make the
+computed bill overstate — which `check_failsafe_arms` reports in both
+directions, so it cannot drift in silence.
+
+*Alternative declined:* no rule, and the umbrella row excluded again — for
+TM-155's reasons: it is the import a consumer writes, and it is the row that
+fails without the rule.
+
+### TM-160 — O-N8 is discharged: fixed since pin `94874ce` by the compiler's D-248
+
+**2026-09-25, cycle 0.1.0c.** O-N8 — a root file whose `mod:` name mismatched
+its basename, with a sibling carrying that name, compiled at exit 0 into IR with
+two `define i32 @main` — was raised at cycle 0.0.0 and accepted as the
+compiler's DEF-2. Cycle 0.1.0b found its six-line recipe refused at `c3bdae2`
+and did not strike it, because striking is a decision. **Measured here, the
+recipe at every pin this workbench keeps** (`npkc beta.npk`, the sibling
+present, each status beside its artefact):
+
+| Pin | Verdict |
+|---|---|
+| `950bb1d` — cycle 0.0.0, where it was found | exit 0, `.ll` written, **two** `define i32 @main` — the defect |
+| `94874ce`, `0dfddac`, `aaffb87`, `3d15ac9`, `c3bdae2` | exit 1, no `.ll`, **`NITPICK-RESOLVE-012`** — *"a file's header names the file"* |
+
+At `c3bdae2` the refusal is the same without the sibling, and the
+matching-header control compiles. So the ask was met by **D-248**, which landed
+at the compiler's 1.5.1b step 1 and reached this repository with the
+`94874ce` re-pin on 2026-09-04 — and this repository went on describing O-N8
+as live at every pin it has used since: four of its five, `94874ce`, `0dfddac`,
+`aaffb87` and `c3bdae2`. (`3d15ac9` was never this repository's pin; it is in
+the table because the workbench keeps it.) The workbench registry struck it on
+2026-09-25.
+
+*The decision:* O-N8 is struck through in `OPEN_QUESTIONS.md` with this number
+and its text kept; `tests/probe/defect/README.md`'s table row and section say
+since when, and the table gains a dated note that every defect it lists has
+since been discharged, with the three later corpus directories it never listed.
+
+*Alternatives declined:* commit the pair as an asserted regression case — the
+compiler's own suite pins the refusal (`tests/modules/rejection/header_mismatch.npk`
+at `c3bdae2`), nothing in this library was ever shaped around the defect, and
+two files with deliberately mismatched headers would add a test of the
+compiler's resolver to a subcycle whose unit count was planned; wait for the
+compiler to announce it — the measurement is the discharge, as it was for
+O-N4.

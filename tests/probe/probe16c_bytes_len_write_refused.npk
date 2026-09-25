@@ -1,0 +1,51 @@
+// expect-error: NITPICK-TYPE-079
+//
+// PROBE 16c — A CONSUMER CANNOT WRITE `Bytes.len`. The seal on the sink's
+// live prefix, asserted by a refusal.
+//
+// ASKS: may code outside `src/core/bytes.npk` assign a `Bytes`' `len`?
+//
+// MATTERS BECAUSE `len` is the live prefix: `bytes_view` and `bytes_take` hand
+// out exactly `len` bytes of the body, so a consumer that could raise it would
+// read the uninitialised tail through the library's own functions, and one
+// that could lower it would silently truncate what a formatter wrote.
+//
+// ANSWER, measured at `c3bdae2` (cycle 0.1.0c, TM-156): NO. `len` is
+// `sealed limit<ListLen>`, so the assignment below is `NITPICK-TYPE-079`,
+// exactly once. THE REFUSAL IS THE ASSERTION (B-7). What the seal does NOT
+// stop — a write THROUGH `b.body.ptr`, which the compiler's D-313 lets pass —
+// is written down in `src/core/bytes.npk`'s header and is the workbench's
+// question 9; this file pins only what the seal does.
+mod:probe16c_bytes_len_write_refused;
+
+use "../../src/core/bytes.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    Bytes:b = raw bytes_init(4i64);
+    b.len = 2i64;
+    exit 0i32;
+};
+
+// A SUPERSET of what `NITPICK-REACH-002` asks, deliberately (`SAFETY.md` S-6b,
+// constraint 3: a superset compiles). If a later compiler reordered its phases
+// so that the reach analysis ran before the check this file asserts, a
+// failsafe naming exactly the demanded arms could add a stray `REACH-002` to
+// the refusal; this one cannot.
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
+        (LimitViolated)     { exit 109i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

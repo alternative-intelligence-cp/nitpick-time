@@ -188,7 +188,9 @@ costs seconds.
   can be `sealed`, and every field of `CivilDate` and `CivilTime` is, so the
   struct literal is `NITPICK-TYPE-079` outside `cal` (measured at planning;
   `0.1.0c.md` §1). `date_to_days` stays total anyway — it costs nothing, and
-  `wild` storage is still an opt-out.
+  `wild` storage is still an opt-out. **And `check_civil_literal`, named above as
+  what keeps the library half true, is retired at 0.1.0c (TM-158)**: the same
+  `TYPE-079` refuses the literal in every module but `cal`, `src/` included.
 - **The arm codes are cross-stream** (`0.1.0b.md` §2): 106 `StackExhausted`,
   107 `MachineFault`, 108 `DecreasesViolated`, 109 `LimitViolated`. A test whose
   computed exit equals one of them cannot tell its answer from that trap — the

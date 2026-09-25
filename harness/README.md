@@ -115,7 +115,9 @@ against the summary line rather than left to review.
 - **Not that the tree checks have anything to check.** Thirteen are live and
   several report `0` over a small denominator, which is the right answer and is
   why the denominator is always printed (V-1b). Four print as `PEND` with the
-  cycle that turns them on.
+  cycle that turns them on. *(Fourteen were live from cycle 0.1.0 to 0.1.0b —
+  `check_civil_literal` — and this said thirteen; it is true again since
+  0.1.0c retired that check, TM-158.)*
 - **Not that CI is green.** Until cycle 0.0.6 this repository had never pushed,
   so the workflow had never run; the 0.0 close is its first.
 
@@ -148,6 +150,13 @@ and library + repro + suite at 46 (34 probe, 11 unit, 1 conformance). The wall
 clock moves from run to run by more than any one change adds, which is why
 `meta/roadmap/0.1/0.1.0.md` stopped quoting it; the unit count is the number to
 compare.
+
+**At cycle 0.1.0c, the same pin, 75 units**: the self-check's 7 planted cases,
+**16** tree-check violations with 16 clean controls (`check_civil_literal`'s two
+plants and two controls retired with it, TM-158), 3 arm specimens and the
+verdict mechanisms; parse over 88 files; the defect corpus at 24; and library +
+repro + suite at 51 (39 probe — five new, `probe16`…`probe16e` — 11 unit, 1
+conformance). `75 = 24 + 51`, as `70 = 24 + 46` was.
 
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the

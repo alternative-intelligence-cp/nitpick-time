@@ -77,6 +77,7 @@ DIV_ARMS = ("DivByZero", "DivOverflow")
 OVERFLOW_ARM = "IntOverflow"
 INDEX_ARM = "OutOfBounds"
 MEASURE_ARM = "DecreasesViolated"
+LIMIT_ARM = "LimitViolated"
 
 _REACH_003 = re.compile(r"--\s+(\d+)\s+identit(?:y|ies):\s+(.*?)\s+--")
 _FAIL_SITE = re.compile(r"\bfail\s+([A-Z][A-Za-z0-9_]*)")
@@ -147,6 +148,23 @@ def _arith_arms(text):
     # comment that EXPLAINS a measure does not charge the module for one.
     if re.search(r"\bdecreases\b", text):
         arms.add(MEASURE_ARM)
+    # A `limit<` in the code text (cycle 0.1.0c, TM-159). The compiler's D-308
+    # checks a limited field after every write to it, in every build, and traps
+    # `LimitViolated` -- and since cycle 0.1.0c `Vec<T>`'s `count`/`cap` and
+    # `Bytes`' `len` carry the prelude's `ListLen`, so a module that declares
+    # one arms it in every consumer. The same holds for a limited parameter or
+    # local, which is checked at its write too.
+    #
+    # AN OVER-APPROXIMATION, AND IN ONE DIRECTION ONLY. The compiler arms the
+    # identity "at the writes and nowhere else" (`VERIFICATION_REFERENCE.md`
+    # §2.1 at the pin), so a `limit<` on a field this module never writes would
+    # make the computed bill OVERSTATE by exactly this arm -- which
+    # `check_failsafe_arms` reports in both directions, so it cannot drift in
+    # silence. The umbrella row is the calibration on real code: without this
+    # rule it is short by exactly `LimitViolated`, because only it reaches
+    # `src/core/`'s limited fields.
+    if re.search(r"\blimit\s*<", text):
+        arms.add(LIMIT_ARM)
     return arms
 
 

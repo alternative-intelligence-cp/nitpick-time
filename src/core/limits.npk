@@ -123,4 +123,8 @@ pub fixed int64:NTIME_NANOS_PER_SEC = 1000000000i64;
 // `NITPICK-EMIT-002`, reproduced in
 // `../../tests/probe/defect/fixed_array_len/`, whose diagnostic asks to be
 // reported. Naming the bound is better style in any case: a reader sees why 20.
+// (Dated note, cycle 0.1.0c: "at this pin" was `aaffb87`'s. At `c3bdae2` that
+// defect, O-N18, has LANDED -- the reproduction links and runs at exit 0 and is
+// asserted as a regression test (TM-154) -- so the style reason is the only
+// one left, and it is enough.)
 pub fixed int64:NTIME_DIGITS_MAX = 20i64;

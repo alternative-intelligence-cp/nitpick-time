@@ -8,6 +8,14 @@
 // types those algorithms operate on, and the constructors that make an unreal
 // date UNSPELLABLE.
 //
+// UNSPELLABLE BY WHOM, precisely, because the answer changed at cycle 0.1.0c.
+// Until then it was "by this library": a CONSUMER could write the struct
+// literal and it compiled, linked and ran (C-8b, TM-148, measured at
+// `aaffb87`). Since the fields are `sealed` (C-8c, TM-157) that literal is
+// `NITPICK-TYPE-079` in every module but this one, measured at `c3bdae2`, so an
+// unreal date is unspellable everywhere except here and through `wild` storage
+// reinterpreted by `=>!` -- the language's opt-out for every checked property.
+//
 // `is_leap_year` AND `days_in_month` ARE HERE RATHER THAN AT 0.1.1, and the
 // reason is recorded rather than discovered: `civil_date` must refuse February
 // 30th (C-8), and a constructor that validates three of its four conditions is
@@ -133,19 +141,39 @@ pub enum:ValueFault = {
 // this layout. The cost is that every field is a NARROWING SITE and there is no
 // checked narrowing (TM-105, S-15b) -- see `civil_date` below, where the
 // validity check and the width check are the same check.
+//
+// EVERY FIELD IS `sealed`, SINCE CYCLE 0.1.0c (C-8c, TM-157; the compiler's
+// D-313): read anywhere, WRITTEN ONLY IN THIS MODULE. Measured at `c3bdae2`, a
+// consumer's `CivilDate{ year: 32000i32, month: 99u8, day: 99u8 }` is
+// `NITPICK-TYPE-079` once per field it names, `a.month = 13u8` is `TYPE-079`,
+// and a declared-uninitialised `CivilDate` cannot be read (`NITPICK-ASSIGN-001`,
+// D-010). So outside `cal` the only way to hold a `CivilDate` is to have been
+// handed one by `civil_date` -- or to reinterpret `wild` storage with `=>!`,
+// the language's opt-out for every checked property. Reads, copies, `clone()`
+// and the derived `cmp` all still work everywhere; `probe16e` pins that half.
+// `sealed` and not `hidden`, because every field is READ across modules --
+// `tests/unit/civil_order.npk` reads each one.
 #[derive(Eq, Ord, Clone, Debug)]
-pub struct:CivilDate = { int32:year; uint8:month; uint8:day; };
+pub struct:CivilDate = { sealed int32:year; sealed uint8:month; sealed uint8:day; };
 
 // C-6 again: hour, minute, second, then nanos. The field is `nanos`, not
 // `nano`, and it is `uint32` -- 999 999 999 fits, so the bound is SEMANTIC
-// rather than a width check (C-9).
+// rather than a width check (C-9). Sealed field by field, like `CivilDate`
+// above and for the same reason (C-8c, TM-157).
 #[derive(Eq, Ord, Clone, Debug)]
-pub struct:CivilTime = { uint8:hour; uint8:minute; uint8:second; uint32:nanos; };
+pub struct:CivilTime = { sealed uint8:hour; sealed uint8:minute; sealed uint8:second; sealed uint32:nanos; };
 
 // Date before time, so the derived `Ord` compares chronologically. Both members
 // are named types, and a derived body reaches a named member through that
 // member's own impl (the compiler's D-258) -- which is why both are declared
 // above this one and both derive the same four.
+//
+// NOT SEALED, AND DELIBERATELY (TM-157). Its two members can only have come
+// from `civil_date` and `civil_time`, so its literal checks nothing that was
+// not already checked -- the reasoning of the "no `civil_datetime`" note below,
+// unchanged. And the seals below it still hold THROUGH it: a write that reaches
+// a sealed field through a path, `dt.date.month = 13u8`, is `TYPE-079` from
+// outside `cal` like any other (measured at `c3bdae2`, cycle 0.1.0c's record).
 #[derive(Eq, Ord, Clone, Debug)]
 pub struct:CivilDateTime = { CivilDate:date; CivilTime:time; };
 
@@ -251,6 +279,17 @@ pub func:days_in_month = int64(int64:y, int64:m) {
 // real BECAUSE `CivilDate` CANNOT HOLD AN UNREAL ONE. A single unchecked
 // constructor added for convenience removes that guarantee everywhere at once,
 // and it will be asked for.
+//
+// (THE LAST SENTENCE BUT ONE WAS FALSE OF A CONSUMER FROM CYCLE 0.1.0 TO
+// 0.1.0b, and TM-148's count of the sites carrying that reading missed this
+// one: at `aaffb87` a consumer's struct literal built month 99 at exit 0, and
+// C-8b is what said so. SINCE CYCLE 0.1.0c IT IS TRUE, with exactly two
+// exceptions, both stated: this module itself, which is why nothing in it
+// builds a `CivilDate` but this function; and `wild` storage reinterpreted by
+// `=>!`, the author's opt-out. Every field is `sealed`, so a consumer's literal
+// or field write is `NITPICK-TYPE-079` -- C-8c, TM-157, measured at `c3bdae2`.
+// Cycle 0.1.1's `date_to_days` is written total over every field value anyway,
+// which costs nothing and survives the opt-out.)
 //
 // VALIDATE, THEN NARROW -- IN THAT ORDER, NEVER THE REVERSE. There is no
 // checked narrowing in this language (TM-105, S-15b): `=>!` truncates in

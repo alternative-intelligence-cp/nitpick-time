@@ -109,14 +109,19 @@ nothing here is raised upstream and nothing is worked around.
 ## 3. The types
 
 ```nitpick
-pub struct:CivilDate = { int32:year; uint8:month; uint8:day; };
-pub struct:CivilTime = { uint8:hour; uint8:minute; uint8:second; uint32:nanos; };
+pub struct:CivilDate = { sealed int32:year; sealed uint8:month; sealed uint8:day; };
+pub struct:CivilTime = { sealed uint8:hour; sealed uint8:minute; sealed uint8:second; sealed uint32:nanos; };
 pub struct:CivilDateTime = { CivilDate:date; CivilTime:time; };
 
 pub enum:Weekday = { Monday; Tuesday; Wednesday; Thursday; Friday; Saturday; Sunday; };
 pub enum:Month   = { January; February; March; April; May; June;
                      July; August; September; October; November; December; };
 ```
+
+*(Amended at cycle 0.1.0c by C-8c, TM-157: the two validated types' fields
+gained `sealed`. Until then the block read `{ int32:year; uint8:month;
+uint8:day; }` and `{ uint8:hour; uint8:minute; uint8:second; uint32:nanos; }`
+— the same fields, in the same order, and C-6 below is unchanged by it.)*
 
 **Rule C-6 — field order is declaration order is comparison order** (M-6). Year
 before month before day; hour before minute before second before nanos. A
@@ -132,9 +137,9 @@ caller porting code will look for it, but the enum's own order is ISO's.
 returns `Result<CivilDate>` and refuses February 30th, month 13, day 0. There
 is no unchecked constructor **in the module**: a `CivilDate` this library
 produces is a date that exists. **C-8b is the limit of that sentence and must
-be read with it** — the last clause of this rule used to read "which is what
-lets everything downstream skip the question", and downstream cannot quite skip
-it.
+be read with it, and C-8c narrows that limit** — the last clause of this rule
+used to read "which is what lets everything downstream skip the question", and
+downstream cannot quite skip it.
 
 **Rule C-8b (TM-148, cycle 0.1.0) — THE GUARANTEE IS ABOUT THE VALUES THIS
 LIBRARY PRODUCES, NOT ABOUT THE TYPE, BECAUSE THE LANGUAGE HAS NO PRIVATE
@@ -172,6 +177,10 @@ could not be February 30th.
   outside `src/cal/cal.npk`. That is the half that is enforceable, and it is
   the half that matters most: both use-after-frees cycle 0.0 shipped were this
   library defeating its own stated contract under a green suite (S-18d, S-18e).
+  *(Amended by C-8c; `check_civil_literal` retired by TM-158's decision at
+  cycle 0.1.0c, because `NITPICK-TYPE-079` now enforces its property for every
+  module but `cal`. The sentence stays as the record of what held from 0.1.0
+  to 0.1.0b.)*
 - **Outside it, a function that would misbehave rather than merely mislead on
   a malformed `CivilDate` says so in its header**, and is written to be total
   where it can be. `date_to_days` (C-10) is branch-free arithmetic that is
@@ -181,6 +190,43 @@ could not be February 30th.
 `CivilDateTime` has no validating constructor and needs none: both its members
 can only have come from one, so its literal checks nothing that was not already
 checked.
+
+**Rule C-8c (TM-157, cycle 0.1.0c) — THE FIELDS ARE SEALED, SO C-8 HOLDS OF THE
+TYPE AGAIN, FOR EVERY MODULE BUT `cal`.** It narrows C-8b, whose text above
+stays as the record of what was true at pin `aaffb87`.
+
+At compiler `c3bdae2` a struct field may be `sealed` (the compiler's D-313):
+read anywhere, written only by code in the module that declares the struct.
+**Every field of `CivilDate` and `CivilTime` is sealed.** C-8b's premise — *"the
+language has no private field"* — is false at this pin, and
+`tests/probe/probe15_civil_literal_bypass.npk`, written at 0.1.0 to announce
+exactly this day, is now refused. Measured at `c3bdae2`, each a consumer that
+imports `cal`:
+
+| What a consumer writes | Verdict | Pinned by |
+|---|---|---|
+| `CivilDate{ year: 32000i32, month: 99u8, day: 99u8 }` | **`NITPICK-TYPE-079`**, once per field named — three | `probe15` |
+| `a.month = 13u8;` on a `CivilDate` from `civil_date` | **`NITPICK-TYPE-079`** | `probe16d` |
+| `CivilTime{ hour: 24u8, … }` | **`NITPICK-TYPE-079`**, four | the cycle's record |
+| `dt.date.month = 13u8;` through an unsealed `CivilDateTime` | **`NITPICK-TYPE-079`** — a write reaching a sealed field through a path is a write | the cycle's record |
+| `CivilDate:v;` and then `v.month` | **`NITPICK-ASSIGN-001`** — no default value to read (D-010) | the cycle's record |
+| a field READ — `d.month`, `t.hour`, every field of both types | compiles and runs | `probe16e`; `tests/unit/civil_construct.npk` reads every field |
+| `d.cmp(e)` | compiles and runs | `tests/unit/civil_order.npk` |
+| `d.clone()`, and a `CivilDateTime` literal from two constructed values | compile and run | the cycle's record |
+
+**What remains outside the guarantee is `wild` storage reinterpreted by `=>!`**,
+the language's opt-out for every checked property: eight bytes from `alloc`,
+written through a `uint8` slice and read as a `wild CivilDate->`, yield month
+99 at exit 0 (measured at `c3bdae2`). That is an author opting out, stated
+rather than hidden, and it is why **C-8b's second bullet stands** — write
+downstream functions total where they can be — because it costs nothing and
+the opt-out exists. **C-8b's first bullet is retired with its check**:
+`NITPICK-TYPE-079` enforces, for every module but `cal` — consumers and the rest
+of `src/` alike — exactly the property `check_civil_literal` enforced over
+`src/` (TM-158).
+
+`CivilDateTime` is **not** sealed, for C-8b's closing reason: its members can
+only have come from the constructors, and the seals below it hold through it.
 
 **Rule C-9 (TM-029) — `CivilTime` admits `hour ∈ [0,23]`, `minute ∈ [0,59]`,
 `second ∈ [0,59]`, `nanos ∈ [0, 999 999 999]`.** Hour 24 is refused —

@@ -1,0 +1,66 @@
+// expect-exit: 0
+//
+// PROBE 16e — EVERY SEALED FIELD IS STILL READABLE FROM OUTSIDE. The positive
+// twin of `probe15` and `probe16`…`probe16d`.
+//
+// ASKS: after cycle 0.1.0c's seals, may a consumer still READ `Vec.count`,
+// `Vec.cap`, `Bytes.len`, `Bytes.body.cap` and `CivilDate.month`?
+//
+// MATTERS BECAUSE a refusal proves nothing on its own: the four refusal probes
+// would all pass against a compiler that refused EVERY access to a sealed
+// field, and that compiler would break every test here that reads a length
+// and every consumer that reads a date's month. `sealed` is "read anywhere,
+// written only by the declaring module" (the compiler's D-313); this file is
+// the "read anywhere" half, measured rather than assumed — the same reason
+// `tests/unit/bytes_view_lifetime.npk` carries its control (TM-139).
+//
+// ANSWER, measured at `c3bdae2` (cycle 0.1.0c, TM-156, TM-157): YES. Each read
+// is checked against the value it must have after one push, or after one
+// `civil_date`, and a wrong value exits with its own code, 10 … 14 — none of
+// them an arm code (TM-152). `items` is not read here: it is `hidden`, and
+// `probe16b` asserts that it cannot be.
+mod:probe16e_sealed_reads;
+
+use "../../src/core/vec.npk".*;
+use "../../src/core/bytes.npk".*;
+use "../../src/cal/cal.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    Vec<int64>:v = raw vec_init::<int64>(4i64);
+    drop vec_push(@v, 7i64);
+    if (v.count != 1i64) { exit 10i32; }
+    if (v.cap != 4i64) { exit 11i32; }
+    Bytes:b = raw bytes_init(4i64);
+    drop bytes_push(@b, 65u8);
+    if (b.len != 1i64) { exit 12i32; }
+    if (b.body.cap != 4i64) { exit 13i32; }
+    CivilDate:d = civil_date(2026i64, 9i64, 25i64) ?! ETimeValue;
+    if (d.month != 9u8) { exit 14i32; }
+    drop vec_free(@v);
+    exit 0i32;
+};
+
+// A SUPERSET of what `NITPICK-REACH-002` asks, deliberately (`SAFETY.md` S-6b,
+// constraint 3: a superset compiles). If a later compiler reordered its phases
+// so that the reach analysis ran before the check this file asserts, a
+// failsafe naming exactly the demanded arms could add a stray `REACH-002` to
+// the refusal; this one cannot.
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
+        (LimitViolated)     { exit 109i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

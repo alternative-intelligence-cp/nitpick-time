@@ -1,0 +1,55 @@
+// expect-error: NITPICK-TYPE-079
+//
+// PROBE 16 — A CONSUMER CANNOT WRITE `Vec<T>.count`. The seal on the length,
+// asserted by a refusal.
+//
+// ASKS: may code outside `src/core/vec.npk` assign a `Vec`'s `count`?
+//
+// MATTERS BECAUSE `count` is the bound every accessor's `#wild_slice` is laid
+// over (`SAFETY.md` S-17c). A consumer that could set it past the live prefix
+// would turn the compiler's own bounds guard into a guard over uninitialised
+// or unallocated elements — the guard would still run, and it would be guarding
+// the wrong number. Until cycle 0.1.0c nothing stopped it but convention.
+//
+// ANSWER, measured at `c3bdae2` (cycle 0.1.0c, TM-156): NO. `count` is
+// `sealed limit<ListLen>` (the compiler's D-313 and D-308), so the assignment
+// below is `NITPICK-TYPE-079` — "written only by the module that declares
+// `Vec`" — exactly once. THE REFUSAL IS THE ASSERTION: the harness requires the
+// set of codes reported to equal the marker's (B-7), so a compiler that let
+// this compile turns the file red. `probe16e` is the positive twin — the same
+// field READ from outside — without which a compiler refusing every access
+// would pass this file too.
+mod:probe16_vec_count_write_refused;
+
+use "../../src/core/vec.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    Vec<int64>:v = raw vec_init::<int64>(4i64);
+    v.count = 3i64;
+    drop vec_free(@v);
+    exit 0i32;
+};
+
+// A SUPERSET of what `NITPICK-REACH-002` asks, deliberately (`SAFETY.md` S-6b,
+// constraint 3: a superset compiles). If a later compiler reordered its phases
+// so that the reach analysis ran before the check this file asserts, a
+// failsafe naming exactly the demanded arms could add a stray `REACH-002` to
+// the refusal; this one cannot.
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
+        (LimitViolated)     { exit 109i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

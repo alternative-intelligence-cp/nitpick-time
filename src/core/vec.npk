@@ -119,6 +119,51 @@
 // THE ONLY RAW `.items[` IN THE LIBRARY ARE IN THIS FILE, and
 // `check_raw_index` fails the run on any other -- which is what keeps every
 // index inside the accessor pair.
+//
+// ===========================================================================
+// `items` IS HIDDEN, `count` AND `cap` ARE SEALED UNDER `ListLen`
+// (cycle 0.1.0c, TM-156; the compiler's D-313, D-314, D-308)
+// ===========================================================================
+//
+// SINCE CYCLE 0.1.0c THE PARAGRAPH ABOVE IS THE COMPILER'S RULE FOR EVERY
+// OTHER MODULE, NOT OURS. `items` is `hidden`: code outside this module can
+// neither read nor write it, so `v.items[i]` anywhere else is
+// `NITPICK-TYPE-080` at compile time -- measured at `c3bdae2`, and pinned by
+// `../../tests/probe/probe16b_vec_items_read_refused.npk`. What TM-108 and
+// TM-129 kept true by convention, and `check_raw_index` by a tree check, no
+// other module can now spell at all. `check_raw_index` stays: it still watches
+// `Bytes`' `.ptr[`, which `sealed` does not hide (a read, and a write, through
+// a sealed field's pointer both pass -- D-313; `bytes.npk` says what that
+// leaves open), and it still watches THIS file's own bare-pointer bindings.
+//
+// `count` and `cap` are `sealed`: read anywhere, written only here, so a
+// consumer's `v.count = 3i64` is `NITPICK-TYPE-079` (`probe16`). And each
+// carries the prelude's `ListLen` -- `{ $ >= 0i64, $ <= 140737488355328i64 }`,
+// the bound the compiler's own `List` and its built-in lengths use -- which
+// is CHECKED AFTER EVERY WRITE, IN EVERY BUILD, trapping `LimitViolated`. So
+// every consumer of this module owes that arm (109 in this ecosystem's
+// failsafes, TM-152), and the check can only ever fire from inside this file,
+// because nothing outside can write the field.
+//
+// THE PAYOFF IS THE VERIFIED BUILD'S, NOT A PLAIN BUILD'S. In a plain build
+// the limit is one more check that correct code never trips. What it buys is
+// that every READ of `count` or `cap` becomes a FACT the solver may assume
+// (`VERIFICATION_REFERENCE.md` §2.1 at the pin: "every read is a fact") --
+// which is what makes the bounds rows of the `#wild_slice` producer calls
+// below, and `vec_reserve`'s `v.cap * 2i64` overflow row, dischargeable
+// rather than opaque. That build is cycle 0.8's (Q-6); nothing here claims it
+// yet.
+//
+// WHAT HIDING AND SEALING DO NOT STOP: A WHOLE-STRUCT COPY. A `Vec<T>` is a
+// plain struct over a `wild` pointer, so `Vec<int64>:w = v;` compiles and
+// makes a SECOND HANDLE on the same block, and `v = u;` overwrites all three
+// fields at once from outside this module -- neither names a field, so
+// neither is a write the seal sees. Measured at `c3bdae2`: after the copy,
+// `vec_free(@v)` and then `vec_at(@w, 0i64)` reads the allocator's `0xAA`
+// poison (exit 170) -- a use-after-free with no hidden or sealed field ever
+// named. It is the manual `wild` regime this type chose -- `bytes.npk`'s
+// header says why the two containers differ -- and the workbench's question 9
+// carries it to the author beside `Bytes`' pointee.
 mod:vec;
 
 // The three fields, in this order, matching `BUILD.md` B-12 exactly.
@@ -132,7 +177,21 @@ mod:vec;
 // by design: a compiler `D-nnn` is verified by READING it, which is what
 // caught this. `SAFETY.md` §1 already cited the rule correctly, to
 // `TRAITS_REFERENCE §2.5`, so the mis-citation was one site.)
-pub struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };
+//
+// THE QUALIFIERS, SINCE CYCLE 0.1.0c (TM-156) -- see the header's last
+// section for what each one does. ONE ORDER PARSES: `sealed limit<ListLen>
+// int64:count`. Written the other way round, `limit<ListLen> sealed int64`, it
+// is `NITPICK-PARSE-001` "expected a type" at the column of `sealed` --
+// measured at `c3bdae2` -- although `TYPE_REFERENCE.md` §9.1.2's example at
+// that pin shows the refused order; `VERIFICATION_REFERENCE.md` §2.1 shows the
+// one that parses. `ListLen` needs no import: it is the prelude's `pub`
+// `Rules<int64>` (D-308 §6), and it admits the VACANT value 0, which a field's
+// rule must (`NITPICK-TYPE-077`). The fields are `int64` and not `T`, so the
+// generic struct is no obstacle to `NITPICK-TYPE-059`. And a limited field has
+// NO ADDRESS (`NITPICK-TYPE-063`): nothing here takes `@v.count` -- every
+// function reaches the struct through a pointer and assigns the field, which is
+// a write point, not an address.
+pub struct:Vec<T> = { hidden wild T->:items; sealed limit<ListLen> int64:count; sealed limit<ListLen> int64:cap; };
 
 // `ensures answer.count == 0 && answer.cap >= 1`
 //

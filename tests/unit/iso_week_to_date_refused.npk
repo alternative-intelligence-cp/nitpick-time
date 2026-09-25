@@ -1,0 +1,112 @@
+// expect-exit: 0
+//
+// `iso_week_to_date` REFUSES THROUGH ITS `Result`, NEVER THROUGH A TRAP --
+// `SAFETY.md` S-12 and `CALENDAR.md` C-14 -- AND ACCEPTS THE NEIGHBOUR OF
+// EVERY REFUSAL, so a constructor that refused everything cannot pass it.
+//
+// THE WEEK COUNT IS THE BOUND THAT MOVES: 2021 has 52 weeks and 2020 has 53,
+// -1 has 52 and -2 has 53, 1970 has 53 -- so week 53 of 2021 is refused and
+// week 53 of 2020 accepted, and week 54 of both 2020 and -2 refused. The
+// exhaustive half -- the week after every week-year's last, refused, all
+// 19 999 -- is `tests/unit/sweep/every_iso_week_date.npk`.
+//
+// AND THE RANGE'S END FALLS INSIDE A WEEK. 9999's week 52 runs to Sunday
+// 10000-01-02, so its Friday, 9999-12-31, is accepted and its Saturday and
+// Sunday are refused -- by `days_to_date`'s range check, relayed. The range's
+// start has no such edge: -9999-01-01 is a Monday and begins week 1.
+//
+// THE `int64` EXTREMES OF ALL THREE ARGUMENTS. At `int64` MAX, `iy + 1`
+// and `(w - 1) * 7` would overflow and trap `IntOverflow` (exit 93); this
+// file exits 0 only because every argument is checked against its bound
+// BEFORE the arithmetic that uses it. `int64` MIN is built arithmetically
+// (`NITPICK-LEX-004`).
+//
+// EXIT CODES, clear of every arm code: 10 ... 26 a refusal that did not
+// happen; 30 ... 38 an accepted week date that was refused or came back as
+// another date.
+mod:iso_week_to_date_refused;
+
+use "../../src/cal/cal.npk".CivilDate;
+use "../../src/cal/cal.npk".iso_week_to_date;
+use "../../src/core/limits.npk".NTIME_YEAR_MIN;
+use "../../src/core/limits.npk".NTIME_YEAR_MAX;
+
+// 0 when `iso_week_to_date(iy, w, wd)` is the date `(ey, em, ed)`; `code`
+// when it is refused or is another date.
+func:accepts = int32(int64:iy, int64:w, int64:wd, int64:ey, int64:em,
+                     int64:ed, int32:code) never fails {
+    Result<CivilDate>:r = iso_week_to_date(iy, w, wd);
+    if (r.is_error)                         { pass code; }
+    CivilDate:v = r.value;
+    if ((v.year => int64) != ey)            { pass code; }
+    if ((v.month => int64) != em)           { pass code; }
+    if ((v.day => int64) != ed)             { pass code; }
+    pass 0i32;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    int64:top = 9223372036854775807i64;
+    int64:bottom = (0i64 - 9223372036854775807i64) - 1i64;
+
+    // ---- refused, each one step outside its bound --------------------
+    if (!iso_week_to_date(NTIME_YEAR_MIN - 1i64, 1i64, 1i64).is_error) { exit 10i32; }  // YearRange
+    if (!iso_week_to_date(NTIME_YEAR_MAX + 1i64, 1i64, 1i64).is_error) { exit 11i32; }  // YearRange
+    if (!iso_week_to_date(2021i64, 0i64, 1i64).is_error)               { exit 12i32; }  // WeekRange
+    if (!iso_week_to_date(2021i64, 53i64, 1i64).is_error)              { exit 13i32; }  // WeekOfYear, 52 weeks
+    if (!iso_week_to_date(2020i64, 54i64, 1i64).is_error)              { exit 14i32; }  // WeekOfYear, 53 weeks
+    if (!iso_week_to_date(0i64 - 2i64, 54i64, 1i64).is_error)          { exit 15i32; }  // WeekOfYear, -2
+    if (!iso_week_to_date(0i64 - 1i64, 53i64, 1i64).is_error)          { exit 16i32; }  // WeekOfYear, -1
+    if (!iso_week_to_date(2021i64, 1i64, 0i64).is_error)               { exit 17i32; }  // WeekdayRange
+    if (!iso_week_to_date(2021i64, 1i64, 8i64).is_error)               { exit 18i32; }  // WeekdayRange
+    if (!iso_week_to_date(9999i64, 52i64, 6i64).is_error)              { exit 19i32; }  // past the range
+    if (!iso_week_to_date(9999i64, 53i64, 1i64).is_error)              { exit 20i32; }  // WeekOfYear, 9999
+
+    // ---- refused at the `int64` extremes, through the `Result` --------
+    if (!iso_week_to_date(top, 1i64, 1i64).is_error)                   { exit 21i32; }
+    if (!iso_week_to_date(bottom, 1i64, 1i64).is_error)                { exit 22i32; }
+    if (!iso_week_to_date(2021i64, top, 1i64).is_error)                { exit 23i32; }
+    if (!iso_week_to_date(2021i64, bottom, 1i64).is_error)             { exit 24i32; }
+    if (!iso_week_to_date(2021i64, 1i64, top).is_error)                { exit 25i32; }
+    if (!iso_week_to_date(2021i64, 1i64, bottom).is_error)             { exit 26i32; }
+
+    // ---- accepted, each one step inside the bound beside it -----------
+    int32:r = 0i32;
+    r = raw accepts(NTIME_YEAR_MIN, 1i64,  1i64, 0i64 - 9999i64, 1i64,  1i64,  30i32);
+    if (r != 0i32) { exit r; }
+    r = raw accepts(NTIME_YEAR_MAX, 52i64, 5i64, 9999i64,        12i64, 31i64, 31i32);
+    if (r != 0i32) { exit r; }
+    r = raw accepts(2021i64,        1i64,  1i64, 2021i64,        1i64,  4i64,  32i32);
+    if (r != 0i32) { exit r; }
+    r = raw accepts(2021i64,        52i64, 7i64, 2022i64,        1i64,  2i64,  33i32);
+    if (r != 0i32) { exit r; }
+    r = raw accepts(2020i64,        53i64, 7i64, 2021i64,        1i64,  3i64,  34i32);
+    if (r != 0i32) { exit r; }
+    r = raw accepts(2021i64,        1i64,  7i64, 2021i64,        1i64,  10i64, 35i32);
+    if (r != 0i32) { exit r; }
+    r = raw accepts(0i64 - 2i64,    53i64, 5i64, 0i64 - 1i64,    1i64,  1i64,  36i32);
+    if (r != 0i32) { exit r; }
+    r = raw accepts(0i64 - 1i64,    52i64, 7i64, 0i64,           1i64,  2i64,  37i32);
+    if (r != 0i32) { exit r; }
+    r = raw accepts(1970i64,        53i64, 4i64, 1970i64,        12i64, 31i64, 38i32);
+    if (r != 0i32) { exit r; }
+
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

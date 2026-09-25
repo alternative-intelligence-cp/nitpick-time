@@ -216,8 +216,8 @@ the gap is written down here.
 | in the transition binary search | the invariant `trans[lo].at_utc <= target < trans[hi].at_utc` holds at every step |
 | after an offset lookup | `|offset| <= 64_800` |
 | after the three `int128` narrowings | the value fits (P-5) |
-| after weekday computation | the result is `0 … 6` |
-| after ISO week computation | the week is `1 … 53` and the week-year is within one of the calendar year |
+| after weekday computation | the result is `0 … 6` — **written as a comment at 0.1.3 (Q-6, TM-164), and ALSO CHECKED IN CODE**: `weekday_index`'s `#unreachable()` belt stops the program on an index outside it, because `weekday` manufactures a `Weekday` tag from it (`SAFETY.md` S-15c). **Stood in for over the whole range by `tests/unit/sweep/every_civil_date.npk`'s weekday rider since cycle 0.1.3** |
+| after ISO week computation | the week is `1 … 53` and the week-year is within one of the calendar year — **written as comments at 0.1.3 (Q-6, TM-164)**; **stood in for over the whole range by `tests/unit/sweep/every_iso_week_date.npk` since cycle 0.1.3**, which compares every week and week-year with a walk of ISO 8601's rule |
 | in every parser loop | `at` strictly increases, so the loop terminates |
 
 **Rule P-8 — the parser's "strictly increases" is the one worth naming.** It is
@@ -264,6 +264,10 @@ closed-form, the searches are logarithmic, and the parsers are linear scans.
 > `tests/probe/probe10_view_edges.npk` (`36f0e0f`), and 0.1.2's three sweeps add
 > six — seven, none of which states or needs a measure, and 48 `while`, every
 > one with `decreases`, re-counted at 0.1.2.)*
+>
+> *(Cycle 0.1.3: its two sweep members add six more `for` — thirteen, none
+> with a measure — and the derived fields add no loop at all: every one is
+> closed-form. The `while` count stays 48.)*
 
 ---
 

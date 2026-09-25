@@ -191,6 +191,18 @@ not minutes" rests on it: its three units took **4.5 s** together — 2.1 +
 1.9 + 0.5 s, both legs, compile included, the run's own per-unit figures —
 against a 30 s threshold `meta/roadmap/0.1/0.1.2.md` §6 set in advance.
 
+**At cycle 0.1.3, the same pin, 86 units**: the self-check unchanged — its 7
+planted cases, 21 tree-check violations with 21 clean controls, 3 arm
+specimens and the verdict mechanisms; the tree checks at `11 live`; parse over
+99 files; the defect corpus at 24; and library + repro + suite at 62 (39
+probe, 17 unit — three new, `derived_field_vectors`, `ordinal_to_date_refused`
+and `iso_week_to_date_refused` — **5 sweep** — `every_ordinal_date` and
+`every_iso_week_date` joined the three, TM-174 — 1 conformance).
+`86 = 24 + 62`. The `sweep` stage's five units took **16.5 s** together —
+2.7 + 1.9 + 7.9 + 0.5 + 3.5 s, both legs, compile included, the run's own
+per-unit figures — against a 30 s threshold `meta/roadmap/0.1/0.1.3.md` §8 set
+in advance; the ISO week member is the long pole.
+
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the
 run makes about 200 of them. One that does *not* compile costs ~0.03 s.

@@ -125,7 +125,24 @@ once per month in the month walk. **So under A the cost at 0.1.2 is the arm,
 not the time; and the live check adds no evidence the civil walk does not
 already give**, because that walk asserts every day number in the range
 directly — this question's own argument for A′ in cycle 0.1, now measured. The
-question stays the author's.)* **What does not:** 0.1.0b and
+question stays the author's.)* *(0.1.3 was worked on A′ as well, and
+`meta/roadmap/0.1/0.1.3.md` §11 measured A on the derived fields: live
+`ensures` on the four integer-valued ones — `weekday_index` 0 … 6,
+`day_of_year` 1 … 366, `iso_week_number` 1 … 53, `iso_weekday` 1 … 7 — take a
+consumer of `cal` from eleven identities to **twelve**, the extra one
+`EnsuresViolated`, and leave the three sweeps that call them within noise of
+A′ at -O0 (1.97 s → 2.01 s, 2.58 s → 2.61 s, 6.57 s → 6.71 s). **And it found a
+third option for a single site: A′ with the check written as code.** The one
+range that guards something — the weekday index, from which `weekday`
+manufactures a tag the compiler cannot check — is checked by an
+`#unreachable()` line in the body (`SAFETY.md` S-15c), which stops the program
+exactly as a live `ensures` would, through `Unreachable`, an arm every consumer
+already owes. So under A′ a contract can still be enforced where it earns it,
+at no arm cost, and the question is only about the rest. **The author
+answered it the same day: A′** — *"the recommendation on q-6 seems fine to
+me"*, 2026-09-25 15:56, recorded on the workbench's board — and the numbered
+decision that puts A′ in P-1's place is owed to 0.1.3c's plan, which strikes
+this question through with that decision's number.)* **What does not:** 0.1.0b and
 0.1.0c; 0.1.0b adds a dated note under P-1 saying its premise is false and this
 question is its replacement. **The same P-1 is in all six work repositories'
 `VERIFICATION.md`**, so one answer can serve all six, recorded in each.
@@ -660,8 +677,9 @@ the next session to meet it should inherit an input rather than a
 rediscovery.
 
 *The question.* `SAFETY.md` S-3 says the caller's distinctions ride as detail
-fields rather than as errors, and `ValueFault` is that detail — ten variants,
-one per refusal row. **TM-147 measured that an `error:` cannot carry a
+fields rather than as errors, and `ValueFault` is that detail — ten variants
+when this was raised, fourteen since cycle 0.1.3 appended four (TM-173), one
+per refusal row. **TM-147 measured that an `error:` cannot carry a
 payload** (`tests/probe/probe14_error_payload_refused.npk`,
 `NITPICK-PARSE-001`, exit 1, no `.ll`), and a `Result<T>` is
 `{ T value, tbb32 err }`, so the error half of every return is a code. There
@@ -687,8 +705,9 @@ pub func:civil_date_fault = ValueFault(int64:y, int64:m, int64:d) never fails;
 ```
 
 `civil_date` becomes two lines over it, so the rules live in exactly one place
-and the constructor cannot drift from the classifier. It needs an **eleventh
-`ValueFault` variant** meaning "no fault" — which amends `SAFETY.md` S-3's enum
+and the constructor cannot drift from the classifier. It needs a **"no fault"
+`ValueFault` variant** — the eleventh when this was raised, the fifteenth since
+cycle 0.1.3 — which amends `SAFETY.md` S-3's enum
 and is the substantive part of the decision, not the function. It costs a
 consumer nothing: a `never fails` function arms no identity, so the arm bill
 does not move.
@@ -702,7 +721,7 @@ does not move.
 - **A richer success type** — return `Result<Checked>` where `Checked` carries
   both. It puts a fault field on the happy path, which is the shape S-3 exists
   to avoid.
-- **`Optional<ValueFault>` from the classifier** rather than an eleventh
+- **`Optional<ValueFault>` from the classifier** rather than a "no fault"
   variant. Avoids amending the enum; costs an `Optional` at every call and a
   second way to spell "valid". Worth measuring before choosing — `Optional` is
   on DERIVE-006's refused list, so a `ValueFault` inside one cannot be derived

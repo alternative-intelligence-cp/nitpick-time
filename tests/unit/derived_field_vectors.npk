@@ -1,0 +1,191 @@
+// expect-exit: 0
+//
+// THE DERIVED FIELDS AGAINST FORTY-ONE DATES, EVERY FIELD AND BOTH CONSTRUCTORS
+// BACK -- `CALENDAR.md` C-13, C-14 and C-15, and C-14's boundary cases. The
+// sweeps (`tests/unit/sweep/every_civil_date.npk`, `every_ordinal_date.npk`,
+// `every_iso_week_date.npk`) are the gate; this file is the other half of the
+// argument, because a sweep compares the library with a walk that reads the
+// same rules, and these forty-one were computed by things that are neither.
+//
+// THE TABLE WAS DERIVED THREE WAYS BEFORE THIS FILE WAS WRITTEN, and all three
+// agree on all forty-one (`meta/roadmap/0.1/0.1.3.md` §3): Python 3.12.3's
+// `datetime` -- `weekday()`, `timetuple().tm_yday` and `isocalendar()` -- after
+// a shift of whole 400-year cycles that is NEVER zero, which moves no weekday
+// and no week number because 146 097 days is 20 871 weeks; Zeller's
+// congruence with the leap rule and ISO 8601's Thursday rule; and a count of
+// days from -9999-01-01 with ISO 8601's 4-January rule.
+//
+// WHY THESE FORTY-ONE. A Gregorian year has one of fourteen SHAPES -- the weekday
+// of its 1 January, and whether it is leap -- and C-14's boundary cases are its
+// 1 January on each weekday, in leap and common years. But the week that
+// 1 January falls in is decided by the PREVIOUS year: a common year beginning
+// on a Saturday opens in week 52 of the year before (2011) or in week 53
+// (2005), measured at planning over every year from 2 to 9998. So for each of
+// fourteen years, one of each shape, the rows are its 1 January, its
+// 31 December and the next 1 January -- the shape at both ends, and every
+// year-end a shape can have (TM-175). Thirty-nine dates once the three that
+// coincide are merged; the range's last day; and 31 December 2018, which
+// ISO 8601-1:2019/Amd 1:2022 gives as the Monday of 2019's week 1 -- the one
+// row the standard itself states. The fourteen years span the range and its
+// sign: -9999, the range's first year and C-17's Monday; -101 and -4, a
+// negative century and a negative leap year, where `%` needs its correction;
+// -1 and 0, either side of astronomical numbering's year zero; 1901; 1969 and
+// 1970, either side of the day `n + 3` stops being negative; 2004 and 2011,
+// whose next and own 1 January are the two Saturday cases; 2008, 2012 and
+// 2016; and 2020, whose week 53 holds 1 January 2021.
+//
+// EXIT CODES. Row k exits 9 + k: 10 ... 50, clear of every arm code. A row's
+// code covers all seven checks on its date -- `weekday`, `iso_weekday`,
+// `day_of_year`, `iso_week_year`, `iso_week_number`, and the two constructors
+// back to it -- because a mismatch in any one names the date, and the date is
+// what a reader looks up.
+mod:derived_field_vectors;
+
+use "../../src/cal/cal.npk".CivilDate;
+use "../../src/cal/cal.npk".civil_date;
+use "../../src/cal/cal.npk".weekday;
+use "../../src/cal/cal.npk".weekday_number;
+use "../../src/cal/cal.npk".iso_weekday;
+use "../../src/cal/cal.npk".day_of_year;
+use "../../src/cal/cal.npk".iso_week_year;
+use "../../src/cal/cal.npk".iso_week_number;
+use "../../src/cal/cal.npk".ordinal_to_date;
+use "../../src/cal/cal.npk".iso_week_to_date;
+
+// `v` is the date `(y, m, d)`, compared field by field -- not by `date_to_days`,
+// so this file's verdict does not rest on the function whose results it would
+// otherwise be comparing through.
+func:same = bool(CivilDate:v, int64:y, int64:m, int64:d) never fails {
+    if ((v.year => int64) != y)  { pass false; }
+    if ((v.month => int64) != m) { pass false; }
+    pass ((v.day => int64) == d);
+};
+
+// Row k: the date `(y, m, d)`, its ISO weekday `wd` (Monday = 1), its day of
+// the year `doy`, and its ISO week date `(iy, iw, wd)`. Every `Result` is
+// tested with `is_error` before its `value` is read, so a refusal exits with
+// the row's code rather than as the anonymous `ETimeValue` arm.
+func:row = int32(int64:y, int64:m, int64:d, int64:wd, int64:doy,
+                 int64:iy, int64:iw, int32:code) never fails {
+    Result<CivilDate>:there = civil_date(y, m, d);
+    if (there.is_error)                               { pass code; }
+    CivilDate:c = there.value;
+    if (raw weekday_number(raw weekday(c)) != wd)     { pass code; }
+    if (raw iso_weekday(c) != wd)                     { pass code; }
+    if (raw day_of_year(c) != doy)                    { pass code; }
+    if (raw iso_week_year(c) != iy)                   { pass code; }
+    if (raw iso_week_number(c) != iw)                 { pass code; }
+    Result<CivilDate>:o = ordinal_to_date(y, doy);
+    if (o.is_error)                                   { pass code; }
+    if (!(raw same(o.value, y, m, d)))                { pass code; }
+    Result<CivilDate>:i = iso_week_to_date(iy, iw, wd);
+    if (i.is_error)                                   { pass code; }
+    if (!(raw same(i.value, y, m, d)))                { pass code; }
+    pass 0i32;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    int32:r = 0i32;
+    //          year             month  day    wd    doy     week-year        week   9 + k
+    r = raw row(0i64 - 9999i64,  1i64,  1i64,  1i64, 1i64,   0i64 - 9999i64,  1i64,  10i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64 - 9999i64,  12i64, 31i64, 1i64, 365i64, 0i64 - 9998i64,  1i64,  11i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64 - 9998i64,  1i64,  1i64,  2i64, 1i64,   0i64 - 9998i64,  1i64,  12i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64 - 101i64,   1i64,  1i64,  7i64, 1i64,   0i64 - 102i64,   52i64, 13i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64 - 101i64,   12i64, 31i64, 7i64, 365i64, 0i64 - 101i64,   52i64, 14i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64 - 100i64,   1i64,  1i64,  1i64, 1i64,   0i64 - 100i64,   1i64,  15i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64 - 4i64,     1i64,  1i64,  1i64, 1i64,   0i64 - 4i64,     1i64,  16i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64 - 4i64,     12i64, 31i64, 2i64, 366i64, 0i64 - 3i64,     1i64,  17i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64 - 3i64,     1i64,  1i64,  3i64, 1i64,   0i64 - 3i64,     1i64,  18i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64 - 1i64,     1i64,  1i64,  5i64, 1i64,   0i64 - 2i64,     53i64, 19i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64 - 1i64,     12i64, 31i64, 5i64, 365i64, 0i64 - 1i64,     52i64, 20i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64,            1i64,  1i64,  6i64, 1i64,   0i64 - 1i64,     52i64, 21i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64,            12i64, 31i64, 7i64, 366i64, 0i64,            52i64, 22i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(1i64,            1i64,  1i64,  1i64, 1i64,   1i64,            1i64,  23i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(1901i64,         1i64,  1i64,  2i64, 1i64,   1901i64,         1i64,  24i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(1901i64,         12i64, 31i64, 2i64, 365i64, 1902i64,         1i64,  25i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(1902i64,         1i64,  1i64,  3i64, 1i64,   1902i64,         1i64,  26i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(1969i64,         1i64,  1i64,  3i64, 1i64,   1969i64,         1i64,  27i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(1969i64,         12i64, 31i64, 3i64, 365i64, 1970i64,         1i64,  28i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(1970i64,         1i64,  1i64,  4i64, 1i64,   1970i64,         1i64,  29i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(1970i64,         12i64, 31i64, 4i64, 365i64, 1970i64,         53i64, 30i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(1971i64,         1i64,  1i64,  5i64, 1i64,   1970i64,         53i64, 31i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(2004i64,         1i64,  1i64,  4i64, 1i64,   2004i64,         1i64,  32i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(2004i64,         12i64, 31i64, 5i64, 366i64, 2004i64,         53i64, 33i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(2005i64,         1i64,  1i64,  6i64, 1i64,   2004i64,         53i64, 34i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(2008i64,         1i64,  1i64,  2i64, 1i64,   2008i64,         1i64,  35i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(2008i64,         12i64, 31i64, 3i64, 366i64, 2009i64,         1i64,  36i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(2009i64,         1i64,  1i64,  4i64, 1i64,   2009i64,         1i64,  37i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(2011i64,         1i64,  1i64,  6i64, 1i64,   2010i64,         52i64, 38i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(2011i64,         12i64, 31i64, 6i64, 365i64, 2011i64,         52i64, 39i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(2012i64,         1i64,  1i64,  7i64, 1i64,   2011i64,         52i64, 40i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(2012i64,         12i64, 31i64, 1i64, 366i64, 2013i64,         1i64,  41i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(2013i64,         1i64,  1i64,  2i64, 1i64,   2013i64,         1i64,  42i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(2016i64,         1i64,  1i64,  5i64, 1i64,   2015i64,         53i64, 43i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(2016i64,         12i64, 31i64, 6i64, 366i64, 2016i64,         52i64, 44i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(2017i64,         1i64,  1i64,  7i64, 1i64,   2016i64,         52i64, 45i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(2018i64,         12i64, 31i64, 1i64, 365i64, 2019i64,         1i64,  46i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(2020i64,         1i64,  1i64,  3i64, 1i64,   2020i64,         1i64,  47i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(2020i64,         12i64, 31i64, 4i64, 366i64, 2020i64,         53i64, 48i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(2021i64,         1i64,  1i64,  5i64, 1i64,   2020i64,         53i64, 49i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(9999i64,         12i64, 31i64, 5i64, 365i64, 9999i64,         52i64, 50i32);
+    if (r != 0i32) { exit r; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

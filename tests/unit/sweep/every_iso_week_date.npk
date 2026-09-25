@@ -1,0 +1,155 @@
+// expect-exit: 0
+// sweep-count: 7304484
+//
+// EVERY DATE IN THE RANGE, AS AN ISO WEEK DATE AND BACK -- `CALENDAR.md` C-14,
+// on the gate's range (`TESTING.md` V-2, V-4). The walk carries a week date of
+// its own -- week-year, week, weekday -- and advances it by ISO 8601's rule
+// read the calendar's way: the weekday by one per date, from Monday on
+// -9999-01-01; and at each Monday the week by one, EXCEPT that a Monday on 29,
+// 30 or 31 December or on 1 ... 4 January begins week 1 of a new week-year,
+// because week 1 is the week that holds 4 January. For every date,
+// `iso_week_year`, `iso_week_number` and `iso_weekday` must equal the walk's
+// three, and `iso_week_to_date` of the walk's three must be the same date.
+// When a week-year ends it must have had 52 or 53 weeks, and
+// `iso_week_to_date` of the week after its last must be REFUSED; after the
+// range's last date, so must the week after 9999's last and the day after
+// 9999-12-31 in its week. Run in full, at -O0 and again under `opt -O2` (B-3),
+// on every full invocation (B-9).
+//
+// TWO READINGS OF ISO 8601 THAT SHARE NO CODE. `src/cal/cal.npk` finds week
+// 1's Monday from day numbers -- 4 January's, less its weekday index -- and
+// compares day numbers; this walk finds it from the month and day of each
+// Monday it reaches, and counts. -9999-01-01 is a Monday on or before 4
+// January, so it begins week 1 of -9999: that is where the walk starts.
+//
+// THE INVERSE IS HANDED THE WALK'S WEEK DATE, NOT THE VALUE UNDER TEST, AND
+// THAT IS THE DIFFERENCE FROM "`iso_week_to_date(iso_week_year(d),
+// iso_week_number(d), iso_weekday(d)) == d`" (`0.1.3.md` §7, TM-174). Every ISO
+// field in `cal` is read off one function, forwards and back, so a week 1
+// begun on the wrong Monday moves both directions together, and that round
+// trip still passes -- measured, exit 0 with the full count, with week 1 taken
+// as the week that holds 5 January; and it passes an `iso_week_to_date` that
+// accepts week 53 of every year, because a real date never asks for a week
+// that does not exist.
+//
+// THE COUNT IS THE EVIDENCE (`TESTING.md` V-16, TM-122): N is the dates that
+// passed every check, and the harness requires it to equal the domain declared
+// above. The declared domain is tagged where the specifications state it
+// (`TESTING.md` V-1h, TM-168).
+//
+// Three `for` loops over ranges, bounded by construction: no `decreases`, no
+// `DecreasesViolated`, and the eleven identities of any program importing
+// `cal` (`SAFETY.md` S-4) -- measured.
+//
+// EXIT CODES, clear of every arm code (V-1j): 10 `days_in_month` refused a
+// month from 1 to 12; 11 `civil_date` refused a date the month's length
+// admits; 12 `iso_week_year` is not the walk's; 13 `iso_week_number` is not;
+// 14 `iso_weekday` is not; 15 `iso_week_to_date` refused a week date the walk
+// reached; 16 it accepted the week after a week-year's last; 17 it returned a
+// different date; 18 it accepted the day after the range's last -- a belt: two
+// independent range checks below it refuse that day; 19 a week-year the walk
+// finished had neither 52 nor 53 weeks -- a check on this walk's own reading
+// of the rule; 20, 21 and 22 the `swept` line could not be built, could not be
+// written, or was written short.
+mod:every_iso_week_date;
+
+use "../../../src/cal/cal.npk".CivilDate;
+use "../../../src/cal/cal.npk".civil_date;
+use "../../../src/cal/cal.npk".days_in_month;
+use "../../../src/cal/cal.npk".iso_week_year;
+use "../../../src/cal/cal.npk".iso_week_number;
+use "../../../src/cal/cal.npk".iso_weekday;
+use "../../../src/cal/cal.npk".iso_week_to_date;
+use "../../../src/core/limits.npk".NTIME_YEAR_MIN;
+use "../../../src/core/limits.npk".NTIME_YEAR_MAX;
+
+func:main = int32(cstring[]:_~argv) {
+    int64:count = 0i64;
+    int64:iy = 0i64;
+    int64:w = 0i64;
+    int64:wd = 0i64;
+    for (int64:y in NTIME_YEAR_MIN..NTIME_YEAR_MAX) {
+        for (int64:m in 1i64..12i64) {
+            Result<int64>:dim = days_in_month(y, m);
+            if (dim.is_error) { exit 10i32; }
+            for (int64:d in 1i64..dim.value) {
+                Result<CivilDate>:c = civil_date(y, m, d);
+                if (c.is_error) { exit 11i32; }
+                if (count == 0i64) {
+                    iy = y;
+                    w = 1i64;
+                    wd = 1i64;
+                } else {
+                    wd = wd + 1i64;
+                    if (wd == 8i64) {
+                        wd = 1i64;
+                        bool:starts = ((m == 12i64) && (d >= 29i64))
+                                      || ((m == 1i64) && (d <= 4i64));
+                        if (starts) {
+                            if ((w != 52i64) && (w != 53i64)) { exit 19i32; }
+                            Result<CivilDate>:past = iso_week_to_date(iy, w + 1i64, 1i64);
+                            if (!past.is_error) { exit 16i32; }
+                            iy = is (m == 12i64) : (y + 1i64) : y;
+                            w = 1i64;
+                        } else {
+                            w = w + 1i64;
+                        }
+                    }
+                }
+                if (raw iso_week_year(c.value) != iy)   { exit 12i32; }
+                if (raw iso_week_number(c.value) != w)  { exit 13i32; }
+                if (raw iso_weekday(c.value) != wd)     { exit 14i32; }
+                Result<CivilDate>:back = iso_week_to_date(iy, w, wd);
+                if (back.is_error) { exit 15i32; }
+                CivilDate:b = back.value;
+                if ((b.year => int64) != y)  { exit 17i32; }
+                if ((b.month => int64) != m) { exit 17i32; }
+                if ((b.day => int64) != d)   { exit 17i32; }
+                count = count + 1i64;
+            }
+        }
+    }
+    // The last week-year, 9999, ends inside its week 52: its week 53 does not
+    // exist, and the day after 9999-12-31 is outside the range.
+    Result<CivilDate>:last = iso_week_to_date(iy, w + 1i64, 1i64);
+    if (!last.is_error) { exit 16i32; }
+    Result<CivilDate>:beyond = iso_week_to_date(iy, w, wd + 1i64);
+    if (!beyond.is_error) { exit 18i32; }
+    int32:said = raw say_swept(count);
+    if (said != 0i32) { exit said; }
+    exit 0i32;
+};
+
+// `swept <count>` and a newline, on stdout, exactly once -- the same helper
+// as `every_day_number.npk`'s, and every copy is checked on every run by the
+// harness reading what it printed.
+func:say_swept = int32(int64:count) never fails {
+    string:digits = int_to_string(count);
+    string:head = string_concat("swept ", digits);
+    string:line = string_concat(head, "\n");
+    Result<cstring>:c = to_cstring(line);
+    if (c.is_error) { pass 20i32; }
+    cstring:s = c.value;
+    Result<int64>:w = sys(1i64, 1i64, s.ptr, s.len);
+    if (w.is_error) { pass 21i32; }
+    if (w.value != s.len) { pass 22i32; }
+    pass 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

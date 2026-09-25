@@ -4381,3 +4381,280 @@ the leap rule on every run; tagging roadmap files — they are archived at the
 cycle's close, and a tag in `done/` would pin history to the present. The
 three-method recomputation of `0.1.2.md` §2 is run at execution and recorded;
 the tags carry it forward.
+
+---
+
+# Cycle 0.1.3 — the derived fields, ratified 2026-09-25
+
+Eight decisions, drafted at planning (`meta/roadmap/0.1/0.1.3.md` §14, PD-20 …
+PD-27, in that order) and recorded here by the worker in the commit that makes
+the change each describes. Every measurement is at compiler `c3bdae2` and is
+recorded with its command in `0.1.3.md`'s execution record; the ones taken at
+planning were re-run at execution and matched.
+
+### TM-169 — `cal` gains seven public names: `weekday`, `day_of_year`, `ordinal_to_date`, `iso_week_year`, `iso_week_number`, `iso_weekday` and `iso_week_to_date`
+
+**2026-09-25, cycle 0.1.3 (PD-20).** Five are `CALENDAR.md` C-13 … C-15's own
+names, computed from the day number and never stored, `never fails` and total.
+The two constructors exist because `TESTING.md` V-4 requires the reverse of
+every representation the library produces, and cycle 0.4's
+`parse_iso_week_date` and `parse_iso_ordinal_date` (`FORMAT_MODEL.md` §2) will
+call them. They are validating constructors in `days_to_date`'s shape: `int64`
+arguments, each checked against its bound before any arithmetic on it (S-12),
+and built through `days_to_date` and so through `civil_date`, which stays the
+only builder of a `CivilDate` in `src/` (C-8). The umbrella re-exports all
+seven, one line each (B-16), so it re-exports 57 names where it re-exported 50.
+
+**The arm bill does not move**, measured at execution rather than argued:
+`NITPICK-REACH-003`'s own list names the same eleven identities for a consumer
+of `src/cal/cal.npk` and for each of the six new or changed tests, and
+`check_failsafe_arms` reads `cal` 11 and the umbrella 13, as before. None of the
+seven loops, and the one new trap site, `#unreachable()` (TM-171), arms
+`Unreachable`, which is in the floor.
+
+*Declined:* an `IsoWeekDate` struct returned by one function — a fourth public
+type, and a literal a consumer could write unchecked unless it were sealed, for
+a triple C-14 already names as three functions; `iso_week_to_date` taking a
+`Weekday` — then the parser at 0.4 turns a digit into a `Weekday` itself, the
+manufactured-tag problem of TM-171 moved into a second module, where an `int64`
+and a range check keep it in one; the names `ordinal_date` and `iso_week_date`
+— either reads as the field rather than the constructor, and the second sits
+beside `FORMAT_MODEL.md`'s `to_iso_week_date`, which means the opposite
+direction; `civil_date_from_ordinal` and `civil_date_from_iso_week` — correct,
+and long, where `days_to_date` already set the module's pattern; no
+constructors at all — V-4 and C-15 require the round trip, and a round trip
+with no reverse is not one.
+
+### TM-170 — Hinnant's `days_from_civil(y, m, d)` is a private function of `cal`, and `date_to_days` is its one-line widening from the sealed fields
+
+**2026-09-25, cycle 0.1.3 (PD-21).** The derived fields need the day number of
+dates they do not hold — 1 January of a date's year, 4 January of its
+week-year — and building one with `civil_date` would put a `Result` inside
+functions that cannot fail. So the nine lines of `date_to_days`' body move,
+unchanged but for `y` now being the parameter Hinnant's page decrements, into a
+private `days_from_civil` over three `int64`s — his own signature — and
+`date_to_days` becomes one line that widens the three sealed fields and calls
+it. The module holds one copy of the formula. C-12's bounds hold of every call:
+each caller passes a month and a day of 1 … 12 and 1 … 31 or a sealed field's,
+and a year within one of an `int32`.
+
+*Measured at execution*: every test that feeds on `date_to_days` — both day
+walks, `day_number_vectors`, `range_constants`, the three new unit tests and
+the two new sweeps — runs against the moved body in `0.1.3.md` §7's control row
+and exits 0, every sweep at its full count; and row D16, the one line with
+month and day swapped, fails every column that computes a day number, so the
+line is load-bearing and tested. `CALENDAR.md` C-10 says where the formula
+went. Two comments that said `date_to_days` carries the negative-year
+correction — `is_leap_year`'s header and `tests/unit/leap_rule.npk`'s — were
+made stale by the move and are corrected, dated, in the same commit.
+
+*Declined:* a second copy of the formula specialised to 1 January — two
+statements of it, which is how two functions come to disagree;
+`civil_date(y, 1, 1)` with its error handled — a `Result` in a total function,
+and a branch no valid input takes; a cumulative table of month offsets for
+`day_of_year` — a second statement of the month lengths beside
+`MONTH_LENGTH`.
+
+### TM-171 — one weekday computation: a private `weekday_index` applies C-13's correction and then checks `0 ≤ index ≤ 6` with `#unreachable()`; `weekday` manufactures the tag from it with `=>!`; `SAFETY.md` gains S-15c
+
+**2026-09-25, cycle 0.1.3 (PD-22).** The index has to become a `Weekday`. The
+checked cast is refused — `k => Wd` is `NITPICK-TYPE-009`, whose own text reads
+*"this manufactures a tag, and nothing checks that the number names a variant
+… Write `=>!` to accept that"* (measured at execution) — and `intN =>! Enum`
+is permitted and unchecked: the compiler's D-140, *"a forged tag makes every
+arm of a proven `pick` miss and the statement fall through"*. It is the exact
+inverse of `weekday_number`'s `w =>! int32`, so the enum stays the one
+statement of C-7's order. **Measured at execution**, `0.1.3.md` §2.3's
+`forge.npk`: in range the manufactured tag is the variant; a tag of −6 reads
+back as −5 through a `weekday_number`-shaped function, and an exhaustive
+seven-arm `pick` over it matches none of the arms and falls through — exit 0,
+at -O0 and under `opt -O2`. *(The compiler's `TYPE_REFERENCE` §9.3 still says
+"`intN => enum` is impossible in both spellings (D-140)" at `c3bdae2` — the
+first draft D-140 records being overruled. The diagnostic and `forge.npk` are
+the pin's behaviour, and this decision rests on them.)*
+
+So the index is range-checked on the same path, and the check's failure is
+`#unreachable()` (the compiler's `CONTROL_REFERENCE` §1.2.2): the modulus is
+taken in exactly one place, `weekday_index`, which `weekday`, `iso_weekday`
+and week 1's Monday (TM-172) all call. The correction leaves every index in
+0 … 6, so the check is dead code on every input. **What it buys is the
+correction's absence turned from a silent wrong answer into a controlled
+stop**, measured at execution on `0.1.3.md` §7's matrix: with the correction
+deleted and the check kept (row D1), every test that computes a pre-1970
+weekday stops at exit 95, `Unreachable`, while the ordinal member and the
+ordinal refusal file, which compute none, stay green; with both deleted (row
+D2) the forged tags reach the tests, and the weekday rider exits 17 on the
+range's second day.
+
+**`SAFETY.md` S-15c** states the rule: a narrowing of a value the library
+itself computed is checked like any other (S-15b), and since there is no
+caller to answer — and a `never fails` function has no error to return — its
+failure is `#unreachable()`, a controlled stop through the floor's
+`Unreachable` and no new arm, rather than an `ETimeValue`. Manufacturing an
+enum tag counts as a narrowing.
+
+*Declined:* `=>!` alone — measured to forge; a `fixed Weekday[7]` table, whose
+out-of-range index would trap `OutOfBounds` — not spellable, refused
+`NITPICK-TYPE-035` at `c3bdae2` (`table.npk`, measured at execution: an enum
+variant is not a compile-time constant for a module-level initialiser); a
+seven-arm `pick` on the index — C-7's order stated a second time, and a
+catch-all that makes a bad index a VALID wrong weekday; a live `ensures` in
+place of the belt — the same stop through a paid arm, `EnsuresViolated`, in
+every consumer, which Q-6's answer, A′ (the author's, 2026-09-25), admits only
+where a numbered decision accepts that arm, and this one would buy nothing the
+free belt does not (`0.1.3.md` §11); a separate modulus in each function that
+needs one — three corrections, three places to forget one.
+
+### TM-172 — week 1 of a week-year begins on the Monday on or before 4 January, computed by one private function, `iso_week_one`, from which every ISO field is read in both directions; a week-year's length is the distance between two consecutive week-1 Mondays; week 53 of a 52-week year is refused
+
+**2026-09-25, cycle 0.1.3 (PD-23).** ISO 8601-1:2019's clause 3.1.1.23 defines
+week 1 as the week including the first Thursday of the year, per
+`meta/research/iso-8601-week-date.md`, as of 2026-09-25. The first Thursday is
+one of 1 … 7 January, and the Monday-to-Sunday week around it holds 4 January
+exactly then, so week 1's Monday is the Monday on or before 4 January:
+`days_from_civil(iy, 1, 4)` less 4 January's weekday index. That form is
+derived, not quoted, and `CALENDAR.md` C-14 says so.
+
+`iso_week_year` is `y − 1` before `y`'s week-1 Monday, `y + 1` from `y + 1`'s,
+and `y` otherwise; `iso_week_number` is whole weeks since the week-year's
+week-1 Monday, plus one; a week-year's week count is the distance between two
+consecutive week-1 Mondays, over seven — 52 or 53, never tabulated; and
+`iso_week_to_date` adds `(w − 1) × 7 + (wd − 1)` to the week-year's week-1
+Monday. So forwards and back cannot disagree about where a week-year begins —
+**which is exactly why their round trip proves nothing on its own** (TM-174):
+with week 1 taken as the week holding 5 January (row D8), both directions move
+together.
+
+**The range's two ends, re-derived at execution by three methods that share no
+code with `src/cal/`** (`0.1.3.md` §3): −9999-01-01 is a Monday and begins week
+1 of −9999, so nothing in the range falls in week-year −10000; 9999-12-31 is a
+Friday in week 52 of 9999, whose Saturday and Sunday are 10000-01-01 and -02,
+so `iso_week_to_date(9999, 52, 6)` and `(9999, 52, 7)` are refused by
+`days_to_date`'s range check, relayed. Week 53 of a 52-week year is refused,
+not read as week 1 of the next: one date, one spelling.
+
+*Declined:* the Thursday form in code beside a 4-January form elsewhere — two
+statements of one rule, the shape TM-170 removes; a closed-form week count (the
+`p(y)` formula) — a third statement of the leap rule; accepting week 53 of a
+short year as week 1 of the next — two spellings of one date; tabulating
+anything — C-14 says computed.
+
+### TM-173 — `ValueFault` gains `DayOfYear`, `WeekRange`, `WeekOfYear` and `WeekdayRange`, appended
+
+**2026-09-25, cycle 0.1.3 (PD-24).** C-5b's rule is one variant per refusal
+row, and the two constructors bring four: a day of the year past the year's
+last (`DayOfYear`, beside `DayOfMonth`), a week below 1 (`WeekRange`), a week
+past the week-year's last (`WeekOfYear`), and an ISO weekday outside 1 … 7
+(`WeekdayRange`). They follow `DayRange` and `DayOfMonth`'s split — a fixed
+bound and one the year decides are two variants — and are carried beside each
+`fail` as a comment, like the existing ten, since how a refusal hands its fault
+back is still `OPEN_QUESTIONS.md` O-X8. `SAFETY.md` S-3's block carries the
+fourteen.
+
+**It moves one count, found at execution by a sweep for the enum's size**:
+`CALENDAR.md` C-5b's recommendation and O-X8 both said the companion classifier
+would need an *eleventh*, "no fault", variant, and O-X8 called the enum *ten
+variants*. Both were true until this decision; with fourteen, the "no fault"
+variant would be the fifteenth. C-5b and O-X8 are corrected in the same
+commit, each with a dated note, and the recommendation itself does not move.
+
+*Declined:* reusing `DayRange` and `DayOfMonth` — a day-of-month fault reported
+for a week; leaving the enum for O-X8 to settle — the rule is recorded now and
+binds the commit that adds the rows; inserting rather than appending — every
+existing variant's tag would move.
+
+### TM-174 — the weekday rider is a count on the civil walk; C-14 and C-15 each get a `sweep` member that compares the forward functions with a walk of the rule, hands the REVERSE the walk's value, and asks it to refuse one past each bound; `TESTING.md` gains V-4b
+
+**2026-09-25, cycle 0.1.3 (PD-25).** C-17's second rider joins
+`tests/unit/sweep/every_civil_date.npk`'s walk (TM-165) as a count that is 0 on
+−9999-01-01, a Monday, advances by one per date and goes back to 0 after 6 by
+comparison rather than by `%`; each date's `weekday_number(weekday(d))` must be
+the count plus one. `every_ordinal_date.npk` compares `day_of_year` with a
+count of the year's dates, hands `ordinal_to_date` the count, and asks it to
+refuse the day after each of the 19 999 years' last; `every_iso_week_date.npk`
+carries a week date of its own, advanced by ISO 8601's rule read from each
+Monday's month and day, compares the three ISO fields with it, hands
+`iso_week_to_date` the walk's three, and asks it to refuse the week after each
+of the 19 999 week-years' last. Each new member declares the day range,
+7 304 484, as its `sweep-count`, and each declared domain is a tagged
+denominator (TM-168).
+
+**Measured at execution** (`0.1.3.md` §7, both tables 0 differences from the
+plan): *"advances by one, mod seven"* exits 0 with the full count on a weekday
+missing its `%` correction (row D2) and on one a day late everywhere (D3),
+where the count exits 17 on both; the round trip
+`iso_week_to_date(iso_week_year(d), iso_week_number(d), iso_weekday(d)) == d`
+exits 0 with the full count with week 1 taken as the week holding 5 January
+(D8) and with week 53 accepted in every year (D9), where the member exits 16 on
+both; and `ordinal_to_date(y, day_of_year(d)) == d` exits 0 with the full count
+with day 366 accepted in every year (D5), where the member exits 15. **V-4b is
+the general rule**: when a function is total, a check that builds its input
+from the value under test is fooled — the rule TM-167 applied to three riders,
+stated for every round trip, cycle 0.2's and 0.4's included.
+
+*Declined:* the round trips as first worded (the cycle README's *"the ISO week
+round trip"*) — fooled, measured; folding the ordinal and ISO checks into
+`every_civil_date.npk`, as V-2's old row *"the same sweep"* suggested — the
+gate's file would carry two cycles' claims, a failure in either would read as
+the gate's, and each check's cost is visible only on its own line; one member
+for both — one `swept` line for two claims (TM-166's reason); the weekday rider
+in a member of its own — TM-165 settled where it goes.
+
+### TM-175 — C-14's boundary cases are indexed by the shape of the year that ENDS: for each of the fourteen shapes, that year's 1 January, its 31 December and the next 1 January; `tests/unit/derived_field_vectors.npk` carries 41 dates so chosen, derived three ways
+
+**2026-09-25, cycle 0.1.3 (PD-26). Amends `CALENDAR.md` C-14**, whose boundary
+sentence as first written is quoted in the dated note beside the new text.
+C-14 indexed its fourteen cases by the shape of the year that BEGINS — 1
+January on each weekday, leap or common — **but the ISO week 1 January falls in
+is decided by the year that ENDS.** Measured at execution with Python 3.12.3's
+`isocalendar()` over every year from 2 to 9998 (`0.1.3.md` §1.3's `shapes.py`):
+a common year beginning on a Saturday opens in week 52 of the year before when
+that year was common (2011 → 2010-W52-6) and in week 53 when it was leap (2005
+→ 2004-W53-6), so fourteen cases chosen as C-14 worded them fix thirteen
+answers and leave the fourteenth to whichever year was picked. Indexed by the
+shape of the year before, no 1 January is ambiguous, and no 31 December is
+ambiguous by its own year's shape.
+
+So the vectors take fourteen years, one of each shape — −9999, −101, −4, −1,
+0, 1901, 1969, 1970, 2004, 2008, 2011, 2012, 2016 and 2020 — and for each its
+1 January, its 31 December and the next 1 January; merged where two coincide,
+39 dates, plus the range's last day and 2018-12-31, ISO 8601-1:2019/Amd
+1:2022's own example, the Monday of 2019's week 1: **41**. Every row was
+generated and never typed, and re-derived at execution three ways that share
+no code with `src/cal/` or with each other — Python's `datetime` after a
+NON-ZERO shift of whole 400-year cycles, Zeller's congruence with ISO 8601's
+Thursday rule, and a count of days from −9999-01-01 with the 4-January rule —
+which agree on all 41, and the file states exactly them. The control, 2005-01-01
+stated as week 52 of 2004, is red on its one row.
+
+*Declined:* C-14's fourteen as worded — one answer left to the choice of year;
+a fifteenth case bolted on — right for the Saturday and silent about why, where
+the ending-shape index says it; every year's boundary in the unit test — that
+is the ISO member's job, over all 19 999 (TM-174).
+
+### TM-176 — `BUILD.md` B-15 is restated to what the specifications do: a public name is the one its specification gives it, a family of functions over one type shares the type's prefix, and `host_` is the one module prefix; the promised `check_public_prefix` is withdrawn
+
+**2026-09-25, cycle 0.1.3 (PD-27). Amends `BUILD.md` B-15** (its old text quoted
+in the dated note beside the new) and `CONTRIBUTING.md`'s *Style* paragraph,
+which restated it. B-15 required `cal_`, `span_`, `fmt_` and the rest on every
+public name; `cal` had shipped eight unprefixed public functions since 0.1.0,
+named as `CALENDAR.md` names them, and three of the six model documents name
+their functions for what they compute rather than for their module. The
+promised check was never scheduled, and would have failed on its first run
+against the specifications it was meant to hold the code to. This subcycle
+adds seven names, so B-15 could not stand as it was: a rule a commit records
+binds the text the same commit writes.
+
+**Unprefixed names cost a consumer nothing**, measured at execution: a consumer
+that imports `weekday` and `day_of_year` from `src/cal/cal.npk` and declares
+`int64` locals of the same two names compiles (`npkc` exit 0, `.ll` written),
+links and runs at exit 0 — the locals shadow the imported functions.
+
+*Declined:* naming only the seven new functions `cal_*` — one module with two
+conventions; renaming all fifteen `cal_*` — a MAJOR-grade change to the whole
+surface and to `CALENDAR.md`'s names, for a rule nothing else follows (the
+author may still choose it, and it is mechanical: the fifteen `pub func` names,
+their `pub use` lines, their callers in `tests/`, and every specification that
+names them); writing the check as B-15 stood — red on arrival; a check that
+the umbrella's names are the specifications' names — the stronger instrument,
+not needed to take this decision, and left to the cycle that wants it.

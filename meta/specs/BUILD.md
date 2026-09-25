@@ -275,9 +275,9 @@ lets the stage cover the 24 files here that must not compile
 refused at `PARSE-001`, `LEX-004`, `PARSE-002`, `TYPE-009`, `TYPE-046`,
 `TYPE-079`, `TYPE-080`, `BORROW-001`, `BORROW-012`, `REACH-002` and
 `REACH-003`, and every family after the first three runs only on something
-that parsed. Re-measured at pin `c3bdae2`, cycle 0.1.2: **94 files = 70 parse
+that parsed. Re-measured at pin `c3bdae2`, cycle 0.1.3: **99 files = 75 parse
 cleanly + 22 parse and are refused later + 2 do not parse**
-<!-- [[sweep: npk_total=94]] -->, and the two
+<!-- [[sweep: npk_total=99]] -->, and the two
 are `probe02d_wide_literal_refused.npk` (LEX-004, PARSE-002) and
 `probe14_error_payload_refused.npk` (PARSE-001, TM-147). It read
 `50 = 36 + 13 + 1` for three subcycles after the tree stopped being that size,
@@ -292,7 +292,8 @@ the `+ 5` in each of the two sums: `88 = 64 + 22 + 2`, with 24 that must not
 compile. Cycle 0.1.1 added three unit tests that run, all three in the first
 term — `91 = 67 + 22 + 2` — and the 24 did not move; and cycle 0.1.2 added
 three sweeps that run, all three in the first term again — `94 = 70 + 22 + 2`
-(TM-166).
+(TM-166); and cycle 0.1.3 added five that run — two sweeps and three unit
+tests — all five in the first term again: `99 = 75 + 22 + 2` (TM-174).
 
 **AND THE TWO NUMBERS IN THAT PARAGRAPH ARE DIFFERENT SETS** — worth one
 sentence, because earlier versions had two sixteens, and before that two
@@ -321,6 +322,13 @@ its members: the three civil sweeps cost **4.5 s** together on a full
 invocation — 2.1 + 1.9 + 0.5 s, both legs, compile included, the harness's own
 per-unit figures — against a 30 s threshold `meta/roadmap/0.1/0.1.2.md` §6 set
 in advance. That measurement is what "seconds, not minutes" now rests on.)*
+*(Measured at cycle 0.1.3, when the ordinal and ISO week members joined: the
+five sweeps cost **16.5 s** together on a full invocation — 2.7 + 1.9 + 7.9 +
+0.5 + 3.5 s for `every_civil_date`, `every_day_number`, `every_iso_week_date`,
+`every_month_length` and `every_ordinal_date`, both legs, compile included, the
+harness's own per-unit figures — against a 30 s threshold
+`meta/roadmap/0.1/0.1.3.md` §8 set in advance. The ISO week member is the long
+pole: about ten evaluations of Hinnant's formula per date, by design.)*
 
 **Rule B-9b (TM-125) — no CI workflow may pass `--quick`**, and O-X5 is settled
 that way. The argument is not that the sweeps are cheap — they are, and that
@@ -403,13 +411,33 @@ which at 447 entries beats a hash and has one invariant instead of four.
 basename** — the loader reports `NITPICK-RESOLVE-005` at line 1 otherwise, and
 says nothing about the name.
 
-**Rule B-15 (amended at cycle 0.0.6 — F5).** Public names carry **their
+**Rule B-15 (amended at cycle 0.1.3 — TM-176).** A public name is the one its
+specification gives it. A family of functions over one type shares that type's
+prefix — `vec_` and `bytes_` today, and the `timestamp_`, `period_` and `zone_`
+families `SPAN_MODEL.md` and `ZONE_MODEL.md` name — and a function named for
+what it computes carries none: `civil_date`, `date_to_days`, `weekday`,
+`iso_week_year` (`CALENDAR.md` C-7 … C-15). **`host_` is the one MODULE
+prefix, and deliberately so**: it marks the impure module at every call site
+(TM-018, `SAFETY.md` S-10). A `pub struct` takes PascalCase (`Timestamp`,
+`CivilDate`, `ZonedDateTime`, `Vec`, `Bytes`); constants are `SCREAMING_SNAKE`
+and, where they are named bounds, carry the LIBRARY's prefix `NTIME_` rather
+than a module's, because `src/core/limits.npk` owns them for the whole library
+(`check_constants_named`). The review point for a new public name is the
+umbrella's one line per name (B-16), where a name becomes a MAJOR version to
+take away (TM-013).
+
+*(Amended at cycle 0.1.3, TM-176. The rule read: "Public names carry **their
 module's** short prefix and nothing else carries it: `vec_`, `bytes_`, `cal_`,
-`span_`, `zone_`, `fmt_`, `host_`. A `pub struct` takes PascalCase
-(`Timestamp`, `CivilDate`, `ZonedDateTime`, `Vec`, `Bytes`); constants are
-`SCREAMING_SNAKE` and, where they are named bounds, carry the LIBRARY's prefix
-`NTIME_` rather than a module's, because `src/core/limits.npk` owns them for
-the whole library (`check_constants_named`).
+`span_`, `zone_`, `fmt_`, `host_`", and its note promised a
+`check_public_prefix` "at cycle 0.1, when `src/cal/` gives it a second
+directory to be right about". By cycle 0.1.2 `cal` had shipped eight public
+functions and not one carried `cal_` — they carry the names `CALENDAR.md`
+gives them — and three of the six model documents name their functions for
+what they compute rather than for their module. The rule was followed by
+`host_` and by the `Vec` and `Bytes` families and by nothing else; the check
+was never scheduled, and would have failed on its first run against the
+specifications it was meant to hold the code to. Both are withdrawn: the rule
+now says what the specifications do.)*
 
 *(The list read `cal_`, `span_`, `zone_`, `fmt_`, `host_` — one entry per
 directory that existed when it was written — and `src/core/` then shipped

@@ -1,0 +1,114 @@
+// expect-exit: 0
+// sweep-count: 7304484
+//
+// EVERY DATE IN THE RANGE, AS AN ORDINAL DATE AND BACK -- `CALENDAR.md` C-15,
+// on the gate's range (`TESTING.md` V-2, V-4). For every year in
+// [NTIME_YEAR_MIN, NTIME_YEAR_MAX], every month, and every day
+// `days_in_month` says that month has: `day_of_year` of the date equals a
+// COUNT of the year's dates so far, and `ordinal_to_date` of the year and that
+// count is the same date. After each year's last date, `ordinal_to_date` of
+// the day after it is REFUSED. Run in full, at -O0 and again under
+// `opt -O2` (B-3), on every full invocation (B-9).
+//
+// THE INVERSE IS HANDED THE COUNT, NOT THE VALUE UNDER TEST, AND THAT IS THE
+// DIFFERENCE FROM "`ordinal_to_date(y, day_of_year(d)) == d`" (`0.1.3.md` §7,
+// TM-174). A round trip that builds its input from the value under test only
+// checks that two functions agree with each other: it passes an
+// `ordinal_to_date` that accepts day 366 of every year -- measured, exit 0
+// with the full count -- because a real date never asks for a day that does
+// not exist. The count is the calendar's: reset at each year, advanced by one
+// per date. So `day_of_year` is compared with something it did not compute,
+// the inverse is handed something neither function computed, and the refusal
+// at each year's end is asked of all 19 999 years.
+//
+// TWO IMPLEMENTATIONS OF A YEAR'S LENGTH THAT SHARE NO CODE: this walk's, the
+// leap rule and the month table; and `ordinal_to_date`'s, the distance between
+// two 1 Januaries by Hinnant's formula.
+//
+// THE COUNT IS THE EVIDENCE (`TESTING.md` V-16, TM-122): N is the dates that
+// passed every check, and the harness requires it to equal the domain declared
+// above. The declared domain is tagged where the specifications state it
+// (`TESTING.md` V-1h, TM-168).
+//
+// Three `for` loops over ranges, bounded by construction: no `decreases`, no
+// `DecreasesViolated`, and the eleven identities of any program importing
+// `cal` (`SAFETY.md` S-4) -- measured.
+//
+// EXIT CODES, clear of every arm code (V-1j): 10 `days_in_month` refused a
+// month from 1 to 12; 11 `civil_date` refused a date the month's length
+// admits; 12 `day_of_year` is not the count; 13 `ordinal_to_date` refused a
+// day the count reached; 14 it returned a different date; 15 it accepted the
+// day after a year's last; 20, 21 and 22 the `swept` line could not be built,
+// could not be written, or was written short.
+mod:every_ordinal_date;
+
+use "../../../src/cal/cal.npk".CivilDate;
+use "../../../src/cal/cal.npk".civil_date;
+use "../../../src/cal/cal.npk".days_in_month;
+use "../../../src/cal/cal.npk".day_of_year;
+use "../../../src/cal/cal.npk".ordinal_to_date;
+use "../../../src/core/limits.npk".NTIME_YEAR_MIN;
+use "../../../src/core/limits.npk".NTIME_YEAR_MAX;
+
+func:main = int32(cstring[]:_~argv) {
+    int64:count = 0i64;
+    for (int64:y in NTIME_YEAR_MIN..NTIME_YEAR_MAX) {
+        int64:k = 0i64;
+        for (int64:m in 1i64..12i64) {
+            Result<int64>:dim = days_in_month(y, m);
+            if (dim.is_error) { exit 10i32; }
+            for (int64:d in 1i64..dim.value) {
+                Result<CivilDate>:c = civil_date(y, m, d);
+                if (c.is_error) { exit 11i32; }
+                k = k + 1i64;
+                if (raw day_of_year(c.value) != k) { exit 12i32; }
+                Result<CivilDate>:back = ordinal_to_date(y, k);
+                if (back.is_error) { exit 13i32; }
+                CivilDate:b = back.value;
+                if ((b.year => int64) != y)  { exit 14i32; }
+                if ((b.month => int64) != m) { exit 14i32; }
+                if ((b.day => int64) != d)   { exit 14i32; }
+                count = count + 1i64;
+            }
+        }
+        Result<CivilDate>:past = ordinal_to_date(y, k + 1i64);
+        if (!past.is_error) { exit 15i32; }
+    }
+    int32:said = raw say_swept(count);
+    if (said != 0i32) { exit said; }
+    exit 0i32;
+};
+
+// `swept <count>` and a newline, on stdout, exactly once -- the same helper
+// as `every_day_number.npk`'s, and every copy is checked on every run by the
+// harness reading what it printed.
+func:say_swept = int32(int64:count) never fails {
+    string:digits = int_to_string(count);
+    string:head = string_concat("swept ", digits);
+    string:line = string_concat(head, "\n");
+    Result<cstring>:c = to_cstring(line);
+    if (c.is_error) { pass 20i32; }
+    cstring:s = c.value;
+    Result<int64>:w = sys(1i64, 1i64, s.ptr, s.len);
+    if (w.is_error) { pass 21i32; }
+    if (w.value != s.len) { pass 22i32; }
+    pass 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

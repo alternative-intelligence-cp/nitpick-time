@@ -1,12 +1,17 @@
 // The civil calendar -- the TYPES and the VALIDATING CONSTRUCTORS (cycle
-// 0.1.0), and HINNANT'S TWO ALGORITHMS (cycle 0.1.1). Governed by
-// `meta/specs/CALENDAR.md`; this file implements §3 and C-6 through C-12.
+// 0.1.0), HINNANT'S TWO ALGORITHMS (cycle 0.1.1), and the DERIVED FIELDS --
+// the weekday of a date, its ordinal date and its ISO week date, with the two
+// constructors that build a date back from them (cycle 0.1.3). Governed by
+// `meta/specs/CALENDAR.md`; this file implements §3 and C-6 through C-15.
 //
 // THE PUBLIC FUNCTIONS, in the order they appear: `is_leap_year`,
 // `days_in_month`, `date_to_days`, `days_to_date`, `civil_date`, `civil_time`,
-// `weekday_number` and `weekday_number_sunday_first`. The derived fields --
-// the weekday of a date, ordinal dates, ISO week dates (C-13, C-14, C-15) --
-// are cycle 0.1.3's.
+// `weekday_number`, `weekday_number_sunday_first`, `weekday`, `day_of_year`,
+// `ordinal_to_date`, `iso_week_year`, `iso_week_number`, `iso_weekday` and
+// `iso_week_to_date`. (Until cycle 0.1.3 the list ended at
+// `weekday_number_sunday_first`, and this paragraph ended: "The derived fields
+// -- the weekday of a date, ordinal dates, ISO week dates (C-13, C-14, C-15)
+// -- are cycle 0.1.3's.")
 //
 // THE ALGORITHMS ARE HOWARD HINNANT'S, USED AS GIVEN (C-10, TM-016), AND THIS
 // IS THEIR CITATION: Howard Hinnant, "chrono-Compatible Low-Level Date
@@ -145,10 +150,18 @@ pub error:ETimeValue;
 // back is DELIBERATELY NOT DECIDED HERE (O-X8). Nothing in this cycle needs
 // it, and adding a public name to settle it would be a TM-013 commitment taken
 // by default. What IS settled is that the enum has one variant per refusal row
-// of `0.1.0.md` §3, so the distinction exists to be delivered.
+// of `0.1.0.md` §3, so the distinction exists to be delivered -- and, since
+// cycle 0.1.3, one per refusal row of `ordinal_to_date` and `iso_week_to_date`
+// too: a day of the year past the year's last (`DayOfYear`, beside
+// `DayOfMonth`), a week below 1 (`WeekRange`) or past the week-year's last
+// (`WeekOfYear`), and an ISO weekday outside 1 ... 7 (`WeekdayRange`). A fixed
+// bound and a bound the year decides are two variants, as `DayRange` and
+// `DayOfMonth` are (`SAFETY.md` S-3). Appended, so every earlier variant keeps
+// its tag.
 pub enum:ValueFault = {
     YearRange; MonthRange; DayRange; HourRange; MinuteRange;
     SecondRange; NanoRange; OffsetRange; DayOfMonth; Overflow;
+    DayOfYear; WeekRange; WeekOfYear; WeekdayRange;
 };
 
 // ===========================================================================
@@ -256,7 +269,9 @@ fixed int64[12]:MONTH_LENGTH = [
 // remainder against ZERO, and zero has no sign.** `-4 % 4` is `0`, `-100 % 100`
 // is `0`, `-400 % 400` is `0`. A sign correction would be needed the moment a
 // NON-ZERO remainder were used -- as `days_from_civil`'s `era` does, which is
-// why `date_to_days` below carries `(y >= 0 ? y : y - 399) / 400` (0.1.1).
+// why `days_from_civil` below carries `(y >= 0 ? y : y - 399) / 400` (0.1.1).
+// (Until cycle 0.1.3 this sentence said `date_to_days` carries it, which was
+// true until that cycle moved the formula into the private `days_from_civil`.)
 //
 // The four cases and their negative mirrors are named tests in
 // `tests/unit/leap_rule.npk`; year -1, -4, -100 and -400 are there because a
@@ -314,6 +329,40 @@ pub func:days_in_month = int64(int64:y, int64:m) {
 // bill stays 11 (`SAFETY.md` S-4). The first function here that loops adds
 // that arm to every program importing this module.
 
+// HINNANT'S `days_from_civil`, OVER ITS THREE INTEGERS -- the day number of
+// `(y, m, d)`, epoch 1970-01-01 = 0. NOT PUBLIC. This is the body
+// `date_to_days` held at cycles 0.1.1 and 0.1.2, moved here unchanged at
+// cycle 0.1.3 (TM-170): the derived fields below need the day number of a date
+// they do not hold -- 1 January of a date's year, 4 January of its week-year
+// -- and building a `CivilDate` for it would put a `Result` inside functions
+// that cannot fail. Hinnant's own function takes the three integers, so this
+// is his signature again, and there is ONE copy of the formula in the module.
+//
+// TOTAL, AND ITS CALLERS KEEP C-12's BOUNDS. Every caller passes a month and
+// day of 1 ... 12 and 1 ... 31 or a sealed field's, and a year within one of
+// an `int32` -- a sealed field widened, or a range-checked year plus one -- so
+// `|era| <= 5.4e6` and `|era * 146097| <= 7.9e11` hold of every call, nothing
+// can overflow `int64`, and every divisor is a literal, so no input traps.
+//
+// `(y - 399) / 400` IS THE NEGATIVE-YEAR CORRECTION, NOT AN OFF-BY-ONE. `/`
+// truncates toward zero (`tests/probe/probe07_negative_div.npk`), so for a
+// negative `y` the plain quotient rounds the wrong way. The leap rule above
+// needs no such correction and `era` does (`0.1.0.md` §6); vectors -1, -4,
+// -100, -400 and -401 in `tests/unit/day_number_vectors.npk` are the
+// correction under test.
+//
+// Hinnant's `y -= m <= 2;` adds a `bool` to an integer; here it is an `if`, on
+// the parameter itself, as his page writes it.
+func:days_from_civil = int64(int64:y, int64:m, int64:d) never fails {
+    if (m <= 2i64) { y = y - 1i64; }
+    int64:era = (is (y >= 0i64) : y : (y - 399i64)) / 400i64;
+    int64:yoe = y - (era * 400i64);
+    int64:mp = is (m > 2i64) : (m - 3i64) : (m + 9i64);
+    int64:doy = (((153i64 * mp) + 2i64) / 5i64) + d - 1i64;
+    int64:doe = (yoe * 365i64) + (yoe / 4i64) - (yoe / 100i64) + doy;
+    pass (era * 146097i64) + doe - 719468i64;
+};
+
 // `ensures answer >= NTIME_DAY_MIN && answer <= NTIME_DAY_MAX`
 //  (true of every `CivilDate` that `civil_date` can build -- C-8c)
 //
@@ -333,25 +382,11 @@ pub func:days_in_month = int64(int64:y, int64:m) {
 // an opt-out. A second copy of `civil_date`'s validity check here would be a
 // second place for the two to disagree.
 //
-// `(y - 399) / 400` IS THE NEGATIVE-YEAR CORRECTION, NOT AN OFF-BY-ONE. `/`
-// truncates toward zero (`tests/probe/probe07_negative_div.npk`), so for a
-// negative `y` the plain quotient rounds the wrong way. The leap rule above
-// needs no such correction and `era` does (`0.1.0.md` §6); vectors -1, -4,
-// -100, -400 and -401 in `tests/unit/day_number_vectors.npk` are the
-// correction under test.
-//
-// Hinnant's `y -= m <= 2;` adds a `bool` to an integer; here it is an `if`.
+// ONE LINE SINCE CYCLE 0.1.3: the widening from the sealed fields, and
+// `days_from_civil` above it is the algorithm (TM-170). Until then this
+// function held the algorithm's nine lines itself.
 pub func:date_to_days = int64(CivilDate:cd) never fails {
-    int64:m = cd.month => int64;
-    int64:d = cd.day => int64;
-    int64:y = cd.year => int64;
-    if (m <= 2i64) { y = y - 1i64; }
-    int64:era = (is (y >= 0i64) : y : (y - 399i64)) / 400i64;
-    int64:yoe = y - (era * 400i64);
-    int64:mp = is (m > 2i64) : (m - 3i64) : (m + 9i64);
-    int64:doy = (((153i64 * mp) + 2i64) / 5i64) + d - 1i64;
-    int64:doe = (yoe * 365i64) + (yoe / 4i64) - (yoe / 100i64) + doy;
-    pass (era * 146097i64) + doe - 719468i64;
+    pass raw days_from_civil(cd.year => int64, cd.month => int64, cd.day => int64);
 };
 
 // `ensures answer.month >= 1 && answer.month <= 12`
@@ -519,4 +554,170 @@ pub func:weekday_number = int64(Weekday:w) never fails {
 // stays ISO's. Monday's tag 0 gives 1; Sunday's tag 6 gives 7 mod 7 = 0.
 pub func:weekday_number_sunday_first = int64(Weekday:w) never fails {
     pass (((w =>! int32) => int64) + 1i64) % 7i64;
+};
+
+// ===========================================================================
+// The derived fields -- `CALENDAR.md` C-13, C-14, C-15 (cycle 0.1.3, TM-169)
+// ===========================================================================
+//
+// COMPUTED, NEVER STORED (C-13). Each is a function of the day number, so none
+// can disagree with the date it describes: a stored weekday is a second
+// representation of a fact the date already carries, and two representations
+// drift.
+//
+// FIVE ARE `never fails` AND TOTAL; TWO BUILD A DATE BACK AND ARE VALIDATING
+// CONSTRUCTORS, as `civil_date` and `days_to_date` are. Each constructor
+// checks every argument against its bound BEFORE any arithmetic on it (S-12),
+// and builds through `days_to_date`, so through `civil_date` -- which keeps
+// `civil_date` the only builder of a `CivilDate` in `src/` (C-8).
+//
+// ONE WEEKDAY COMPUTATION, AND ONE CORRECTION. `weekday_index` is the only
+// place this module reduces a day number modulo seven; `weekday`,
+// `iso_weekday` and week 1's Monday all call it. `%` here takes the sign of
+// the DIVIDEND (`tests/probe/probe07_negative_div.npk`), so `(n + 3) % 7` is
+// negative on six days in seven before 1969-12-29, and the correction is what
+// makes it a weekday at all (C-13).
+//
+// NO LOOP, SO NO MEASURE AND NO `DecreasesViolated`: `cal`'s bill stays 11,
+// measured at planning with every function below in place. `#unreachable()`
+// arms `Unreachable`, which is in the floor already.
+
+// Monday = 0 ... Sunday = 6, the weekday of a DAY NUMBER (C-13): 1970-01-01 is
+// a Thursday, index 3, so the index is `(n + 3) mod 7`, with the modulus made
+// non-negative because `%` here truncates toward zero.
+//
+// `ensures answer >= 0 && answer <= 6` -- `VERIFICATION.md` §6's weekday row,
+// a comment per Q-6's A' (TM-164) -- AND THE LINE THAT CHECKS IT IS CODE. The
+// correction leaves `rem` in 0 ... 6 for every `int64` -- `%` by 7 lies in
+// -6 ... 6, and the correction adds 7 to exactly the negative ones -- so the
+// belt below never fires. It is there because `weekday` turns this index into
+// a `Weekday` with `=>!`, which MANUFACTURES A TAG the compiler does not check
+// (the compiler's D-140), and a tag outside 0 ... 6 is a `Weekday` that is
+// none of the seven: every arm of a consumer's exhaustive `pick` misses it and
+// the statement falls through (measured at planning, `0.1.3.md` §2). S-15b's
+// rule -- a range check before every narrowing -- applied to a value this
+// module computed: there is no caller to answer, so the failure is a
+// controlled stop, not an `ETimeValue` (S-15c, TM-171).
+func:weekday_index = int64(int64:n) never fails {
+    int64:rem = (n + 3i64) % 7i64;
+    if (rem < 0i64) { rem = rem + 7i64; }
+    if ((rem < 0i64) || (rem > 6i64)) { #unreachable(); }
+    pass rem;
+};
+
+// THE WEEKDAY OF A DATE (C-13, C-7), `Weekday.Monday` ... `Weekday.Sunday`.
+// The index IS the tag, because the enum's declaration order is Monday first:
+// `weekday_number` above reads the tag with `=>!` and this writes it with
+// `=>!`, so C-7's order is stated once, by the enum, and not restated as a
+// seven-arm `pick`. Both the `int64` to `int32` narrowing and the
+// manufactured tag rest on `weekday_index`'s belt, on the same path (S-15b).
+pub func:weekday = Weekday(CivilDate:cd) never fails {
+    pass ((raw weekday_index(raw date_to_days(cd))) =>! int32) =>! Weekday;
+};
+
+// `ensures answer >= 1 && answer <= 366`
+//
+// THE DAY OF THE YEAR, 1 ... 366 (C-15): the day number less 1 January's, plus
+// one -- from the day number, like every field here, and not from a table of
+// month offsets, which would be a second statement of the month lengths
+// beside `MONTH_LENGTH`.
+pub func:day_of_year = int64(CivilDate:cd) never fails {
+    pass ((raw date_to_days(cd)) - (raw days_from_civil(cd.year => int64, 1i64, 1i64))) + 1i64;
+};
+
+// `ensures day_of_year(answer) == doy`
+//
+// THE DATE OF AN ORDINAL DATE -- the round trip's other half (C-15,
+// `TESTING.md` V-4). A validating constructor: the year against C-4's range,
+// the day against 1 and the year's length, each BEFORE any arithmetic on it
+// (S-12), so neither `y + 1` nor `first + doy` can overflow, and
+// `tests/unit/ordinal_to_date_refused.npk` asserts the refusal arrives through
+// the `Result` at both `int64` extremes of both arguments. The year's length
+// is the distance between two consecutive 1 Januaries -- Hinnant's answer,
+// not `is_leap_year`'s -- because the sweep that checks this function counts
+// the days with the leap rule and the month table, and the two sides then
+// share no code.
+pub func:ordinal_to_date = CivilDate(int64:y, int64:doy) {
+    if (y < NTIME_YEAR_MIN) { fail ETimeValue; }   // ValueFault.YearRange
+    if (y > NTIME_YEAR_MAX) { fail ETimeValue; }   // ValueFault.YearRange
+    if (doy < 1i64)         { fail ETimeValue; }   // ValueFault.DayRange
+    int64:first = raw days_from_civil(y, 1i64, 1i64);
+    int64:len = (raw days_from_civil(y + 1i64, 1i64, 1i64)) - first;
+    if (doy > len)          { fail ETimeValue; }   // ValueFault.DayOfYear
+    pass (relay days_to_date((first + doy) - 1i64));
+};
+
+// THE DAY NUMBER OF THE MONDAY THAT BEGINS WEEK 1 OF WEEK-YEAR `iy` (C-14).
+// ISO 8601's week 1 is the week that holds the year's first Thursday, which is
+// the week that holds 4 January -- the first Thursday is one of 1 ... 7
+// January, and the Monday-to-Sunday week around it holds the 4th exactly then
+// -- so its Monday is 4 January less 4 January's weekday index. EVERY ISO
+// FIELD IN THIS MODULE IS READ OFF THIS ONE FUNCTION, forwards and back, so
+// the two directions cannot disagree about where a week-year begins; the sweep
+// that checks them reads the rule the other way, from the month and day of
+// each Monday (TM-172, `tests/unit/sweep/every_iso_week_date.npk`).
+func:iso_week_one = int64(int64:iy) never fails {
+    int64:jan4 = raw days_from_civil(iy, 1i64, 4i64);
+    pass jan4 - (raw weekday_index(jan4));
+};
+
+// `ensures answer >= cd.year - 1 && answer <= cd.year + 1` --
+// `VERIFICATION.md` §6's "the week-year is within one of the calendar year"
+//
+// THE WEEK-YEAR OF A DATE (C-14): the year its ISO week belongs to, which is a
+// neighbour of the calendar year for up to three days at either end -- 1
+// January 2021 is in week 53 of 2020, and 31 December 2012 in week 1 of 2013.
+pub func:iso_week_year = int64(CivilDate:cd) never fails {
+    int64:n = raw date_to_days(cd);
+    int64:y = cd.year => int64;
+    if (n < (raw iso_week_one(y)))          { pass y - 1i64; }
+    if (n >= (raw iso_week_one(y + 1i64)))  { pass y + 1i64; }
+    pass y;
+};
+
+// `ensures answer >= 1 && answer <= 53` -- `VERIFICATION.md` §6's ISO row
+//
+// THE WEEK NUMBER, 1 ... 53 (C-14): whole weeks since the week-year's first
+// Monday, plus one. The difference is 0 ... 370, never negative, so `/`
+// truncating toward zero is the floor it needs to be.
+pub func:iso_week_number = int64(CivilDate:cd) never fails {
+    int64:n = raw date_to_days(cd);
+    pass ((n - (raw iso_week_one(raw iso_week_year(cd)))) / 7i64) + 1i64;
+};
+
+// `ensures answer >= 1 && answer <= 7`
+//
+// THE ISO WEEKDAY, Monday = 1 ... Sunday = 7 (C-14, C-7): what
+// `weekday_number(weekday(cd))` gives, from the same `weekday_index` and
+// without the enum between them.
+pub func:iso_weekday = int64(CivilDate:cd) never fails {
+    pass (raw weekday_index(raw date_to_days(cd))) + 1i64;
+};
+
+// `ensures iso_week_year(answer) == iy && iso_week_number(answer) == w`
+// `ensures iso_weekday(answer) == wd`
+//
+// THE DATE OF AN ISO WEEK DATE -- the round trip's other half (C-14,
+// `TESTING.md` V-4). A validating constructor, each argument checked BEFORE
+// the arithmetic that uses it (S-12): the week-year against C-4's range, the
+// weekday against 1 ... 7, the week against 1 and against the week-year's own
+// count -- 52, or 53 in a long year -- which is the distance between two
+// consecutive week-1 Mondays. WEEK 53 OF A 52-WEEK YEAR IS REFUSED, not read
+// as week 1 of the next: one date, one spelling.
+//
+// TWO DAYS OF THE LAST WEEK-YEAR LIE OUTSIDE THE RANGE. 9999's week 52 runs to
+// Sunday 10000-01-02, so `(9999, 52, 6)` and `(9999, 52, 7)` are refused by
+// `days_to_date`'s range check and relayed -- `ValueFault.YearRange`, the day
+// being outside C-4's years. The first week-year has no such edge:
+// -9999-01-01 is a Monday, so it begins week 1 of -9999.
+pub func:iso_week_to_date = CivilDate(int64:iy, int64:w, int64:wd) {
+    if (iy < NTIME_YEAR_MIN) { fail ETimeValue; }   // ValueFault.YearRange
+    if (iy > NTIME_YEAR_MAX) { fail ETimeValue; }   // ValueFault.YearRange
+    if (w < 1i64)            { fail ETimeValue; }   // ValueFault.WeekRange
+    if (wd < 1i64)           { fail ETimeValue; }   // ValueFault.WeekdayRange
+    if (wd > 7i64)           { fail ETimeValue; }   // ValueFault.WeekdayRange
+    int64:first = raw iso_week_one(iy);
+    int64:weeks = ((raw iso_week_one(iy + 1i64)) - first) / 7i64;
+    if (w > weeks)           { fail ETimeValue; }   // ValueFault.WeekOfYear
+    pass (relay days_to_date(first + ((w - 1i64) * 7i64) + (wd - 1i64)));
 };

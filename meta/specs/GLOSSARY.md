@@ -18,6 +18,10 @@ instead.
 | **ambiguous** | a civil reading that occurs twice, at a fall-back transition. |
 | **nonexistent** | a civil reading that never occurs, in a spring-forward gap. |
 | **day number** | days since 1970-01-01, the integer the calendar algorithms work in. |
+| **weekday** | the day of the week of a date — `Weekday.Monday` … `Weekday.Sunday`, Monday first (C-7). Its *number* is 1 … 7 (`weekday_number`, `iso_weekday`); its *index*, 0 … 6, is internal to `cal` (C-13). |
+| **ordinal date** | a year and a day of that year, 1 … 366 — `2026-268`. `day_of_year`, and `ordinal_to_date` back (C-15). |
+| **week date** | ISO 8601's week-year, week and weekday — `2026-W39-5`. `iso_week_year`, `iso_week_number` and `iso_weekday`, and `iso_week_to_date` back (C-14). |
+| **week-year** | the year a date's ISO week belongs to. It differs from the calendar year for up to three days at either end of a year: 1 January 2021 is in week 53 of 2020. |
 | **epoch** | 1970-01-01T00:00:00Z, and only that. An `Instant` has no epoch (M-2). |
 | **the range** | `year ∈ [−9999, +9999]` — `CALENDAR.md` §2, checked at every constructor. |
 | **layout** | a typed list of `FmtPart`s describing a format. Never a string. |
@@ -41,3 +45,4 @@ instead.
 | "aware" for a zoned time | same |
 | "timezone" as one word | the IANA term is "time zone"; the type is `ZoneId` |
 | "format string" | there is none (F-1); the word is "layout" and it is a value |
+| "ISO year" | it reads as the calendar year, and the thing meant is the week-year, which is not always the same year |

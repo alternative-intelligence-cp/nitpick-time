@@ -113,11 +113,15 @@ verification time.
 
 ## Style
 
-Match the surrounding code. Public names carry their module's short prefix
-(`cal_`, `span_`, `zone_`, `fmt_`, `host_`); types are PascalCase; constants
-are SCREAMING_SNAKE. `meta/specs/BUILD.md` §7 lists the reserved words that
-read like ordinary names and the substitutes this library uses instead — use
-those, so the tree is consistent.
+Match the surrounding code. A public name is the one its specification gives
+it: a family of functions over one type shares the type's prefix (`vec_`,
+`bytes_`, `timestamp_`, `period_`, `zone_`), a function named for what it
+computes carries none (`date_to_days`, `weekday`), and `host_` is the one
+module prefix, because it marks the impure module (`meta/specs/BUILD.md` B-15,
+amended at cycle 0.1.3); types are PascalCase; constants are SCREAMING_SNAKE.
+`meta/specs/BUILD.md` §7 lists the reserved words that read like ordinary names
+and the substitutes this library uses instead — use those, so the tree is
+consistent.
 
 **And one that is not in that table: `stack`.** It is a memory qualifier beside
 `wild`, it is the natural name for a parser local, and it does not fail where

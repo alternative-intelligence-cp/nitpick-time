@@ -1,0 +1,106 @@
+// expect-exit: 0
+//
+// `ordinal_to_date` REFUSES THROUGH ITS `Result`, NEVER THROUGH A TRAP --
+// `SAFETY.md` S-12 and `CALENDAR.md` C-15 -- AND ACCEPTS THE NEIGHBOUR OF
+// EVERY REFUSAL. A constructor that refused everything would pass a file of
+// refusals alone, so each bound is tested from both sides: the refusal one
+// step outside it and the date one step inside it, which is the control the
+// WRONG implementation gets wrong.
+//
+// THE YEAR'S LENGTH IS THE BOUND THAT MOVES, so it is tested where it moves:
+// a common year (2021), a leap year (2020), a century that is not leap (1900),
+// year 0, which is leap (C-2), and year -1, which is not. The exhaustive half
+// -- the day after every year's last, refused, all 19 999 years -- is
+// `tests/unit/sweep/every_ordinal_date.npk`.
+//
+// THE CASES THIS FILE EXISTS FOR ARE THE `int64` EXTREMES. At `int64` MAX,
+// `y + 1` and `first + doy` would overflow: D-210 would trap them
+// `IntOverflow` and this file would exit 93. It exits 0 only because
+// `ordinal_to_date` checks both arguments against their bounds BEFORE its
+// first arithmetic on either -- so this is the test that the checks come
+// FIRST, not merely that they exist. `int64` MIN is built arithmetically,
+// because it cannot be spelled as a literal (`NITPICK-LEX-004`,
+// `tests/probe/probe02d_wide_literal_refused.npk`).
+//
+// EXIT CODES, clear of every arm code: 10 ... 21 a refusal that did not
+// happen; 30 ... 37 an accepted date that was refused or came back as another
+// date.
+mod:ordinal_to_date_refused;
+
+use "../../src/cal/cal.npk".CivilDate;
+use "../../src/cal/cal.npk".ordinal_to_date;
+use "../../src/core/limits.npk".NTIME_YEAR_MIN;
+use "../../src/core/limits.npk".NTIME_YEAR_MAX;
+
+// 0 when `ordinal_to_date(y, doy)` is the date `(ey, em, ed)`; `code` when it
+// is refused or is another date.
+func:accepts = int32(int64:y, int64:doy, int64:ey, int64:em, int64:ed,
+                     int32:code) never fails {
+    Result<CivilDate>:r = ordinal_to_date(y, doy);
+    if (r.is_error)                         { pass code; }
+    CivilDate:v = r.value;
+    if ((v.year => int64) != ey)            { pass code; }
+    if ((v.month => int64) != em)           { pass code; }
+    if ((v.day => int64) != ed)             { pass code; }
+    pass 0i32;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    int64:top = 9223372036854775807i64;
+    int64:bottom = (0i64 - 9223372036854775807i64) - 1i64;
+
+    // ---- refused, each one step outside its bound --------------------
+    if (!ordinal_to_date(NTIME_YEAR_MIN - 1i64, 1i64).is_error)  { exit 10i32; }  // YearRange
+    if (!ordinal_to_date(NTIME_YEAR_MAX + 1i64, 1i64).is_error)  { exit 11i32; }  // YearRange
+    if (!ordinal_to_date(2021i64, 0i64).is_error)                { exit 12i32; }  // DayRange
+    if (!ordinal_to_date(2021i64, 366i64).is_error)              { exit 13i32; }  // DayOfYear, common
+    if (!ordinal_to_date(2020i64, 367i64).is_error)              { exit 14i32; }  // DayOfYear, leap
+    if (!ordinal_to_date(1900i64, 366i64).is_error)              { exit 15i32; }  // century, not leap
+    if (!ordinal_to_date(0i64, 367i64).is_error)                 { exit 16i32; }  // year 0, leap
+    if (!ordinal_to_date(0i64 - 1i64, 366i64).is_error)          { exit 17i32; }  // year -1, common
+
+    // ---- refused at the `int64` extremes, through the `Result` --------
+    if (!ordinal_to_date(top, 1i64).is_error)                    { exit 18i32; }
+    if (!ordinal_to_date(bottom, 1i64).is_error)                 { exit 19i32; }
+    if (!ordinal_to_date(2021i64, top).is_error)                 { exit 20i32; }
+    if (!ordinal_to_date(2021i64, bottom).is_error)              { exit 21i32; }
+
+    // ---- accepted, each one step inside the bound beside it -----------
+    int32:r = 0i32;
+    r = raw accepts(NTIME_YEAR_MIN, 1i64,   0i64 - 9999i64, 1i64,  1i64,  30i32);
+    if (r != 0i32) { exit r; }
+    r = raw accepts(NTIME_YEAR_MAX, 365i64, 9999i64,        12i64, 31i64, 31i32);
+    if (r != 0i32) { exit r; }
+    r = raw accepts(2021i64,        1i64,   2021i64,        1i64,  1i64,  32i32);
+    if (r != 0i32) { exit r; }
+    r = raw accepts(2021i64,        365i64, 2021i64,        12i64, 31i64, 33i32);
+    if (r != 0i32) { exit r; }
+    r = raw accepts(2020i64,        366i64, 2020i64,        12i64, 31i64, 34i32);
+    if (r != 0i32) { exit r; }
+    r = raw accepts(1900i64,        365i64, 1900i64,        12i64, 31i64, 35i32);
+    if (r != 0i32) { exit r; }
+    r = raw accepts(0i64,           366i64, 0i64,           12i64, 31i64, 36i32);
+    if (r != 0i32) { exit r; }
+    r = raw accepts(0i64 - 1i64,    365i64, 0i64 - 1i64,    12i64, 31i64, 37i32);
+    if (r != 0i32) { exit r; }
+
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

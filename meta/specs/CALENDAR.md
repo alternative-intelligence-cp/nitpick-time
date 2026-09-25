@@ -108,8 +108,10 @@ thing a MAJOR version is needed to take away. **A name added to settle a
 question nobody has asked yet is a commitment taken by default.** The
 recommendation, so a later session inherits an input rather than a
 rediscovery, is a `never fails` companion classifier returning the fault
-directly; it needs an eleventh "no fault" variant, and that is the decision to
-take.
+directly; it needs a "no fault" variant, and that is the decision to take.
+*(Amended at cycle 0.1.3, TM-173: this read "an eleventh 'no fault'
+variant" — true of the ten `ValueFault` had until then. Cycle 0.1.3 appended
+four, so the "no fault" variant would now be the fifteenth.)*
 
 This is the language behaving as specified rather than a compiler defect, so
 nothing here is raised upstream and nothing is worked around.
@@ -265,6 +267,12 @@ The transcription was checked against the page line by line, not against the
 digest. **Its one deviation is C-12's**: Hinnant's intermediates are
 `unsigned`, and `ntime`'s are `int64`.
 
+Since cycle 0.1.3 `days_from_civil` keeps his signature as well: it is a
+private function of `src/cal/cal.npk` over the three integers, and
+`date_to_days` is its one-line widening from a `CivilDate`'s sealed fields —
+so the derived fields (C-13 … C-15) reach the day number of 1 January or
+4 January of any year through the module's one copy of the formula (TM-170).
+
 The shape, for a reader who has not seen them:
 
 ```
@@ -316,16 +324,62 @@ sealed since C-8c, and it is total instead. The range check is
 0. Derived because a stored weekday is a second representation of a fact the
 date already carries, and the two can disagree.
 
+Since cycle 0.1.3 the modulus is taken in exactly one place,
+`src/cal/cal.npk`'s private `weekday_index`, and `weekday`, `iso_weekday` and
+C-14's week-1 Monday all call it. `weekday` returns a `Weekday` whose tag IS
+the index — C-7's Monday-first order, stated once, by the enum — manufactured
+with `=>!`, which the compiler does not check (its D-140). So the index is
+range-checked on the same path, and one outside 0 … 6 stops the program
+through `#unreachable()` instead of becoming a `Weekday` that is none of the
+seven (`SAFETY.md` S-15c, TM-171). The correction leaves every index in range,
+so the check never fires; what it does is turn the correction's absence from a
+silent wrong answer into a controlled stop — measured, with and without it
+(`meta/roadmap/0.1/0.1.3.md` §7, rows D1 and D2).
+
 **Rule C-14 — ISO week dates are computed, not tabulated.** `iso_week_year`,
 `iso_week_number` (1 … 53) and `iso_weekday` follow ISO 8601: week 1 is the
 week containing the first Thursday of the year, weeks start on Monday, and the
 week-year may differ from the calendar year at the boundaries. The three are
-computed from the day number by the standard rule and the boundary cases —
-1 January falling on each of the seven weekdays, in leap and common years — are
-each a test.
+computed from the day number by the standard rule, and the boundary cases are
+each a test: **for each of the fourteen shapes a year can have — its
+1 January on each weekday, leap or common — that year's 1 January, its
+31 December, and the 1 January after it.** `iso_week_to_date(iy, w, wd)` is
+the round trip's other half. It refuses a week-year outside C-4's range, a
+week below 1 or past the week-year's last — week 53 of a 52-week year is
+refused, not read as week 1 of the next — and an ISO weekday outside 1 … 7,
+each before any arithmetic on it; and it refuses the two days of 9999's last
+week that fall after 9999-12-31.
+
+The standard is ISO 8601-1:2019 with its Amendment 1:2022, whose clause
+3.1.1.23 states the rule — *"the first calendar week of a calendar year is the
+week including the first Thursday of that year"* — per
+`meta/research/iso-8601-week-date.md`, as of 2026-09-25. `src/cal/cal.npk` computes week 1's Monday as the Monday on or
+before 4 January, which is the same week — the first Thursday is one of
+1 … 7 January, and the Monday-to-Sunday week around it holds the 4th exactly
+then — and that form is derived, not quoted (TM-172). Since cycle 0.1.3 every
+date in the range is checked against a walk of the rule read the calendar's
+way, and handed back, by `tests/unit/sweep/every_iso_week_date.npk` — 7 304 484 dates <!-- [[sweep: domain_every_iso_week_date=7304484]] -->,
+and the week after each of the 19 999 week-years' last is refused.
+
+*(Amended at cycle 0.1.3, TM-175. The boundary sentence read: "the boundary
+cases — 1 January falling on each of the seven weekdays, in leap and common
+years — are each a test." That indexes the cases by the year that BEGINS, and
+the week 1 January falls in is decided by the year that ENDS: measured over
+every year from 2 to 9998, a common year beginning on a Saturday opens in
+week 52 of the year before when that year was common (2011) and in week 53
+when it was leap (2005), so fourteen cases chosen that way fix thirteen
+answers and leave the fourteenth to whichever year was picked. Indexed by the
+ending year's shape, nothing is left over. `tests/unit/derived_field_vectors.npk`
+carries both: fourteen years, one of each shape, at both ends and at the next
+1 January.)*
 
 **Rule C-15 — ordinal dates** (`day_of_year`, 1 … 366) are computed the same
-way and round-trip with `CivilDate`.
+way and round-trip with `CivilDate`. `ordinal_to_date(y, doy)` is the round
+trip's other half (TM-169): it refuses a year outside C-4's range and a day
+below 1 or past the year's last, each before any arithmetic on it. Since cycle
+0.1.3 every date in the range is checked against a count of its year's days,
+and handed back, by `tests/unit/sweep/every_ordinal_date.npk` — 7 304 484 dates <!-- [[sweep: domain_every_ordinal_date=7304484]] -->, and the
+day after each of the 19 999 years' last is refused.
 
 ---
 
@@ -359,15 +413,19 @@ implementation fails:
 2. **Weekday cycle** — each day's weekday equals a count begun at
    −9999-01-01's weekday, a **Monday**, and advanced by one per day, so it is
    in Monday … Sunday on every day of the range, every century and 400-year
-   boundary included. *Asserted from cycle 0.1.3, where `weekday()` is written
-   (TM-165)*; until then it rests on item 1's chain, which is the whole of
-   what a weekday derived from the day number (C-13) needs from the calendar.
+   boundary included. *Asserted since cycle 0.1.3, on `tests/unit/sweep/every_civil_date.npk`'s
+   walk (TM-165)*, where it rests on item 1's chain — the whole of what a
+   weekday derived from the day number (C-13) needs from the calendar — and
+   adds the derivation's own arithmetic. *(Until cycle 0.1.3 this sentence
+   read "Asserted from cycle 0.1.3, where `weekday()` is written (TM-165); until
+   then it rests on item 1's chain, …".)*
 3. **Month lengths** — for every year in range and every month, the length
    `days_in_month` gives equals the distance from that month's first day to
    the next month's first day — for 9999-12, to `NTIME_DAY_MAX + 1`.
 
 Since cycle 0.1.2 the first is asserted on `tests/unit/sweep/every_civil_date.npk`'s
-walk and the third by `tests/unit/sweep/every_month_length.npk`.
+walk and the third by `tests/unit/sweep/every_month_length.npk`; since cycle
+0.1.3 the second is asserted on the first's walk.
 
 *(Amended at cycle 0.1.2, TM-167. The three items read, verbatim:
 "1. **Monotonicity** — `date_to_days` is strictly increasing over dates in

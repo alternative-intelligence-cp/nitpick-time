@@ -554,9 +554,9 @@ def run_parse(rep, root, bld):
     """Every `.npk` in the tree in front of the real parser, each exactly once.
 
     THE DENOMINATOR IS THE WHOLE TREE AND THAT IS WHY THE STAGE IS WORTH ITS
-    COST. Re-measured at cycle 0.1.2: of the 94 `.npk` files here
-    [[sweep: npk_total=94]] the library build roots 5 [[sweep: lib_reach=5]],
-    the suite roots 57 [[sweep: suite_roots=57]], and 3 more are reached by
+    COST. Re-measured at cycle 0.1.3: of the 99 `.npk` files here
+    [[sweep: npk_total=99]] the library build roots 5 [[sweep: lib_reach=5]],
+    the suite roots 62 [[sweep: suite_roots=62]], and 3 more are reached by
     `use` from a suite root [[sweep: support_total=3]] -- so 29 are put in
     front of the compiler by NOTHING ELSE. Five of those are the remaining
     `src/` placeholders and 24 are the reproductions under
@@ -565,7 +565,7 @@ def run_parse(rep, root, bld):
     then went three cycles asserted by nothing (TM-141), for exactly this
     reason.
 
-        94 = 5 (library) + 57 (suite roots) + 3 (reached by `use`) + 29
+        99 = 5 (library) + 62 (suite roots) + 3 (reached by `use`) + 29
 
     EVERY NUMBER IN THAT SENTENCE IS TAGGED AND CHECKED (TM-142). It read
     `50 = 1 + 27 + 3 + 19` until cycle 0.0.6, three subcycles after the tree

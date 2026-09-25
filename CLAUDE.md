@@ -7,7 +7,37 @@ Guidance for Claude Code sessions working in this repository.
 `ntime` — a date, time and time-zone library for **Nitpick**, the
 safety-critical systems language at `../../nitpick`.
 
-**Status, after cycle 0.1.2: the sweep.** `tests/unit/sweep/` holds cycle
+**Status, after cycle 0.1.3: the derived fields, and cycle 0.1's gate
+complete.** `src/cal/` computes a date's **weekday**, its **day of the year**
+and its **ISO week date** from its day number and stores none of them
+(`CALENDAR.md` C-13 … C-15), and builds a date back from an ordinal date and
+from an ISO week date — seven public names, `weekday`, `day_of_year`,
+`ordinal_to_date`, `iso_week_year`, `iso_week_number`, `iso_weekday` and
+`iso_week_to_date` (TM-169), so the umbrella re-exports 57. Hinnant's formula
+is one private `days_from_civil` and `date_to_days` its one-line widening
+(TM-170). **Every weekday goes through one private `weekday_index`**, whose
+`%` correction is range-checked by an `#unreachable()` line before `weekday`
+manufactures a `Weekday` tag with `=>!` — a tag the compiler does not check,
+and one outside the enum makes an exhaustive `pick` fall through silently
+(TM-171, `SAFETY.md` S-15c). **The gate is complete**: both round trips,
+monotonicity, month lengths and — on `tests/unit/sweep/every_civil_date.npk`'s
+walk — the weekday cycle, a count begun at −9999-01-01's Monday (C-17). Two
+new `sweep` members check the ordinal and ISO week dates against walks of
+their own rules over every date in the range, hand each constructor the
+WALK's values rather than the values under test, and ask it to refuse one
+past every bound (`TESTING.md` V-4b, TM-174): a round trip built from the
+value under test passed three wrong implementations, measured. **Forty-one
+vectors, derived three ways, carry C-14's boundary cases** — indexed by the
+year that ENDS, because a common year beginning on a Saturday opens in week 52
+or week 53 of the year before depending on that year (TM-175). `BUILD.md`
+B-15's module-prefix rule is restated to what the specifications do (TM-176).
+Every assertion was seen to fail on a mutant, `meta/roadmap/0.1/0.1.3.md` §7's
+twenty-one rows. `cal` still owes **11** arms and the umbrella **13**, and the
+contracts are comments — Q-6's A′, which the author chose on 2026-09-25. A
+full invocation is **86 units green** at pin `c3bdae2`; the five sweeps cost
+16.5 s of it.
+
+**After cycle 0.1.2: the sweep.** `tests/unit/sweep/` holds cycle
 0.1's gate (`CALENDAR.md` C-16) and two of its three riders (C-17), run in
 full at -O0 and again under `opt -O2` on every full invocation: **every day
 number in the range goes to its date and back** (`every_day_number.npk`);

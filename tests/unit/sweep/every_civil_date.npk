@@ -29,13 +29,25 @@
 // exits 0 having printed `swept 7304435`. Only the count and a `+ 1` chain see
 // a day that was never visited. This file has both.
 //
-// AND IT IS WHAT THE WEEKDAY CYCLE RESTS ON. C-17's second rider -- the
-// weekday advances by one, mod seven, per day -- is true of any weekday
-// derived from the day number (C-13) exactly when consecutive dates have
-// consecutive day numbers, which is the `+ 1` chain here, asserted at every
-// one of the range's 7 304 483 steps, every century and every 400-year
-// boundary among them. The weekday function itself is cycle 0.1.3's, and its
-// assertion joins this walk then (`0.1.2.md` §9).
+// AND THE WEEKDAY CYCLE, C-17's SECOND RIDER, ON THE SAME WALK SINCE CYCLE
+// 0.1.3 (TM-165). Each date's `weekday` is compared with a COUNT that is 0 on
+// -9999-01-01, a Monday, advances by one per date and goes back to 0 after 6,
+// so on every day of the range the weekday is the one seven-day cycle begun
+// on the range's first day, every century and 400-year boundary included. It
+// rests on the `+ 1` chain above, which is the whole of what a weekday derived
+// from the day number (C-13) needs from the calendar; what it adds is the
+// derivation's own arithmetic. The Monday is not Hinnant's: Python's
+// `date(1, 1, 1)` and `date(401, 1, 1)` are Mondays, -9999-01-01 lies 25 and
+// 26 whole 400-year cycles before them, and 146 097 days is exactly 20 871
+// weeks.
+//
+// "EQUALS THE COUNT", NOT "ADVANCES BY ONE, MOD SEVEN", AND THE DIFFERENCE
+// WAS MEASURED (`0.1.3.md` §7, TM-167). A weekday whose `%` correction is
+// missing is wrong on six days in seven before 1969-12-29, and a weekday one
+// day late is wrong on every day; the numbers `weekday_number` reads off both
+// still advance by one, mod seven, on all 7 304 483 steps, and a check of
+// that exits 0 with the full count. The count catches the first on the
+// range's second day and the second on its first.
 //
 // THE COUNT IS THE EVIDENCE (`TESTING.md` V-16, TM-122): N is the dates that
 // passed every check, and the harness requires it to equal the domain
@@ -54,8 +66,8 @@
 // admits; 12 the first date is not NTIME_DAY_MIN; 13 a date's day number is
 // not the previous one's plus one; 14 `days_to_date` refused a day number
 // this walk reached; 15 it returned a different date; 16 the last date is not
-// NTIME_DAY_MAX; 20, 21 and 22 the `swept` line could not be built, could not
-// be written, or was written short.
+// NTIME_DAY_MAX; 17 a date's weekday is not the count's; 20, 21 and 22 the
+// `swept` line could not be built, could not be written, or was written short.
 mod:every_civil_date;
 
 use "../../../src/cal/cal.npk".CivilDate;
@@ -63,6 +75,8 @@ use "../../../src/cal/cal.npk".civil_date;
 use "../../../src/cal/cal.npk".days_in_month;
 use "../../../src/cal/cal.npk".date_to_days;
 use "../../../src/cal/cal.npk".days_to_date;
+use "../../../src/cal/cal.npk".weekday;
+use "../../../src/cal/cal.npk".weekday_number;
 use "../../../src/core/limits.npk".NTIME_YEAR_MIN;
 use "../../../src/core/limits.npk".NTIME_YEAR_MAX;
 use "../../../src/core/limits.npk".NTIME_DAY_MIN;
@@ -71,6 +85,7 @@ use "../../../src/core/limits.npk".NTIME_DAY_MAX;
 func:main = int32(cstring[]:_~argv) {
     int64:count = 0i64;
     int64:prev = 0i64;
+    int64:wk = 0i64;
     for (int64:y in NTIME_YEAR_MIN..NTIME_YEAR_MAX) {
         for (int64:m in 1i64..12i64) {
             Result<int64>:dim = days_in_month(y, m);
@@ -90,6 +105,9 @@ func:main = int32(cstring[]:_~argv) {
                 if ((b.year => int64) != y)  { exit 15i32; }
                 if ((b.month => int64) != m) { exit 15i32; }
                 if ((b.day => int64) != d)   { exit 15i32; }
+                if (raw weekday_number(raw weekday(c.value)) != wk + 1i64) { exit 17i32; }
+                wk = wk + 1i64;
+                if (wk == 7i64) { wk = 0i64; }
                 prev = n;
                 count = count + 1i64;
             }

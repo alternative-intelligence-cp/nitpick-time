@@ -37,10 +37,11 @@
 # WHAT A GREEN RUN PROVES TODAY. `src/core/` is real code since cycle 0.0.4 --
 # `Vec<T>`, `Bytes` and thirteen named bounds -- and `src/cal/` since 0.1.0 --
 # the civil types and their validating constructors, and since 0.1.1 Hinnant's
-# `date_to_days` and `days_to_date` -- re-exported together as 50 public names,
-# so this IS evidence about behaviour, of the 81 units the runner reports at
+# `date_to_days` and `days_to_date`, and since 0.1.3 the derived fields --
+# re-exported together as 57 public names [[sweep: lib_reexports=57]],
+# so this IS evidence about behaviour, of the 86 units the runner reports at
 # compiler `c3bdae2` (62 at cycle 0.0.6, 67 at 0.1.0, 70 at 0.1.0b, 75 at
-# 0.1.0c, 78 at 0.1.1). What
+# 0.1.0c, 78 at 0.1.1, 81 at 0.1.2). What
 # it is evidence of: the pinned compiler builds from a clean checkout at exactly
 # LLVM 20.1.2, every `.npk` under `src/` compiles, every unit under `tests/`
 # meets its own header at -O0 and again under `opt -O2`, the whole
@@ -71,6 +72,14 @@
 # the month table and Hinnant both give it -- the three `tests/unit/sweep/`
 # members, each printing the count it visited (TM-122), and each assertion in
 # them seen to fail on a mutant (`meta/roadmap/0.1/0.1.2.md` §5).
+# AND SINCE CYCLE 0.1.3: every date's weekday is the one seven-day cycle begun
+# on the range's first Monday, and every date in the range
+# goes to its ordinal date and back, 7 304 484 of them  [[sweep: domain_every_ordinal_date=7304484]]
+# and to its ISO week date and back, 7 304 484 of them  [[sweep: domain_every_iso_week_date=7304484]]
+# -- each compared with a walk of its own rule rather than with itself, the
+# day after every year's last and the week after every week-year's last
+# refused, and each assertion seen to fail on a mutant
+# (`meta/roadmap/0.1/0.1.3.md` §7).
 #
 # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
 # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,

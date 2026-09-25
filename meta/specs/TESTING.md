@@ -17,7 +17,7 @@ than sampled. Where that is possible it is the gate, and §3 says where.
 
 | Stage | Answers |
 |---|---|
-| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **29 files of 94 that no other stage roots** <!-- [[sweep: npk_total=94]] --> |
+| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **29 files of 99 that no other stage roots** <!-- [[sweep: npk_total=99]] --> |
 | `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
 | `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
 | `check` | every documented refusal actually refuses, with exactly its code |
@@ -228,9 +228,10 @@ is, and that is the gate.** Sampling is what you do when you cannot enumerate.
 |---|---|---|---|
 | civil ↔ day-number round trip, both directions | every day in `[−9999-01-01, +9999-12-31]` | 7 304 484 × 2 <!-- [[sweep: domain_every_day_number=7304484]] --> | 0.1 |
 | `date_to_days` increases by exactly one per day | the same sweep | — | 0.1 |
-| weekday advances by one mod seven | the same sweep | — | 0.1 (at 0.1.3, TM-165) |
+| each day's weekday equals a count begun at −9999-01-01's Monday | the same sweep | — | 0.1 — asserted at 0.1.3 (TM-165, TM-167) |
 | month lengths match the leap rule | every (year, month) in range | 239 988 <!-- [[sweep: domain_every_month_length=239988]] --> | 0.1 |
-| ISO week/ordinal round trip | the same sweep | — | 0.1 |
+| ordinal date: `day_of_year` equals a count of the year's days, `ordinal_to_date` of the count is the date, and the day after each year's last is refused | every date in the range | 7 304 484 <!-- [[sweep: domain_every_ordinal_date=7304484]] --> | 0.1 — at 0.1.3 |
+| ISO week date: the three fields equal a walk of ISO 8601's rule, `iso_week_to_date` of the walk's three is the date, and the week after each week-year's last is refused | every date in the range | 7 304 484 <!-- [[sweep: domain_every_iso_week_date=7304484]] --> | 0.1 — at 0.1.3 |
 | `Timestamp` ↔ civil round trip | every second would be too many; every **day boundary**, plus every second of 512 randomly chosen days | 7.3 M + 44 M | 0.2 |
 | zone transition sweep | every transition in the table, ±1 second | ~27 000 × 4 | 0.6 |
 | format/parse round trip | the generated corpus × every layout | ~10⁶ | 0.4 |
@@ -247,6 +248,16 @@ increasing" — which a leap rule missing its 400-year day passes, measured
 (TM-167, `CALENDAR.md` C-17) — and the third row's cycle cell read "0.1"; the
 weekday cycle is asserted at 0.1.3, where `weekday()` is written (TM-165).)*
 
+*(Amended at cycle 0.1.3. The third row read "weekday advances by one mod
+seven" — the form TM-167 declined at 0.1.2, which passes a weekday missing its
+`%` correction and one a day late everywhere (measured,
+`meta/roadmap/0.1/0.1.3.md` §7) — and was left in that form when `CALENDAR.md`
+C-17 was restated. The last row read "ISO week/ordinal round trip | the same
+sweep | — | 0.1": a round trip that builds its input from the value under test
+passes two functions that are wrong together, so each representation is now
+checked against a walk of its own rule and has a member, and a declared domain,
+of its own (TM-174, V-4b).)*
+
 **Rule V-3 — the civil sweep is the strongest statement this library makes.**
 It is self-evident (a round trip is obviously the right property), it needs no
 external corpus to trust, and it covers the negative years that no external
@@ -258,7 +269,7 @@ as much certainty.
 ## 4. The round trips
 
 **Rule V-4 — the general shape**: *if the library produces a representation,
-write the reverse and check the fixed point.* `ntime` has three, and each has
+write the reverse and check the fixed point.* `ntime` has five, and each has
 a documented exception list rather than a mysterious skip:
 
 1. **civil ↔ days** — no exceptions (V-2).
@@ -269,6 +280,32 @@ a documented exception list rather than a mysterious skip:
    next day. The exception list is a committed file with two entries, and a
    test asserts the list has exactly two entries — so a third arriving is a
    red run and not a quiet edit.
+4. **civil ↔ ordinal date** — no exceptions (`CALENDAR.md` C-15), since
+   cycle 0.1.3.
+5. **civil ↔ ISO week date** — no exceptions (`CALENDAR.md` C-14), since
+   cycle 0.1.3. A week-year that differs from the calendar year at a boundary
+   is the representation, not an exception to it.
+
+*(Amended at cycle 0.1.3: this rule said three. The ordinal date and the ISO
+week date are representations the library produces from cycle 0.1.3, each with
+its reverse.)*
+
+**Rule V-4b (TM-174) — the reverse is handed an INDEPENDENT value, not the
+representation under test, wherever one exists.** A round trip that builds its
+input from the value under test — `from(to(d)) == d` — shows only that two
+functions agree with each other: it passes two that are wrong the same way,
+and it passes a reverse that accepts too much, because a real value never asks
+for one that does not exist. Measured at cycle 0.1.3: the ISO week round trip
+written that way exits 0 with the full count with week 1 taken as the week
+that holds 5 January, and with week 53 accepted in every year; the ordinal one
+with day 366 accepted in every year (`meta/roadmap/0.1/0.1.3.md` §7). So a
+sweep carries the representation's own rule as a walk — a count of the year's
+days, ISO 8601's rule read from each Monday's month and day — compares the
+forward functions with the walk, hands the REVERSE the walk's value, and asks
+the reverse to refuse the value one past each bound the walk crosses. It is the
+general form of the rule the 0.1.2 riders were restated in (TM-167): when a
+function is total, a check that builds its own input from the value under test
+is fooled.
 
 **Rule V-5 — the format corpus is generated, not written.** Cycle 0.4 emits
 values spanning: both range extremes, the epoch, every month, both leap and
@@ -463,4 +500,7 @@ there it is an expectation that does nothing (V-1f).
 range, and `every_month_length.npk` over its (year, month) pairs. Each
 declared domain is a tagged denominator (V-1h, TM-168), so on a green run the
 specification's number, the header's and what the program visited are one
-number.
+number. **Since cycle 0.1.3 it holds five**: `every_ordinal_date.npk` and
+`every_iso_week_date.npk` over the same day range, each checking one of V-4's
+representations against a walk of its rule (V-4b), and each a tagged
+denominator too (TM-174).

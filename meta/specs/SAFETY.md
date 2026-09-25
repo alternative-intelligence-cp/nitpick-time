@@ -59,12 +59,22 @@ different things to a caller, so the caller's distinction is a field:
 pub enum:ValueFault = {
     YearRange; MonthRange; DayRange; HourRange; MinuteRange;
     SecondRange; NanoRange; OffsetRange; DayOfMonth; Overflow;
+    DayOfYear; WeekRange; WeekOfYear; WeekdayRange;
 };
 ```
 
 The same pattern carries `ParseError` (the byte offset, and what was expected)
 and `ZoneFault` (`Unknown`, `Ambiguous`, `Nonexistent`). This is the playbook's
 rule and it is what keeps the budget at three without losing information.
+
+*(Amended at cycle 0.1.3, TM-173: the last four variants are new, appended so
+every earlier one keeps its tag. They are the refusal rows of the two
+constructors cycle 0.1.3 adds — `DayOfYear`, a day past the year's last, beside
+`DayOfMonth`; `WeekRange`, a week below 1; `WeekOfYear`, a week past the
+week-year's last; `WeekdayRange`, an ISO weekday outside 1 … 7 — and they
+follow `DayRange` and `DayOfMonth`'s split: a fixed bound and a bound the year
+decides are two variants. How a refusal hands its variant back is still
+`../OPEN_QUESTIONS.md` O-X8.)*
 
 **Rule S-4 — module decomposition is part of the budget**, because REACH is
 import-scoped:
@@ -404,6 +414,22 @@ the dangerous one. A file where every cast is `=>!` hides which is which.
 rediscovered: a positive `int128` narrowing to a negative `int64`, because what
 `=>!` discards is everything above the destination's sign bit. In a time
 library that is a future instant reported as long past, with no error anywhere.
+
+**Rule S-15c (TM-171, cycle 0.1.3) — a narrowing of a value THIS LIBRARY
+COMPUTED is checked the same way, and its failure is `#unreachable()`.** S-15b
+answers a caller who broke a precondition, so its failure is an `ETimeValue`.
+A value the library derives itself, whose range holds by construction, has no
+caller to answer — and a `never fails` function has no error to return — so
+the range check before the narrowing ends in the compiler's `#unreachable()`,
+which traps through the floor's `Unreachable`: a controlled stop, and no new
+arm. **Manufacturing an enum tag is a narrowing in this rule's sense.**
+`intN =>! Enum` is permitted and unchecked (the compiler's D-140), and a tag
+outside the enum's range is a value that is none of its variants: measured at
+cycle 0.1.3, it makes every arm of an exhaustive `pick` miss and the statement
+fall through, silently (`meta/roadmap/0.1/0.1.3.md` §2). The one site today is
+`src/cal/cal.npk`'s `weekday_index`, whose modulus correction keeps every
+index in 0 … 6; the check after it is what makes the correction's absence a
+stop rather than a `Weekday` that is no weekday (`CALENDAR.md` C-13).
 
 **Rule S-16.** Nothing divides by a value it has not proven nonzero on the same
 path. The calendar algorithms divide by literals and nothing else — among them

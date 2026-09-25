@@ -2,8 +2,11 @@
 
 `CivilDate`, `CivilTime`, `CivilDateTime`, `Weekday`, `Month`, and Howard
 Hinnant's `days_from_civil` / `civil_from_days` as `date_to_days` /
-`days_to_date` (since cycle 0.1.1). Proleptic Gregorian, astronomical year
-numbering, ±9999.
+`days_to_date` (since cycle 0.1.1); and, since cycle 0.1.3, the fields derived
+from a date's day number — `weekday`, `day_of_year`, `iso_week_year`,
+`iso_week_number` and `iso_weekday` — with `ordinal_to_date` and
+`iso_week_to_date` to build a date back from an ordinal date and an ISO week
+date (TM-169). Proleptic Gregorian, astronomical year numbering, ±9999.
 
 **Declares `ETimeValue` and nothing else**, so a program that only wants
 calendar arithmetic owes exactly one IDENTITY arm — and eleven arms in all at

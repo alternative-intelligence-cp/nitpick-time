@@ -52,11 +52,13 @@ names it. Three parts:
   sweep that ran short, and a program whose `failsafe` has been deleted. Case 6
   (a generator differing by one line) is **pending until 0.5** and prints as
   pending rather than passing.
-- **Twenty planted violations across the tree checks** — each check shown red on
-  a violation and silent on a clean control, in milliseconds, with no
+- **Twenty-one planted violations across the tree checks** — each check shown
+  red on a violation and silent on a clean control, in milliseconds, with no
   compilation. *(This bullet said "nine" from cycle 0.0.3, when it was true, to
-  0.1.1; the run prints the number, derived from `selfcheck.TREE_PLANTS`, and
-  it is 20 since `check_literal_divisors` brought four rows — TM-163.)*
+  0.1.1, and "twenty" at 0.1.1; the run prints the number, derived from
+  `selfcheck.TREE_PLANTS`, and it is 20 since `check_literal_divisors` brought
+  four rows — TM-163 — and 21 since cycle 0.1.2 gave `check_denominators` a
+  row for a sweep's declared domain — TM-168.)*
 - **The S-6 arm generator** diffed against `NITPICK-REACH-003`'s own identity
   list on three modules whose bills cycle 0.0.0 measured.
 
@@ -105,10 +107,17 @@ against the summary line rather than left to review.
 ## What a green run does NOT mean
 
 - **Not that the WHOLE library works.** `src/core/` is real code since cycle
-  0.0.4 and the suite is evidence about it; the other five `src/` directories
-  are still placeholders, so nothing here dates anything. *(This read "there is
-  none yet; `src/` is placeholders" for two subcycles after `src/core/` landed
-  — C6.)*
+  0.0.4 and `src/cal/` since 0.1.0 — the civil types, Hinnant's two algorithms
+  since 0.1.1, swept over the whole range since 0.1.2 — and the suite is
+  evidence about both; the other four `src/` directories are still
+  placeholders, so nothing here converts a time to a zone, a timestamp to a
+  date, or text to either. *(This read "there is none yet; `src/` is
+  placeholders" for two subcycles after `src/core/` landed — C6. And until
+  cycle 0.1.2 it read "the other five `src/` directories are still
+  placeholders, so nothing here dates anything" — false since 0.1.0 gave
+  `cal/` a body, and since 0.1.1 converted a date to a day; the CI header
+  carried the same sentence, found at 0.1.2's planning, and this one and
+  `run.py`'s by the sweep for it.)*
 - **Not a MEMORY result for the managed half.** D-151's exit-0 trap counts
   `wild` allocations and a `buffer` is managed (TM-106), so a green run says
   nothing about `Bytes` (`SAFETY.md` S-18b).
@@ -169,6 +178,18 @@ four, TM-163), 3 arm specimens and the verdict mechanisms; the tree checks at
 suite at 54 (39 probe, 14 unit — three new, `range_constants`,
 `day_number_vectors` and `days_to_date_refused` — 1 conformance).
 `78 = 24 + 54`.
+
+**At cycle 0.1.2, the same pin, 81 units**: the self-check's 7 planted cases,
+**21** tree-check violations with 21 clean controls (`check_denominators`' row
+for a sweep's declared domain, TM-168), 3 arm specimens and the verdict
+mechanisms; the tree checks at `11 live`; parse over 94 files; the defect
+corpus at 24; and library + repro + suite at 57 (39 probe, 14 unit, **3
+sweep** — `every_day_number`, `every_civil_date` and `every_month_length`,
+the stage's first members, TM-166 — 1 conformance). `81 = 24 + 57`. **The
+`sweep` stage is the one step whose cost is stated**, because B-9's "seconds,
+not minutes" rests on it: its three units took **4.5 s** together — 2.1 +
+1.9 + 0.5 s, both legs, compile included, the run's own per-unit figures —
+against a 30 s threshold `meta/roadmap/0.1/0.1.2.md` §6 set in advance.
 
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the

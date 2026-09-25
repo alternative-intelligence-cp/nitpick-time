@@ -17,7 +17,7 @@ than sampled. Where that is possible it is the gate, and §3 says where.
 
 | Stage | Answers |
 |---|---|
-| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **29 files of 91 that no other stage roots** <!-- [[sweep: npk_total=91]] --> |
+| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **29 files of 94 that no other stage roots** <!-- [[sweep: npk_total=94]] --> |
 | `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
 | `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
 | `check` | every documented refusal actually refuses, with exactly its code |
@@ -51,7 +51,7 @@ them found something on its first run.
 | `check_expect_headers` | **the tree partitioned three ways, with the denominator printed** (TM-115): every `.npk` is under `src/` (judged by "it compiles"), or under `tests/` with an `expect-` marker of its own or a NAMED exemption, or it is unowned — and unowned is a failure. The exemption list is diffed in both directions, so an exemption naming a file that is gone fails too. **It says a marker is WELL-FORMED and nothing about whether it is TRUE**; that is `check_exemptions_live`'s and `run_defect_corpus`'s job, and the gap between the two readings was TM-141 |
 | `check_exemptions_live` (TM-137) | **every exemption's recorded VERDICT, re-derived from the file on every run.** An exemption's reason is a claim about what the compiler does, and the compiler moves. The superseded mechanism checked only that the named file still existed: O-N17 landed, two files went from stopping at `llc` to running clean, the suite stayed green and nothing said a word |
 | `run_defect_corpus` (TM-141) | **every `expect-` marker under `tests/probe/defect/`, asserted.** The `probe` entry is non-recursive by design, so the suite selected 0 of these 24 files and 21 committed expectations — the whole regression corpus for four discharged compiler defects — were evaluated by nothing. The inversion was sharp: the 3 files EXEMPT from having an expectation had their verdict re-derived every run, and the 21 that HAD one did not |
-| `check_denominators` (TM-142) | **every number TAGGED `[[sweep: name=N]]` against what the tree measures.** The tree went from 50 `.npk` to 78 and eleven sites in six live files still carried the 0.0.3 figures. The harness PRINTS every denominator on every run (V-1b) and no document was diffed against the print. **The mechanism is narrower than "every number": it checks the tagged ones**, and an untagged number is not covered — which is why the marker is ugly enough to notice in review |
+| `check_denominators` (TM-142) | **every number TAGGED `[[sweep: name=N]]` against what the tree measures.** The tree went from 50 `.npk` to 78 and eleven sites in six live files still carried the 0.0.3 figures. The harness PRINTS every denominator on every run (V-1b) and no document was diffed against the print. **The mechanism is narrower than "every number": it checks the tagged ones**, and an untagged number is not covered — which is why the marker is ugly enough to notice in review. **And since cycle 0.1.2 it measures what each `sweep` member DECLARES**, as `domain_<stem>`, so a specification's statement of a domain and the test's are one list (TM-161, TM-168) |
 | `check_specs_current` | **reports** spec citations that no longer resolve — a renumbering is not a reason to stop a build — and **FAILS on a stale exemption** (TM-145). Those are different animals: a stale exemption is V-1c's both-directions rule, a failure everywhere else in this harness, and the one thing here a green run would otherwise hide. It matters at a cycle close, when archiving `meta/roadmap/<cycle>/` moves the paths two of its keys name. **There is no whole-file entry in its table, as a rule**: `checks.py` marks one excused as long as the file EXISTS, so its reason is never re-derived — TM-137's shape inside the mechanism written to prevent it |
 
 **Rule V-1.** `check_purity` and `check_int128_sites` are the two that matter
@@ -187,6 +187,19 @@ a number inside a roadmap execution record is **history and is correctly
 frozen**, and is not tagged. The distinction is tense: present tense is a claim,
 past tense is a record.
 
+*(**Since cycle 0.1.2 (TM-168) the measured side includes what each `sweep`
+member DECLARES**: `check_denominators` reads every `tests/unit/sweep/` member's
+`// sweep-count:` as `domain_<stem>`, and every live statement of a domain is
+tagged with it — `CALENDAR.md` §2 and C-16, this document's V-2, `TIME_MODEL.md`,
+`src/cal/README.md`, `harness/stages.py`, `src/core/limits.npk` and
+`nitpick.toml`, eleven tags when it landed. So a specification's statement of a
+domain and the test's are one list, diffed on every run, where TM-161's were
+two lists nobody diffed for three weeks. **Roadmap files are not tagged,
+deliberately**: a cycle's folder is archived to `meta/roadmap/done/` at its
+close, and a tag there would pin history to the present. The cycle README's
+statements of the domains were diffed once, at execution, by
+`meta/roadmap/0.1/0.1.2.md` §2's three-way recomputation.)*
+
 ---
 
 **Rule V-1j (TM-152) — a test's expected exit is never an arm code it does not
@@ -213,10 +226,10 @@ is, and that is the gate.** Sampling is what you do when you cannot enumerate.
 
 | Gate | Domain | Size | Cycle |
 |---|---|---|---|
-| civil ↔ day-number round trip, both directions | every day in `[−9999-01-01, +9999-12-31]` | 7 304 484 × 2 | 0.1 |
-| `date_to_days` strictly increasing | the same sweep | — | 0.1 |
-| weekday advances by one mod seven | the same sweep | — | 0.1 |
-| month lengths match the leap rule | every (year, month) in range | 239 988 | 0.1 |
+| civil ↔ day-number round trip, both directions | every day in `[−9999-01-01, +9999-12-31]` | 7 304 484 × 2 <!-- [[sweep: domain_every_day_number=7304484]] --> | 0.1 |
+| `date_to_days` increases by exactly one per day | the same sweep | — | 0.1 |
+| weekday advances by one mod seven | the same sweep | — | 0.1 (at 0.1.3, TM-165) |
+| month lengths match the leap rule | every (year, month) in range | 239 988 <!-- [[sweep: domain_every_month_length=239988]] --> | 0.1 |
 | ISO week/ordinal round trip | the same sweep | — | 0.1 |
 | `Timestamp` ↔ civil round trip | every second would be too many; every **day boundary**, plus every second of 512 randomly chosen days | 7.3 M + 44 M | 0.2 |
 | zone transition sweep | every transition in the table, ±1 second | ~27 000 × 4 | 0.6 |
@@ -228,6 +241,11 @@ been one day early; the month count was twelve low — 19 998 years × 12, when
 `[−9999, +9999]` is 19 999 years, so 239 988. Both are the domain a `sweep`
 member declares in `// sweep-count:`, where either would have been a red run
 at cycle 0.1.2 rather than a quiet one.)*
+
+*(Amended at cycle 0.1.2: the second row read "`date_to_days` strictly
+increasing" — which a leap rule missing its 400-year day passes, measured
+(TM-167, `CALENDAR.md` C-17) — and the third row's cycle cell read "0.1"; the
+weekday cycle is asserted at 0.1.3, where `weekday()` is written (TM-165).)*
 
 **Rule V-3 — the civil sweep is the strongest statement this library makes.**
 It is self-evident (a round trip is obviously the right property), it needs no
@@ -439,3 +457,10 @@ that takes seconds. Nothing outside the program can tell the difference, so the
 program is made to testify. A `sweep` member with no `sweep-count` is a failure,
 and a `sweep-count` on a member of any other stage is a failure too, because
 there it is an expectation that does nothing (V-1f).
+
+**Since cycle 0.1.2 `tests/unit/sweep/` holds three members, one domain each**
+(TM-166): `every_day_number.npk` and `every_civil_date.npk` over V-2's day
+range, and `every_month_length.npk` over its (year, month) pairs. Each
+declared domain is a tagged denominator (V-1h, TM-168), so on a green run the
+specification's number, the header's and what the program visited are one
+number.

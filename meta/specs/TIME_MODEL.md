@@ -248,7 +248,7 @@ than proposed repeatedly.
 
 | Span | Nanoseconds | Fits `int64`? |
 |---|---|---|
-| the full civil range (7 304 484 days — 7 304 485 until cycle 0.1.1, TM-161) | 6.31 × 10²⁰ | **no** |
+| the full civil range (7 304 484 days <!-- [[sweep: domain_every_day_number=7304484]] --> — 7 304 485 until cycle 0.1.1, TM-161) | 6.31 × 10²⁰ | **no** |
 | ±292 years | 9.22 × 10¹⁸ | yes, exactly |
 
 **Rule M-18 — `timestamp_since(a, b) -> Result<Duration>` fails

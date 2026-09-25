@@ -1,0 +1,113 @@
+// expect-exit: 0
+// sweep-count: 239988
+//
+// EVERY MONTH IN THE RANGE, ITS LENGTH TWO WAYS -- `CALENDAR.md` C-17's third
+// rider, on the gate's range (`TESTING.md` V-2). For each of the 19 999
+// years in [NTIME_YEAR_MIN, NTIME_YEAR_MAX] and each of its twelve months, the
+// length `days_in_month` gives -- the month table, with C-3's leap rule
+// applied to February -- equals the length Hinnant's `date_to_days` implies:
+// the day number of the first of the NEXT month less the day number of the
+// first of THIS one. The last month, 9999-12, has no next month the calendar
+// can build, so its next first is NTIME_DAY_MAX + 1, the day after the range.
+//
+// TWO IMPLEMENTATIONS OF THE GREGORIAN MONTH THAT SHARE NO CODE. The table
+// and `is_leap_year` on one side; Hinnant's `(153 * mp + 2) / 5` and his
+// `yoe / 4 - yoe / 100` over 400-year eras on the other. Neither is derived
+// from the other anywhere in the range, so their agreement over all 239 988
+// months is evidence about both.
+//
+// "NEXT FIRST MINUS THIS FIRST", NOT "LAST MINUS FIRST PLUS ONE", AND THE
+// DIFFERENCE WAS MEASURED (`0.1.2.md` §5). The obvious formula builds the
+// month's LAST day with the length under test and counts to it. But
+// `date_to_days` is total (C-12, TM-162), so a February 29th that should not
+// exist still gets a number -- the next day's -- and the obvious formula then
+// counts 29 days in a common February and agrees with the wrong length.
+// Measured: it exits 0, with the full count, with the century rule dropped,
+// with the 400-year rule dropped, and with April given 31 days. The first of
+// the next month is built without the length under test, so this one cannot
+// be talked round -- it exits 12 on all three.
+//
+// THE COUNT IS THE EVIDENCE (`TESTING.md` V-16, TM-122): N is the months whose
+// length was checked -- each against the next month's first, the last against
+// the range's end -- and the harness requires it to equal the domain declared
+// above, 19 999 years x 12 (it was 239 976 until cycle 0.1.1, TM-161). The
+// declared domain is tagged where the specifications state it (`TESTING.md`
+// V-1h).
+//
+// Two `for` loops over ranges, bounded by construction: no `decreases`, no
+// `DecreasesViolated`, and the eleven identities of any program importing
+// `cal` (`SAFETY.md` S-4) -- measured.
+//
+// EXIT CODES, clear of every arm code (V-1j): 10 `days_in_month` refused a
+// month from 1 to 12; 11 `civil_date` refused a first of the month; 12 a
+// month's length is not the distance to the next month's first; 13 the last
+// month's length is not the distance to NTIME_DAY_MAX + 1; 20, 21 and 22 the
+// `swept` line could not be built, could not be written, or was written short.
+mod:every_month_length;
+
+use "../../../src/cal/cal.npk".CivilDate;
+use "../../../src/cal/cal.npk".civil_date;
+use "../../../src/cal/cal.npk".days_in_month;
+use "../../../src/cal/cal.npk".date_to_days;
+use "../../../src/core/limits.npk".NTIME_YEAR_MIN;
+use "../../../src/core/limits.npk".NTIME_YEAR_MAX;
+use "../../../src/core/limits.npk".NTIME_DAY_MAX;
+
+func:main = int32(cstring[]:_~argv) {
+    int64:count = 0i64;
+    int64:prev_first = 0i64;
+    int64:prev_dim = 0i64;
+    for (int64:y in NTIME_YEAR_MIN..NTIME_YEAR_MAX) {
+        for (int64:m in 1i64..12i64) {
+            Result<int64>:dim = days_in_month(y, m);
+            if (dim.is_error) { exit 10i32; }
+            Result<CivilDate>:c = civil_date(y, m, 1i64);
+            if (c.is_error) { exit 11i32; }
+            int64:first = raw date_to_days(c.value);
+            if (count > 0i64) {
+                if (first - prev_first != prev_dim) { exit 12i32; }
+            }
+            prev_first = first;
+            prev_dim = dim.value;
+            count = count + 1i64;
+        }
+    }
+    if ((NTIME_DAY_MAX + 1i64) - prev_first != prev_dim) { exit 13i32; }
+    int32:said = raw say_swept(count);
+    if (said != 0i32) { exit said; }
+    exit 0i32;
+};
+
+// `swept <count>` and a newline, on stdout, exactly once -- the same helper
+// as `every_day_number.npk`'s, and every copy is checked on every run by the
+// harness reading what it printed.
+func:say_swept = int32(int64:count) never fails {
+    string:digits = int_to_string(count);
+    string:head = string_concat("swept ", digits);
+    string:line = string_concat(head, "\n");
+    Result<cstring>:c = to_cstring(line);
+    if (c.is_error) { pass 20i32; }
+    cstring:s = c.value;
+    Result<int64>:w = sys(1i64, 1i64, s.ptr, s.len);
+    if (w.is_error) { pass 21i32; }
+    if (w.value != s.len) { pass 22i32; }
+    pass 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

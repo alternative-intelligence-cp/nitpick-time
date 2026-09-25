@@ -44,7 +44,7 @@ whole supported range, including negative years, because C-1 says proleptic.
 | maximum date | `+9999-12-31` |
 | minimum day number (epoch 1970-01-01 = 0) | `−4 371 587` |
 | maximum day number | `+2 932 896` |
-| **total days in range** | **7 304 484** |
+| **total days in range** | **7 304 484** <!-- [[sweep: domain_every_day_number=7304484]] --> |
 | minimum `Timestamp.secs` | `−377 705 116 800` |
 | maximum `Timestamp.secs` | `+253 402 300 799` |
 
@@ -342,20 +342,50 @@ the count below 7 304 485 — §2's first day, one day early. At the old bound
 the first element of the sweep is −10000-12-31, which `days_to_date` cannot
 return, so the gate would have failed on its first case.)*
 
-That is 7 304 484 cases in each direction, run in full, not sampled. It is the
+That is 7 304 484 cases in each direction <!-- [[sweep: domain_every_day_number=7304484]] -->, run in full, not sampled. It is the
 analogue of the sibling library's `GraphemeBreakTest.txt` gate, and it is
 stronger: there is no external corpus to trust, because the property is
 self-evidently the right one and the range is small enough to enumerate.
+Since cycle 0.1.2 its two halves are `tests/unit/sweep/every_day_number.npk`
+and `tests/unit/sweep/every_civil_date.npk`, run in full at -O0 and again under
+`opt -O2` on every full invocation (`BUILD.md` B-9, TM-166).
 
-**Rule C-17 — three more exhaustive checks ride the same sweep**, because the
-loop is already running:
+**Rule C-17 (TM-167) — three more exhaustive checks ride the same sweep**,
+because the loop is already running, and each is stated in the form a wrong
+implementation fails:
 
-1. **Monotonicity** — `date_to_days` is strictly increasing over dates in
-   order.
-2. **Weekday cycle** — the weekday advances by exactly one, modulo seven, per
-   day, across the whole range including every century and 400-year boundary.
-3. **Month lengths** — the day count per month matches C-3's leap rule for
-   every year in range.
+1. **Monotonicity** — over the dates in order, each date's day number is the
+   previous one's **plus one**, from −9999-01-01's `NTIME_DAY_MIN`.
+2. **Weekday cycle** — each day's weekday equals a count begun at
+   −9999-01-01's weekday, a **Monday**, and advanced by one per day, so it is
+   in Monday … Sunday on every day of the range, every century and 400-year
+   boundary included. *Asserted from cycle 0.1.3, where `weekday()` is written
+   (TM-165)*; until then it rests on item 1's chain, which is the whole of
+   what a weekday derived from the day number (C-13) needs from the calendar.
+3. **Month lengths** — for every year in range and every month, the length
+   `days_in_month` gives equals the distance from that month's first day to
+   the next month's first day — for 9999-12, to `NTIME_DAY_MAX + 1`.
+
+Since cycle 0.1.2 the first is asserted on `tests/unit/sweep/every_civil_date.npk`'s
+walk and the third by `tests/unit/sweep/every_month_length.npk`.
+
+*(Amended at cycle 0.1.2, TM-167. The three items read, verbatim:
+"1. **Monotonicity** — `date_to_days` is strictly increasing over dates in
+order." — "2. **Weekday cycle** — the weekday advances by exactly one, modulo
+seven, per day, across the whole range including every century and 400-year
+boundary." — "3. **Month lengths** — the day count per month matches C-3's
+leap rule for every year in range." Each, as written, is passed by a mutant the
+new form fails, measured (`meta/roadmap/0.1/0.1.2.md` §5 and §1.3): a leap rule
+missing its 400-year day keeps every step strictly increasing — the civil walk
+with a `>` chain exits 0 having visited 7 304 435 of the 7 304 484 days — and
+breaks the plus-one chain; a weekday computed as `(n + 3) % 7` with the
+truncating `%` and no correction advances by one, mod seven, on all 7 304 483
+steps and differs from the count on the range's second day; and a month length
+checked by building the month's LAST day with the length under test and
+counting to it agrees with the century-rule, 400-year-rule and April-31
+mutants, because `date_to_days` is total (C-12) and gives a February 29th that
+should not exist the next day's number — while the distance between
+month-firsts refuses all three.)*
 
 **Rule C-18 — a fourth check is a *sampled* cross-oracle**, and it is separate
 because it trusts something external: a Python generator emits a few hundred

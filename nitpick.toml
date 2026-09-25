@@ -112,7 +112,7 @@ path  = "tests/probe"
 #   `parse`   HAS NO ENTRY BY DESIGN, not by omission (TM-123). It is a
 #             WHOLE-TREE stage: `BUILD.md` §3's Directory column for it reads
 #             "every `.npk` in the tree", and that is where its value is — of
-#             the 91 files here [[sweep: npk_total=91]], 29 are put in front of
+#             the 94 files here [[sweep: npk_total=94]], 29 are put in front of
 #             the compiler by nothing
 #             else. An entry would narrow it to one directory and silently
 #             un-cover the rest, so `stage = "parse"` is REFUSED BY NAME.
@@ -129,14 +129,9 @@ path  = "tests/probe"
 #   `golden`  IMPLEMENTED, and `tests/golden/` is empty: nothing formats
 #             anything yet. Exercised by `selfcheck.py` case 4. Its entry
 #             arrives with `fmt` at cycle 0.4.
-#   `sweep`   IMPLEMENTED, and `tests/unit/sweep/` is empty. Exercised by
-#             `selfcheck.py` case 7. **Its entry arrives at cycle 0.1 with the
-#             civil round-trip sweep** (`TESTING.md` V-2, V-3: 7 304 484 days,
-#             both directions -- 7 304 485 until cycle 0.1.1 corrected the
-#             range's first day, TM-161), and every member will carry `// sweep-count:`
-#             so the harness can tell a sweep that ran from one that did not
-#             (TM-122). Until then `--quick` has nothing to skip and says so
-#             with the number.
+#   `sweep`   HAS AN ENTRY SINCE CYCLE 0.1.2, below the unit tests. Until
+#             then this line read "IMPLEMENTED, and `tests/unit/sweep/` is
+#             empty", and `--quick` had nothing to skip.
 
 # THE UNIT TESTS. Stage `program`, added at cycle 0.0.4 with the first library
 # code -- `src/core/`. Before 0.0.4 this directory was EMPTY and had no entry,
@@ -144,11 +139,11 @@ path  = "tests/probe"
 # with nothing in it reports green while checking nothing.
 #
 # NOT `recursive`, exactly as `probe` is not, and for the same reason: the plain
-# glob is `tests/unit/*.npk` and it EXCLUDES `tests/unit/sweep/`, which is still
-# empty and whose own entry arrives at cycle 0.1 with the civil round-trip sweep
-# (`TESTING.md` V-2, V-3). `recursive = true` here would sweep an empty
-# directory into a `program` entry and fail for a reason that is not the
-# library's.
+# glob is `tests/unit/*.npk` and it EXCLUDES `tests/unit/sweep/`, which has its
+# own `sweep` entry below since cycle 0.1.2. Recursive, this entry would run
+# the three sweeps a second time as `program` members, where their
+# `sweep-count` is an expectation that does nothing -- a failure (B-5e) --
+# instead of as the `sweep` members they are.
 #
 # SEVEN FILES AT 0.0.4, and the split is NAMED rather than counted, because a
 # count taken from the command instead of from the names is how the probe entry
@@ -166,6 +161,32 @@ path  = "tests/probe"
 name  = "unit"
 stage = "program"
 path  = "tests/unit"
+
+# THE SWEEPS -- cycle 0.1.2, and cycle 0.1's gate (`CALENDAR.md` C-16, C-17;
+# `TESTING.md` V-2, V-3). Stage `sweep`: as `program`, both legs, and each
+# program must PRINT the count it visited, equal to the `sweep-count` its
+# header declares (TM-122) -- an exhaustive loop that returned early exits 0
+# exactly like one that finished. Separable, never optional: `--quick` skips
+# this entry LOUDLY and concludes nothing, and CI never passes it (B-9, B-9b).
+#
+# THREE MEMBERS, ONE DOMAIN EACH, and each domain is TAGGED here and wherever
+# a specification states it, so `check_denominators` diffs every statement
+# against the header that declares it (`TESTING.md` V-1h):
+#
+#   every_day_number.npk    each day number to its date and back
+#                           [[sweep: domain_every_day_number=7304484]]
+#   every_civil_date.npk    each date to its day number and back, and each
+#                           number the last one's plus one
+#                           [[sweep: domain_every_civil_date=7304484]]
+#   every_month_length.npk  each month's length, two ways
+#                           [[sweep: domain_every_month_length=239988]]
+#
+# C-17's second rider, the weekday cycle, joins `every_civil_date.npk` with
+# `weekday()` at cycle 0.1.3 (`meta/roadmap/0.1/0.1.2.md` §9).
+[[test]]
+name  = "sweep"
+stage = "sweep"
+path  = "tests/unit/sweep"
 
 # THE CONSUMER. Stage `compile`, `kind = "positive"` -- which in the compiler's
 # vocabulary means "compiles, links, runs, and exits with the expected code",

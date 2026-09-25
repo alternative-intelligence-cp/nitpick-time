@@ -22,9 +22,14 @@ WHAT A GREEN RUN HERE IS, AND IS NOT.
   a SOURCE-level check and is the only thing that answers that question.
 
   IT IS NOT evidence that the WHOLE library works. `src/core/` is real code
-  since cycle 0.0.4 -- `Vec<T>`, `Bytes` and thirteen named bounds -- and the
-  suite is evidence about it. The other five `src/` directories are still
-  placeholders, so nothing here dates anything. AND IT IS NOT A MEMORY RESULT
+  since cycle 0.0.4 -- `Vec<T>`, `Bytes` and thirteen named bounds -- and
+  `src/cal/` since 0.1.0 -- the civil types, Hinnant's two algorithms since
+  0.1.1, swept over the whole range since 0.1.2 -- and the suite is evidence
+  about both. The other four `src/` directories are still placeholders, so
+  nothing here converts a time to a zone, a timestamp to a date, or text to
+  either. (Until cycle 0.1.2 this said "the other five ... so nothing here
+  dates anything" -- false since 0.1.0 gave `cal/` a body, and since 0.1.1
+  converted a date to a day.) AND IT IS NOT A MEMORY RESULT
   FOR THE MANAGED HALF: D-151's exit-0 trap counts `wild` allocations and a
   `buffer` is managed (TM-106), so a green run says nothing about `Bytes`
   (S-18b, S-18e).
@@ -549,9 +554,9 @@ def run_parse(rep, root, bld):
     """Every `.npk` in the tree in front of the real parser, each exactly once.
 
     THE DENOMINATOR IS THE WHOLE TREE AND THAT IS WHY THE STAGE IS WORTH ITS
-    COST. Re-measured at cycle 0.1.1: of the 91 `.npk` files here
-    [[sweep: npk_total=91]] the library build roots 5 [[sweep: lib_reach=5]],
-    the suite roots 54 [[sweep: suite_roots=54]], and 3 more are reached by
+    COST. Re-measured at cycle 0.1.2: of the 94 `.npk` files here
+    [[sweep: npk_total=94]] the library build roots 5 [[sweep: lib_reach=5]],
+    the suite roots 57 [[sweep: suite_roots=57]], and 3 more are reached by
     `use` from a suite root [[sweep: support_total=3]] -- so 29 are put in
     front of the compiler by NOTHING ELSE. Five of those are the remaining
     `src/` placeholders and 24 are the reproductions under
@@ -560,7 +565,7 @@ def run_parse(rep, root, bld):
     then went three cycles asserted by nothing (TM-141), for exactly this
     reason.
 
-        83 = 5 (library) + 46 (suite roots) + 3 (reached by `use`) + 29
+        94 = 5 (library) + 57 (suite roots) + 3 (reached by `use`) + 29
 
     EVERY NUMBER IN THAT SENTENCE IS TAGGED AND CHECKED (TM-142). It read
     `50 = 1 + 27 + 3 + 19` until cycle 0.0.6, three subcycles after the tree
@@ -569,6 +574,13 @@ def run_parse(rep, root, bld):
     joined the library's reach, three unit tests and one probe joined the
     suite -- and the check found every stale site rather than a reader
     noticing one.
+
+    (Cycle 0.1.2: that holds for the sentence's MEASURED numbers, and not for
+    its two differences -- the 29, and the five placeholders -- nor for the
+    equation above, which restates the sentence untagged: it read
+    `83 = 5 (library) + 46 (suite roots) + 3 (reached by `use`) + 29` from
+    cycle 0.1.0 until 0.1.2's planning found it two subcycles stale, the
+    limit TM-142 states for itself.)
     """
     files = all_npk(root)
     verdicts = {"parses": 0, "refused later": 0, "does not parse": 0}

@@ -1170,6 +1170,10 @@ _SWEEP_MARK = re.compile(r"\[\[sweep:\s*([a-z_]+)\s*=\s*(-?\d+)\s*\]\]")
 
 _TAGGABLE = (".md", ".py", ".toml", ".yml", ".yaml", ".npk", ".txt")
 
+# The `sweep` stage's directory (`BUILD.md` §3). `denominators()` measures the
+# domain each member there DECLARES, as `domain_<stem>` (cycle 0.1.2).
+SWEEP_DIR = "tests/unit/sweep"
+
 
 def _walk(root):
     """`os.walk` with this repository's pruning: skipped dirs and nested repos."""
@@ -1235,6 +1239,25 @@ def denominators(tree, extra=None):
         d[label + "_exit"] = n_exit
         d[label + "_error"] = n_error
         d[label + "_nomarker"] = n_none
+    # THE DOMAIN EACH `sweep` MEMBER DECLARES, as `domain_<stem>` -- cycle
+    # 0.1.2, `TESTING.md` V-1h. A member's `// sweep-count:` is the test's
+    # statement of a number the specifications state too (7 304 484 days in
+    # `CALENDAR.md` §2, 239 988 months in `TESTING.md` V-2), and the `sweep`
+    # stage holds the program's printed count to it (TM-122). Measured here,
+    # every statement of it can be TAGGED, which makes the test's number and
+    # the specification's one list: `probe07` asserted the range's right first
+    # day for three weeks beside a `CALENDAR.md` that stated the wrong one,
+    # and nothing compared the two (TM-161). A stem outside `[a-z_]` could not
+    # be named by a tag (`_SWEEP_MARK`); no member's is.
+    for rel in tests:
+        if not rel.startswith(SWEEP_DIR + "/") or rel.count("/") != 3:
+            continue
+        try:
+            e = stages.read(tree, rel)
+        except stages.MarkerError:
+            continue                  # `check_expect_headers` names the file
+        if e.sweep_count is not None:
+            d["domain_" + os.path.basename(rel)[:-4]] = e.sweep_count
     lib = os.path.join(tree, "src", "lib.npk")
     if os.path.isfile(lib):
         with open(lib, "r", encoding="utf-8", errors="replace") as fh:

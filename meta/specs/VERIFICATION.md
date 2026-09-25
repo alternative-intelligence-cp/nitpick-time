@@ -210,8 +210,8 @@ the gap is written down here.
 
 | Site | Proof |
 |---|---|
-| after `days_to_date` | the result is in the supported range, and `date_to_days` of it returns the input — **written as comments at 0.1.1 (Q-6, TM-164)**: `prove(date_to_days(answer) == n)`, and the range half as an `ensures` comment, since the result is `civil_date`'s |
-| after `date_to_days` | the result is in `[DAY_MIN, DAY_MAX]` — **written as a comment at 0.1.1 (Q-6, TM-164)**: `ensures answer >= NTIME_DAY_MIN && answer <= NTIME_DAY_MAX` |
+| after `days_to_date` | the result is in the supported range, and `date_to_days` of it returns the input — **written as comments at 0.1.1 (Q-6, TM-164)**: `prove(date_to_days(answer) == n)`, and the range half as an `ensures` comment, since the result is `civil_date`'s. **Stood in for, over the whole range, by `tests/unit/sweep/every_day_number.npk` and `every_civil_date.npk` since cycle 0.1.2** (TM-166) — P-1's property test, and the row P-11 hands over |
+| after `date_to_days` | the result is in `[DAY_MIN, DAY_MAX]` — **written as a comment at 0.1.1 (Q-6, TM-164)**: `ensures answer >= NTIME_DAY_MIN && answer <= NTIME_DAY_MAX`. **Stood in for, over the whole range, by `tests/unit/sweep/every_day_number.npk` and `every_civil_date.npk` since cycle 0.1.2** (TM-166) — P-1's property test, and the row P-11 hands over |
 | after every `Timestamp` construction | `nanos < 1_000_000_000` (P-4) |
 | in the transition binary search | the invariant `trans[lo].at_utc <= target < trans[hi].at_utc` holds at every step |
 | after an offset lookup | `|offset| <= 64_800` |
@@ -239,7 +239,7 @@ the bound is stated:
 | every parser | bytes remaining (P-8) |
 | the decimal writer | the value, divided by ten each step |
 | `Period` normalisation | fixed, four steps |
-| the exhaustive sweeps (tests) | the day range |
+| the exhaustive sweeps (tests) | the day range — a `for` over it, bounded by construction (the compiler's CONTROL_REFERENCE §2) |
 
 `ntime` has **no unbounded loop and no recursion at all**. That is worth
 stating as a property rather than an accident: the calendar algorithms are
@@ -256,6 +256,14 @@ closed-form, the searches are logarithmic, and the parsers are linear scans.
 > **none is `unbounded`** (TM-151). So the property this rule claimed is
 > executed rather than stated. The table above is still the plan for the loops
 > later cycles write; each will carry its variant as the clause.
+>
+> *(Cycle 0.1.2: **the 48 are this tree's `while` loops**, and the sentence
+> said "loops" — found at the 0.1.2 planning. A `for` over a range states no
+> measure: it is bounded by construction, and D-304 asks the clause of `while`
+> and `when` alone. The tree has held one `for` since cycle 0.0.0, in
+> `tests/probe/probe10_view_edges.npk` (`36f0e0f`), and 0.1.2's three sweeps add
+> six — seven, none of which states or needs a measure, and 48 `while`, every
+> one with `decreases`, re-counted at 0.1.2.)*
 
 ---
 

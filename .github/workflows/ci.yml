@@ -38,9 +38,9 @@
 # `Vec<T>`, `Bytes` and thirteen named bounds -- and `src/cal/` since 0.1.0 --
 # the civil types and their validating constructors, and since 0.1.1 Hinnant's
 # `date_to_days` and `days_to_date` -- re-exported together as 50 public names,
-# so this IS evidence about behaviour, of the 78 units the runner reports at
+# so this IS evidence about behaviour, of the 81 units the runner reports at
 # compiler `c3bdae2` (62 at cycle 0.0.6, 67 at 0.1.0, 70 at 0.1.0b, 75 at
-# 0.1.0c). What
+# 0.1.0c, 78 at 0.1.1). What
 # it is evidence of: the pinned compiler builds from a clean checkout at exactly
 # LLVM 20.1.2, every `.npk` under `src/` compiles, every unit under `tests/`
 # meets its own header at -O0 and again under `opt -O2`, the whole
@@ -48,11 +48,14 @@
 # `tests/conformance/import.npk` emits, assembles, links, RUNS and exits 0. The
 # run is what is judged -- `npkc` exiting 0 is NOT well-formedness (O-N11,
 # TM-112), and a stage that stopped at the `.ll` would have passed a program
-# with no handler. AND SINCE CYCLE 0.1.0b: every loop in the tree states a
+# with no handler. AND SINCE CYCLE 0.1.0b: every `while` in the tree states a
 # measure the compiler checks on every trip (D-304, `DecreasesViolated`), and
 # every `failsafe` names the two identities the compiler's 1.5 added to the
 # floor, `StackExhausted` and `MachineFault` -- the pinned compiler refuses a
-# tree missing either, so a green run here is a tree that has both. AND SINCE
+# tree missing either, so a green run here is a tree that has both. (The
+# first half said "every loop" until cycle 0.1.2, whose sweeps added six
+# `for` loops over ranges: a `for` is bounded by construction and states no
+# measure, and the tree had held one since cycle 0.0.0.) AND SINCE
 # CYCLE 0.1.0c: `Vec<T>`'s pointer is `hidden`, the lengths of `Vec` and
 # `Bytes` are `sealed limit<ListLen>`, and every field of `CivilDate` and
 # `CivilTime` is `sealed` -- five probes assert that the pinned compiler
@@ -61,7 +64,13 @@
 # CYCLE 0.1.1: the range constants are recomputed from the calendar algorithm
 # rather than trusted (TM-161), twenty-six day numbers computed without
 # Hinnant's formula are asserted both ways, and every divisor in `src/cal/`
-# is a positive integer literal, checked (TM-163).
+# is a positive integer literal, checked (TM-163). AND SINCE CYCLE 0.1.2:
+# every day number and every date in the range round-trips on both legs,
+# 7 304 484 of each [[sweep: domain_every_day_number=7304484]], and every one of
+# the 239 988 months [[sweep: domain_every_month_length=239988]] has the length
+# the month table and Hinnant both give it -- the three `tests/unit/sweep/`
+# members, each printing the count it visited (TM-122), and each assertion in
+# them seen to fail on a mutant (`meta/roadmap/0.1/0.1.2.md` §5).
 #
 # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
 # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
@@ -79,11 +88,13 @@
 # for three cycles.
 #
 # WHAT IT IS STILL NOT EVIDENCE OF. Four of the six `src/` directories are
-# still placeholders -- `span/`, `zone/`, `fmt/`, `host/` -- and `cal/` holds
-# the types and constructors but not yet the day-number algorithms (cycle
-# 0.1.1), so nothing here converts a date to a day or a time to a zone. (This
+# still placeholders -- `span/`, `zone/`, `fmt/`, `host/` -- so nothing here
+# converts a time to a zone, a timestamp to a date, or text to either. (This
 # said five placeholders, `cal/` among them, until cycle 0.1.0b; `cal/` had had
-# a body since 0.1.0.) And a green run is not a MEMORY result for the managed
+# a body since 0.1.0. And until cycle 0.1.2 it said `cal/` held "the types and
+# constructors but not yet the day-number algorithms (cycle 0.1.1), so nothing
+# here converts a date to a day" -- false since 0.1.1, which added them.) And
+# a green run is not a MEMORY result for the managed
 # half: D-151's exit-0 trap counts `wild` allocations and a `buffer` is managed
 # (TM-106), so `exit 0` says nothing about `Bytes` (S-18b, S-18e).
 #

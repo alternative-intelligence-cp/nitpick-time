@@ -61,7 +61,7 @@ sibling libraries.
 | Cycle | Topic | Gated on |
 |---|---|---|
 | ~~**0.0**~~ | **Foundations** — the language probes, the harness, `src/core/` — **CLOSED 2026-09-06, archived at [`done/0.0/`](done/0.0/README.md)** | — |
-| **0.1** | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **IN PROGRESS: 0.1.0, the adoption to compiler `c3bdae2` ([`0.1/0.1.0b.md`](0.1/0.1.0b.md)), the access properties ([`0.1/0.1.0c.md`](0.1/0.1.0c.md)) and the algorithms ([`0.1/0.1.1.md`](0.1/0.1.1.md)) done; the sweep, 0.1.2, next — planned and rehearsed in [`0.1/0.1.2.md`](0.1/0.1.2.md); the gate's weekday rider lands at 0.1.3 with `weekday()` (PD-16)** | 0.0 ✓ |
+| **0.1** | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **IN PROGRESS: 0.1.0, the adoption to compiler `c3bdae2` ([`0.1/0.1.0b.md`](0.1/0.1.0b.md)), the access properties ([`0.1/0.1.0c.md`](0.1/0.1.0c.md)), the algorithms ([`0.1/0.1.1.md`](0.1/0.1.1.md)) and the sweep ([`0.1/0.1.2.md`](0.1/0.1.2.md)) — the gate's round trips, monotonicity and month lengths — done; derived fields, 0.1.3, next, carrying the gate's weekday rider with `weekday()` (TM-165), where the gate completes** | 0.0 ✓ |
 | **0.2** | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop | 0.1 |
 | **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double | 0.2 |
 | **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate | 0.2 |
@@ -115,7 +115,9 @@ ordinal dates, and the range constants pinned by a test that recomputes them.
 number in `[−4 371 587, +2 932 896]` round-trips in both directions —
 7 304 484 cases each way, run in full, plus monotonicity, the weekday cycle and
 month lengths on the same sweep. *(The bound read −4 371 588 and the count
-7 304 485 until cycle 0.1.1: the range's first day was one day early, TM-161.)*
+7 304 485 until cycle 0.1.1: the range's first day was one day early, TM-161.)* *(Since cycle 0.1.2 monotonicity is stated as
+each date's day number being the previous one's plus one, TM-167, and the
+weekday cycle is asserted at 0.1.3, where `weekday()` is written, TM-165.)*
 
 ### 0.2 — Instants and timestamps
 `src/span/`: `Instant` with its clock tag, `Timestamp` with its normalisation

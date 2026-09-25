@@ -20,7 +20,7 @@
 // their days with `date_to_days`. The relations are still written out, so a
 // reader can check them by hand:
 //
-//     NTIME_DAY_MAX - NTIME_DAY_MIN + 1  =  2932896 + 4371587 + 1  =  7304484
+//     NTIME_DAY_MAX - NTIME_DAY_MIN + 1  =  2932896 + 4371587 + 1  =  7304484  [[sweep: domain_every_day_number=7304484]]
 //                                        =  CALENDAR.md §2's "total days"
 //     NTIME_SECS_MIN =  NTIME_DAY_MIN * 86400 = -4371587 * 86400 = -377705116800
 //     NTIME_SECS_MAX =  NTIME_DAY_MAX * 86400 + 86399

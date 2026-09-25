@@ -1,0 +1,97 @@
+// expect-exit: 0
+// sweep-count: 7304484
+//
+// EVERY DAY NUMBER IN THE RANGE, TO ITS DATE AND BACK -- the first half of
+// `CALENDAR.md` C-16, cycle 0.1's gate (`TESTING.md` V-2, V-3; TM-026). For
+// every `n` in [NTIME_DAY_MIN, NTIME_DAY_MAX], `days_to_date(n)` is accepted
+// and `date_to_days` of the date it returns is `n` again. Run in full, at -O0
+// and again under `opt -O2` (B-3), on every full invocation (B-9).
+//
+// THE DOMAIN IS THE INTEGERS, AND THAT IS WHAT THIS FILE ADDS TO ITS SIBLING.
+// `every_civil_date.npk` walks the CALENDAR -- year, month, day, with
+// `days_in_month` deciding how long each month is -- so what it visits rests
+// on the leap rule and the month table. This file walks the day numbers
+// themselves and rests on the two constants alone; each covers the other's
+// way of enumerating wrongly.
+//
+// AND WHAT IT CANNOT SEE, measured at planning (`0.1.2.md` §5): a validator
+// that accepts too much. With the century rule dropped (1900 leap), or April
+// given 31 days, every day number still goes to its date and back and this
+// file exits 0 with the full count -- Hinnant's `civil_from_days` never
+// produces 1900-02-29 or an April 31st, so the wrong acceptance is never asked
+// for. `every_civil_date.npk` asks for it.
+//
+// THE COUNT IS THE EVIDENCE (`TESTING.md` V-16, TM-122). The program prints
+// `swept <N>`, N the day numbers that passed both checks, and the harness
+// requires N to equal the domain declared above -- because a loop that
+// returned early exits 0 exactly like one that finished. And the declared
+// domain is tagged where the specifications state it, so `check_denominators`
+// diffs the specification's number against this header on every run
+// (`TESTING.md` V-1h).
+//
+// A `for` OVER A RANGE, NOT A `while`. `..` is inclusive at both ends, and a
+// `for` is bounded by construction (the compiler's CONTROL_REFERENCE §2): it
+// states no `decreases` and arms no `DecreasesViolated`, so this program owes
+// exactly the eleven identities any program importing `cal` owes (`SAFETY.md`
+// S-4) -- measured, `NITPICK-REACH-003` on a copy with no `failsafe`.
+//
+// EXIT CODES, clear of every arm code (V-1j): 10 `days_to_date` refused a day
+// in the range; 11 the date it returned is another day number; 20, 21 and 22
+// the `swept` line could not be built, could not be written, or was written
+// short.
+mod:every_day_number;
+
+use "../../../src/cal/cal.npk".CivilDate;
+use "../../../src/cal/cal.npk".date_to_days;
+use "../../../src/cal/cal.npk".days_to_date;
+use "../../../src/core/limits.npk".NTIME_DAY_MIN;
+use "../../../src/core/limits.npk".NTIME_DAY_MAX;
+
+func:main = int32(cstring[]:_~argv) {
+    int64:count = 0i64;
+    for (int64:n in NTIME_DAY_MIN..NTIME_DAY_MAX) {
+        Result<CivilDate>:r = days_to_date(n);
+        if (r.is_error)                      { exit 10i32; }
+        if (raw date_to_days(r.value) != n)  { exit 11i32; }
+        count = count + 1i64;
+    }
+    int32:said = raw say_swept(count);
+    if (said != 0i32) { exit said; }
+    exit 0i32;
+};
+
+// `swept <count>` and a newline, on stdout, exactly once (`TESTING.md` V-16).
+// The prelude's `int_to_string`, `string_concat` and `to_cstring`, and `sys`
+// for `write` -- the shape `harness/selfcheck.py`'s own sweep fixtures use,
+// and the compiler's `lib/` is not ours to import (B-10). It costs no arm
+// beyond the floor: measured, six identities alone.
+func:say_swept = int32(int64:count) never fails {
+    string:digits = int_to_string(count);
+    string:head = string_concat("swept ", digits);
+    string:line = string_concat(head, "\n");
+    Result<cstring>:c = to_cstring(line);
+    if (c.is_error) { pass 20i32; }
+    cstring:s = c.value;
+    Result<int64>:w = sys(1i64, 1i64, s.ptr, s.len);
+    if (w.is_error) { pass 21i32; }
+    if (w.value != s.len) { pass 22i32; }
+    pass 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

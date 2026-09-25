@@ -650,6 +650,20 @@ PLANTED = [
      ("src/cal/cal.npk",
       "mod:cal;\n// " + _TAG % ("npk_total", _MINI_NPK) + "\n"),
      "which this sweep does not measure"),
+    # AND A SWEEP'S DECLARED DOMAIN AGAINST A STATEMENT OF IT (cycle 0.1.2) --
+    # TM-161's shape, a test and a document holding two values for one
+    # quantity. The member declares 10 and the tag beside it says 11; one
+    # file, so the row plants one file as every row does. The needle is the
+    # MEASURED side, so a check that read the tag back as its own measurement
+    # would not pass it.
+    (checks_mod.check_denominators,
+     ("tests/unit/sweep/tiny.npk",
+      "// expect-exit: 0\n// sweep-count: 10\n// "
+      + _TAG % ("domain_tiny", 11) + "\nmod:tiny;\n"),
+     ("tests/unit/sweep/tiny.npk",
+      "// expect-exit: 0\n// sweep-count: 10\n// "
+      + _TAG % ("domain_tiny", 10) + "\nmod:tiny;\n"),
+     "the tree says 10"),
     (checks_mod.check_purity,
      ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() never fails "
                          "{ pass mono_now(); };\n"),

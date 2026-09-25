@@ -114,7 +114,18 @@ without re-planning — and every later cycle's. *(0.1.1 was worked on A′, at 
 orchestrator's instruction, while this stays open: TM-164. Its arm cost was
 measured both ways there — `cal` 11 and the umbrella 13 as committed, 12 and 14
 with the one live `ensures` — and A's arm, `EnsuresViolated`, would exit 117
-in this ecosystem, not the 110 the plan proposed.)* **What does not:** 0.1.0b and
+in this ecosystem, not the 110 the plan proposed.)* *(0.1.2 was worked on A′
+too, and `meta/roadmap/0.1/0.1.2.md` §8 measured what A would change there —
+re-measured at execution, a scratch copy of `src/` with `date_to_days`
+carrying the live `ensures`: each of the three sweeps then owes **twelve**
+identities rather than eleven, the extra one `EnsuresViolated`, and runs within
+noise of A′ at -O0 — 1.29 s → 1.34 s, 1.42 s → 1.44 s and 0.02 s → 0.02 s —
+with the `ensures` checked at every return, once per day in each day walk and
+once per month in the month walk. **So under A the cost at 0.1.2 is the arm,
+not the time; and the live check adds no evidence the civil walk does not
+already give**, because that walk asserts every day number in the range
+directly — this question's own argument for A′ in cycle 0.1, now measured. The
+question stays the author's.)* **What does not:** 0.1.0b and
 0.1.0c; 0.1.0b adds a dated note under P-1 saying its premise is false and this
 question is its replacement. **The same P-1 is in all six work repositories'
 `VERIFICATION.md`**, so one answer can serve all six, recorded in each.

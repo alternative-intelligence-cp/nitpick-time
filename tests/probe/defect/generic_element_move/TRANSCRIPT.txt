@@ -1,3 +1,5 @@
+Absolute paths shortened to `$WB/` and `$REPO/` at cycle 0.1.0b, when the workbench's leak scan widened to every tracked text file. Nothing else in this transcript was changed.
+
 O-N17 -- a generic function that MOVES OUT OF an indexed element, at an OWNING
 `T`, emits a call to an undefined `@npk.vacant.<dty>`. Recorded 2026-09-05 at
 pin `0dfddac`, by `nitpick-time` cycle 0.0.4.
@@ -55,7 +57,7 @@ $ $NPKC tests/probe/defect/generic_element_move/case1_generic_move_out.npk -o ca
   exit=0   artefact: wrote case1_generic_move_out.ll, 850377 B
 
 $ llc -O0 -filetype=obj -relocation-model=static case1_generic_move_out.ll -o case1_generic_move_out.o
-llc: error: llc: /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/.internal/s2_004/tx/case1_generic_move_out.ll:23179:13: error: use of undefined value '@npk.vacant.1876'
+llc: error: llc: $REPO/.internal/s2_004/tx/case1_generic_move_out.ll:23179:13: error: use of undefined value '@npk.vacant.1876'
   call void @"npk.vacant.1876"(ptr %t15)
             ^
   exit=1   artefact: NO .o
@@ -263,62 +265,62 @@ link and run at exit 0. Every status below is paired with the artefact it
 should have produced, and no pipeline was used to take any of them.
 
 --- case1_generic_move_out
-$ /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/aaffb87/npkc tests/probe/defect/generic_element_move/case1_generic_move_out.npk -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case1_generic_move_out.ll
+$ $WB/.internal/toolchain/aaffb87/npkc tests/probe/defect/generic_element_move/case1_generic_move_out.npk -o $REPO/build/on17land/case1_generic_move_out.ll
   exit=0   artefact: build/on17land/case1_generic_move_out.ll, 55652 B
-$ llc -O0 -filetype=obj -relocation-model=static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case1_generic_move_out.ll -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case1_generic_move_out.o
+$ llc -O0 -filetype=obj -relocation-model=static $REPO/build/on17land/case1_generic_move_out.ll -o $REPO/build/on17land/case1_generic_move_out.o
   exit=0   artefact: build/on17land/case1_generic_move_out.o, 31784 B
-$ ld.lld -static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case1_generic_move_out.o /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/aaffb87/npkrt.o -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case1_generic_move_out
+$ ld.lld -static $REPO/build/on17land/case1_generic_move_out.o $WB/.internal/toolchain/aaffb87/npkrt.o -o $REPO/build/on17land/case1_generic_move_out
   exit=0   artefact: build/on17land/case1_generic_move_out, 65480 B
-$ /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case1_generic_move_out
+$ $REPO/build/on17land/case1_generic_move_out
   exit=0
 
 --- case2_concrete_move_out
-$ /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/aaffb87/npkc tests/probe/defect/generic_element_move/case2_concrete_move_out.npk -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case2_concrete_move_out.ll
+$ $WB/.internal/toolchain/aaffb87/npkc tests/probe/defect/generic_element_move/case2_concrete_move_out.npk -o $REPO/build/on17land/case2_concrete_move_out.ll
   exit=0   artefact: build/on17land/case2_concrete_move_out.ll, 55672 B
-$ llc -O0 -filetype=obj -relocation-model=static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case2_concrete_move_out.ll -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case2_concrete_move_out.o
+$ llc -O0 -filetype=obj -relocation-model=static $REPO/build/on17land/case2_concrete_move_out.ll -o $REPO/build/on17land/case2_concrete_move_out.o
   exit=0   artefact: build/on17land/case2_concrete_move_out.o, 31784 B
-$ ld.lld -static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case2_concrete_move_out.o /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/aaffb87/npkrt.o -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case2_concrete_move_out
+$ ld.lld -static $REPO/build/on17land/case2_concrete_move_out.o $WB/.internal/toolchain/aaffb87/npkrt.o -o $REPO/build/on17land/case2_concrete_move_out
   exit=0   artefact: build/on17land/case2_concrete_move_out, 65480 B
-$ /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case2_concrete_move_out
+$ $REPO/build/on17land/case2_concrete_move_out
   exit=0
 
 --- case3_generic_scalar
-$ /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/aaffb87/npkc tests/probe/defect/generic_element_move/case3_generic_scalar.npk -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case3_generic_scalar.ll
+$ $WB/.internal/toolchain/aaffb87/npkc tests/probe/defect/generic_element_move/case3_generic_scalar.npk -o $REPO/build/on17land/case3_generic_scalar.ll
   exit=0   artefact: build/on17land/case3_generic_scalar.ll, 53974 B
-$ llc -O0 -filetype=obj -relocation-model=static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case3_generic_scalar.ll -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case3_generic_scalar.o
+$ llc -O0 -filetype=obj -relocation-model=static $REPO/build/on17land/case3_generic_scalar.ll -o $REPO/build/on17land/case3_generic_scalar.o
   exit=0   artefact: build/on17land/case3_generic_scalar.o, 31176 B
-$ ld.lld -static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case3_generic_scalar.o /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/aaffb87/npkrt.o -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case3_generic_scalar
+$ ld.lld -static $REPO/build/on17land/case3_generic_scalar.o $WB/.internal/toolchain/aaffb87/npkrt.o -o $REPO/build/on17land/case3_generic_scalar
   exit=0   artefact: build/on17land/case3_generic_scalar, 65008 B
-$ /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case3_generic_scalar
+$ $REPO/build/on17land/case3_generic_scalar
   exit=0
 
 --- case4_generic_move_in
-$ /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/aaffb87/npkc tests/probe/defect/generic_element_move/case4_generic_move_in.npk -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case4_generic_move_in.ll
+$ $WB/.internal/toolchain/aaffb87/npkc tests/probe/defect/generic_element_move/case4_generic_move_in.npk -o $REPO/build/on17land/case4_generic_move_in.ll
   exit=0   artefact: build/on17land/case4_generic_move_in.ll, 55793 B
-$ llc -O0 -filetype=obj -relocation-model=static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case4_generic_move_in.ll -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case4_generic_move_in.o
+$ llc -O0 -filetype=obj -relocation-model=static $REPO/build/on17land/case4_generic_move_in.ll -o $REPO/build/on17land/case4_generic_move_in.o
   exit=0   artefact: build/on17land/case4_generic_move_in.o, 31704 B
-$ ld.lld -static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case4_generic_move_in.o /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/aaffb87/npkrt.o -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case4_generic_move_in
+$ ld.lld -static $REPO/build/on17land/case4_generic_move_in.o $WB/.internal/toolchain/aaffb87/npkrt.o -o $REPO/build/on17land/case4_generic_move_in
   exit=0   artefact: build/on17land/case4_generic_move_in, 65400 B
-$ /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case4_generic_move_in
+$ $REPO/build/on17land/case4_generic_move_in
   exit=0
 
 --- case5_generic_drop_loop
-$ /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/aaffb87/npkc tests/probe/defect/generic_element_move/case5_generic_drop_loop.npk -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case5_generic_drop_loop.ll
+$ $WB/.internal/toolchain/aaffb87/npkc tests/probe/defect/generic_element_move/case5_generic_drop_loop.npk -o $REPO/build/on17land/case5_generic_drop_loop.ll
   exit=0   artefact: build/on17land/case5_generic_drop_loop.ll, 58446 B
-$ llc -O0 -filetype=obj -relocation-model=static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case5_generic_drop_loop.ll -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case5_generic_drop_loop.o
+$ llc -O0 -filetype=obj -relocation-model=static $REPO/build/on17land/case5_generic_drop_loop.ll -o $REPO/build/on17land/case5_generic_drop_loop.o
   exit=0   artefact: build/on17land/case5_generic_drop_loop.o, 32592 B
-$ ld.lld -static /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case5_generic_drop_loop.o /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/aaffb87/npkrt.o -o /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case5_generic_drop_loop
+$ ld.lld -static $REPO/build/on17land/case5_generic_drop_loop.o $WB/.internal/toolchain/aaffb87/npkrt.o -o $REPO/build/on17land/case5_generic_drop_loop
   exit=0   artefact: build/on17land/case5_generic_drop_loop, 66064 B
-$ /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case5_generic_drop_loop
+$ $REPO/build/on17land/case5_generic_drop_loop
   exit=0
 
 AND THE SYMBOL SETS, which are what made this actionable in PART A: the
 `called minus defined` column that held `1876` for `case1` is now empty.
 
-$ grep -c npk.vacant /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case1_generic_move_out.ll
+$ grep -c npk.vacant $REPO/build/on17land/case1_generic_move_out.ll
   exit=0
   | 10
-$ grep -c use of undefined /home/randy/Workspace/REPOS/nitpick-libs/nitpick-time/build/on17land/case1_generic_move_out.ll
+$ grep -c use of undefined $REPO/build/on17land/case1_generic_move_out.ll
   exit=1
   | 0
   (`grep -c` exits 1 on zero matches; the count printed is the artefact,

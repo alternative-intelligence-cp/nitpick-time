@@ -1,3 +1,5 @@
+Absolute paths shortened to `$WB/` and `$REPO/` at cycle 0.1.0b, when the workbench's leak scan widened to every tracked text file. Nothing else in this transcript was changed.
+
 RE-RECORDED 2026-09-04 AT THE RE-PIN. Read this header before the numbers.
 
 O-N9 IS DISCHARGED, and this file is the measurement that discharges it --
@@ -53,8 +55,8 @@ it. The pin proves "not landed", never "not real".
 ================================================================
 
 $ sha256sum "$NPKC" "$NPKRT"
-0f8c46789160ee1262ffe146a4164c5fef8d0f020f733ed4e4d9cbbccb3d8a84  /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/94874ce/npkc
-c9ddbcffd32eccc7787bd71c39ebefd25913170a9fae48de32eb53ca68b2239e  /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/94874ce/npkrt.o
+0f8c46789160ee1262ffe146a4164c5fef8d0f020f733ed4e4d9cbbccb3d8a84  $WB/.internal/toolchain/94874ce/npkc
+c9ddbcffd32eccc7787bd71c39ebefd25913170a9fae48de32eb53ca68b2239e  $WB/.internal/toolchain/94874ce/npkrt.o
 exit=0
 
 $ llvm-config --version

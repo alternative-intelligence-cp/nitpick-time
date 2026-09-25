@@ -1,3 +1,5 @@
+Absolute paths shortened to `$WB/` and `$REPO/` at cycle 0.1.0b, when the workbench's leak scan widened to every tracked text file. Nothing else in this transcript was changed.
+
 RE-RECORDED AGAIN 2026-09-05 AT THE 0dfddac RE-PIN. Read this header before
 the numbers. THIS FILE NOW HOLDS THREE RECORDINGS, NEWEST FIRST.
 
@@ -52,8 +54,8 @@ new header are the correction.
 ================================================================
 
 $ sha256sum "$NPKC" "$NPKRT"
-38e48973eee3a83056a62d515abc68d6bca62d052f3b5e1fbf2ced00101267d9  /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/0dfddac/npkc
-c9ddbcffd32eccc7787bd71c39ebefd25913170a9fae48de32eb53ca68b2239e  /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/0dfddac/npkrt.o
+38e48973eee3a83056a62d515abc68d6bca62d052f3b5e1fbf2ced00101267d9  $WB/.internal/toolchain/0dfddac/npkc
+c9ddbcffd32eccc7787bd71c39ebefd25913170a9fae48de32eb53ca68b2239e  $WB/.internal/toolchain/0dfddac/npkrt.o
 exit=0
 
 $ llvm-config --version
@@ -147,8 +149,8 @@ exit=1
 ================================================================
 
 $ sha256sum "$NPKC" "$NPKRT"
-0f8c46789160ee1262ffe146a4164c5fef8d0f020f733ed4e4d9cbbccb3d8a84  /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/94874ce/npkc
-c9ddbcffd32eccc7787bd71c39ebefd25913170a9fae48de32eb53ca68b2239e  /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/94874ce/npkrt.o
+0f8c46789160ee1262ffe146a4164c5fef8d0f020f733ed4e4d9cbbccb3d8a84  $WB/.internal/toolchain/94874ce/npkc
+c9ddbcffd32eccc7787bd71c39ebefd25913170a9fae48de32eb53ca68b2239e  $WB/.internal/toolchain/94874ce/npkrt.o
 exit=0
 
 $ llvm-config --version
@@ -255,8 +257,8 @@ toolchain. Every exit code is printed. Regenerate with the commands as
 they appear -- nothing here is summarised.
 
 $ sha256sum "$NPKC" "$NPKRT"
-fbb7d022e6a98ebcc9bc138aa01305310249eff54ddbf1aa0fc307aa52f8419f  /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/950bb1d/npkc
-869c490de641380c574c9785d191414eea29c3cd5af6e84196ee2ffcb168b658  /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/950bb1d/npkrt.o
+fbb7d022e6a98ebcc9bc138aa01305310249eff54ddbf1aa0fc307aa52f8419f  $WB/.internal/toolchain/950bb1d/npkc
+869c490de641380c574c9785d191414eea29c3cd5af6e84196ee2ffcb168b658  $WB/.internal/toolchain/950bb1d/npkrt.o
 exit=0
 
 $ llvm-config --version

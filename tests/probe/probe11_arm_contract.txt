@@ -1,3 +1,5 @@
+Absolute paths shortened to `$WB/` and `$REPO/` at cycle 0.1.0b, when the workbench's leak scan widened to every tracked text file. Nothing else in this transcript was changed.
+
 PROBE 11 — the `failsafe` arm contract. THE TRANSCRIPT, VERBATIM.
 
 Every command below was run from the repository root on 2026-09-03 against the
@@ -24,8 +26,8 @@ asked for are four arms THE IMPORT ADDED.
 ================================================================
 
 $ sha256sum "$NPKC" "$NPKRT"
-fbb7d022e6a98ebcc9bc138aa01305310249eff54ddbf1aa0fc307aa52f8419f  /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/950bb1d/npkc
-869c490de641380c574c9785d191414eea29c3cd5af6e84196ee2ffcb168b658  /home/randy/Workspace/REPOS/nitpick-libs/.internal/toolchain/950bb1d/npkrt.o
+fbb7d022e6a98ebcc9bc138aa01305310249eff54ddbf1aa0fc307aa52f8419f  $WB/.internal/toolchain/950bb1d/npkc
+869c490de641380c574c9785d191414eea29c3cd5af6e84196ee2ffcb168b658  $WB/.internal/toolchain/950bb1d/npkrt.o
 exit=0
 
 $ llvm-config --version

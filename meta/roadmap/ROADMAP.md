@@ -61,7 +61,7 @@ sibling libraries.
 | Cycle | Topic | Gated on |
 |---|---|---|
 | ~~**0.0**~~ | **Foundations** — the language probes, the harness, `src/core/` — **CLOSED 2026-09-06, archived at [`done/0.0/`](done/0.0/README.md)** | — |
-| **0.1** | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **IN PROGRESS: 0.1.0, the adoption to compiler `c3bdae2` ([`0.1/0.1.0b.md`](0.1/0.1.0b.md)), the access properties ([`0.1/0.1.0c.md`](0.1/0.1.0c.md)), the algorithms ([`0.1/0.1.1.md`](0.1/0.1.1.md)) and the sweep ([`0.1/0.1.2.md`](0.1/0.1.2.md)) — the gate's round trips, monotonicity and month lengths — done; derived fields, 0.1.3, next, carrying the gate's weekday rider with `weekday()` (TM-165), where the gate completes** | 0.0 ✓ |
+| **0.1** | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **IN PROGRESS: 0.1.0, the adoption to compiler `c3bdae2` ([`0.1/0.1.0b.md`](0.1/0.1.0b.md)), the access properties ([`0.1/0.1.0c.md`](0.1/0.1.0c.md)), the algorithms ([`0.1/0.1.1.md`](0.1/0.1.1.md)) and the sweep ([`0.1/0.1.2.md`](0.1/0.1.2.md)) — the gate's round trips, monotonicity and month lengths — done; derived fields, 0.1.3, next — planned ([`0.1/0.1.3.md`](0.1/0.1.3.md)) — carrying the gate's weekday rider with `weekday()` (TM-165), where the gate completes; then `check_no_owning_fields`' premise, 0.1.3b ([`0.1/0.1.3b.md`](0.1/0.1.3b.md)), and `Vec` move-only, 0.1.3c, not yet planned** | 0.0 ✓ |
 | **0.2** | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop | 0.1 |
 | **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double | 0.2 |
 | **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate | 0.2 |

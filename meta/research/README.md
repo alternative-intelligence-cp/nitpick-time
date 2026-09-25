@@ -10,3 +10,5 @@ TM-007 is the first.
 - [`tzdb-size.md`](tzdb-size.md) — the compiled tzdb's size, TM-007 and TM-135.
 - [`hinnant-date-algorithms.md`](hinnant-date-algorithms.md) — the source of
   `date_to_days` and `days_to_date` (TM-016), as read on 2026-09-25.
+- [`iso-8601-week-date.md`](iso-8601-week-date.md) — ISO 8601-1's edition in
+  force and its week-date rule (`CALENDAR.md` C-14), as read on 2026-09-25.

@@ -21,6 +21,15 @@ strongest gate.
 > copy: every fenced command in it was run verbatim there, the harness went
 > `GREEN -- 81 unit(s)` with the subcycle applied, and the tree was then put
 > back to `c7a60ac` exactly. Its §13 says which command ran where.
+>
+> **`0.1.3.md` and `0.1.3b.md` were written by a third planner the same day,
+> after 0.1.2's close**, and rehearsed in the REAL checkout at `c3bdae2` — 0.1.3
+> from its own fenced blocks, extracted and applied by the plan's `apply.py`,
+> and 0.1.3b on top of 0.1.3's applied state — the tree put back to `7689432`
+> exactly after each pass. Each file's last section says which command ran
+> where. **0.1.3b is the re-measurement the workbench owed this repository** when
+> it found `PLAYBOOK.md` §2's TYPE-046 row false; it is placed after 0.1.3,
+> which carries the cycle's gate, and before 0.1.3c.
 
 ## Why here
 
@@ -77,10 +86,12 @@ C-8's guarantee. That is worth knowing before writing it.
 | 0.1.0c | **The access properties** — `Vec`/`Bytes` hidden, sealed and under `ListLen` (the board's item 13), `CivilDate`/`CivilTime` sealed, `check_civil_literal` retired — **[`0.1.0c.md`](0.1.0c.md), DONE 2026-09-25** | C-8 holds of the TYPE again for every module but `cal` (C-8c); `GREEN -- 75 unit(s)`, and CI green — run `36158556785` |
 | 0.1.1 | **The algorithms** — `date_to_days`, `days_to_date`, the leap rule, `days_in_month` — **[`0.1.1.md`](0.1.1.md), DONE 2026-09-25** | the published algorithms, cited, with their divisions by literals — and the range's first day corrected by the test that recomputes it (TM-161); `GREEN -- 78 unit(s)`, and CI green — run `36164292563` |
 | 0.1.2 | **The sweep** — the exhaustive round trip both ways, monotonicity and month lengths, each assertion shown to fail; the weekday rider moves to 0.1.3 with `weekday()` (TM-165) — **[`0.1.2.md`](0.1.2.md), DONE 2026-09-25** | the round trips and two of the gate's three riders (TM-166, TM-167); `GREEN -- 81 unit(s)`, and CI green — run `36176251416` |
-| 0.1.3 | **Derived fields** — weekday, day-of-year, ISO week date, ordinal date — and **the weekday cycle on 0.1.2's walk** (TM-165) | computed, never stored; **the cycle's gate complete** |
+| 0.1.3 | **Derived fields** — weekday, day-of-year, ISO week date, ordinal date — and **the weekday cycle on 0.1.2's walk** (TM-165) — **[`0.1.3.md`](0.1.3.md), PLANNED** | computed, never stored; **the cycle's gate complete**; `GREEN -- 86 unit(s)` at the rehearsal |
+| 0.1.3b | **`check_no_owning_fields`' premise, re-measured** — owed since the workbench found `PLAYBOOK.md` §2's TYPE-046 row false: the premise was false at every kept pin, the check had three blind spots, and a move out of `fixed` storage compiles and faults, a compiler defect raised by path — **[`0.1.3b.md`](0.1.3b.md), PLANNED** | S-19b; the check widened and commissioned; `GREEN -- 90 unit(s)` at the rehearsal |
+| 0.1.3c | **`Vec` move-only by construction** — question 9, answered 2026-09-25 — porting `nitpick-regex`'s 0.0.4d once that has landed and been verified — **NOT PLANNED YET; plan it before it is dispatched** | no whole-`Vec` copy and no by-value `Vec` compiles |
 | 0.1.4 | **The cross-oracle** — the Python corpus and the agreement test | agreement over years 1 … 9999 |
 | 0.1.4b | **The managed-memory gate** — `NPK_HEAP_STATS`'s `peak_live`, carried from cycle 0.0 by `0.1.0.md` §8 — **NOT PLANNED YET; plan it before it is dispatched** | the four leak/no-leak pairs bounded by `peak_live`, and the `ulimit -v` cap a belt |
-| 0.1.5 | **Close** | `done/0.1/`, `0.2.0.md` written |
+| 0.1.5 | **Close** — and what earlier subcycles found and did not own: the public `README.md`'s *"Status: planning. No code yet."*; `nitpick.toml`'s `check` item still saying *"cycle 0.0.4"*; `src/core/core.npk`'s *"the other five placeholders point AT it"* (four do); `check_error_budget`'s *"expected: no module raises anything before cycle 0.1"*; and `tests/probe/README.md`'s table, which never listed probes 12 to 16 | `done/0.1/`, `0.2.0.md` written |
 
 **Why 0.1.4b exists — a premise found false at planning, 2026-09-25.**
 `0.1.0.md` §8 carried the `peak_live` gate on the reading that `NPK_HEAP_STATS`
@@ -161,13 +172,23 @@ environment) and a control that fails.
 - [x] **each domain recomputed three ways and diffed against every statement of it** (`0.1.2.md` §2), and every live statement tagged, so `check_denominators` diffs it on every run (TM-168) — 19 sites, then 22 with the three headers, 0 disagreements, the control red; thirteen tags, the plan's eleven and two in the CI header's new sentence
 - [x] the wall-clock cost recorded; if it is over ~30 s, say so and decide whether to keep it in the default run — **measured at planning: 4.5 s for the three members, both legs, compile included, against a 30 s threshold set in advance (`0.1.2.md` §6)** — at execution 4.5 s, and 4.6 s on the gating run: kept in the default run, and `BUILD.md` B-9 carries the number
 
-### 0.1.3 — derived fields
-- [ ] `weekday()` derived from the day number (C-13), **never stored**
-- [ ] **the weekday cycle, C-17's second rider, on `tests/unit/sweep/every_civil_date.npk`'s walk** — moved here from 0.1.2 by TM-165 (`0.1.2.md` §9): each day's `weekday()` equals a count begun at −9999-01-01's **Monday** and advanced by one per day, so it is Monday … Sunday on every day of the range. **Not** "advances by one, mod seven": that check passes a weekday whose modulus correction is missing, over the whole range (measured at 0.1.2's planning), so that mutant is the rider's control and must exit red
-- [ ] `day_of_year()` and the ordinal-date round trip
-- [ ] `iso_week_year`, `iso_week_number` (1…53), `iso_weekday`, by the standard rule (C-14)
-- [ ] the ISO boundary cases as explicit tests: 1 January falling on each of the seven weekdays, in leap and common years — fourteen cases, each hand-checked
-- [ ] the ISO week round trip on the same exhaustive sweep as 0.1.2
+### 0.1.3 — derived fields — [`0.1.3.md`](0.1.3.md) §13 is the full list
+- [ ] `weekday()` derived from the day number (C-13), **never stored** — through one private `weekday_index`, whose correction is range-checked before `weekday` manufactures the tag (S-15c; PD-22): measured at planning, a forged `Weekday` falls through every arm of an exhaustive `pick`
+- [ ] **the weekday cycle, C-17's second rider, on `tests/unit/sweep/every_civil_date.npk`'s walk** — moved here from 0.1.2 by TM-165 (`0.1.2.md` §9): each day's `weekday()` equals a count begun at −9999-01-01's **Monday** and advanced by one per day, so it is Monday … Sunday on every day of the range. **Not** "advances by one, mod seven": that check passes a weekday whose modulus correction is missing, over the whole range (measured at 0.1.2's planning), so that mutant is the rider's control and must exit red — **re-measured at 0.1.3's planning: the rider exits 17 on it, and on a weekday one day late, where the declined form exits 0 with the full count; and with the belt kept, the missing correction stops at 95 instead of answering**
+- [ ] `day_of_year()` and the ordinal-date round trip — ~~the round trip~~ **the reverse, `ordinal_to_date`, handed a COUNT of the year's days rather than `day_of_year`'s answer, and asked to refuse the day after every year's last** (V-4b; PD-25): measured, the round trip as worded passes a reverse that accepts day 366 of every year
+- [ ] `iso_week_year`, `iso_week_number` (1…53), `iso_weekday`, by the standard rule (C-14) — week 1's Monday as the Monday on or before 4 January, one private function read in both directions (PD-23); ISO 8601-1:2019 with Amd 1:2022, `../../research/iso-8601-week-date.md`
+- [ ] ~~the ISO boundary cases as explicit tests: 1 January falling on each of the seven weekdays, in leap and common years — fourteen cases, each hand-checked~~ **the boundary cases indexed by the year that ENDS** — for each of the fourteen year shapes, its 1 January, its 31 December and the next 1 January, **41 dates derived three ways** (PD-26): measured at planning, a common year beginning on a Saturday opens in week 52 or week 53 of the year before depending on THAT year, so C-14's fourteen as worded leave one answer to the choice of year
+- [ ] ~~the ISO week round trip on the same exhaustive sweep as 0.1.2~~ **the ISO week date against a walk of ISO 8601's rule over every date, the reverse handed the walk's values, and the week after every week-year's last refused** — its own member, `every_iso_week_date.npk` (PD-25): measured, the round trip as worded passes week 1 taken as the week holding 5 January
+- [ ] **found at planning:** `BUILD.md` B-15 required a `cal_` prefix that none of `cal`'s eight public names has ever had, and promised a check nobody scheduled — restated (PD-27); `TESTING.md` V-2's weekday row still stated the declined formulation; V-4 counted three round trips
+
+### 0.1.3b — `check_no_owning_fields`' premise, re-measured — [`0.1.3b.md`](0.1.3b.md) §9 is the full list
+- [ ] the premise measured false at every kept pin, and the rule restated on the reason that holds — a copy out refused, a move out faulting (S-19b; PD-28)
+- [ ] the check widened to an owning element, an owner at any depth, and a field's type rather than its name — each planted and seen red first
+- [ ] `probe17`, `probe17b`, `probe17c`, and `tests/probe/defect/fixed_move_out/` with its control and generated transcript; the defect raised by path
+- [ ] `ZONE_MODEL.md` Z-4 and Z-6's version string held behind the defect (PD-29)
+
+### 0.1.3c — `Vec` move-only by construction — NOT PLANNED YET
+- [ ] planned once `nitpick-regex`'s 0.0.4d has landed and been verified, porting its design (question 9)
 
 ### 0.1.4 — the cross-oracle
 - [ ] `tools/gen_civil_oracle.py` emitting `(y, m, d, day_number, weekday, iso_week, day_of_year)` rows from Python's `datetime`, committed under `tests/fixtures/civil/`

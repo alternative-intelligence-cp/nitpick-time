@@ -10,7 +10,7 @@
 # ============================================================================
 # THE TWO CONDITIONS THIS FILE EXISTS TO WRITE DOWN
 # ============================================================================
-# A green run here may be read as "ntime builds against compiler aaffb87" only
+# A green run here may be read as "ntime builds against compiler c3bdae2" only
 # because BOTH of the following are stated AND enforced below. Either one
 # missing and the claim is weaker than it sounds.
 #
@@ -85,8 +85,8 @@ permissions:
   contents: read
 
 env:
-  # ../BOARD.md's pinned toolchain, by FULL sha. `aaffb87` is the short form
-  # used in the roadmap, in the manifest and in the transcripts.
+  # ../BOARD.md's pinned toolchain, by FULL sha. `c3bdae2` is the short form
+  # used in the roadmap and in the transcripts.
   #
   # THIS PIN WAS `0dfddac` UNTIL CYCLE 0.0.6 AND THE COMMENT ABOVE WAS FALSE
   # WHILE IT WAS (TM-140). The board moved to `aaffb87` on 2026-09-05 and this
@@ -95,15 +95,20 @@ env:
   # the whole suite was run at `aaffb87` before it was made, and the audit
   # additionally built the library and every runnable unit at `0dfddac`, so the
   # content is known pin-portable and what was wrong was only the pin.
-  NITPICK_COMMIT: aaffb8768dd60b61b7a82cdf5b4736d40deac8fb
-  NITPICK_COMMIT_SHORT: aaffb87
+  #
+  # AND IT WAS `aaffb87` UNTIL CYCLE 0.1.0b. This commit moves it to `c3bdae2`,
+  # the compiler's 1.5 close, and it is deliberately RED on its own: the tree
+  # it pins is not yet adopted. It is pushed only together with the adoption,
+  # so CI runs once, on the adopted tree (`meta/roadmap/0.1/0.1.0b.md` §3).
+  NITPICK_COMMIT: c3bdae270d63c93ab6e89825fddeec9425e2c6fd
+  NITPICK_COMMIT_SHORT: c3bdae2
   # nitpick.toml [toolchain] llvm. Condition (1) above.
   LLVM_VERSION: 20.1.2
   # The digests of the artefacts the workbench pins, from
-  # ../.internal/toolchain/aaffb87/SHA256SUMS. Reported against CI's own, never
+  # ../.internal/toolchain/c3bdae2/SHA256SUMS. Reported against CI's own, never
   # asserted -- see the step that uses them for why.
-  NPKC_SHA256_WORKBENCH: a3b0dadc650421b25ac24bfc073ee29e2b57659a48bd84338edd3b23c382c86e
-  NPKRT_SHA256_WORKBENCH: c9ddbcffd32eccc7787bd71c39ebefd25913170a9fae48de32eb53ca68b2239e
+  NPKC_SHA256_WORKBENCH: 5fd636b9ab557c19a0738e6f316f3347cc4ed29dd9a77f72199d6380c0c36323
+  NPKRT_SHA256_WORKBENCH: 162b897539285a773a6a1a0329750e148a6c9590b45dda2d017704743b591824
 
 jobs:
   build:

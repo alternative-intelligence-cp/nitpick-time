@@ -4658,3 +4658,82 @@ their `pub use` lines, their callers in `tests/`, and every specification that
 names them); writing the check as B-15 stood — red on arrival; a check that
 the umbrella's names are the specifications' names — the stronger instrument,
 not needed to take this decision, and left to the cycle that wants it.
+
+---
+
+# Cycle 0.1.3b — `check_no_owning_fields`' premise, ratified 2026-09-25
+
+Two decisions, drafted at planning (`meta/roadmap/0.1/0.1.3b.md` §10, PD-28
+and PD-29, in that order) and recorded here by the worker in the commit that
+makes the change each describes. Every verdict below was taken by the plan's
+`transcript.py` at the pins it names, re-run at execution and equal to the
+planning run line for line, and is recorded with its command in `0.1.3b.md`'s
+execution record.
+
+### TM-177 — `check_no_owning_fields` keeps its rule on a reason that holds: no `fixed` table holds an owning value, as its element or as a field of its element at any depth, because a copy out is refused and a move out compiles and faults; `SAFETY.md` gains S-19b, and the check reads an element's own type, a field's type rather than its name, and nested structs
+
+**2026-09-25, cycle 0.1.3b (PD-28). Amends `SAFETY.md` §1's `TYPE-046` row,
+adds S-19b, and restates `TESTING.md` §2's row and `CLAUDE.md`'s line**, each
+with its old words quoted beside the new. The check rested on its own comment's
+premise, *"an owning field is one the language will not let a table hold"* —
+the workbench `PLAYBOOK.md` §2 row found false on 2026-09-25. **Measured here
+at every pin this repository has kept, `0dfddac` to `c3bdae2`, on both legs**
+(`tests/probe/defect/fixed_move_out/TRANSCRIPT.txt`): a `fixed` table holds a
+`string` as its element and a struct holding one, and every read that does not
+move them runs (`probe17`); a row or an element copied out by value — the read
+S-17's accessor pair does — is refused `NITPICK-TYPE-046` (`probe17b`,
+`probe17c`); and a move out, explicit or by a plain `pass`, compiles and faults
+— `run:107` at -O0 and `run:95` under `opt -O2` at `c3bdae2` for an element,
+`run:95` on both legs for a scalar — while the same reads by `.clone()` exit 0
+at every pin. So the premise's first clause was false for as long as this
+repository has had a pin, and its last — *"read-only data that nothing may move
+out of"* — was the compiler's defect stated as the language's rule: O-N20, the
+compiler's DEF-99, whose refusal, `NITPICK-TYPE-084`, is its 1.6.0 step 3f and
+was at no pin of ours when this was recorded.
+
+**The rule survives on the reason that holds**: a table whose rows own can be
+read neither by value nor by move, so the zone tables hold offsets into a name
+pool (`ZONE_MODEL.md` Z-7), as they were designed to. **And the check now sees
+what the rule says.** Three blind spots, found by re-reading the check against
+those facts rather than by any failure, each planted in `selfcheck.py` and seen
+red against the check as it stood before it changed: an owning ELEMENT
+(`fixed string[2]`) was never looked at, because only struct fields were read —
+0 problems on the plant; an owner two structs down (`Row` holds `Name`, `Name`
+holds a `string`) was not either; and owners were matched by substring, so a
+field NAMED `int64:string_off` read as one — the old check fired on the nested
+plant and on its control alike, for that field. After the change every
+`check_no_owning_fields` row is red on its plant, naming the reason, and silent
+on its control; the self-check plants 23 violations beside 23 controls; and the
+tree reads `1 table(s) over 10 file(s) in src/, against 5 struct(s)` — the one
+table `MONTH_LENGTH`, an `int64[12]`.
+
+*Declined:* dropping the rule, since the language allows the table — every
+read S-17 prescribes is then refused, and the only read left that compiles is a
+move that faults; relying on `.clone()` at every read — a house rule standing
+where the language's refusal already stands; widening the check to `fixed`
+scalars — Z-4's version string is the only one planned, and TM-178 holds it;
+keeping the substring match — it reports a field named `string_off` as an
+owner, measured on the plant's control.
+
+### TM-178 — `ZONE_MODEL.md` Z-4's `pub fixed string:TZDB_VERSION` and Z-6's `ntime_tzdb_version()` are held until the compiler refuses a move out of `fixed` storage; `OPEN_QUESTIONS.md` O-X10 records it, and cycle 0.5 settles it
+
+**2026-09-25, cycle 0.1.3b (PD-29). Adds a dated note to `ZONE_MODEL.md` Z-6
+and opens O-X10.** Z-6's obvious body, `pass TZDB_VERSION`, is the
+reproduction's case 2 on a scalar, and Z-4's `pub` binding hands every consumer
+case 3's `move`: both compile at `c3bdae2` and stop the program when the moved
+string drops — case 3 at `run:95` on both legs, and the scalar `pass`, in case
+2's own shape, at `run:95` on both legs too, at every kept pin (measured at
+execution; `0.1.3b.md`'s record). The author's standing call is that a compiler defect holds the work
+that depends on it rather than being covered by a house rule, and the defect is
+raised: O-N20, the compiler's DEF-99. Nothing before cycle 0.5 declares a
+version string, so nothing waits on the hold.
+
+*Declined:* Z-4 private and Z-6 returning `.clone()` — correct today, with this
+library remembering never to `pass` it as the only guard, which is a house rule
+in the defect's place; the version as bytes, built on request — removes the
+owner, and is a representation chosen because of a defect; deciding now — cycle
+0.5 is several cycles away and the fix may land first. *(Recorded after the
+compiler seat confirmed DEF-99, which the plan could not know: as the seat
+describes its fix, the move and the `pass` are refused where each is written,
+so once a pin carries it the first declined option is the compiler's rule
+rather than a house one. O-X10 says so, and cycle 0.5 reads it there.)*

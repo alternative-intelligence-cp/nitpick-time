@@ -797,8 +797,8 @@ table, `tests/probe/README.md`'s table and several decisions cite by name, and
 P-5 says a probe is never deleted for the same reason those citations exist.
 
 **Settled at 0.0.2**, which builds the runner. **Nothing waits on it**: no
-probe changes either way, and the entry in the manifest is true about the 25
-<!-- [[sweep: probe_exit=26]] --> today. *(That word was `nineteen` until cycle
+probe changes either way, and the entry in the manifest is true about the 27
+<!-- [[sweep: probe_exit=27]] --> today. *(That word was `nineteen` until cycle
 0.0.6 — a settled question's prose is history and is normally frozen, but this
 sentence is in the PRESENT tense about the tree as it is now, so it is a claim
 and not a record. TM-142.)*
@@ -822,6 +822,42 @@ then:* it waits for something to check. Today no module but the placeholder
 `host` could name a syscall, `check_purity` refuses the spelling everywhere
 else, and a scan with nothing to find would be commissioned only against
 plants.
+
+### O-X10 — how `ZONE_MODEL.md` Z-4's version string is held, while a move out of `fixed` storage compiles and faults
+
+**Raised at cycle 0.1.3b's planning, 2026-09-25.** Z-4 puts the tzdb release
+name in `pub fixed string:TZDB_VERSION`, and Z-6 makes `ntime_tzdb_version()`
+public. Measured at every kept pin (`SAFETY.md` S-19b): a `fixed string` read
+by lending or by `.clone()` is safe, and a `move` or a plain `pass` of it
+compiles and stops the program when the moved value drops — so the obvious
+body of Z-6's function, and any consumer's `move(TZDB_VERSION)`, is the
+compiler defect in `tests/probe/defect/fixed_move_out/` — O-N20 below, the
+compiler's DEF-99.
+
+- **(a) Hold Z-4 and Z-6 as written, and write neither until the compiler
+  refuses a move out of `fixed` storage — RECOMMENDED.** The defect is raised
+  and confirmed: DEF-99's fix refuses the move as `NITPICK-TYPE-084`, at the
+  compiler's 1.6.0 step 3f, which no pin of ours carried when this was written;
+  cycle 0.5 is several cycles away; and the author's standing call is that a
+  compiler defect holds the work that depends on it rather than being covered
+  by a house rule.
+- **(b) Z-4 made private, and Z-6 returning `.clone()`** — correct today, but
+  the one thing between a caller and the fault would be this library
+  remembering to write `.clone()` and never `pass`: a house rule standing in
+  for the compiler's check.
+- **(c) The version held as bytes and built into a `string` on request** —
+  removes the owning value from `fixed` storage altogether, and is a
+  representation chosen because of a defect, which is a workaround by another
+  name.
+
+**Settles at:** cycle 0.5's planning, reading the defect's status then. **Why
+it stays open until then:** it waits on the compiler's fix, and nothing before
+cycle 0.5 declares a version string. **What the fix changes, as the compiler
+seat describes it** (unlanded, and so not measured here): a `move` or a `pass`
+of `TZDB_VERSION` is then refused where it is written, so Z-6's body can only
+be `.clone()` — (b)'s spelling, enforced by the compiler rather than
+remembered — and Z-4's `pub` binding hands a consumer nothing that compiles
+but a lend or a clone.
 
 ---
 
@@ -987,6 +1023,46 @@ TM-136).
 **Two entries in `EXPECT_EXEMPT` carry its verdict** (`case1` at `run:0`,
 `case4` at `run:170`) for the same reason O-N18's does, and both will fire when
 the check lands.
+
+---
+
+### O-N20 — a `move` out of `fixed` storage holding an owning value compiles, and the program faults
+
+**Raised** from this repository at cycle 0.1.3b's planning, 2026-09-25, at pin
+`c3bdae2`, by path; **numbered O-N20** in the workbench registry
+(`../../meta/OPEN_QUESTIONS.md`); **confirmed by the compiler the same day as
+its DEF-99.** Its fix refuses the move at compile time as `NITPICK-TYPE-084`
+and is the compiler's 1.6.0 step 3f — **not landed when this was written, and
+at no pin of ours**: `c3bdae2` accepts every case.
+
+**What it is.** `fixed` storage is emitted as an LLVM `constant` global, and a
+`move` out of an element, a row's field or a scalar of it — or the implicit
+move of a plain `pass` — compiles, and the program faults. At -O0 the move
+stores its vacancy into the constant: SIGSEGV, which `c3bdae2`'s runtime turns
+into `MachineFault` (107). Under `opt -O2` the store is deleted and the moved
+string's drop frees read-only bytes (`Unreachable`, 95). A scalar writes no
+vacancy and stops at 95 on both legs. The COPY is already refused,
+`NITPICK-TYPE-046` (`tests/probe/probe17b_fixed_row_copy_refused.npk`,
+`probe17c_fixed_string_copy_refused.npk`), so the fix asked for is the same
+refusal for the move. `SAFETY.md` S-19b carries the table.
+
+**Reproduction:** `tests/probe/defect/fixed_move_out/` — three cases and the
+control that makes them one, with a transcript at every kept pin: accepted at
+all six, `0dfddac` to `c3bdae2`, so it is not a regression.
+
+**What it holds here** (TM-178): `ZONE_MODEL.md` Z-4's version string and Z-6's
+`ntime_tzdb_version()`, which are case 3's and case 2's shapes exactly — O-X10
+above. Nothing else: no `fixed` value in `src/` owns, and S-19b with
+`check_no_owning_fields` keeps it so.
+
+> **EXPECT THIS TO FIRE AT THE RE-PIN THAT CARRIES STEP 3f, AND IT IS THE
+> MECHANISM WORKING.** The three cases sit in `harness/run.py`'s
+> `EXPECT_EXEMPT` at `run:107`, `run:107` and `run:95`; at that pin each stops
+> at `npkc` instead and `check_exemptions_live` fails naming it. The response is
+> TM-154's: each takes `// expect-error: NITPICK-TYPE-084`, its `EXPECT_EXEMPT`
+> entry is deleted, `case4_clone_control.npk` keeps its `expect-exit: 0`, this
+> question is struck through with the pin that fixed it, and O-X10 is read
+> again.
 
 ---
 

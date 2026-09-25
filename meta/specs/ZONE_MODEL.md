@@ -63,6 +63,17 @@ exactly the change a review should see.
 believes, and `COMPAT.md` §3 states the policy: a release bump is a **minor**
 version of `ntime`, never a patch, because it changes computed answers.
 
+*(Cycle 0.1.3b, measured: a `fixed string` is read safely by lending it or by
+`.clone()`, and a `move` or a plain `pass` of it compiles and stops the program
+when the moved string is dropped — `Unreachable`, the allocator asked to free
+read-only bytes — the compiler defect in `tests/probe/defect/fixed_move_out/`,
+case 3: O-N20, the compiler's DEF-99, whose fix refuses the move as
+`NITPICK-TYPE-084` at its 1.6.0 step 3f, at no pin of ours when this was
+written. So Z-6's function written the obvious way, `pass TZDB_VERSION`, is that
+defect, and Z-4's `pub` binding hands every consumer the same `move`. How the
+version string is held is `../OPEN_QUESTIONS.md` O-X10, and cycle 0.5 writes
+neither shape while the defect is open (TM-178).)*
+
 ---
 
 ## 3. The table, and its measured size

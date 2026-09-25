@@ -189,9 +189,9 @@ add — is the document that was wrong.
 **Rule B-4c (TM-119) — inside a `program` entry, the FILE'S OWN HEADER decides
 what kind of test it is. This is a deliberate divergence from `npkg`'s `kind`.**
 A `[[test]]` selects by **directory** and `kind` is per entry, so one entry over
-`tests/probe/` cannot be true about both the 26 files carrying `expect-exit:`
-<!-- [[sweep: probe_exit=26]] -->
-and the 13 carrying `expect-error:` (O-X7; 8 until cycle 0.1.0c). The runner therefore dispatches per
+`tests/probe/` cannot be true about both the 27 files carrying `expect-exit:`
+<!-- [[sweep: probe_exit=27]] -->
+and the 15 carrying `expect-error:` (O-X7; 8 until cycle 0.1.0c, 13 until 0.1.3b). The runner therefore dispatches per
 file: `expect-error:` present makes it a **refusal** member — `npkc` must fail
 and the *set* of codes must equal the set named (B-7) — and `expect-exit:`
 present makes it a **run** member. **Both markers is a failure; neither is a
@@ -270,14 +270,14 @@ expectations name.
 `NITPICK-LEX-*` comes from the compiler's `src/frontend/diag_codes.npk` and
 `NITPICK-PARSE-*` from `parse_codes.npk`; every other family belongs to a later
 phase, so a file reported with one of those **necessarily parsed**. That is what
-lets the stage cover the 24 files here that must not compile
-<!-- [[sweep: tests_error=24]] --> — they are
+lets the stage cover the 26 files here that must not compile
+<!-- [[sweep: tests_error=26]] --> — they are
 refused at `PARSE-001`, `LEX-004`, `PARSE-002`, `TYPE-009`, `TYPE-046`,
 `TYPE-079`, `TYPE-080`, `BORROW-001`, `BORROW-012`, `REACH-002` and
 `REACH-003`, and every family after the first three runs only on something
-that parsed. Re-measured at pin `c3bdae2`, cycle 0.1.3: **99 files = 75 parse
-cleanly + 22 parse and are refused later + 2 do not parse**
-<!-- [[sweep: npk_total=99]] -->, and the two
+that parsed. Re-measured at pin `c3bdae2`, cycle 0.1.3b: **106 files = 80 parse
+cleanly + 24 parse and are refused later + 2 do not parse**
+<!-- [[sweep: npk_total=106]] -->, and the two
 are `probe02d_wide_literal_refused.npk` (LEX-004, PARSE-002) and
 `probe14_error_payload_refused.npk` (PARSE-001, TM-147). It read
 `50 = 36 + 13 + 1` for three subcycles after the tree stopped being that size,
@@ -293,7 +293,10 @@ compile. Cycle 0.1.1 added three unit tests that run, all three in the first
 term — `91 = 67 + 22 + 2` — and the 24 did not move; and cycle 0.1.2 added
 three sweeps that run, all three in the first term again — `94 = 70 + 22 + 2`
 (TM-166); and cycle 0.1.3 added five that run — two sweeps and three unit
-tests — all five in the first term again: `99 = 75 + 22 + 2` (TM-174).
+tests — all five in the first term again: `99 = 75 + 22 + 2` (TM-174); and
+cycle 0.1.3b added seven — three probes, one that runs and two refused
+`TYPE-046`, and four reproductions that compile — so `106 = 80 + 24 + 2`
+(TM-177).
 
 **AND THE TWO NUMBERS IN THAT PARAGRAPH ARE DIFFERENT SETS** — worth one
 sentence, because earlier versions had two sixteens, and before that two
@@ -306,7 +309,8 @@ rooted that produced a non-parse diagnostic*, whatever their header says. At
 exempt — so 16 and 15 overlapped in fourteen. At `c3bdae2` that file compiles,
 and the second set is exactly the first minus its two files that do not parse
 at all: **19 = 17 + 2**, and **24 = 22 + 2** at cycle 0.1.0c, whose five new
-refusals are in both sets. **Ask what was counted, not who miscounted.**
+refusals are in both sets — and **26 = 24 + 2** at cycle 0.1.3b, whose two
+are in both as well. **Ask what was counted, not who miscounted.**
 
 **Rule B-8 — the harness is itself tested.** A self-check feeds it wrong
 expectations and requires it to report every one as a failure. A suite that

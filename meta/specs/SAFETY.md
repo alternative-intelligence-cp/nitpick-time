@@ -19,7 +19,7 @@ costs a library that does calendar arithmetic.
 | Plain integer `+ - *` **traps** on overflow | D-210 | Every arithmetic path states its range and checks it **before** the trap fires. §4. |
 | `/` and `%` by zero trap; signed `MIN / -1` traps | D-007, D-142 | The calendar algorithms divide constantly; every divisor is a nonzero literal or a proven value. §4. |
 | Indexing **a type that carries a length** is bounds-checked and traps | D-070 | a slice `T[]`, a fixed array `T[N]` and a `simd<T, N>` lane trap; **a bare pointer does not** — and `Vec<T>.items` and `Bytes`' `buffer` body are both reached as one. §4, S-17b. |
-| Owning values are **move-only** | TYPE-046 | No binding-to-binding copies of a `string`. **Every value in a table has no owning field.** §5. |
+| Owning values are **move-only** | TYPE-046 | No binding-to-binding copies of a `string`. **No `fixed` table holds an owning value** — the language lets one, then refuses the copy that reads a row out and does not stop the move that faults (S-19b). §5. |
 | Borrows are second class | D-004 | A view of the zone table cannot be returned or stored. §5. |
 | A successful `exit 0` with live `wild` allocations **traps** | D-151 | Every `wild` byte is paired on every path. §5. |
 | There are **no closures** | D-018 | A layout is data the formatter interprets, not a callback. FORMAT_MODEL.md. |
@@ -842,6 +842,35 @@ into a `Bytes` will actually be held:
 
 **Rule S-19.** The generated zone tables are `fixed` module state — read-only
 memory, no initialisation at startup, nothing to leak, and nothing to race.
+
+**Rule S-19b (TM-177, cycle 0.1.3b) — no `fixed` table holds an owning value:
+not as its element, and not as a field of its element at any depth. The
+reason is measured, and it is not that the language forbids one.** Measured
+at every pin this repository has kept, `0dfddac` to `c3bdae2`
+(`tests/probe/probe17*`, `tests/probe/defect/fixed_move_out/TRANSCRIPT.txt`):
+
+| What a program does with an owning value in `fixed` storage | Verdict |
+|---|---|
+| declares it — `fixed string[2]`, `fixed Row[2]` whose `Row` holds a `string`, `fixed string` | compiles and runs (`probe17`) |
+| reads a scalar field of a row; lends the value to a by-value parameter; `.clone()` | runs, both legs, and a second read sees the value (`probe17`) |
+| copies a row or an element out by value — **the read S-17's accessor pair does** | **refused `NITPICK-TYPE-046`** (`probe17b`, `probe17c`) |
+| moves it out — `move(NAMES[i])`, or a plain `pass NAMES[i]` | **compiles, and faults**: at -O0 the IR stores the vacancy into an LLVM `constant` global (SIGSEGV; `MachineFault`, 107, at `c3bdae2`), under `opt -O2` the store is deleted and the moved string's drop frees read-only bytes (`Unreachable`, 95); a `fixed` scalar moved out stops at 95 on both legs. **A compiler defect** — O-N20, the compiler's DEF-99, whose fix refuses the move as `NITPICK-TYPE-084` (its 1.6.0 step 3f, at no pin of ours yet) |
+
+So a table whose rows own can be read neither by value nor by move, and the
+zone tables hold OFFSETS into a name pool (`ZONE_MODEL.md` Z-7) — which was
+the design already, and is now the rule for the reason that holds.
+`check_no_owning_fields` enforces it over `src/`: since cycle 0.1.3b it sees an
+owning ELEMENT and an owner at any depth, which it could not before. **A
+`fixed` scalar of an owning type** — `ZONE_MODEL.md` Z-4's `TZDB_VERSION` — is
+not a table and is outside the check; its hazard is the same defect, and
+O-X10 holds it.
+
+*(§1's row read, until cycle 0.1.3b: "No binding-to-binding copies of a
+`string`. **Every value in a table has no owning field.** §5." — and
+`check_no_owning_fields`' own comment gave the reason as "an owning field is
+one the language will not let a table hold", which was false at every kept
+pin. Found when the workbench's `PLAYBOOK.md` §2 row that reason came from was
+measured false on 2026-09-25, and re-measured here.)*
 
 **Rule S-20.** `ntime` opens **no descriptor** except in `host_system_zone()`,
 which reads `/etc/localtime`'s *link target*, closes what it opened before

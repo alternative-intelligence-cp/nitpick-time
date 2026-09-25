@@ -17,7 +17,7 @@ than sampled. Where that is possible it is the gate, and §3 says where.
 
 | Stage | Answers |
 |---|---|
-| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **29 files of 99 that no other stage roots** <!-- [[sweep: npk_total=99]] --> |
+| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **33 files of 106 that no other stage roots** <!-- [[sweep: npk_total=106]] --> |
 | `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
 | `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
 | `check` | every documented refusal actually refuses, with exactly its code |
@@ -42,7 +42,7 @@ them found something on its first run.
 | `check_error_budget` | the count and names of public `error:` declarations against `SAFETY.md` §2's table |
 | `check_failsafe_arms` | the generated per-module arm list against programs that import each module and compile their `failsafe` |
 | `check_layering` | `BUILD.md` §6's diagram against `src/` — its **edges** (every `use`) and its **nodes** (every layer the diagram names holds at least one module). The node half is D1's repair: cycle 0.0.1's acceptance claimed `run.py` "asserts the count is at least 7" and no such assertion was in the tree, so *"a directory whose placeholder was deleted rather than replaced is invisible to the sweep"* was live for four subcycles inside a ticked box |
-| `check_no_owning_fields` | every value stored in a table or array declares no owning field. **It could not see a SINGLE-LINE struct until cycle 0.0.6 and both of this repository's structs are one** (TM-138), so neither type's real fields had ever been examined while the check reported `0 of 0`; the self-check now plants the same violation in both spellings |
+| `check_no_owning_fields` | **no `fixed` table's element owns — itself, or through a field at any depth** (`SAFETY.md` S-19b). **It could not see a SINGLE-LINE struct until cycle 0.0.6 and both of this repository's structs are one** (TM-138), so neither type's real fields had ever been examined while the check reported `0 of 0`; the self-check now plants the same violation in both spellings. **And until cycle 0.1.3b it could not see an owning ELEMENT (`fixed string[2]`) or an owner two structs down, and it matched owners by substring**, so a field named `string_off` read as one — all three found by re-measuring the premise the check was written on, which was false (TM-177), and all three planted now |
 | `check_int128_sites` | `int128` appears at exactly the three sites `SPAN_MODEL.md` §5 names, and nowhere else |
 | `check_constants_named` | no bound outside `src/core/limits.npk`; no magic 86400, 146097, 719468 or 1000000000 outside the algorithm module that owns it |
 | `check_literal_divisors` (TM-163) | **every `/`, `%`, `/=` and `%=` in `src/cal/` against `CALENDAR.md` C-11**: the divisor must be a positive decimal integer literal with its width suffix, standing alone — nothing after it that binds tighter than `/`, since `256i64 =>! uint8` is 0 — so D-007's divide-by-zero and `MIN / −1` traps are unreachable by construction. It reads code with comments AND strings blanked, because every `use` path in `cal.npk` holds a `/`; `+%`, `-%` and `*%` are the wrapping operators and not divisions. It is C-11's list of divisors, which a list in the rule's text could not be: the one C-11 carried was short by eight the day `civil_from_days` arrived. **Its limits are stated in its docstring**: block comments, character literals, raw strings and templates are not modelled — `src/cal/` has none |
@@ -161,7 +161,10 @@ exemption"* — read as coverage and was, for those 21, membership in a bucket
 nobody evaluated. **The arithmetic is printed on every run and asserted:
 24 = 3 exempt + 21 asserted** — and **24 = 0 exempt + 24 asserted** at compiler
 `c3bdae2`, since cycle 0.1.0b, when O-N18 and O-N19 landed and the three
-exempt files took `expect-` markers of their own (TM-154).
+exempt files took `expect-` markers of their own (TM-154) — and **28 = 3
+exempt + 25 asserted** since cycle 0.1.3b, whose `fixed_move_out/` (O-N20)
+brought three reproductions exempt at their recorded verdicts and one asserted
+control (TM-177).
 
 **Rule V-1i (TM-146) — "every `.npk` in the tree" means THIS repository, and
 what the walk prunes is PRINTED.** A directory holding a `.git` entry is a

@@ -39,9 +39,9 @@
 # the civil types and their validating constructors, and since 0.1.1 Hinnant's
 # `date_to_days` and `days_to_date`, and since 0.1.3 the derived fields --
 # re-exported together as 57 public names [[sweep: lib_reexports=57]],
-# so this IS evidence about behaviour, of the 86 units the runner reports at
+# so this IS evidence about behaviour, of the 90 units the runner reports at
 # compiler `c3bdae2` (62 at cycle 0.0.6, 67 at 0.1.0, 70 at 0.1.0b, 75 at
-# 0.1.0c, 78 at 0.1.1, 81 at 0.1.2). What
+# 0.1.0c, 78 at 0.1.1, 81 at 0.1.2, 86 at 0.1.3). What
 # it is evidence of: the pinned compiler builds from a clean checkout at exactly
 # LLVM 20.1.2, every `.npk` under `src/` compiles, every unit under `tests/`
 # meets its own header at -O0 and again under `opt -O2`, the whole
@@ -79,7 +79,13 @@
 # -- each compared with a walk of its own rule rather than with itself, the
 # day after every year's last and the week after every week-year's last
 # refused, and each assertion seen to fail on a mutant
-# (`meta/roadmap/0.1/0.1.3.md` §7).
+# (`meta/roadmap/0.1/0.1.3.md` §7). AND SINCE CYCLE 0.1.3b: no `fixed` table
+# may hold an owning value, as its element or at any depth of it (`SAFETY.md`
+# S-19b), and a `move` out of `fixed` storage -- a compiler defect, O-N20,
+# the compiler's DEF-99 -- is
+# reproduced in `tests/probe/defect/fixed_move_out/`, each case's verdict
+# re-derived on every run, so the day the compiler refuses the move, this run
+# says so.
 #
 # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
 # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,

@@ -1,0 +1,46 @@
+// expect-exit: 0
+//
+// CASE 4 — THE CONTROL: THE SAME READS, CLONED. Cases 1 to 3 take a `string`
+// out of `fixed` storage by moving it; this takes the same three by
+// `.clone()`, drops each clone the same way, twice, and exits 0 on both legs
+// at every pin that has `.clone()` on a string. So what faults in cases 1
+// to 3 is the MOVE, not the table, the scalar or the drop -- the
+// discrimination a reproduction owes before it is raised. Exit 10 … 12 name a
+// read that came back wrong.
+mod:case4_clone_control;
+
+fixed string:V = "2026c";
+fixed string[2]:NAMES = ["alpha", "beta"];
+
+func:take = int64() {
+    string:a = V.clone() ?! HeapOom;
+    string:b = NAMES[1i64].clone() ?! HeapOom;
+    pass string_byte_length(a) * 10i64 + string_byte_length(b);
+};
+
+func:main = int32(cstring[]:_~argv) {
+    Result<int64>:r = take();
+    if (r.is_error) { exit 10i32; }
+    if (r.value != 54i64) { exit 11i32; }
+    Result<int64>:s = take();
+    if (s.is_error) { exit 10i32; }
+    if (s.value != 54i64) { exit 12i32; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

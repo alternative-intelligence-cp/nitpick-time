@@ -1,0 +1,45 @@
+// NO `expect-` MARKER, AND DELIBERATELY: named in `harness/run.py`'s
+// `EXPECT_EXEMPT` at `run:107`, re-derived on every full run (TM-137).
+//
+// CASE 1 — AN EXPLICIT `move` OUT OF A `fixed` TABLE COMPILES, AND FAULTS.
+// `move(NAMES[1])` is accepted by `npkc` at every kept pin; the emitted IR
+// stores the vacancy -- `zeroinitializer` -- into the table, which is an LLVM
+// `constant` global, and storing into a constant is undefined behaviour. At
+// -O0 the store hits read-only memory: SIGSEGV, which `c3bdae2`'s runtime
+// turns into `MachineFault`, exit 107 (raw 139 at the earlier pins). Under
+// `opt -O2` the store is deleted as the UB it is, and the moved string is
+// then dropped -- freeing a body that was never allocated -- which the
+// allocator stops as `Unreachable`, exit 95. TWO LEGS, TWO ANSWERS, NEITHER
+// OF THEM A COMPILE ERROR. The verdict recorded is the -O0 leg's, which is
+// the one `_verdict` derives; `README.md` has both, and `TRANSCRIPT.txt`
+// every pin.
+mod:case1_element_move;
+
+fixed string[2]:NAMES = ["alpha", "beta"];
+
+func:take = int64() never fails {
+    string:s = move(NAMES[1i64]);
+    pass string_byte_length(s);
+};
+
+func:main = int32(cstring[]:_~argv) {
+    if (raw take() != 4i64) { exit 10i32; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

@@ -120,6 +120,31 @@ EXPECT_EXEMPT = {
     # `expect-error:`. Each was run once against the kept `aaffb87` pin as its
     # control, and the three verdicts recorded here reproduced exactly
     # (`meta/roadmap/0.1/0.1.0b.md`'s execution record, TM-154).
+    # A MOVE OUT OF `fixed` STORAGE -- a compiler defect, found at cycle 0.1.3b
+    # re-measuring `check_no_owning_fields`' premise: the workbench registry's
+    # O-N20, the compiler's DEF-99. Each
+    # case compiles; none can carry an `expect-exit:` that would not make a
+    # fault a committed expectation of this suite, so each is here at the
+    # verdict it has at `c3bdae2`, and the day a pin carries DEF-99's fix --
+    # the move refused at compile time as `NITPICK-TYPE-084`, the compiler's
+    # 1.6.0 step 3f, at no pin of ours when this was written -- all three
+    # MOVE to `npkc`, `check_exemptions_live` names each, and each takes
+    # `// expect-error: NITPICK-TYPE-084` (TM-137's
+    # mechanism, as O-N18's and O-N19's files did at cycle 0.1.0b). The -O0
+    # leg is the verdict recorded; the -O2 leg differs for cases 1 and 2, and
+    # the directory's `README.md` and `TRANSCRIPT.txt` carry both.
+    "tests/probe/defect/fixed_move_out/case1_element_move.npk": ("run:107",
+        "`move` out of a `fixed` table's element: the IR stores the vacancy "
+        "into an LLVM `constant` global -- MachineFault at -O0, and under "
+        "`opt -O2` the store is deleted and the drop of the moved string is "
+        "stopped as Unreachable, 95"),
+    "tests/probe/defect/fixed_move_out/case2_element_pass.npk": ("run:107",
+        "the same move written as a plain `pass NAMES[i]` -- `pass` of a place "
+        "moves, so nothing in the source says move; case 1's verdicts"),
+    "tests/probe/defect/fixed_move_out/case3_scalar_move.npk": ("run:95",
+        "`move` out of a `fixed string` scalar -- `ZONE_MODEL.md` Z-4's shape: "
+        "no vacancy is written, and the moved string's drop frees read-only "
+        "bytes, stopped as Unreachable on both legs"),
 }
 
 # The directories a `.npk` may not live in and be missed: none. This walk is
@@ -437,10 +462,13 @@ def run_defect_corpus(rep, root, bld, subdir=None):
     the directory, so a NEW subdirectory is covered the day it is created --
     which is the property that failed here.
 
-    THE ARITHMETIC IS PRINTED AND ASSERTED: 24 = 0 exempt + 24 asserted at
-    compiler `c3bdae2`, and 24 = 3 + 21 until cycle 0.1.0b, when O-N18's and
-    O-N19's three exemptions expired and their files took markers (TM-154).  A
-    corpus that grew a file nobody judged would change the sum.
+    THE ARITHMETIC IS PRINTED AND ASSERTED: 28 = 3 exempt + 25 asserted at
+    compiler `c3bdae2` since cycle 0.1.3b, whose `fixed_move_out/` (O-N20)
+    brought three reproductions exempt at their recorded verdicts and one
+    asserted control; 24 = 0 + 24 from cycle 0.1.0b to 0.1.3; and 24 = 3 + 21
+    until cycle 0.1.0b, when O-N18's and O-N19's three exemptions expired and
+    their files took markers (TM-154).  A corpus that grew a file nobody judged
+    would change the sum.
 
     `subdir` IS A PARAMETER FOR THE SAME REASON `check_exemptions_live` takes
     one: a stage that can only be pointed at a corpus where everything already
@@ -554,18 +582,18 @@ def run_parse(rep, root, bld):
     """Every `.npk` in the tree in front of the real parser, each exactly once.
 
     THE DENOMINATOR IS THE WHOLE TREE AND THAT IS WHY THE STAGE IS WORTH ITS
-    COST. Re-measured at cycle 0.1.3: of the 99 `.npk` files here
-    [[sweep: npk_total=99]] the library build roots 5 [[sweep: lib_reach=5]],
-    the suite roots 62 [[sweep: suite_roots=62]], and 3 more are reached by
-    `use` from a suite root [[sweep: support_total=3]] -- so 29 are put in
+    COST. Re-measured at cycle 0.1.3b: of the 106 `.npk` files here
+    [[sweep: npk_total=106]] the library build roots 5 [[sweep: lib_reach=5]],
+    the suite roots 65 [[sweep: suite_roots=65]], and 3 more are reached by
+    `use` from a suite root [[sweep: support_total=3]] -- so 33 are put in
     front of the compiler by NOTHING ELSE. Five of those are the remaining
-    `src/` placeholders and 24 are the reproductions under
-    `tests/probe/defect/` [[sweep: defect_total=24]] -- the directory whose
+    `src/` placeholders and 28 are the reproductions under
+    `tests/probe/defect/` [[sweep: defect_total=28]] -- the directory whose
     files went two days with no expectation at all (TM-115), and whose markers
     then went three cycles asserted by nothing (TM-141), for exactly this
     reason.
 
-        99 = 5 (library) + 62 (suite roots) + 3 (reached by `use`) + 29
+        106 = 5 (library) + 65 (suite roots) + 3 (reached by `use`) + 33
 
     EVERY NUMBER IN THAT SENTENCE IS TAGGED AND CHECKED (TM-142). It read
     `50 = 1 + 27 + 3 + 19` until cycle 0.0.6, three subcycles after the tree
@@ -668,8 +696,8 @@ def select(root, entry):
     """The files a `[[test]]` entry selects: `<path>/*.npk`, non-recursive.
 
     NOT recursive, and the omission is load-bearing (the manifest says so at
-    length): a plain glob over `tests/probe/` is exactly the 39
-    [[sweep: probe_dir=39]] probe programs and excludes `support/` -- three
+    length): a plain glob over `tests/probe/` is exactly the 42
+    [[sweep: probe_dir=42]] probe programs and excludes `support/` -- three
     library modules with no `main` -- and `defect/`, whose files are
     reproductions rather than tests of this library and are judged by
     `run_defect_corpus` instead (TM-141). The schema has no `recursive` key, so

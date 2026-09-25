@@ -772,6 +772,34 @@ PLANTED = [
       "mod:zone;\nstruct:Row = { int64:id; int64:name_off; };\n"
       "pub fixed Row[2]:TABLE = [];\n"),
      "owning field"),
+    # AN OWNING ELEMENT, NOT A FIELD (cycle 0.1.3b). Until then the check read
+    # only struct fields, so a table whose ELEMENT is a `string` was invisible
+    # to it -- the table `tests/probe/probe17c_fixed_string_copy_refused.npk`
+    # declares, which the language lets exist, refuses to copy from, and does
+    # not stop a move out of.
+    (checks_mod.check_no_owning_fields,
+     ("src/zone/zone.npk",
+      "mod:zone;\npub fixed string[2]:NAMES = [\"a\", \"b\"];\n"),
+     ("src/zone/zone.npk",
+      "mod:zone;\npub fixed int64[2]:IDS = [1i64, 2i64];\n"),
+     "owning element"),
+    # AND AN OWNER TWO STRUCTS DOWN (cycle 0.1.3b): `Row` holds no `string`,
+    # but its `Name` does, so a row copied out of the table would own one all
+    # the same. The control's `Name` holds an offset instead -- and both
+    # `Row`s carry a field NAMED `string_off`, which the check matched as an
+    # owner until 0.1.3b (it looked for the substring), so a check that went
+    # back to substrings would fire on the control. Multi-line, because the
+    # nested case's other spelling is covered by the rows above.
+    (checks_mod.check_no_owning_fields,
+     ("src/zone/zone.npk",
+      "mod:zone;\nstruct:Name = {\n    string:text;\n};\n"
+      "struct:Row = {\n    int64:string_off;\n    Name:name;\n};\n"
+      "pub fixed Row[2]:TABLE = [];\n"),
+     ("src/zone/zone.npk",
+      "mod:zone;\nstruct:Name = {\n    int64:off;\n};\n"
+      "struct:Row = {\n    int64:string_off;\n    Name:name;\n};\n"
+      "pub fixed Row[2]:TABLE = [];\n"),
+     "owns through"),
 ]
 
 

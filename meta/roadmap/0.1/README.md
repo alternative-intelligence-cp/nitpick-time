@@ -183,10 +183,10 @@ environment) and a control that fails.
 - [x] **found at execution, not planned:** two comments that said `date_to_days` carries the negative-year correction — `is_leap_year`'s header and `tests/unit/leap_rule.npk`'s — false once TM-170 moved the formula, corrected; `CALENDAR.md` C-5b's and O-X8's *"eleventh"* no-fault variant, the fifteenth once TM-173 appended four, corrected; and Q-6's note records the author's answer, A′, where the plan's text said the question stays open
 
 ### 0.1.3b — `check_no_owning_fields`' premise, re-measured — [`0.1.3b.md`](0.1.3b.md) §9 is the full list
-- [ ] the premise measured false at every kept pin, and the rule restated on the reason that holds — a copy out refused, a move out faulting (S-19b; PD-28)
+- [ ] the premise measured false at every kept pin, and the rule restated on the reason that holds — a copy out refused, a move out faulting (S-19b; TM-177)
 - [ ] the check widened to an owning element, an owner at any depth, and a field's type rather than its name — each planted and seen red first
 - [ ] `probe17`, `probe17b`, `probe17c`, and `tests/probe/defect/fixed_move_out/` with its control and generated transcript; the defect raised by path
-- [ ] `ZONE_MODEL.md` Z-4 and Z-6's version string held behind the defect (PD-29)
+- [ ] `ZONE_MODEL.md` Z-4 and Z-6's version string held behind the defect (TM-178)
 
 ### 0.1.3c — `Vec` move-only by construction — NOT PLANNED YET
 - [ ] planned once `nitpick-regex`'s 0.0.4d has landed and been verified, porting its design (question 9)

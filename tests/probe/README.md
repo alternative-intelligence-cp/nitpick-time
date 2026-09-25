@@ -103,6 +103,14 @@ entries from cycle 0.0.2.
 | `probe11d_floor_only.npk` | the **unconditional floor**: nothing imported, nothing computed | TM-107 — the control the other three are measured against |
 | `probe11e_unused_import_refused.npk` | *(must not compile)* is the arm owed by the import, or by the call? | TM-107, `SAFETY.md` S-4c |
 | `probe11f_declared_unraised.npk` | does a `pub error:` **declaration** cost an arm, or does the first `fail`? | TM-107, `SAFETY.md` S-6 |
+| `probe17_fixed_owning_reads.npk` | may `fixed` storage hold a `string` — as an element, a row's field, a scalar — and be read without moving it? | `SAFETY.md` S-19b — the positive twin |
+| `probe17b_fixed_row_copy_refused.npk` | *(must not compile)* a row whose element owns, copied out by value — the accessor's read | S-19b — `NITPICK-TYPE-046` |
+| `probe17c_fixed_string_copy_refused.npk` | *(must not compile)* an element of a `fixed string[2]`, copied out | S-19b — `NITPICK-TYPE-046` |
+
+*(Cycle 0.1.3b: the three `probe17` rows are new. **Probes 12 to 16 — cycles
+0.0.4 to 0.1.0c — are not in this table**, and the heading above says "What is
+here": found at 0.1.3b's planning, and owed to cycle 0.1's close. Each of those
+files says in its own header what it asks.)*
 
 Probes 09 and 10 were planned in `0.0.0.md` §4 and **held, not merely
 unwritten**: they are the borrow-edge probes, and the author ruled O-N9

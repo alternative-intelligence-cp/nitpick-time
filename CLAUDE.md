@@ -7,7 +7,26 @@ Guidance for Claude Code sessions working in this repository.
 `ntime` — a date, time and time-zone library for **Nitpick**, the
 safety-critical systems language at `../../nitpick`.
 
-**Status, after cycle 0.1.3: the derived fields, and cycle 0.1's gate
+**Status, after cycle 0.1.3b: the owning-field check's premise,
+re-measured.** `check_no_owning_fields` rested on *"an owning field is one the
+language will not let a table hold"*, and **measured at every pin this
+repository has kept, `0dfddac` to `c3bdae2`, that is false**: a `fixed` table
+holds a `string` and a struct holding one, and reads that do not move them
+work (`tests/probe/probe17_fixed_owning_reads.npk`). What the language refuses
+is a COPY of an owning row or element — `NITPICK-TYPE-046`, the read
+`SAFETY.md` S-17's accessor pair does (`probe17b`, `probe17c`) — and what it
+does not stop is a MOVE out of `fixed` storage, which **compiles and faults**:
+a compiler defect, reproduced with its control in
+`tests/probe/defect/fixed_move_out/` and raised — the workbench registry's
+O-N20, the compiler's DEF-99, whose refusal, `NITPICK-TYPE-084`, is at no pin
+of ours yet. So the rule stands on the reason that holds (`SAFETY.md` S-19b,
+TM-177), and the check now sees an owning ELEMENT, an owner two structs down,
+and a field's type rather than its name — three blind spots, each planted and
+seen red first. Cycle 0.5's version string (`ZONE_MODEL.md` Z-4, Z-6) is held
+behind the defect (TM-178, `meta/OPEN_QUESTIONS.md` O-X10). No library code
+changed. A full invocation is **90 units green** at pin `c3bdae2`.
+
+**After cycle 0.1.3: the derived fields, and cycle 0.1's gate
 complete.** `src/cal/` computes a date's **weekday**, its **day of the year**
 and its **ISO week date** from its day number and stores none of them
 (`CALENDAR.md` C-13 … C-15), and builds a date back from an ordinal date and
@@ -261,8 +280,10 @@ Full statement in `meta/specs/SAFETY.md` §1. The ones that bite hardest here:
   Every range is checked **before** the trap so the caller gets an answer.
 - `Ord` derives in **declaration order**, so a struct's field order is
   semantic (`Timestamp` is seconds-then-nanos for exactly this reason).
-- Owning values are **move-only**; a value stored in a table has no owning
-  field.
+- Owning values are **move-only**, and a `fixed` table holds no owning value:
+  the language allows one, refuses the copy that reads a row out, and does not
+  stop a move out of `fixed` storage, which faults (`SAFETY.md` S-19b — a
+  compiler defect raised at cycle 0.1.3b, O-N20, the compiler's DEF-99).
 - There are **no closures** and **no format-specifier language** (D-018,
   D-053).
 - `defer` does **not** run on a trap; `failsafe` is the only code guaranteed to

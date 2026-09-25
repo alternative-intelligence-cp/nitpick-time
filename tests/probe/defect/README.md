@@ -13,6 +13,7 @@ records what the behaviour used to be.
 | **O-N9** — a `uint8[]` view escapes its owning frame | [`view_escape/`](view_escape/README.md) | no — a conformance rule, subject to Q-5 |
 | **O-N10** — `derive(Eq)` on a payload enum will not compile; `derive(Ord)` is silently wrong | [`derive_payload_enum/`](derive_payload_enum/README.md) | no — one type exposed, no rule needs it |
 | **O-N11** (accepted — the compiler's DEF-5) — a program with `main` and no `failsafe` compiles at exit 0 | [`missing_failsafe/`](missing_failsafe/README.md) | no — but it constrains cycle 0.0.3's harness |
+| **O-N20** (the compiler's DEF-99; its fix, the refusal `NITPICK-TYPE-084` at the compiler's 1.6.0 step 3f, is at no pin of ours yet) — a `move` out of `fixed` storage compiles, and faults | `fixed_move_out/` | no — nothing here moves out of `fixed` storage, and `SAFETY.md` S-19b keeps owners out of tables; cycle 0.5's version string waits on it |
 
 > **Read this table as cycle 0.0.0's, which is when it was written** (dated
 > note, cycle 0.1.0c). Its "Blocking?" column is the state at pin `950bb1d`,
@@ -25,6 +26,14 @@ records what the behaviour used to be.
 > (O-N19) and [`fixed_array_len/`](fixed_array_len/README.md) (O-N18), both
 > fixed at `c3bdae2` (TM-154). Every reproduction that is a file is asserted by
 > its marker on every run (`run_defect_corpus`, TM-141).
+
+> **The last row is cycle 0.1.3b's, and it is OPEN** (dated note, cycle
+> 0.1.3b). O-N20 was raised at pin `c3bdae2` and is the one defect in this
+> directory that no pin of ours has fixed, so the note above — *"every defect
+> in it has since been fixed"* — is true of the rows before it and not of this
+> one. Its reproductions are exempt at their recorded verdicts rather than
+> asserted by a marker (TM-137), and [`fixed_move_out/`](fixed_move_out/README.md)
+> carries its status.
 
 ---
 

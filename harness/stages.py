@@ -3,8 +3,8 @@
 THE HEADER IS THE AUTHORITY (B-5), AND FROM THIS CYCLE IT ALSO DECIDES WHAT KIND
 OF TEST A FILE IS (O-X7, TM-119). A `[[test]]` entry selects by DIRECTORY and
 never by file, so one `program` entry over `tests/probe/` cannot be true about
-both the 26 files carrying `expect-exit:` [[sweep: probe_exit=26]] and the 13
-carrying `expect-error:` [[sweep: probe_error=13]]. It dispatches per file
+both the 27 files carrying `expect-exit:` [[sweep: probe_exit=27]] and the 15
+carrying `expect-error:` [[sweep: probe_error=15]]. It dispatches per file
 instead:
 
     expect-error:  present  ->  a REFUSAL member. `npkc` must fail, and the SET
@@ -360,7 +360,7 @@ def parse_verdict(bld, rel, e):
 
     THE RULE IS ONE LINE AND ITS CONSEQUENCE IS NOT OBVIOUS: a file must parse
     UNLESS its own header names a parse-phase code. That is what lets the stage
-    cover the 24 files in this tree [[sweep: tests_error=24]] that must NOT
+    cover the 26 files in this tree [[sweep: tests_error=26]] that must NOT
     compile -- they are refused at PARSE-001, LEX-004, PARSE-002, TYPE-009,
     TYPE-046, TYPE-079, TYPE-080, BORROW-001, BORROW-012, REACH-002 and
     REACH-003, and every family after the first three is a phase that only

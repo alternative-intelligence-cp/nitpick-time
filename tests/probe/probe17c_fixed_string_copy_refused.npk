@@ -1,0 +1,35 @@
+// expect-error: NITPICK-TYPE-046
+//
+// PROBE 17c — AN ELEMENT OF A `fixed` TABLE OF `string` CANNOT BE COPIED OUT.
+// ASKS: may a program read `NAMES[i]` into a binding by value?
+//
+// ANSWER, measured at every kept pin from `0dfddac` to `c3bdae2` (cycle
+// 0.1.3b): NO -- `NITPICK-TYPE-046`. `probe17b`'s fact for a table whose
+// ELEMENT is the owner rather than a field of it -- the shape
+// `check_no_owning_fields` could not see at all until cycle 0.1.3b, because
+// it looked only inside structs.
+mod:probe17c_fixed_string_copy_refused;
+
+fixed string[2]:NAMES = ["alpha", "beta"];
+
+func:main = int32(cstring[]:_~argv) {
+    string:s = NAMES[0i64];
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

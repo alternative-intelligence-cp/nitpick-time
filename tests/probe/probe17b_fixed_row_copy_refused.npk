@@ -1,0 +1,40 @@
+// expect-error: NITPICK-TYPE-046
+//
+// PROBE 17b — A ROW OF A `fixed` TABLE WHOSE ELEMENT OWNS CANNOT BE COPIED OUT.
+// ASKS: may a program read such a row BY VALUE -- `Row:r = ROWS[i];`, the read
+// `SAFETY.md` S-17's one accessor pair would do for every zone table?
+//
+// ANSWER, measured at every kept pin from `0dfddac` to `c3bdae2` (cycle
+// 0.1.3b): NO -- `NITPICK-TYPE-046`: the row owns storage, so it is move-only
+// (the compiler's D-183), and a copy would leave two owners of one body. THIS
+// is the fact `check_no_owning_fields` now rests on: a table read by value
+// through an accessor cannot have an owning row. Its positive twin is
+// `probe17`, which reads the same table's scalar fields and lends its string.
+mod:probe17b_fixed_row_copy_refused;
+
+struct:Row = { int64:n; string:name; };
+
+fixed Row[2]:ROWS = [Row{ n: 1i64, name: "alpha" }, Row{ n: 2i64, name: "beta" }];
+
+func:main = int32(cstring[]:_~argv) {
+    Row:r = ROWS[0i64];
+    if (r.n != 1i64) { exit 10i32; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

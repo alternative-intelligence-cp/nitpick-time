@@ -1,0 +1,78 @@
+// expect-exit: 0
+//
+// PROBE 17 — A `fixed` TABLE MAY HOLD AN OWNING VALUE, AND EVERY READ THAT DOES
+// NOT MOVE IT WORKS. The positive twin of `probe17b` and `probe17c`.
+//
+// ASKS: may `fixed` storage hold a `string` -- as a table's element, as a
+// field of a table's row, and as a scalar -- and can a program read it without
+// taking it: a scalar field of a row, a by-value argument (the compiler's
+// D-065 lend), and `.clone()`?
+//
+// MATTERS BECAUSE `check_no_owning_fields` rested for five cycles on the
+// premise that "an owning field is one the language will not let a table
+// hold" (`harness/checks.py`, `SAFETY.md` §1). That premise was false at
+// every pin this repository has kept -- measured at `0dfddac`, `94874ce`,
+// `950bb1d`, `aaffb87`, `3d15ac9` and `c3bdae2` (cycle 0.1.3b) -- and the
+// check's rule now stands on what IS true, which this probe and its two
+// twins pin: the language lets a table hold an owner, refuses to COPY one out
+// (`probe17b`, `probe17c`), and -- the defect in
+// `defect/fixed_move_out/`, O-N20 -- does not stop a MOVE out.
+//
+// ANSWER, measured at `c3bdae2`: YES to all of it, on both legs. Each read is
+// done twice, because a read that moved the value would leave the second one
+// reading a vacancy; a wrong value exits with its own code, 10 … 16, none of
+// them an arm code (TM-152). `.clone()` returns a `Result<string>` and is
+// read with `?!`, which is where this file's `HeapOom` comes from.
+mod:probe17_fixed_owning_reads;
+
+struct:Row = { int64:n; string:name; };
+
+fixed string:VERSION = "2026c";
+fixed string[2]:NAMES = ["alpha", "beta"];
+fixed Row[2]:ROWS = [Row{ n: 1i64, name: "alpha" }, Row{ n: 2i64, name: "beta" }];
+
+func:len_of = int64(string:s) never fails {
+    pass string_byte_length(s);
+};
+
+func:cloned = int64() {
+    string:a = VERSION.clone() ?! HeapOom;
+    string:b = NAMES[1i64].clone() ?! HeapOom;
+    pass string_byte_length(a) + string_byte_length(b);
+};
+
+func:main = int32(cstring[]:_~argv) {
+    // a scalar field of a row whose element owns
+    if (ROWS[1i64].n != 2i64) { exit 10i32; }
+    if (ROWS[1i64].n != 2i64) { exit 11i32; }
+    // lent, twice: a scalar, an element, a field of a row
+    if (raw len_of(VERSION) != 5i64)       { exit 12i32; }
+    if (raw len_of(NAMES[0i64]) != 5i64)   { exit 13i32; }
+    if (raw len_of(ROWS[0i64].name) != 5i64) { exit 14i32; }
+    if (raw len_of(NAMES[0i64]) != 5i64)   { exit 15i32; }
+    // cloned, twice
+    Result<int64>:r = cloned();
+    if (r.is_error) { exit 16i32; }
+    if (r.value != 9i64) { exit 16i32; }
+    Result<int64>:s = cloned();
+    if (s.is_error) { exit 16i32; }
+    if (s.value != 9i64) { exit 16i32; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

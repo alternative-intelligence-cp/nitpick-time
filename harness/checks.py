@@ -638,16 +638,40 @@ def check_literal_divisors(tree, **_):
 
 
 # ---------------------------------------------------------------------------
-# check_no_owning_fields -- SAFETY.md §5 / TESTING.md §2
+# check_no_owning_fields -- SAFETY.md S-19b / TESTING.md §2
 # ---------------------------------------------------------------------------
 
-# An owning field is one the language will not let a table hold: a `string`, a
-# `buffer`, an owning container, or a `wild` pointer. TYPE-046 makes owning
-# values move-only, so a value COPIED out of a table cannot have one -- and a
-# `fixed` table is read-only data that nothing may move out of.
-_OWNING_TYPES = ("string", "buffer", "Bytes", "Vec<")
+# WHAT IS TRUE, MEASURED at every pin this repository has kept, `0dfddac` to
+# `c3bdae2` (cycle 0.1.3b; `tests/probe/probe17*` and
+# `tests/probe/defect/fixed_move_out/`): a `fixed` table MAY hold an owning
+# value -- a `string` as its element, or a struct holding one -- and every read
+# that does not move it works: a scalar field, a lend (a by-value argument),
+# `.clone()`. What the language refuses is a COPY of an owning row or element,
+# `NITPICK-TYPE-046`, which is the read `SAFETY.md` S-17's accessor pair does;
+# and what it does NOT stop is a MOVE out of `fixed` storage, which compiles and
+# then faults -- a compiler defect, reproduced in `fixed_move_out/` (O-N20, the
+# compiler's DEF-99, whose refusal is at no pin of ours yet). So a table
+# whose rows own can be read neither by value nor by move, and this library's
+# tables hold none (S-19b): the zone tables hold OFFSETS into a name pool for
+# exactly this reason (`ZONE_MODEL.md` Z-7).
+#
+# (Until cycle 0.1.3b this comment read: "An owning field is one the language
+# will not let a table hold: a `string`, a `buffer`, an owning container, or a
+# `wild` pointer. TYPE-046 makes owning values move-only, so a value COPIED out
+# of a table cannot have one -- and a `fixed` table is read-only data that
+# nothing may move out of." The first sentence was false at every kept pin; a
+# `wild` pointer was never among the types the code looked for, and it does
+# not make a struct owning -- a whole-`Vec` copy compiles (question 9,
+# measured at cycle 0.1.0c); and the last clause described the compiler's
+# defect as though it were the language's rule.)
+#
+# An owning TYPE, for this check: `string`, `buffer`, `Bytes`, any `Vec<...>`,
+# and a struct with a field of an owning type, at any depth. A field's type is
+# the last token before its `:`, after any qualifier (`sealed`, `hidden`,
+# `limit<R>`), so a field NAMED `string_off` owns nothing.
+_OWNING_TYPES = ("string", "buffer", "Bytes")
 _FIXED_TABLE = re.compile(
-    r"^\s*(?:pub\s+)?fixed\s+([A-Za-z_][A-Za-z0-9_]*)\s*\[\s*\d*\s*\]\s*:")
+    r"^\s*(?:pub\s+)?fixed\s+([A-Za-z_][A-Za-z0-9_]*(?:<[^>\[\]]*>)?)\s*\[\s*\d*\s*\]\s*:")
 _STRUCT_DECL = re.compile(r"^\s*(?:pub\s+)?struct:([A-Za-z_][A-Za-z0-9_]*)")
 
 
@@ -708,20 +732,55 @@ def _structs(tree, files):
     return out
 
 
-def check_no_owning_fields(tree, **_):
-    """Every value stored in a table declares no owning field.
+def _owning_type(t):
+    """`string`, `buffer`, `Bytes` or a `Vec<...>` -- the owning TYPES."""
+    return t in _OWNING_TYPES or t.startswith("Vec<")
 
-    NO TABLE TO CHECK YET, AND THAT IS THE RIGHT ANSWER (P-20). `src/` holds
-    two real structs -- `Vec<T>` and `Bytes` -- and no `fixed` table, so this
-    reports `0 table(s) ... against 2 struct(s)`. The check exists now so that
-    cycle 0.1's zone tables meet an instrument that already works, rather than
-    one written the same week as the thing it guards.
+
+def _field_type(ftext):
+    """A field's type: the last token before its `:`, so that `sealed`,
+    `hidden`, `wild` and `limit<R>` are skipped as the qualifiers they are."""
+    head = ftext.split(":", 1)[0].split()
+    return head[-1] if head else ""
+
+
+def _owners(structs, name, seen=()):
+    """The fields of struct `name` that own, AT ANY DEPTH: a list of
+    `(rel, lineno, field_text, via)`, where `via` names the struct a nested
+    owner was found through and is None for a field that owns itself."""
+    out = []
+    for rel, lineno, ftext in structs.get(name, ()):
+        ftype = _field_type(ftext)
+        if _owning_type(ftype):
+            out.append((rel, lineno, ftext, None))
+        elif ftype in structs and ftype != name and ftype not in seen:
+            if _owners(structs, ftype, seen + (name,)):
+                out.append((rel, lineno, ftext, ftype))
+    return out
+
+
+def check_no_owning_fields(tree, **_):
+    """No `fixed` table holds an owning value -- neither an owning ELEMENT nor
+    a struct with an owning field at any depth (`SAFETY.md` S-19b).
+
+    ONE TABLE TODAY, AND IT IS NOT A ZONE TABLE. `src/cal/cal.npk`'s
+    `MONTH_LENGTH` (`int64[12]`) has been the one `fixed` table in `src/` since
+    cycle 0.1.0, and the run log's `against 5 struct(s)` counts the types whose
+    fields were actually read -- `Vec`, `Bytes`, `CivilDate`, `CivilTime`,
+    `CivilDateTime`. Cycle 0.5's zone tables meet an instrument that already
+    works. *(Until cycle 0.1.3b this docstring said "`src/` holds two real
+    structs ... and no `fixed` table, so this reports `0 table(s) ... against
+    2 struct(s)`" -- true at cycle 0.0.4, and two numbers stale for four
+    subcycles: a docstring's claim about its own coverage is a list to check.)*
 
     "0 tables" AND "cannot see the fields" READ THE SAME IN THE HEADLINE, which
     is how `_structs`' single-line blindness survived three cycles (TM-138).
-    They are different states and only one of them is now true: the two structs
-    are parsed, and the run log's `against 2 struct(s)` is a count of types
-    whose fields were actually read.
+    AND TWO MORE BLIND SPOTS LASTED UNTIL CYCLE 0.1.3b, found by re-measuring
+    the premise rather than by a failure: a table whose ELEMENT owns -- `fixed
+    string[2]` -- was never looked at, because only struct fields were read;
+    and an owner two structs down -- `Row` holds `Name`, `Name` holds a
+    `string` -- was not either. Both are planted in `selfcheck.py`, and were
+    seen red before this function could see them.
     """
     files = src_files(tree)
     structs = _structs(tree, files)
@@ -733,18 +792,25 @@ def check_no_owning_fields(tree, **_):
                 continue
             tables += 1
             elem = m.group(1)
-            for frel, flineno, ftext in structs.get(elem, ()):
-                for owning in _OWNING_TYPES:
-                    if owning in ftext:
-                        problems.append(
-                            "%s:%d stores `%s` in a table, and `%s` has an "
-                            "owning field at %s:%d -- `%s`. Owning values are "
-                            "move-only (TYPE-046), so a row copied out of a "
-                            "table cannot carry one; the zone tables hold "
-                            "OFFSETS into a name pool for exactly this reason "
-                            "(ZONE_MODEL.md)."
-                            % (rel, lineno, elem, elem, frel, flineno, ftext))
-                        break
+            if _owning_type(elem):
+                problems.append(
+                    "%s:%d stores `%s` in a table: an owning element. A copy "
+                    "of it out of the table is refused (TYPE-046), and a move "
+                    "out of `fixed` storage compiles and faults (the compiler "
+                    "defect in tests/probe/defect/fixed_move_out/), so the "
+                    "table can be read by neither (SAFETY.md S-19b)."
+                    % (rel, lineno, elem))
+                continue
+            for frel, flineno, ftext, via in _owners(structs, elem):
+                problems.append(
+                    "%s:%d stores `%s` in a table, and `%s` has an owning "
+                    "field at %s:%d -- `%s`%s. A row copied out of the table "
+                    "is refused (TYPE-046) and a move out of `fixed` storage "
+                    "faults, so an owning row can be read by neither; the "
+                    "zone tables hold OFFSETS into a name pool for exactly "
+                    "this reason (ZONE_MODEL.md Z-7, SAFETY.md S-19b)."
+                    % (rel, lineno, elem, elem, frel, flineno, ftext,
+                       "" if via is None else ", which owns through `%s`" % via))
     headline = ("%d table(s) over %d file(s) in src/, against %d struct(s)"
                 % (tables, len(files), len(structs)))
     return Result("check_no_owning_fields", headline, problems)

@@ -52,13 +52,15 @@ names it. Three parts:
   sweep that ran short, and a program whose `failsafe` has been deleted. Case 6
   (a generator differing by one line) is **pending until 0.5** and prints as
   pending rather than passing.
-- **Twenty-one planted violations across the tree checks** — each check shown
-  red on a violation and silent on a clean control, in milliseconds, with no
-  compilation. *(This bullet said "nine" from cycle 0.0.3, when it was true, to
-  0.1.1, and "twenty" at 0.1.1; the run prints the number, derived from
-  `selfcheck.TREE_PLANTS`, and it is 20 since `check_literal_divisors` brought
-  four rows — TM-163 — and 21 since cycle 0.1.2 gave `check_denominators` a
-  row for a sweep's declared domain — TM-168.)*
+- **Twenty-three planted violations across the tree checks** — each check
+  shown red on a violation and silent on a clean control, in milliseconds, with
+  no compilation. *(This bullet said "nine" from cycle 0.0.3, when it was true,
+  to 0.1.1, "twenty" at 0.1.1 and "twenty-one" at 0.1.2; the run prints the
+  number, derived from `selfcheck.TREE_PLANTS`, and it is 20 since
+  `check_literal_divisors` brought four rows — TM-163 — 21 since cycle 0.1.2
+  gave `check_denominators` a row for a sweep's declared domain — TM-168 — and
+  23 since cycle 0.1.3b gave `check_no_owning_fields` an owning element and an
+  owner two structs down — TM-177.)*
 - **The S-6 arm generator** diffed against `NITPICK-REACH-003`'s own identity
   list on three modules whose bills cycle 0.0.0 measured.
 
@@ -202,6 +204,18 @@ and `iso_week_to_date_refused` — **5 sweep** — `every_ordinal_date` and
 2.7 + 1.9 + 7.9 + 0.5 + 3.5 s, both legs, compile included, the run's own
 per-unit figures — against a 30 s threshold `meta/roadmap/0.1/0.1.3.md` §8 set
 in advance; the ISO week member is the long pole.
+
+**At cycle 0.1.3b, the same pin, 90 units**: the self-check's 7 planted cases,
+**23** tree-check violations with 23 clean controls — `check_no_owning_fields`
+gained an owning element and an owner two structs down (TM-177) — 3 arm
+specimens and the verdict mechanisms; the tree checks at `11 live`; parse over
+106 files; the defect corpus at **28 = 3 exempt + 25 asserted** — O-N20's
+`fixed_move_out/`, three reproductions exempt at their recorded verdicts
+(`run:107`, `run:107`, `run:95`) and its control asserted — with `exemption
+verdicts: 6 of 6`; and library + repro + suite at 65 (42 probe — `probe17`,
+which runs, and `probe17b` and `probe17c`, refused `TYPE-046` — 17 unit,
+5 sweep, 1 conformance). `90 = 25 + 65`. No library code changed, and the five
+sweeps took 2.8 + 2.0 + 7.9 + 0.5 + 3.5 = 16.7 s, as at 0.1.3 within noise.
 
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the

@@ -32,7 +32,7 @@ came in as estimated, this cycle is the estimate made real.
 ## Checklist
 
 ### 0.5.0 — the TZif reader
-- [ ] Q-1 answered: the release pinned, recorded in `src/zone/version.npk` as `pub fixed string:TZDB_VERSION`, and named in every generated file's header
+- [ ] Q-1 answered: the release pinned, recorded in `src/zone/version.npk` as `pub fixed string:TZDB_VERSION`, and named in every generated file's header — **⚠ HELD since cycle 0.1.3b (TM-178)**: at pin `c3bdae2` a `move` or a plain `pass` of a `fixed string` compiles and faults (O-N20, the compiler's DEF-99), and Z-6's `ntime_tzdb_version()` written the obvious way is exactly that, so read `../../OPEN_QUESTIONS.md` O-X10 before planning this item
 - [ ] the v2+ block read (64-bit transitions), not the v1 block
 - [ ] canonical zones only: symlinks resolved as links (Z-10), the `posix/` and `right/` trees excluded — `right/` is the leap-second variant and TM-006 does not model leap seconds
 - [ ] the generator **hard-fails** on a zone it cannot read, naming it, rather than emitting a row it cannot honour

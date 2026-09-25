@@ -1,0 +1,42 @@
+// NO `expect-` MARKER, AND DELIBERATELY: named in `harness/run.py`'s
+// `EXPECT_EXEMPT` at `run:95`, re-derived on every full run (TM-137).
+//
+// CASE 3 — A `move` OUT OF A `fixed` SCALAR. `fixed string:V` is
+// `ZONE_MODEL.md` Z-4's shape exactly -- `TZDB_VERSION` -- and Z-6's
+// `ntime_tzdb_version()` returning it would be case 2's `pass`. For a
+// scalar the emitted IR writes no vacancy, so the move itself does not fault:
+// the moved string is a second name for read-only bytes, and when it is
+// dropped the allocator is asked to free them and stops the program as
+// `Unreachable`, exit 95, on both legs. A second move of `V` would be a
+// second owner of the same bytes -- nothing marks the first move as having
+// happened.
+mod:case3_scalar_move;
+
+fixed string:V = "2026c";
+
+func:take = int64() never fails {
+    string:s = move(V);
+    pass string_byte_length(s);
+};
+
+func:main = int32(cstring[]:_~argv) {
+    if (raw take() != 5i64) { exit 10i32; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

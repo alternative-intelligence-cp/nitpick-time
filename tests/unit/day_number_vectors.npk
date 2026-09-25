@@ -1,0 +1,142 @@
+// expect-exit: 0
+//
+// HINNANT'S TWO ALGORITHMS AGAINST TWENTY-SIX DAY NUMBERS, EACH BOTH WAYS --
+// `CALENDAR.md` C-10, `0.1.1.md` §4a. The exhaustive round trip is cycle
+// 0.1.2's gate; this file is the other half of the argument, because a round
+// trip proves the two functions are inverses and says nothing about whether
+// either one counts from the right day. These twenty-six say where the days
+// ARE, and they were computed by something that is not Hinnant's formula.
+//
+// THE TABLE WAS RE-DERIVED BEFORE THIS FILE WAS WRITTEN, THREE WAYS, and all
+// three agree on all twenty-six (`0.1.1.md`'s execution record has the
+// commands and their output): Python 3.12.3's proleptic-Gregorian
+// `date.toordinal()` for every year from 1 to 9999; the same ordinal after a
+// shift of whole 400-year cycles of 146 097 days for every row, which is how a
+// year below 1 is reached at all; and that shift forced to be NON-ZERO for
+// every row, so each value is reached by a second, different ordinal.
+//
+// WHY THESE ROWS. The epoch and the day before it; a 400-year leap day and the
+// March 1st after it, where Hinnant's shifted year begins; a century that is
+// not leap, either side of its missing 29th; the first 400-multiples either
+// side of the epoch; 0001-01-01, the cross-oracle's floor (C-18); YEAR 0, which
+// exists and is leap (C-2) and holds Hinnant's own day 0 (0000-03-01); the
+// first negative year, which is not leap; a negative leap year; a negative
+// century, not leap; a negative 400-multiple, leap; -0401-12-31, the day
+// before an `era` boundary under truncating `/` -- the negative-year
+// correction under test (`tests/probe/probe07_negative_div.npk`); both ends of
+// the range, and the day of the other end in each end year; and 2026-09-25,
+// the day the plan was written.
+//
+// EXIT CODES. Row k exits 8 + 2k when `date_to_days` of the date is not the
+// number, and 9 + 2k when `days_to_date` of the number is not the date: 10 ...
+// 61, clear of every arm code. A REFUSAL counts as a mismatch in its own
+// direction -- the date refused by `civil_date` is 8 + 2k, the number refused
+// by `days_to_date` 9 + 2k -- since every one of these must be accepted.
+mod:day_number_vectors;
+
+use "../../src/cal/cal.npk".CivilDate;
+use "../../src/cal/cal.npk".civil_date;
+use "../../src/cal/cal.npk".date_to_days;
+use "../../src/cal/cal.npk".days_to_date;
+
+// Row k, both directions. `fwd` is 8 + 2k and the backward code is `fwd + 1`.
+// A function rather than a loop over a table: a loop would need a measure and
+// owe `DecreasesViolated`, and twenty-six calls written out are the table.
+//
+// A REFUSAL IS A MISMATCH, AND IT NAMES ITS ROW. Each `Result` is tested with
+// `is_error` before its `value` is read -- the compiler's own rule
+// (`NITPICK-TAINT-001` refuses the read otherwise) -- so a date `civil_date`
+// refuses exits `fwd`, and a number `days_to_date` refuses exits `fwd + 1`,
+// rather than both arriving as the anonymous `ETimeValue` arm. That matters
+// for exactly the failure this file exists to catch: with Hinnant's
+// negative-year correction deleted from `days_to_date`'s `era`, the algorithm
+// produces day 0 of a month, and `civil_date`, which it builds through,
+// REFUSES it (measured in scratch at 0.1.1, `0.1.1.md`'s execution record).
+func:row = int32(int64:y, int64:m, int64:d, int64:n, int32:fwd) never fails {
+    Result<CivilDate>:there = civil_date(y, m, d);
+    if (there.is_error)                      { pass fwd; }
+    if (raw date_to_days(there.value) != n)  { pass fwd; }
+    Result<CivilDate>:back = days_to_date(n);
+    if (back.is_error)                       { pass fwd + 1i32; }
+    CivilDate:b = back.value;
+    if ((b.year => int64) != y)              { pass fwd + 1i32; }
+    if ((b.month => int64) != m)             { pass fwd + 1i32; }
+    if ((b.day => int64) != d)               { pass fwd + 1i32; }
+    pass 0i32;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    int32:r = 0i32;
+    //         year               m      d      day number             8 + 2k
+    r = raw row(1970i64,          1i64,  1i64,  0i64,                  10i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(1969i64,          12i64, 31i64, 0i64 - 1i64,           12i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(2000i64,          2i64,  29i64, 11016i64,              14i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(2000i64,          3i64,  1i64,  11017i64,              16i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(1900i64,          2i64,  28i64, 0i64 - 25509i64,       18i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(1900i64,          3i64,  1i64,  0i64 - 25508i64,       20i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(1600i64,          2i64,  29i64, 0i64 - 135081i64,      22i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(2400i64,          2i64,  29i64, 157113i64,             24i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(1i64,             1i64,  1i64,  0i64 - 719162i64,      26i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64,             12i64, 31i64, 0i64 - 719163i64,      28i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64,             3i64,  1i64,  0i64 - 719468i64,      30i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64,             2i64,  29i64, 0i64 - 719469i64,      32i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64,             1i64,  1i64,  0i64 - 719528i64,      34i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64 - 1i64,      12i64, 31i64, 0i64 - 719529i64,      36i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64 - 1i64,      3i64,  1i64,  0i64 - 719834i64,      38i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64 - 1i64,      2i64,  28i64, 0i64 - 719835i64,      40i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64 - 4i64,      2i64,  29i64, 0i64 - 720930i64,      42i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64 - 100i64,    2i64,  28i64, 0i64 - 755994i64,      44i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64 - 100i64,    3i64,  1i64,  0i64 - 755993i64,      46i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64 - 400i64,    2i64,  29i64, 0i64 - 865566i64,      48i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64 - 401i64,    12i64, 31i64, 0i64 - 865626i64,      50i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64 - 9999i64,   1i64,  1i64,  0i64 - 4371587i64,     52i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(0i64 - 9999i64,   12i64, 31i64, 0i64 - 4371223i64,     54i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(9999i64,          1i64,  1i64,  2932532i64,            56i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(9999i64,          12i64, 31i64, 2932896i64,            58i32);
+    if (r != 0i32) { exit r; }
+    r = raw row(2026i64,          9i64,  25i64, 20721i64,              60i32);
+    if (r != 0i32) { exit r; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

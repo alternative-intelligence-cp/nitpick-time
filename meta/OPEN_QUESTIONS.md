@@ -110,7 +110,11 @@ contracts, by decision.
 
 **What waits on it:** 0.1.1's contract form — `meta/roadmap/0.1/0.1.1.md` §6 is
 written for A′ and states A's exact alternative, so either answer is executable
-without re-planning — and every later cycle's. **What does not:** 0.1.0b and
+without re-planning — and every later cycle's. *(0.1.1 was worked on A′, at the
+orchestrator's instruction, while this stays open: TM-164. Its arm cost was
+measured both ways there — `cal` 11 and the umbrella 13 as committed, 12 and 14
+with the one live `ensures` — and A's arm, `EnsuresViolated`, would exit 117
+in this ecosystem, not the 110 the plan proposed.)* **What does not:** 0.1.0b and
 0.1.0c; 0.1.0b adds a dated note under P-1 saying its premise is false and this
 question is its replacement. **The same P-1 is in all six work repositories'
 `VERIFICATION.md`**, so one answer can serve all six, recorded in each.

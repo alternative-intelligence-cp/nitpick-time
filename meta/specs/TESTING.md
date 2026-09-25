@@ -17,7 +17,7 @@ than sampled. Where that is possible it is the gate, and §3 says where.
 
 | Stage | Answers |
 |---|---|
-| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **29 files of 88 that no other stage roots** <!-- [[sweep: npk_total=88]] --> |
+| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **29 files of 91 that no other stage roots** <!-- [[sweep: npk_total=91]] --> |
 | `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
 | `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
 | `check` | every documented refusal actually refuses, with exactly its code |
@@ -45,6 +45,7 @@ them found something on its first run.
 | `check_no_owning_fields` | every value stored in a table or array declares no owning field. **It could not see a SINGLE-LINE struct until cycle 0.0.6 and both of this repository's structs are one** (TM-138), so neither type's real fields had ever been examined while the check reported `0 of 0`; the self-check now plants the same violation in both spellings |
 | `check_int128_sites` | `int128` appears at exactly the three sites `SPAN_MODEL.md` §5 names, and nowhere else |
 | `check_constants_named` | no bound outside `src/core/limits.npk`; no magic 86400, 146097, 719468 or 1000000000 outside the algorithm module that owns it |
+| `check_literal_divisors` (TM-163) | **every `/`, `%`, `/=` and `%=` in `src/cal/` against `CALENDAR.md` C-11**: the divisor must be a positive decimal integer literal with its width suffix, standing alone — nothing after it that binds tighter than `/`, since `256i64 =>! uint8` is 0 — so D-007's divide-by-zero and `MIN / −1` traps are unreachable by construction. It reads code with comments AND strings blanked, because every `use` path in `cal.npk` holds a `/`; `+%`, `-%` and `*%` are the wrapping operators and not divisions. It is C-11's list of divisors, which a list in the rule's text could not be: the one C-11 carried was short by eight the day `civil_from_days` arrived. **Its limits are stated in its docstring**: block comments, character literals, raw strings and templates are not modelled — `src/cal/` has none |
 | `check_no_format_string` | no function anywhere takes a pattern `string` and interprets it — `FORMAT_MODEL.md` F-5's rule, made checkable |
 | `check_raw_index` | **no index through a bare pointer in `src/`, by FIELD or by BINDING.** `Vec<T>.items` and `Bytes`' buffer body are bare pointers, which the language does not bounds-check (TM-108, `SAFETY.md` S-17b), so the accessor pair is the only bound there is. It was two literal substrings until cycle 0.0.6 and was **evadable in one line** — bind the pointer to a local and index the local, which was built at `aaffb87`, ran, and read four elements past the live prefix while the check reported `0 sites` (TM-144). Every `wild T->:name` in a file is now watched. **The limit is stated: it is lexical and per-file**, so a bare pointer passed to another function and indexed there is still not covered; cycle 0.5 gets the widening |
 | `check_expect_headers` | **the tree partitioned three ways, with the denominator printed** (TM-115): every `.npk` is under `src/` (judged by "it compiles"), or under `tests/` with an `expect-` marker of its own or a NAMED exemption, or it is unowned — and unowned is a failure. The exemption list is diffed in both directions, so an exemption naming a file that is gone fails too. **It says a marker is WELL-FORMED and nothing about whether it is TRUE**; that is `check_exemptions_live`'s and `run_defect_corpus`'s job, and the gap between the two readings was TM-141 |
@@ -59,8 +60,8 @@ break by accident and hard to notice: that it is reproducible, and that its
 arithmetic does not silently overflow.
 
 **Rule V-1a (TM-126) — a check runs from the cycle it can be written, and its
-pending siblings are PRINTED.** The table above has **17** rows: **13 are live**
-as of cycle 0.0.6 and **4 print on every run as `PEND`**, and `13 + 4 = 17`
+pending siblings are PRINTED.** The table above has **18** rows: **14 are live**
+as of cycle 0.1.1 and **4 print on every run as `PEND`**, and `14 + 4 = 18`
 closes. Several of the live ones run over a subject that is currently empty —
 which is the right answer, and is what makes the check exist on the day the
 first table type is written rather than be invented in the same week as the
@@ -89,6 +90,13 @@ holds 9, `run.py`'s `[5/9]` line reads `10 live` (the 9 and
 read, in part: *"no `CivilDate{` or `CivilTime{` struct literal in `src/`
 outside `src/cal/cal.npk` … its clean control is the banned form in a
 COMMENT"*.)*
+
+*(**And at cycle 0.1.1 it moved by one, in the same commit as the row.** This
+rule said 17 rows and 13 live until `check_literal_divisors` (TM-163) joined
+§2's table as its eighteenth row and `checks.LIVE` as its tenth member.
+Re-derived from the run: the `[5/9]` line reads `11 live` — `checks.LIVE`'s
+10 and `check_failsafe_arms` — and the three `run.py` drives outside step 5
+make 14.)*
 
 The four pending each name **the cycle that turns it on and why it cannot run
 today**, because a family whose gaps are invisible is a family nobody
@@ -205,14 +213,21 @@ is, and that is the gate.** Sampling is what you do when you cannot enumerate.
 
 | Gate | Domain | Size | Cycle |
 |---|---|---|---|
-| civil ↔ day-number round trip, both directions | every day in `[−9999-01-01, +9999-12-31]` | 7 304 485 × 2 | 0.1 |
+| civil ↔ day-number round trip, both directions | every day in `[−9999-01-01, +9999-12-31]` | 7 304 484 × 2 | 0.1 |
 | `date_to_days` strictly increasing | the same sweep | — | 0.1 |
 | weekday advances by one mod seven | the same sweep | — | 0.1 |
-| month lengths match the leap rule | every (year, month) in range | 239 976 | 0.1 |
+| month lengths match the leap rule | every (year, month) in range | 239 988 | 0.1 |
 | ISO week/ordinal round trip | the same sweep | — | 0.1 |
 | `Timestamp` ↔ civil round trip | every second would be too many; every **day boundary**, plus every second of 512 randomly chosen days | 7.3 M + 44 M | 0.2 |
 | zone transition sweep | every transition in the table, ±1 second | ~27 000 × 4 | 0.6 |
 | format/parse round trip | the generated corpus × every layout | ~10⁶ | 0.4 |
+
+*(Amended at cycle 0.1.1, TM-161: the first row read 7 304 485 × 2 and the
+fourth 239 976. The day count was one high, `CALENDAR.md` §2's first day having
+been one day early; the month count was twelve low — 19 998 years × 12, when
+`[−9999, +9999]` is 19 999 years, so 239 988. Both are the domain a `sweep`
+member declares in `// sweep-count:`, where either would have been a red run
+at cycle 0.1.2 rather than a quiet one.)*
 
 **Rule V-3 — the civil sweep is the strongest statement this library makes.**
 It is self-evident (a round trip is obviously the right property), it needs no
@@ -371,7 +386,7 @@ been driven. Cycle 0.0.6 made the sentence true rather than softening it:
 
 | Commissioned by | What it drives |
 |---|---|
-| `selfcheck.PLANTED` | the 9 tree checks of `checks.LIVE`, one planted violation and one clean control each |
+| `selfcheck.PLANTED` | the tree checks of `checks.LIVE` that fail a run — 9 of its 10 since cycle 0.1.1 (`check_literal_divisors` joined, with four rows) — at least one planted violation and one clean control each |
 | `selfcheck.part_b` directly | `check_layering`'s **node** half — the fault is a file that is NOT there, which no `PLANTED` row can express |
 | `selfcheck.part_b_specs_current` | `check_specs_current`, which reports and never fails, so it is shown REPORTING |
 | `selfcheck.part_c` (`CALIBRATION`) | `check_failsafe_arms`, against `NITPICK-REACH-003`'s own identity list on three modules with known bills |

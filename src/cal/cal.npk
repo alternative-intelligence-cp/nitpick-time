@@ -1,12 +1,33 @@
 // The civil calendar -- the TYPES and the VALIDATING CONSTRUCTORS (cycle
-// 0.1.0). Governed by `meta/specs/CALENDAR.md`; this file implements §3, C-6
-// through C-9, and the parts of §4 the constructors cannot exist without.
+// 0.1.0), and HINNANT'S TWO ALGORITHMS (cycle 0.1.1). Governed by
+// `meta/specs/CALENDAR.md`; this file implements §3 and C-6 through C-12.
 //
-// NO ALGORITHM HERE. `date_to_days` and `days_to_date` -- Hinnant's
-// `days_from_civil` / `civil_from_days` (C-10, TM-016) -- are cycle 0.1.1's,
-// and so are the derived fields (C-13, C-14, C-15). What is here is the set of
-// types those algorithms operate on, and the constructors that make an unreal
-// date UNSPELLABLE.
+// THE PUBLIC FUNCTIONS, in the order they appear: `is_leap_year`,
+// `days_in_month`, `date_to_days`, `days_to_date`, `civil_date`, `civil_time`,
+// `weekday_number` and `weekday_number_sunday_first`. The derived fields --
+// the weekday of a date, ordinal dates, ISO week dates (C-13, C-14, C-15) --
+// are cycle 0.1.3's.
+//
+// THE ALGORITHMS ARE HOWARD HINNANT'S, USED AS GIVEN (C-10, TM-016), AND THIS
+// IS THEIR CITATION: Howard Hinnant, "chrono-Compatible Low-Level Date
+// Algorithms", https://howardhinnant.github.io/date_algorithms.html -- the page
+// dates itself 2021-09-01 and was read on 2026-09-25, per
+// `meta/research/CURRENCY.md` (the digest is
+// `meta/research/hinnant-date-algorithms.md`). `date_to_days` is his
+// `days_from_civil` and `days_to_date` his `civil_from_days`, transcribed
+// line for line and checked against the page, not against a copy of it. ONE
+// DEVIATION: his intermediates are `unsigned` and these are `int64` (C-12),
+// which makes the arithmetic total on inputs his `unsigned` would wrap.
+//
+// NO LOOP IN THIS MODULE. The first function here that loops adds
+// `DecreasesViolated` to every consumer's bill (the compiler's D-304,
+// `SAFETY.md` S-4b), which is eleven arms today -- a budget cost that would
+// arrive with a `while` rather than with a decision, so it is written here.
+//
+// (Until cycle 0.1.1 this header's second paragraph read "NO ALGORITHM HERE.
+// `date_to_days` and `days_to_date` ... are cycle 0.1.1's", and it ended:
+// "What is here is the set of types those algorithms operate on, and the
+// constructors that make an unreal date UNSPELLABLE.")
 //
 // UNSPELLABLE BY WHOM, precisely, because the answer changed at cycle 0.1.0c.
 // Until then it was "by this library": a CONSUMER could write the struct
@@ -87,6 +108,8 @@ mod:cal;
 // disagree about a constant neither of them owns.
 use "../core/limits.npk".NTIME_YEAR_MIN;
 use "../core/limits.npk".NTIME_YEAR_MAX;
+use "../core/limits.npk".NTIME_DAY_MIN;
+use "../core/limits.npk".NTIME_DAY_MAX;
 use "../core/limits.npk".NTIME_NANOS_PER_SEC;
 
 // ===========================================================================
@@ -233,7 +256,7 @@ fixed int64[12]:MONTH_LENGTH = [
 // remainder against ZERO, and zero has no sign.** `-4 % 4` is `0`, `-100 % 100`
 // is `0`, `-400 % 400` is `0`. A sign correction would be needed the moment a
 // NON-ZERO remainder were used -- as `days_from_civil`'s `era` does, which is
-// why 0.1.1 still owes `(y >= 0 ? y : y - 399) / 400`.
+// why `date_to_days` below carries `(y >= 0 ? y : y - 399) / 400` (0.1.1).
 //
 // The four cases and their negative mirrors are named tests in
 // `tests/unit/leap_rule.npk`; year -1, -4, -100 and -400 are there because a
@@ -265,6 +288,108 @@ pub func:days_in_month = int64(int64:y, int64:m) {
         pass 28i64;
     }
     pass MONTH_LENGTH[m - 1i64];
+};
+
+// ===========================================================================
+// The algorithms -- `CALENDAR.md` C-10 ... C-12 (TM-016), cycle 0.1.1
+// ===========================================================================
+//
+// Howard Hinnant's `days_from_civil` and `civil_from_days`, TRANSCRIBED LINE
+// FOR LINE from the page this module's header cites, with his own names --
+// `era`, `yoe`, `mp`, `doy`, `doe` -- so the transcription can be checked
+// against the page a line at a time rather than against a copy of it.
+//
+// THE ONE DEVIATION FROM THE PAGE: his intermediates are `unsigned` and these
+// are `int64` (C-12). His `doy` is `[0, 365]` only for a real date, so on a
+// `day` of 0 his `unsigned` wraps where this gives -1 -- which is what makes
+// `date_to_days` TOTAL, and why the type is not to be "fixed" back.
+//
+// EVERY DIVISOR BELOW IS A POSITIVE INTEGER LITERAL (C-11): nonzero, so
+// D-007's divide-by-zero trap is unreachable by construction, and not -1, so
+// its `MIN / -1` overflow is too. `check_literal_divisors` fails the run on
+// any other divisor anywhere in `src/cal/`, so that sentence is checked rather
+// than remembered.
+//
+// NO LOOP. So no measure, and no `DecreasesViolated` in any consumer: `cal`'s
+// bill stays 11 (`SAFETY.md` S-4). The first function here that loops adds
+// that arm to every program importing this module.
+
+// `ensures answer >= NTIME_DAY_MIN && answer <= NTIME_DAY_MAX`
+//  (true of every `CivilDate` that `civil_date` can build -- C-8c)
+//
+// (`VERIFICATION.md` P-1 as `meta/OPEN_QUESTIONS.md` Q-6's recommended answer,
+// A', reads it: a comment in the syntax it would take, `answer` for `result`
+// (TM-130) -- and evidence of NOTHING, since a plain build checks no comment.
+// The live `ensures` would arm `EnsuresViolated` in every consumer;
+// `0.1.1.md` §6 is that alternative, measured.)
+//
+// THE DAY NUMBER OF A CIVIL DATE, epoch 1970-01-01 = 0. `never fails`, AND
+// TOTAL OVER EVERY FIELD VALUE: with `year` an `int32` and `month` and `day`
+// `uint8`, widened by the CHECKED `=>` (C-12), `|era| <= 5.4e6` and
+// `|era * 146097| <= 7.9e11`, so nothing can overflow `int64`, and every
+// divisor is a literal, so no input traps. After C-8c its argument can only
+// have come from `civil_date`; the totality is C-8b's second bullet, kept
+// because it costs nothing and `wild` storage reinterpreted by `=>!` is still
+// an opt-out. A second copy of `civil_date`'s validity check here would be a
+// second place for the two to disagree.
+//
+// `(y - 399) / 400` IS THE NEGATIVE-YEAR CORRECTION, NOT AN OFF-BY-ONE. `/`
+// truncates toward zero (`tests/probe/probe07_negative_div.npk`), so for a
+// negative `y` the plain quotient rounds the wrong way. The leap rule above
+// needs no such correction and `era` does (`0.1.0.md` §6); vectors -1, -4,
+// -100, -400 and -401 in `tests/unit/day_number_vectors.npk` are the
+// correction under test.
+//
+// Hinnant's `y -= m <= 2;` adds a `bool` to an integer; here it is an `if`.
+pub func:date_to_days = int64(CivilDate:cd) never fails {
+    int64:m = cd.month => int64;
+    int64:d = cd.day => int64;
+    int64:y = cd.year => int64;
+    if (m <= 2i64) { y = y - 1i64; }
+    int64:era = (is (y >= 0i64) : y : (y - 399i64)) / 400i64;
+    int64:yoe = y - (era * 400i64);
+    int64:mp = is (m > 2i64) : (m - 3i64) : (m + 9i64);
+    int64:doy = (((153i64 * mp) + 2i64) / 5i64) + d - 1i64;
+    int64:doe = (yoe * 365i64) + (yoe / 4i64) - (yoe / 100i64) + doy;
+    pass (era * 146097i64) + doe - 719468i64;
+};
+
+// `ensures answer.month >= 1 && answer.month <= 12`
+//  -- held by construction: it is `civil_date`'s result
+// `prove(date_to_days(answer) == n)`      -- `VERIFICATION.md` §6's row
+//
+// THE CIVIL DATE OF A DAY NUMBER -- `civil_from_days`, with the same deviation.
+//
+// THE RANGE IS CHECKED FIRST, BEFORE `n + 719468` (S-12: checked before the
+// trap). At `int64` MAX that addition would trap `IntOverflow`; a day outside
+// `[NTIME_DAY_MIN, NTIME_DAY_MAX]` is `ETimeValue` instead, and
+// `tests/unit/days_to_date_refused.npk` asserts the refusal arrives through
+// the `Result` at both `int64` extremes, never through a trap. The fault is
+// `YearRange` because the day lies outside C-4's years.
+//
+// IT BUILDS THROUGH `civil_date`, NOT A STRUCT LITERAL. So `civil_date` stays
+// the only builder of a `CivilDate` in `src/` -- C-8 inside `cal`, the one
+// module the seal does not reach (C-8c); the `int64` to `int32`/`uint8`
+// narrowing is validate-then-narrow by construction (TM-105), with no `=>!`
+// here; and an ALGORITHM error becomes a REFUSAL the 0.1.2 sweep sees rather
+// than a wrong date it might not. For an `n` in range the `relay` fires only if
+// the algorithm is wrong, and the sweep is what says it is not.
+//
+// Hinnant's `return (y + (m <= 2), m, d)` is the `if` before the `relay`.
+pub func:days_to_date = CivilDate(int64:n) {
+    if (n < NTIME_DAY_MIN) { fail ETimeValue; }   // ValueFault.YearRange
+    if (n > NTIME_DAY_MAX) { fail ETimeValue; }   // ValueFault.YearRange
+    int64:z = n + 719468i64;
+    int64:era = (is (z >= 0i64) : z : (z - 146096i64)) / 146097i64;
+    int64:doe = z - (era * 146097i64);
+    int64:yoe = (doe - (doe / 1460i64) + (doe / 36524i64) - (doe / 146096i64)) / 365i64;
+    int64:y = yoe + (era * 400i64);
+    int64:doy = doe - ((365i64 * yoe) + (yoe / 4i64) - (yoe / 100i64));
+    int64:mp = ((5i64 * doy) + 2i64) / 153i64;
+    int64:d = doy - (((153i64 * mp) + 2i64) / 5i64) + 1i64;
+    int64:m = is (mp < 10i64) : (mp + 3i64) : (mp - 9i64);
+    if (m <= 2i64) { y = y + 1i64; }
+    pass (relay civil_date(y, m, d));
 };
 
 // ===========================================================================

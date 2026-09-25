@@ -14,18 +14,27 @@
 // module holding its own.
 //
 // THE RANGE CONSTANTS ARE COMPUTED, NOT ESTIMATED (`CALENDAR.md` §2 says so in
-// as many words), and cycle 0.1 adds a test that RECOMPUTES the four of them
-// from the calendar algorithm rather than trusting these literals. Until that
-// test exists the relations are written out here so a reader can check them by
-// hand -- which is the weaker guarantee, and it is stated as weaker:
+// as many words), and since cycle 0.1.1 `tests/unit/range_constants.npk`
+// RECOMPUTES them from the calendar algorithm rather than trusting these
+// literals: it builds -9999-01-01 and 9999-12-31 with `civil_date` and counts
+// their days with `date_to_days`. The relations are still written out, so a
+// reader can check them by hand:
 //
-//     NTIME_DAY_MAX - NTIME_DAY_MIN + 1  =  2932896 + 4371588 + 1  =  7304485
+//     NTIME_DAY_MAX - NTIME_DAY_MIN + 1  =  2932896 + 4371587 + 1  =  7304484
 //                                        =  CALENDAR.md §2's "total days"
-//     NTIME_SECS_MIN =  NTIME_DAY_MIN * 86400 = -4371588 * 86400 = -377705203200
+//     NTIME_SECS_MIN =  NTIME_DAY_MIN * 86400 = -4371587 * 86400 = -377705116800
 //     NTIME_SECS_MAX =  NTIME_DAY_MAX * 86400 + 86399
 //                    =  2932896 * 86400 + 86399  =  253402300799
 //
-// All three check out against `CALENDAR.md` §2's table as written.
+// THE RELATIONS HAD BEEN CHECKED FOR CONSISTENCY AND THE STARTING DAY HAD NOT
+// (cycle 0.1.1, TM-161). From cycle 0.0.4 until then this block read
+// `2932896 + 4371588 + 1 = 7304485` and `-4371588 * 86400 = -377705203200`,
+// and closed "All three check out against `CALENDAR.md` §2's table as
+// written" -- which was true, because the table had been derived from the
+// same wrong first day: -4 371 588 is -10000-12-31, the day BEFORE the range.
+// A relation derived from a number cannot catch that number. The
+// recomputation can, and did: it exited 10 against the old constant before
+// the constant moved.
 //
 // WHY THE MOST NEGATIVE VALUES ARE SPELLED THE WAY THEY ARE. A plain negative
 // decimal literal is fine here -- `-9999i64` scans and links, measured at pin
@@ -61,14 +70,17 @@ pub fixed int64:NTIME_YEAR_MIN = -9999i64;
 pub fixed int64:NTIME_YEAR_MAX = 9999i64;
 
 // §2, day number with epoch 1970-01-01 = 0. These are the day numbers of
-// -9999-01-01 and +9999-12-31.
-pub fixed int64:NTIME_DAY_MIN = -4371588i64;
+// -9999-01-01 and +9999-12-31 -- recomputed by `tests/unit/range_constants.npk`
+// from the algorithm. MIN was -4371588i64 until cycle 0.1.1 (TM-161), the day
+// number of -10000-12-31.
+pub fixed int64:NTIME_DAY_MIN = -4371587i64;
 pub fixed int64:NTIME_DAY_MAX = 2932896i64;
 
 // §2, `Timestamp.secs` at the two ends of the same range. MIN is midnight on
 // the first supported day; MAX is the last second of the last supported day,
-// which is why it ends 86399 rather than 00000.
-pub fixed int64:NTIME_SECS_MIN = -377705203200i64;
+// which is why it ends 86399 rather than 00000. MIN moved with `NTIME_DAY_MIN`
+// at cycle 0.1.1 (TM-161); it was -377705203200i64, one day early.
+pub fixed int64:NTIME_SECS_MIN = -377705116800i64;
 pub fixed int64:NTIME_SECS_MAX = 253402300799i64;
 
 // ---------------------------------------------------------------------------

@@ -222,8 +222,11 @@ compiler's:
 // stress: 40                run it that many times, the SAME answer every time
 // argv: …
 // expect-golden: name       the golden file this test asserts against
-// sweep-count: 7304485      the domain a `sweep` must visit (TM-122)
+// sweep-count: 7304484      the domain a `sweep` must visit (TM-122)
 ```
+
+*(The example read `7304485` until cycle 0.1.1 — the civil range's size with
+its first day one day early, TM-161.)*
 
 **Rule B-5e (TM-122) — a `sweep` member declares its domain and the program
 prints what it visited.** `// sweep-count: N`, and the program writes exactly one
@@ -272,9 +275,9 @@ lets the stage cover the 24 files here that must not compile
 refused at `PARSE-001`, `LEX-004`, `PARSE-002`, `TYPE-009`, `TYPE-046`,
 `TYPE-079`, `TYPE-080`, `BORROW-001`, `BORROW-012`, `REACH-002` and
 `REACH-003`, and every family after the first three runs only on something
-that parsed. Re-measured at pin `c3bdae2`, cycle 0.1.0c: **88 files = 64 parse
+that parsed. Re-measured at pin `c3bdae2`, cycle 0.1.1: **91 files = 67 parse
 cleanly + 22 parse and are refused later + 2 do not parse**
-<!-- [[sweep: npk_total=88]] -->, and the two
+<!-- [[sweep: npk_total=91]] -->, and the two
 are `probe02d_wide_literal_refused.npk` (LEX-004, PARSE-002) and
 `probe14_error_payload_refused.npk` (PARSE-001, TM-147). It read
 `50 = 36 + 13 + 1` for three subcycles after the tree stopped being that size,
@@ -285,7 +288,9 @@ files became asserted `TYPE-046` refusals, and `fixed_array_len/case1` stopped
 being refused at all. At cycle 0.1.0b it read `83 = 64 + 17 + 2` with 19 that
 must not compile; cycle 0.1.0c's seals (TM-156, TM-157) turned `probe15` into a
 `TYPE-079` refusal and added four refusal probes and one that runs, which is
-the `+ 5` in each of the two sums.
+the `+ 5` in each of the two sums: `88 = 64 + 22 + 2`, with 24 that must not
+compile. Cycle 0.1.1 added three unit tests that run, all three in the first
+term — `91 = 67 + 22 + 2` — and the 24 did not move.
 
 **AND THE TWO NUMBERS IN THAT PARAGRAPH ARE DIFFERENT SETS** — worth one
 sentence, because earlier versions had two sixteens, and before that two

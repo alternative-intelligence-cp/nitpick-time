@@ -248,6 +248,13 @@ know, and it is the practical teeth behind TM-017's budget of three: the budget
 is not a style guide, it is what keeps the major version from moving.
 
 ### TM-014 — the supported range is year ±9999, astronomical numbering
+> **SUPERSEDED IN PART by TM-161 (2026-09-25).** Its day-number and seconds
+> bounds are one day early at the bottom: −9999-01-01 is day **−4 371 587**, not
+> −4 371 588 (which is −10000-12-31), so the range holds **7 304 484** days and
+> its first second is **−377 705 116 800**. The range itself — years ±9999,
+> astronomical numbering — and every reason below stand. The text below is
+> left exactly as written.
+
 **2026-09-03.** `year ∈ [−9999, +9999]`, proleptic Gregorian, with year 0
 existing and meaning 1 BCE. Every constructor checks it and returns
 `ETimeValue` before D-210's trap can fire.
@@ -413,6 +420,11 @@ shape covers `parse_*_prefix` (trailing input allowed) versus the strict form
 that requires end-of-input.
 
 ### TM-026 — the exhaustive sweep is the gate
+> **SUPERSEDED IN PART by TM-161 (2026-09-25).** Its count is one high: the
+> range holds **7 304 484** days in each direction, its first day having been
+> taken one day early. The decision — the exhaustive sweep is the gate — stands.
+> The text below is left exactly as written.
+
 **2026-09-03.** Where a property can be checked over its whole domain, it is,
 and that is the cycle's gate. The civil round trip covers **every** day in the
 supported range — 7 304 485 in each direction — and runs in seconds.
@@ -1789,6 +1801,10 @@ finding what a runner has to be able to do before it can be shown able to fail.
 Two of them correct something this repository had already planned.
 
 ### TM-122 — a `sweep` declares its domain in its header and PRINTS the count it visited
+> **SUPERSEDED IN PART by TM-161 (2026-09-25).** The domain it quotes, 7 304 485
+> × 2, is 7 304 484 × 2: the range's first day was taken one day early. The
+> marker and its rule stand. The text below is left exactly as written.
+
 **2026-09-05. New marker, `// sweep-count: N`.** `BUILD.md` B-5 and B-9,
 `TESTING.md` V-14 case 7 and the new V-16.
 
@@ -4010,3 +4026,217 @@ two files with deliberately mismatched headers would add a test of the
 compiler's resolver to a subcycle whose unit count was planned; wait for the
 compiler to announce it — the measurement is the discharge, as it was for
 O-N4.
+
+---
+
+# Cycle 0.1.1 — the algorithms, ratified 2026-09-25
+
+Four decisions, drafted at planning (`meta/roadmap/0.1/0.1.1.md` §9, PD-12 …
+PD-15, in that order) and recorded here by the worker in the commit that makes
+the change each describes. Every measurement is at compiler `c3bdae2` and is
+recorded with its command in `0.1.1.md`'s execution record.
+
+### TM-161 — the range's first day is −4 371 587, so the range holds 7 304 484 days and its first second is −377 705 116 800
+
+**2026-09-25, cycle 0.1.1 (PD-12). It supersedes TM-014 in part (its bounds),
+and TM-026 and TM-122 in part (their count).** `NTIME_DAY_MIN` is **−4 371 587**,
+the day number of −9999-01-01; the range holds **7 304 484** days; and
+`NTIME_SECS_MIN` is **−377 705 116 800**. The old −4 371 588 is the day number
+of **−10000-12-31** — the day before the range, in a year C-4 refuses — and it
+passed every relation written beside it because each relation had been derived
+from it: `limits.npk`'s three hand-checked lines and `tests/unit/limits_named.npk`
+all held between numbers that were wrong together.
+
+*Measured, four ways, and the fourth was already in the tree:*
+
+- −9999-01-01 to 0001-01-01 is exactly 10 000 years, 25 × 146 097 = 3 652 425
+  days, and 0001-01-01 is day −719 162 (Python 3.12.3's `date.toordinal()`), so
+  −9999-01-01 is day −4 371 587;
+- Hinnant's `days_from_civil(−9999, 1, 1)` is −4 371 587, and `(−10000, 12, 31)`
+  is −4 371 588;
+- **`tests/unit/range_constants.npk`, written first**, ran against the
+  unchanged constant and failed at its first assertion — the harness printed
+  `FAIL  tests/unit/range_constants.npk` over `-O0 exited 10; the header
+  expects 0` and the same for `opt -O2` — and exits 0 since the constant moved;
+- **and `tests/probe/probe07_negative_div.npk` has asserted
+  `days_from_civil(-9999, 1, 1) == -4371587` since cycle 0.0.0** (`ef14210`,
+  2026-09-03), under the comment *"The ends of CALENDAR.md's supported range"*,
+  green on every run since 0.0.2. For three weeks the tree held two values for
+  one quantity — one in the specification and the constant, one executed in a
+  probe — and nothing compared them.
+
+*Impact, stated plainly:* both constants are public (re-exported by
+`src/lib.npk` since cycle 0.0.4), and each named a day the library cannot
+represent. With the old value `days_to_date(NTIME_DAY_MIN)` would have passed
+its own range check and been refused by `civil_date` — two answers for one
+bound — and cycle 0.1.2's gate would have failed on its first element. No
+consumer exists yet (`date` is gated on cycle 0.7), so the damage was to
+documents.
+
+*Two more range numbers, found in the same sweep and corrected in the same
+commit:*
+
+- **the month-length sweep's size**, `TESTING.md` V-2 and the cycle README's
+  0.1.2 checklist, read **239 976** — 19 998 years × 12. `[−9999, +9999]` is
+  19 999 years: **239 988**. The same shape, a count of the range one short at
+  the bottom, in a number no relation checked and that 0.1.2 would have typed
+  into a `// sweep-count:`;
+- **`TIME_MODEL.md` M-8** said both bounds fit `int64` "with twenty-seven
+  orders of magnitude to spare": `int64` holds 9.2 × 10¹⁸ and the larger bound
+  is 3.8 × 10¹¹, a ratio of 2.4 × 10⁷ — **seven**.
+
+*The extent, with its denominator.* `git grep -n
+'4371588\|4 371 588\|7304485\|7 304 485\|377705203200\|377 705 203 200' --
+':!meta/roadmap/0.1/0.1.1.md'` at the commit before this one: **36 lines in 16
+files = 25 edited to the corrected value + 2 the cycle README's flag on this
+finding, resolved in place + 9 history left as written** (TM-014, TM-026 and
+TM-122's settled text — five lines, each decision now carrying the marker — and
+four in `meta/roadmap/done/0.0/`). The same command over the working tree
+afterwards, `--untracked`, finds 36 lines again, every one of them now a dated
+note, a marker or settled text naming the old value as the old value — read,
+not counted.
+
+*Alternative declined:* keep −4 371 588 and widen the range by a day — C-4's
+range is years −9999 … +9999, the constant names its first day, and a range
+whose first day lies in a year the constructor refuses is two ranges.
+
+### TM-162 — `date_to_days` is total and `never fails`; `days_to_date` checks its range first and builds through `civil_date`
+
+**2026-09-25, cycle 0.1.1 (PD-13).** The two functions are `0.1.1.md` §2's text,
+checked line by line against Hinnant's page (read 2026-09-25) rather than
+against the digest, and they compiled and ran as planned.
+
+- **`date_to_days` is `never fails` and total over every field value.** With
+  `year` an `int32` and `month`/`day` `uint8`, widened by the CHECKED `=>`
+  (C-12), `|era| ≤ 5.4 × 10⁶` and `|era × 146 097| ≤ 7.9 × 10¹¹`: nothing can
+  overflow `int64`, and every divisor is a literal (TM-163), so no input traps.
+  After C-8c its argument can only have come from `civil_date`, and the
+  totality is C-8b's second bullet, kept because it costs nothing and `wild`
+  storage is still an opt-out. *Declined:* a fallible `date_to_days` that
+  re-checks validity — the seal already guarantees it, and a second copy of
+  the check is a second place to disagree.
+- **`days_to_date` checks its range FIRST, before `n + 719468`** (S-12). At
+  `int64` MAX that addition traps `IntOverflow`; `tests/unit/days_to_date_refused.npk`
+  asserts the refusal arrives through the `Result` at both `int64` extremes,
+  and **the same file against a scratch copy with the two range lines deleted
+  exits 93** — so the test sees the ORDER, not merely the check.
+- **`days_to_date` builds through `relay civil_date(y, m, d)`**, not a struct
+  literal. `civil_date` stays the only builder of a `CivilDate` in `src/`; the
+  narrowing is validate-then-narrow by construction (TM-105), with no `=>!` in
+  `days_to_date`; and an algorithm error becomes a refusal the 0.1.2 sweep sees
+  rather than a wrong date it might not. **Measured, not argued:** with the
+  negative-year correction deleted from `days_to_date`'s `era` (scratch), the
+  algorithm produces day 0 of a month and `civil_date` refuses it —
+  `day_number_vectors` exits 33, row 12's backward code, and `range_constants`
+  exits 15. *Declined:* the literal — one line shorter, and it moves the
+  narrowing back into this function; a private `Ymd` struct returned to a
+  wrapper — a second type for one caller.
+- **The negative-year corrections are Hinnant's, as given** (C-10): `era`'s
+  `y - 399` and `z - 146096`. With `date_to_days`' deleted (scratch),
+  `day_number_vectors` exits 32 — row 12, 0000-02-29, the first date whose
+  shifted year is negative — while `range_constants` still exits 0, because
+  −10000 is a multiple of 400 and truncation and floor agree there. The two
+  tests are not redundant, and the mutation is what shows it.
+- **`is (c) : a : b`** is the ternary (CONTROL_REFERENCE §1.4), and Hinnant's
+  `(m <= 2)` added to an integer is an `if`. The names are his — `era`, `yoe`,
+  `mp`, `doy`, `doe` — and the parameter is `cd`.
+- **No loop**, so no measure and no `DecreasesViolated`: `check_failsafe_arms`
+  reads `cal`'s bill as **11** with the functions in, the same eleven as
+  before them. The module header says the first loop would add the arm.
+- **`CALENDAR.md` C-12 is amended** by this decision: its figure *"`era *
+  146097` at year −9999 is about −4.4 × 10⁶"* was the day number, not the
+  product (which is −3 652 425), and its last clause promised `date_to_days` a
+  range check it does not have and does not need.
+
+**And a test-writing fact the plan did not have, measured here:** a `Result`'s
+`.value` may be read after its `is_error` has been tested on the same path, and
+not before (`NITPICK-TAINT-001` otherwise). The three new tests use it so that
+a refusal exits with its own assertion's code instead of the anonymous
+`ETimeValue` arm, which is what made the mutation codes above readable.
+
+### TM-163 — C-11 states its rule without a list, and `check_literal_divisors` enforces it over `src/cal/`
+
+**2026-09-25, cycle 0.1.1 (PD-14).** C-11 read *"every division in them is by a
+nonzero literal (4, 5, 100, 400, 146097)"* — `days_from_civil`'s four divisors
+and one of `civil_from_days`' nine, so the list was short by eight the day the
+second algorithm arrived. **C-11 now states the rule — every divisor in
+`src/cal/` a positive integer literal, nonzero so the divide-by-zero trap is
+unreachable and not −1 so `MIN / −1` is too — and names no divisor.** The list
+is `check_literal_divisors`', a new live tree check in `harness/checks.py`,
+registered in `checks.LIVE` beside `check_constants_named`: at this commit it
+reads **17 divisions over 1 file** in `src/cal/`, every one a positive literal.
+`SAFETY.md` S-16's closed list and S-4b's prediction of `cal`'s divisors are
+amended the same way, and `VERIFICATION.md` §2's discharge sentence with them.
+
+*What the check reads:* the code of every `.npk` under `src/cal/` with comments
+AND string bodies blanked — `strip_strings` moves from `harness/arms.py` into
+`checks.py`, beside `strip_comments`, so one definition of a string serves the
+S-6 generator and this check. **`code_lines` never blanked strings**, although
+the retired `check_civil_literal`'s docstring said it did and this subcycle's
+plan repeated it; read literally, the plan's check would have failed `cal.npk`
+on its own `use "../core/limits.npk"` lines. `+%`, `-%` and `*%` are the
+wrapping operators (the compiler's D-312) and not divisions; `/=` and `%=` are.
+
+**Three departures from the plan's text, each measured before it was made:**
+
+1. **The operand rule.** The plan's — *after optional whitespace and optional
+   `(`, `[1-9][0-9]*(i|u)(8|16|32|64|128)\b`* — accepts `y / (400i64 + m)`,
+   because the literal after the `(` matches and `\b` holds, and
+   `y / 256i64 =>! uint8`, whose divisor is 0. The check takes a literal only
+   when it stands alone: no `(`, and nothing after it that binds tighter than
+   `/` (the compiler's `OP_REFERENCE.md` §0: a cast, a pipeline, a postfix).
+   `y / (400i64)` is therefore refused too — the safe direction, and no such
+   spelling is in the tree.
+2. **The third control.** The plan's, `y +% 1i64` beside a real `/ 4i64`,
+   cannot tell a check that reads `+%` correctly from one that reads it as a
+   remainder: the second would be dividing by the nonzero literal `1i64` and
+   stay silent too. Measured on the fixture: a naive reader is silent on
+   `y +% 1i64` and fires on `y +% m`. The control's operand is `m`, and its
+   plant is the same text without the `+`.
+3. **A fourth row.** The tighter-binding rule is a branch, and a branch never
+   seen red is not commissioned (TM-126): `y / 256i64 =>! uint8` against
+   `y / 256i64`. The self-check reads **20** planted violations and 20 controls
+   — 16 before, and 19 had the plan's three been kept. Every one of the eight
+   fixtures carries a `use` path and a comment holding a `/` and a `%`, so each
+   silent control is also the proof that the check reads neither; measured
+   with the blanking disabled, the same control fires twice on the string and
+   five times on the comment.
+
+*Its limits, stated in its docstring rather than implied:* block comments,
+character literals, raw strings and templates are not modelled, and `src/cal/`
+holds none. In the first two a `/` or `%` reads as a division and fails loud;
+a raw string ending in a backslash would be mis-blanked, the one shape that
+could hide code.
+
+*Alternative declined:* extend C-11's list — the next function falsifies it
+again, and the check is the list that cannot go stale.
+
+### TM-164 — 0.1.1's contracts are comments, per Q-6's recommended answer A′, and nothing arms
+
+**2026-09-25, cycle 0.1.1 (PD-15).** `meta/OPEN_QUESTIONS.md` Q-6 is still the
+author's; the orchestrator's dispatch said to work `0.1.1.md` as written, which
+is for the recommendation, A′. So the obligations are comments in the syntax
+they would take, `answer` for `result` (TM-130):
+
+```
+date_to_days:   // `ensures answer >= NTIME_DAY_MIN && answer <= NTIME_DAY_MAX`
+days_to_date:   // `ensures answer.month >= 1 && answer.month <= 12`
+                // `prove(date_to_days(answer) == n)`
+```
+
+and `VERIFICATION.md` §6's two rows for these functions say they were written
+as comments at 0.1.1. **They are evidence of nothing** — a plain build checks
+no comment (P-1's dated status).
+
+*The arm cost, measured both ways* (a program importing the module and
+declaring no `failsafe`, `NITPICK-REACH-003`'s own list): **as committed, `cal`
+11 and the umbrella 13** — unchanged; **with `date_to_days` carrying the live
+`ensures` of `0.1.1.md` §6 (a scratch copy), `cal` 12 and the umbrella 14**, the
+one extra identity `EnsuresViolated`, exactly as planned. If the author answers
+A, that is the switch, and its arm's code in this ecosystem is **117** — the
+orchestrator's cross-stream table, 2026-09-25 — not the 110 the plan proposed,
+which is an ordinary failure exit in `nitpick-regex`'s `vec_unit.npk`. Taking
+it is a new decision, not an edit to this one.
+
+*Alternative declined:* live contracts now, ahead of the author's answer — a
+budget cost every consumer would pay, taken by default.

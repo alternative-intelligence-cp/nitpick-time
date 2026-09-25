@@ -42,14 +42,24 @@ whole supported range, including negative years, because C-1 says proleptic.
 |---|---|
 | minimum date | `−9999-01-01` |
 | maximum date | `+9999-12-31` |
-| minimum day number (epoch 1970-01-01 = 0) | `−4 371 588` |
+| minimum day number (epoch 1970-01-01 = 0) | `−4 371 587` |
 | maximum day number | `+2 932 896` |
-| **total days in range** | **7 304 485** |
-| minimum `Timestamp.secs` | `−377 705 203 200` |
+| **total days in range** | **7 304 484** |
+| minimum `Timestamp.secs` | `−377 705 116 800` |
 | maximum `Timestamp.secs` | `+253 402 300 799` |
 
 Those numbers are computed, not estimated, and cycle 0.1 pins them as named
-constants with a test that recomputes them.
+constants with a test that recomputes them —
+`tests/unit/range_constants.npk`, since cycle 0.1.1.
+
+*(Amended at cycle 0.1.1, TM-161. The table read **−4 371 588**, **7 304 485**
+and **−377 705 203 200** until then — each one day early. −4 371 588 is the
+day number of **−10000-12-31**, the day before the range, which C-4 refuses:
+the range holds 10 000 years below year 1, exactly 25 × 146 097 = 3 652 425
+days, and year 1 begins at day −719 162, so −9999-01-01 is day −4 371 587.
+The seconds and the total were derived from the wrong first day, so every
+relation between them held and none could catch it. The recomputation did,
+exiting 10 against the old constant before it moved.)*
 
 *Reasoning for ±9999 rather than something wider:*
 
@@ -245,6 +255,16 @@ range far wider than C-4's, defined for negative years, and have a published
 proof. `ntime` uses them as given, cites the source in the module header, and
 does not reinvent them.
 
+**The source**, cited in `src/cal/cal.npk`'s header since cycle 0.1.1: Howard
+Hinnant, *chrono-Compatible Low-Level Date Algorithms*,
+`howardhinnant.github.io/date_algorithms.html` — the page dates itself
+2021-09-01 and was read on 2026-09-25, the first row of
+[`../research/CURRENCY.md`](../research/CURRENCY.md), with its digest in
+[`../research/hinnant-date-algorithms.md`](../research/hinnant-date-algorithms.md).
+The transcription was checked against the page line by line, not against the
+digest. **Its one deviation is C-12's**: Hinnant's intermediates are
+`unsigned`, and `ntime`'s are `int64`.
+
 The shape, for a reader who has not seen them:
 
 ```
@@ -257,17 +277,39 @@ days_from_civil(y, m, d):
     return era * 146097 + doe - 719468
 ```
 
-**Rule C-11 — every division in them is by a nonzero literal** (4, 5, 100, 400,
-146097), so D-007's divide-by-zero trap is unreachable by construction and the
-obligation is discharged by inspection. Stated because it is exactly the kind
-of thing `VERIFICATION.md` has to be able to claim.
+**Rule C-11 (TM-163) — every division in `src/cal/` is by a positive integer
+literal.** Nonzero, so D-007's divide-by-zero trap is unreachable by
+construction; and not −1, so its `MIN / −1` overflow is unreachable too. Both
+obligations are discharged by inspection, which is exactly the kind of thing
+`VERIFICATION.md` has to be able to claim. **The rule carries no list of
+divisors**: `check_literal_divisors` reads every `/`, `%`, `/=` and `%=` in the
+code of every `.npk` under `src/cal/` on every full run and fails on any other
+divisor, so the list is the check's and cannot go stale.
+
+*(Amended at cycle 0.1.1, TM-163. The rule read "every division in them is by a
+nonzero literal (4, 5, 100, 400, 146097)" — `days_from_civil`'s four divisors
+and one of `civil_from_days`' nine. The other eight, and the `%` of
+`is_leap_year` and `weekday_number_sunday_first`, were in no list, so the list
+was incomplete the day the second algorithm arrived. "Nonzero" became
+"positive" because the check accepts only an unsigned literal, and a positive
+divisor is what closes `MIN / −1` as well as the zero.)*
 
 **Rule C-12 — the intermediate values are `int64`, and the reason is
-measured.** `era * 146097` at year −9999 is about −4.4 × 10⁶, and `yoe * 365`
-is at most 145 635 — nowhere near an `int32` limit, but the input `year` is
-`int32` and the products are computed in `int64` so that a caller who somehow
-supplies an out-of-range year gets the range check's error rather than a trap
-inside the algorithm.
+measured.** `era * 146097` at year −9999 is −3 652 425 (`era` is −25), and
+`yoe * 365` is at most 145 635 — nowhere near an `int32` limit, but the input
+`year` is `int32` and the products are computed in `int64` so that NO field
+value traps inside the algorithm: `date_to_days` is total over every `int32`
+year and every pair of `uint8`s, with `|era| ≤ 5.4 × 10⁶` and
+`|era × 146 097| ≤ 7.9 × 10¹¹` (TM-162), and `days_to_date` refuses a day
+outside §2's range through its `Result` before its first addition.
+
+*(Amended at cycle 0.1.1, TM-162. This rule read "`era * 146097` at year −9999
+is about −4.4 × 10⁶" — that is the day number, not the product, which is
+−3 652 425 — and ended "so that a caller who somehow supplies an out-of-range
+year gets the range check's error rather than a trap inside the algorithm".
+`date_to_days` has no range check to give: its argument is a `CivilDate`,
+sealed since C-8c, and it is total instead. The range check is
+`days_to_date`'s.)*
 
 **Rule C-13 — weekday is derived, not stored.**
 `weekday = (days + 3) mod 7` with a non-negative modulus correction, Monday =
@@ -291,11 +333,16 @@ way and round-trip with `CivilDate`.
 
 **Rule C-16 (TM-026).** The cycle-0.1 gate is:
 
-> **Every day number in `[−4 371 588, +2 932 896]` satisfies
+> **Every day number in `[−4 371 587, +2 932 896]` satisfies
 > `date_to_days(days_to_date(n)) == n`, and every date in the supported range
 > satisfies `days_to_date(date_to_days(d)) == d`.**
 
-That is 7 304 485 cases in each direction, run in full, not sampled. It is the
+*(Amended at cycle 0.1.1, TM-161: the interval's lower end read −4 371 588 and
+the count below 7 304 485 — §2's first day, one day early. At the old bound
+the first element of the sweep is −10000-12-31, which `days_to_date` cannot
+return, so the gate would have failed on its first case.)*
+
+That is 7 304 484 cases in each direction, run in full, not sampled. It is the
 analogue of the sibling library's `GraphemeBreakTest.txt` gate, and it is
 stronger: there is no external corpus to trust, because the property is
 self-evidently the right one and the range is small enough to enumerate.

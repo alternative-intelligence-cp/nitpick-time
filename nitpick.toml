@@ -112,7 +112,7 @@ path  = "tests/probe"
 #   `parse`   HAS NO ENTRY BY DESIGN, not by omission (TM-123). It is a
 #             WHOLE-TREE stage: `BUILD.md` §3's Directory column for it reads
 #             "every `.npk` in the tree", and that is where its value is — of
-#             the 88 files here [[sweep: npk_total=88]], 29 are put in front of
+#             the 91 files here [[sweep: npk_total=91]], 29 are put in front of
 #             the compiler by nothing
 #             else. An entry would narrow it to one directory and silently
 #             un-cover the rest, so `stage = "parse"` is REFUSED BY NAME.
@@ -131,8 +131,9 @@ path  = "tests/probe"
 #             arrives with `fmt` at cycle 0.4.
 #   `sweep`   IMPLEMENTED, and `tests/unit/sweep/` is empty. Exercised by
 #             `selfcheck.py` case 7. **Its entry arrives at cycle 0.1 with the
-#             civil round-trip sweep** (`TESTING.md` V-2, V-3: 7 304 485 days,
-#             both directions), and every member will carry `// sweep-count:`
+#             civil round-trip sweep** (`TESTING.md` V-2, V-3: 7 304 484 days,
+#             both directions -- 7 304 485 until cycle 0.1.1 corrected the
+#             range's first day, TM-161), and every member will carry `// sweep-count:`
 #             so the harness can tell a sweep that ran from one that did not
 #             (TM-122). Until then `--quick` has nothing to skip and says so
 #             with the number.

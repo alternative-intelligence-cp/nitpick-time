@@ -15,7 +15,9 @@
 // sign. `-4 % 4`, `-100 % 100` and `-400 % 400` are all `0` under C semantics,
 // so the rule needs no correction. A correction WOULD be needed the moment a
 // non-zero remainder were used -- which `days_from_civil`'s `era` does, and
-// which is why 0.1.1 still owes `(y >= 0 ? y : y - 399) / 400`.
+// which is why `date_to_days` carries `(y >= 0 ? y : y - 399) / 400` since
+// cycle 0.1.1, with `tests/unit/day_number_vectors.npk` testing it at years
+// -1, -4, -100, -400 and -401.
 //
 // A RULE THAT IS RIGHT AND A RULE THAT IS RIGHT BY ACCIDENT PASS THE SAME
 // POSITIVE-YEAR SUITE. That is the whole reason the four century cases each

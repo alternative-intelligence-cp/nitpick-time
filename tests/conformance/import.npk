@@ -7,10 +7,13 @@
 // PUBLIC SURFACE IS IMPORTABLE. It was written when the surface was EMPTY --
 // importing an empty surface was exactly the test -- and at 0.0.4 the surface
 // became 35 names from `src/core/`, then 48 at 0.1.0 with `src/cal/`'s
-// thirteen: this file goes on compiling as names are added to `src/lib.npk`,
-// and the day it does NOT, the surface changed in a
-// way that breaks every consumer -- which is a MAJOR version by TM-013 and had
-// better be a deliberate act rather than a discovery.
+// thirteen, then 50 at 0.1.1 with Hinnant's two, `date_to_days` and
+// `days_to_date` -- which moved the bill below by NOTHING: they divide, add,
+// multiply and raise `ETimeValue`, every one of which was already armed, and
+// they have no loop. This file goes on compiling as names are added to
+// `src/lib.npk`, and the day it does NOT, the surface changed in a way that
+// breaks every consumer -- which is a MAJOR version by TM-013 and had better
+// be a deliberate act rather than a discovery.
 //
 // THE IMPORT IS A RELATIVE PATH, AND THAT IS A DEFECT WE ARE LIVING WITH
 // (0.0.1 P-9, `BUILD.md` B-16). The shape an application SHOULD write is

@@ -98,12 +98,18 @@ expressed in seconds:
 
 | Bound | Value | Civil |
 |---|---|---|
-| minimum | `−377705203200` | `−9999-01-01T00:00:00Z` |
+| minimum | `−377705116800` | `−9999-01-01T00:00:00Z` |
 | maximum | `253402300799` | `+9999-12-31T23:59:59Z` |
 
-Both fit `int64` with twenty-seven orders of magnitude to spare, so the range
+Both fit `int64` with seven orders of magnitude to spare, so the range
 is a *policy*, not a representation limit — and it is checked at every
 constructor rather than left to the trap.
+
+*(Amended at cycle 0.1.1, TM-161. The minimum read `−377705203200`, which is
+midnight on −10000-12-31 — `CALENDAR.md` §2's first day was one day early and
+this bound was derived from it. And the sentence under the table said
+"twenty-seven orders of magnitude": `int64` holds 9.2 × 10¹⁸ and the larger
+bound is 3.8 × 10¹¹, a ratio of 2.4 × 10⁷ — seven.)*
 
 ---
 
@@ -242,7 +248,7 @@ than proposed repeatedly.
 
 | Span | Nanoseconds | Fits `int64`? |
 |---|---|---|
-| the full civil range (7 304 485 days) | 6.31 × 10²⁰ | **no** |
+| the full civil range (7 304 484 days — 7 304 485 until cycle 0.1.1, TM-161) | 6.31 × 10²⁰ | **no** |
 | ±292 years | 9.22 × 10¹⁸ | yes, exactly |
 
 **Rule M-18 — `timestamp_since(a, b) -> Result<Duration>` fails

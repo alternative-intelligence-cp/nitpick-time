@@ -45,7 +45,11 @@ of the range is −4 371 587, not −4 371 588 — so the range holds 7 304 484 
 not the 7 304 485 the checklist and gate below say. Found at planning;
 `0.1.1.md` §1 has the evidence, and 0.1.1 corrects it — specification first,
 with the test that recomputes it — which is why the numbers below are flagged
-rather than silently changed.
+rather than silently changed. **CORRECTED AT 0.1.1 (TM-161)**, with the test
+seen red at the old constant first; the numbers below now carry the corrected
+values, and 0.1.2's month count moved with them — 239 976 was 19 998 years ×
+12, and `[−9999, +9999]` is 19 999 years, so **239 988** (found at 0.1.1's
+execution, not at planning).
 
 **Decisions OUT, taken at 0.1.0 because the work revealed them:** TM-147 (an
 `error:` cannot carry a payload, so C-5's "`ETimeValue` with a `ValueFault`" is
@@ -131,17 +135,19 @@ environment) and a control that fails.
 ### 0.1.2 — the sweep — THE GATE
 > ⚠ **Read `0.1.1.md` §1 before this section.** The first day of the range is
 > −4 371 587 and the range holds **7 304 484** days; the bound and the two
-> counts below are corrected by 0.1.1's worker together with `CALENDAR.md` §2
-> (PD-12), and are flagged here rather than changed ahead of the specification.
+> counts below were corrected by 0.1.1's worker together with `CALENDAR.md` §2
+> (PD-12, recorded as **TM-161**) — they read −4 371 588 and 7 304 485 until
+> then — and the month count with them: it read **239 976**, which is 19 998
+> years × 12, and the range is 19 999 years.
 > **And measured at planning, for this subcycle's own plan:** a forward round
 > trip over the whole corrected range took 1.23 s at `-O0` and 0.19 s under
 > `opt -O2`; `for (int64:i in lo..hi)` is inclusive and needs no measure and no
 > arm, while `till`/`loop` arm `BadStep` even with a literal step.
-- [ ] every day number in `[−4 371 588, +2 932 896]` satisfies `date_to_days(days_to_date(n)) == n` — 7 304 485 cases
-- [ ] every date in the range satisfies `days_to_date(date_to_days(d)) == d` — 7 304 485 cases
+- [ ] every day number in `[−4 371 587, +2 932 896]` satisfies `date_to_days(days_to_date(n)) == n` — 7 304 484 cases
+- [ ] every date in the range satisfies `days_to_date(date_to_days(d)) == d` — 7 304 484 cases
 - [ ] **monotonicity**: `date_to_days` strictly increasing over dates in order
 - [ ] **the weekday cycle**: advances by exactly one mod seven per day, across every century and 400-year boundary
-- [ ] **month lengths**: match the leap rule for every (year, month) in range — 239 976 cases
+- [ ] **month lengths**: match the leap rule for every (year, month) in range — 239 988 cases
 - [ ] the sweep is a `sweep`-stage test, runs in full on a full invocation, and `--quick` skipping it is caught by the self-check's case 7
 - [ ] the wall-clock cost recorded; if it is over ~30 s, say so and decide whether to keep it in the default run
 
@@ -160,9 +166,9 @@ environment) and a control that fails.
 ## Gate
 
 **Every day in the supported range round-trips, in both directions, in full.**
-7 304 485 cases each way, plus monotonicity, the weekday cycle and month
-lengths on the same sweep. This is the strongest statement `ntime` makes and it
-costs seconds.
+7 304 484 cases each way (7 304 485 until 0.1.1, TM-161), plus monotonicity,
+the weekday cycle and month lengths on the same sweep. This is the strongest
+statement `ntime` makes and it costs seconds.
 
 ## Watch for
 

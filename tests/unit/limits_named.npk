@@ -10,11 +10,14 @@
 // date in cycle 0.6.
 //
 // IT IS NOT THE RECOMPUTATION TEST. `limits.npk`'s header and `0.0.4.md` §4
-// both say cycle 0.1 adds a test that RECOMPUTES the four range constants from
-// the calendar algorithm. That is strictly stronger and it needs the calendar,
-// which does not exist yet. This file checks the relations the constants must
-// satisfy among THEMSELVES, which needs nothing -- and it is stated as the
-// weaker guarantee it is.
+// both said cycle 0.1 would add a test that RECOMPUTES the four range
+// constants from the calendar algorithm, and cycle 0.1.1 did:
+// `tests/unit/range_constants.npk`. That is strictly stronger, and it is the
+// one that found `NTIME_DAY_MIN` a day early (TM-161) -- a wrong number every
+// relation below was satisfied by, because each had been derived from it.
+// This file checks the relations the constants must satisfy among
+// THEMSELVES, which needs nothing -- and it is stated as the weaker guarantee
+// it is.
 mod:limits_named;
 
 use "../../src/core/limits.npk".*;
@@ -34,9 +37,12 @@ fixed uint64:U64_MAX = ~0u64;
 
 func:main = int32(cstring[]:_~argv) {
     // ---- CALENDAR.md §2: the total-days figure ---------------------------
-    // 2 932 896 - (-4 371 588) + 1 = 7 304 485, the number §2's table gives
-    // and the size of cycle 0.1's exhaustive sweep.
-    if (NTIME_DAY_MAX - NTIME_DAY_MIN + 1i64 != 7304485i64) { exit 10i32; }
+    // 2 932 896 - (-4 371 587) + 1 = 7 304 484, the number §2's table gives
+    // and the size of cycle 0.1's exhaustive sweep. (Until cycle 0.1.1 this
+    // line said -4 371 588 and 7 304 485, and passed: both numbers came from
+    // the same wrong first day, so the relation held between them. TM-161;
+    // `tests/unit/range_constants.npk` is the test that asks the calendar.)
+    if (NTIME_DAY_MAX - NTIME_DAY_MIN + 1i64 != 7304484i64) { exit 10i32; }
 
     // ---- CALENDAR.md §2: seconds are days x 86 400 -----------------------
     if (NTIME_SECS_MIN != NTIME_DAY_MIN * NTIME_SECS_PER_DAY) { exit 11i32; }

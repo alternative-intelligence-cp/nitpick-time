@@ -58,7 +58,7 @@ import re
 
 import build as build_mod
 from build import BuildError
-from checks import Result, strip_comments
+from checks import Result, strip_comments, strip_strings
 
 
 # The unconditional floor, measured rather than read: a program with `main`, no
@@ -84,34 +84,9 @@ _FAIL_SITE = re.compile(r"\bfail\s+([A-Z][A-Za-z0-9_]*)")
 _PROPAGATE = re.compile(r"\?!|!!!")
 
 
-def strip_strings(text):
-    """Blank double-quoted string bodies, preserving length and line structure.
-
-    OPERATOR DETECTION CANNOT READ STRINGS. `use "./cal/cal.npk".*;` contains a
-    `/` and a `*` and arms nothing; a scanner that counted them would charge
-    every module in the library for a division it does not perform. Blanking the
-    body rather than deleting it keeps every line number and column honest.
-    """
-    out, i, n, in_str = [], 0, len(text), False
-    while i < n:
-        c = text[i]
-        if in_str:
-            if c == "\\" and i + 1 < n:
-                out.append("  ")
-                i += 2
-                continue
-            if c == '"':
-                in_str = False
-                out.append(c)
-            else:
-                out.append(" " if c != "\n" else "\n")
-            i += 1
-            continue
-        if c == '"':
-            in_str = True
-        out.append(c)
-        i += 1
-    return "".join(out)
+# `strip_strings` -- blank double-quoted string bodies -- lives in `checks.py`
+# since cycle 0.1.1 and is imported above: `check_literal_divisors` reads
+# operators too, and one definition of "what is a string" serves both.
 
 
 def code_only(path):

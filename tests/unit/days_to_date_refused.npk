@@ -1,0 +1,62 @@
+// expect-exit: 0
+//
+// `days_to_date` REFUSES A DAY OUTSIDE THE RANGE THROUGH ITS `Result`, NEVER
+// THROUGH A TRAP -- `SAFETY.md` S-12 (every range checked BEFORE the trap) and
+// `0.1.1.md` §4c.
+//
+// THE CASE THIS FILE EXISTS FOR IS `int64` MAX. Hinnant's first line is
+// `z = n + 719468`, and at `int64` MAX that addition overflows: D-210 would
+// trap it `IntOverflow`, and this file's `failsafe` would exit 93. It exits 0
+// only because `days_to_date` compares `n` against `NTIME_DAY_MIN` and
+// `NTIME_DAY_MAX` before its first addition -- so this is the test that the
+// check comes FIRST, not merely that it exists.
+//
+// `int64` MIN IS BUILT ARITHMETICALLY, because it cannot be spelled as a
+// literal in any width (`NITPICK-LEX-004`, `tests/probe/probe02d_wide_literal_refused.npk`):
+// the literal envelope is signed 64-bit and MIN's magnitude is one too large.
+//
+// EXIT CODES. 10 ... 13, one per refusal that did not happen, clear of every
+// arm code. The accepting half -- that the two bounds themselves are accepted
+// and are -9999-01-01 and 9999-12-31 -- is `tests/unit/range_constants.npk`.
+mod:days_to_date_refused;
+
+use "../../src/cal/cal.npk".CivilDate;
+use "../../src/cal/cal.npk".days_to_date;
+use "../../src/core/limits.npk".NTIME_DAY_MIN;
+use "../../src/core/limits.npk".NTIME_DAY_MAX;
+
+func:main = int32(cstring[]:_~argv) {
+    // one day either side of the range
+    Result<CivilDate>:below = days_to_date(NTIME_DAY_MIN - 1i64);
+    if (!below.is_error) { exit 10i32; }
+    Result<CivilDate>:above = days_to_date(NTIME_DAY_MAX + 1i64);
+    if (!above.is_error) { exit 11i32; }
+
+    // `int64` MAX: `n + 719468` would trap, so the refusal proves the order
+    Result<CivilDate>:top = days_to_date(9223372036854775807i64);
+    if (!top.is_error) { exit 12i32; }
+
+    // `int64` MIN, constructed
+    Result<CivilDate>:bottom = days_to_date((0i64 - 9223372036854775807i64) - 1i64);
+    if (!bottom.is_error) { exit 13i32; }
+
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

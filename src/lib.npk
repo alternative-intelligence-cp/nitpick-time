@@ -19,8 +19,10 @@
 // deliberate. Adding a line here is the moment a name becomes public and, by
 // TM-013, a thing a MAJOR version is needed to take away.
 //
-// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 48
-// names now [[sweep: lib_reexports=48]], sixty lines below. (This paragraph
+// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 50
+// names now [[sweep: lib_reexports=50]], sixty lines below -- 48 until cycle
+// 0.1.1 added `date_to_days` and `days_to_date`, counted by `grep -c` and
+// read back from `check_denominators`' `measured:` line. (This paragraph
 // still read "EMPTY TODAY ... this file re-exports nothing" two subcycles
 // after they were added — C6. It then carried `35` through cycle 0.1.0's
 // thirteen additions until the tag was added: an UNTAGGED derived number in a
@@ -191,6 +193,14 @@ pub use "./cal/cal.npk".civil_time;
 // validates three of its four conditions is not a validating constructor.
 pub use "./cal/cal.npk".is_leap_year;
 pub use "./cal/cal.npk".days_in_month;
+
+// Hinnant's two algorithms (cycle 0.1.1, C-10, TM-016): the day number of a
+// date, epoch 1970-01-01 = 0, and the date of a day number. `date_to_days` is
+// `never fails` and total over every field value; `days_to_date` refuses a day
+// outside `[NTIME_DAY_MIN, NTIME_DAY_MAX]` with `ETimeValue` before any
+// arithmetic, and builds its answer through `civil_date` (TM-162).
+pub use "./cal/cal.npk".date_to_days;
+pub use "./cal/cal.npk".days_to_date;
 
 // C-7: Monday = 1 ... Sunday = 7, with the C convention beside it because a
 // caller porting code will look for it. The enum's own order stays ISO's.

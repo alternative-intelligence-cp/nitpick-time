@@ -1,0 +1,114 @@
+// expect-exit: 0
+//
+// THE RANGE CONSTANTS, RECOMPUTED FROM THE ALGORITHM -- the test
+// `src/core/limits.npk`'s header has promised since cycle 0.0.4, and the one
+// that found the promise was needed. `CALENDAR.md` §2 and C-4 (TM-014).
+//
+// WHY A SECOND TEST OF THE SAME FOUR NUMBERS. `tests/unit/limits_named.npk`
+// checks the relations the constants satisfy AMONG THEMSELVES -- days times
+// 86 400, max minus min plus one -- and every one of those relations was true
+// of a wrong starting day, because each was derived from it. `NTIME_DAY_MIN`
+// was -4 371 588 from cycle 0.0.4 to 0.1.1: the day number of -10000-12-31,
+// one day before the range begins, and a year C-4 refuses. This file asks the
+// calendar instead: build -9999-01-01 with `civil_date`, count its days with
+// `date_to_days`, and compare. `0.1.1.md` §1 has the three measurements that
+// agree on -4 371 587.
+//
+// IT WAS SEEN RED BEFORE IT WAS SEEN GREEN, and that is its control. Written
+// first, it ran against the unchanged constant and exited 10 -- the first
+// assertion below -- which is recorded in `0.1.1.md`'s execution record. A
+// test of a constant that has only ever been seen green proves nothing about
+// the constant.
+//
+// EXIT CODES. 10 ... 20, one per assertion, clear of every arm code. Every
+// `Result` is tested with `is_error` before its `value` is read, so a date or
+// a day this file expects to be accepted and that is REFUSED exits with its
+// own assertion's code rather than as the anonymous `ETimeValue` arm.
+mod:range_constants;
+
+use "../../src/cal/cal.npk".CivilDate;
+use "../../src/cal/cal.npk".civil_date;
+use "../../src/cal/cal.npk".date_to_days;
+use "../../src/cal/cal.npk".days_to_date;
+use "../../src/core/limits.npk".NTIME_YEAR_MIN;
+use "../../src/core/limits.npk".NTIME_YEAR_MAX;
+use "../../src/core/limits.npk".NTIME_DAY_MIN;
+use "../../src/core/limits.npk".NTIME_DAY_MAX;
+use "../../src/core/limits.npk".NTIME_SECS_MIN;
+use "../../src/core/limits.npk".NTIME_SECS_MAX;
+use "../../src/core/limits.npk".NTIME_SECS_PER_DAY;
+
+func:main = int32(cstring[]:_~argv) {
+    // ---- the two day numbers, from the ALGORITHM -------------------------
+    // The first day of C-4's range is -9999-01-01 and the last is 9999-12-31,
+    // both built by the validating constructor, both counted by Hinnant.
+    Result<CivilDate>:first = civil_date(NTIME_YEAR_MIN, 1i64, 1i64);
+    if (first.is_error)                                  { exit 10i32; }
+    if (raw date_to_days(first.value) != NTIME_DAY_MIN)  { exit 10i32; }
+    Result<CivilDate>:last = civil_date(NTIME_YEAR_MAX, 12i64, 31i64);
+    if (last.is_error)                                   { exit 11i32; }
+    if (raw date_to_days(last.value) != NTIME_DAY_MAX)   { exit 11i32; }
+
+    // ---- the total, against `CALENDAR.md` §2's table -----------------------
+    // 2 932 896 - (-4 371 587) + 1. A 400-year cycle is 146 097 days, and
+    // -10000-01-01 to 10000-01-01 is fifty of them, 7 304 850; less leap year
+    // -10000's 366, which is outside the range, is 7 304 484.
+    if (NTIME_DAY_MAX - NTIME_DAY_MIN + 1i64 != 7304484i64) { exit 12i32; }
+
+    // ---- the seconds, from the recomputed days ----------------------------
+    // MIN is midnight on the first day; MAX is the last second of the last.
+    if (NTIME_SECS_MIN != NTIME_DAY_MIN * NTIME_SECS_PER_DAY) { exit 13i32; }
+    if (NTIME_SECS_MAX
+        != NTIME_DAY_MAX * NTIME_SECS_PER_DAY + NTIME_SECS_PER_DAY - 1i64) {
+        exit 14i32;
+    }
+
+    // ---- and back: the two bounds are the two dates -----------------------
+    // With the old constant, `days_to_date(NTIME_DAY_MIN)` passed its own range
+    // check and was then refused by `civil_date` (year -10000): two answers
+    // for one bound. A refusal here is 15 or 16 as surely as a wrong date is.
+    Result<CivilDate>:r_lo = days_to_date(NTIME_DAY_MIN);
+    if (r_lo.is_error)               { exit 15i32; }
+    CivilDate:lo = r_lo.value;
+    if (lo.year != (0i32 - 9999i32)) { exit 15i32; }
+    if (lo.month != 1u8)             { exit 15i32; }
+    if (lo.day != 1u8)               { exit 15i32; }
+    Result<CivilDate>:r_hi = days_to_date(NTIME_DAY_MAX);
+    if (r_hi.is_error)               { exit 16i32; }
+    CivilDate:hi = r_hi.value;
+    if (hi.year != 9999i32)          { exit 16i32; }
+    if (hi.month != 12u8)            { exit 16i32; }
+    if (hi.day != 31u8)              { exit 16i32; }
+
+    // ---- one day past either end is refused, through the `Result` ---------
+    Result<CivilDate>:below = days_to_date(NTIME_DAY_MIN - 1i64);
+    if (!below.is_error) { exit 17i32; }
+    Result<CivilDate>:above = days_to_date(NTIME_DAY_MAX + 1i64);
+    if (!above.is_error) { exit 18i32; }
+
+    // ---- and so is the civil date on the far side of either end ----------
+    Result<CivilDate>:y_lo = civil_date(NTIME_YEAR_MIN - 1i64, 12i64, 31i64);
+    if (!y_lo.is_error) { exit 19i32; }
+    Result<CivilDate>:y_hi = civil_date(NTIME_YEAR_MAX + 1i64, 1i64, 1i64);
+    if (!y_hi.is_error) { exit 20i32; }
+
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

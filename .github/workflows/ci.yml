@@ -36,10 +36,11 @@
 #
 # WHAT A GREEN RUN PROVES TODAY. `src/core/` is real code since cycle 0.0.4 --
 # `Vec<T>`, `Bytes` and thirteen named bounds -- and `src/cal/` since 0.1.0 --
-# the civil types and their validating constructors -- re-exported together as
-# 48 public names, so this IS evidence about behaviour, of the 75 units the
-# runner reports at compiler `c3bdae2` (62 at cycle 0.0.6, 67 at 0.1.0, 70 at
-# 0.1.0b). What
+# the civil types and their validating constructors, and since 0.1.1 Hinnant's
+# `date_to_days` and `days_to_date` -- re-exported together as 50 public names,
+# so this IS evidence about behaviour, of the 78 units the runner reports at
+# compiler `c3bdae2` (62 at cycle 0.0.6, 67 at 0.1.0, 70 at 0.1.0b, 75 at
+# 0.1.0c). What
 # it is evidence of: the pinned compiler builds from a clean checkout at exactly
 # LLVM 20.1.2, every `.npk` under `src/` compiles, every unit under `tests/`
 # meets its own header at -O0 and again under `opt -O2`, the whole
@@ -56,7 +57,11 @@
 # `Bytes` are `sealed limit<ListLen>`, and every field of `CivilDate` and
 # `CivilTime` is `sealed` -- five probes assert that the pinned compiler
 # refuses a consumer's write or hidden read, one that the reads still work,
-# and every root that consumes `src/core/` names `LimitViolated`.
+# and every root that consumes `src/core/` names `LimitViolated`. AND SINCE
+# CYCLE 0.1.1: the range constants are recomputed from the calendar algorithm
+# rather than trusted (TM-161), twenty-six day numbers computed without
+# Hinnant's formula are asserted both ways, and every divisor in `src/cal/`
+# is a positive integer literal, checked (TM-163).
 #
 # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
 # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,

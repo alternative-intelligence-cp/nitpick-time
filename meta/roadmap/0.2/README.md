@@ -41,7 +41,7 @@ publicly. Recommendation on file: yes, read-only.
 
 ### 0.2.2 — conversion — THE GATE
 - [ ] `timestamp_to_utc` and `civil_to_utc`, over `cal`'s algorithms
-- [ ] the round trip over **every day boundary** in the range (7 304 485 cases)
+- [ ] the round trip over **every day boundary** in the range (7 304 484 cases — 7 304 485 until cycle 0.1.1 corrected the range's first day, TM-161)
 - [ ] the round trip over **every second of 512 randomly chosen days**, with the seed committed so the run is reproducible (~44 M cases)
 - [ ] a `sweep`-stage test, with the wall-clock cost recorded
 

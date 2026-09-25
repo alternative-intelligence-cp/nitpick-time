@@ -606,6 +606,25 @@ def _mini_tree(where, files, skip_layers=()):
     return where
 
 
+def _div_tree(expr):
+    """`src/cal/cal.npk` for one of `check_literal_divisors`' rows: a function
+    whose body divides as `expr`, beside a `use` PATH and a COMMENT that hold a
+    `/` and a `%` each.
+
+    The two are the shapes the real `cal.npk` has -- five `use
+    "../core/limits.npk"` lines, and a header that explains C-11 in prose -- so
+    a check that read strings or prose would fail the repository on its own
+    imports and its own documentation (`check_purity`'s first-run lesson).
+    Every control built here is therefore also the proof that it does not.
+    Concatenated rather than `%`-formatted, because the fixture is full of `%`.
+    """
+    return ("mod:cal;\n"
+            "use \"../core/limits.npk\".NTIME_DAY_MIN;\n"
+            "// IN PROSE, NOT CODE: y / m, y % 0i64 and x /= m divide by nothing\n"
+            "func:f = int64(int64:y, int64:m) never fails { pass "
+            + expr + "; };\n")
+
+
 # Each row: the check, the file that violates it, the file that does not, and a
 # fragment the finding must name. The CLEAN column is not decoration -- several
 # of these checks are one predicate away from failing this repository's own
@@ -664,6 +683,36 @@ PLANTED = [
      ("src/cal/cal.npk", "mod:cal;\nfixed int64:YEAR_MAX = 9999i64;\n"),
      ("src/core/limits.npk", "mod:limits;\nfixed int64:YEAR_MAX = 9999i64;\n"),
      "Every named bound lives in"),
+    # C-11 (TM-163): EVERY DIVISOR IN `src/cal/` A POSITIVE INTEGER LITERAL.
+    # Four rows, each a plant and a control that differ in ONE expression, and
+    # every one of the eight files carries a `use` path and a comment holding a
+    # `/` and a `%` -- see `_div_tree` -- so each silent control is also the
+    # proof that the check reads neither a string nor prose.
+    (checks_mod.check_literal_divisors,
+     ("src/cal/cal.npk", _div_tree("y / m")),
+     ("src/cal/cal.npk", _div_tree("y / 400i64")),
+     "is not a nonzero literal"),
+    (checks_mod.check_literal_divisors,
+     ("src/cal/cal.npk", _div_tree("y % 0i64")),
+     ("src/cal/cal.npk", _div_tree("y % 4i64")),
+     "literal zero"),
+    # `+%` IS NOT A DIVISION -- it is the wrapping add (the compiler's D-312).
+    # The control's operand is the NON-literal `m`, so only a check that reads
+    # `+%` as an addition stays silent on it, and the plant is the same text
+    # with the `+` deleted. (`0.1.1.md` planned `y +% 1i64` as this control,
+    # and a check that misread `+%` as a remainder would have passed that too:
+    # it would have been dividing by the nonzero literal `1i64`.)
+    (checks_mod.check_literal_divisors,
+     ("src/cal/cal.npk", _div_tree("(y % m) / 4i64")),
+     ("src/cal/cal.npk", _div_tree("(y +% m) / 4i64")),
+     "is not a nonzero literal"),
+    # A LITERAL IS NOT THE DIVISOR WHEN AN OPERATOR THAT BINDS TIGHTER THAN
+    # `/` FOLLOWS IT: `y / 256i64 =>! uint8` divides by `256i64 =>! uint8`,
+    # which is 0. Lexical, so the plant need not type-check, and does not.
+    (checks_mod.check_literal_divisors,
+     ("src/cal/cal.npk", _div_tree("y / 256i64 =>! uint8")),
+     ("src/cal/cal.npk", _div_tree("y / 256i64")),
+     "binds tighter than"),
     (checks_mod.check_raw_index,
      ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64(Vec:v) never fails "
                          "{ pass v.items[0i64]; };\n"),

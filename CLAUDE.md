@@ -7,7 +7,24 @@ Guidance for Claude Code sessions working in this repository.
 `ntime` — a date, time and time-zone library for **Nitpick**, the
 safety-critical systems language at `../../nitpick`.
 
-**Status, after cycle 0.1.0c: the access properties.** `Vec<T>`'s `items` is
+**Status, after cycle 0.1.1: the algorithms.** `date_to_days` and
+`days_to_date` are Howard Hinnant's `days_from_civil` and `civil_from_days`,
+transcribed line for line and cited in `src/cal/cal.npk`'s header (C-10,
+TM-016); `date_to_days` is `never fails` and total, and `days_to_date` refuses
+a day outside the range before its first addition and builds its answer
+through `civil_date` (TM-162). **The range's first day was one day early from
+the founding specification until this cycle**: −9999-01-01 is day **−4 371 587**, so the range
+holds **7 304 484** days and `NTIME_SECS_MIN` is −377 705 116 800 (TM-161) —
+found by `tests/unit/range_constants.npk`, which recomputes the constants from
+the algorithm and was seen RED at the old value first, while
+`tests/probe/probe07_negative_div.npk` had asserted the right number since
+cycle 0.0.0 and nothing compared the two. **Every divisor in `src/cal/` is a
+positive integer literal**, and `check_literal_divisors` says so on every run
+(C-11, TM-163). Contracts are comments, per Q-6's recommended answer (TM-164),
+and `cal` still owes **11** arms. A full invocation is **78 units green** at
+pin `c3bdae2`.
+
+**After cycle 0.1.0c: the access properties.** `Vec<T>`'s `items` is
 `hidden` and its `count`/`cap` are `sealed limit<ListLen>`; `Bytes`' `body` and
 `len` are sealed and `len` carries `ListLen` (TM-156) — so outside `src/core/`
 the bare pointer cannot be named (`NITPICK-TYPE-080`) and the lengths cannot be
@@ -118,15 +135,16 @@ here; "eight faults" was printed on every run for three cycles and only the
 cycle Gate had it right — C3.)*
 Before it, three of the harness's checks had been commissioned by hand and that
 was three checks, not a runner. Then: the `parse`, `check`, `golden` and `sweep`
-stages; `--quick`; and nine live tree checks — **thirteen today**: plus
+stages; `--quick`; and nine live tree checks — **fourteen today**: plus
 `check_exemptions_live` (0.0.5, TM-137), `check_denominators` and
-`run_defect_corpus` (0.0.6, TM-141/TM-142), and `check_expect_headers`, which
+`run_defect_corpus` (0.0.6, TM-141/TM-142), `check_expect_headers`, which
 existed all along and **was never in the count** — the row `TESTING.md` V-14c's
 "every check is commissioned" was false about, found by V-1a's own arithmetic
-not closing. *(It was FOURTEEN from cycle 0.1.0 to 0.1.0b — `check_civil_literal`
-joined — while this sentence said thirteen; and it is thirteen again since
-0.1.0c retired that check (TM-158). Re-derived from the run rather than
-carried: the `[5/9]` line reads `10 live` — `checks.LIVE`'s nine and
+not closing — and `check_literal_divisors` (0.1.1, TM-163). *(It was FOURTEEN
+from cycle 0.1.0 to 0.1.0b — `check_civil_literal` joined — while this sentence
+said thirteen; it was thirteen again after 0.1.0c retired that check (TM-158);
+and it is fourteen since 0.1.1. Re-derived from the run rather than carried:
+the `[5/9]` line reads `11 live` — `checks.LIVE`'s ten and
 `check_failsafe_arms` — and `run.py` drives the other three outside step 5.)*
 
 ## Before starting a session here

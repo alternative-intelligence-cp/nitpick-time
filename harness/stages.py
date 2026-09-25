@@ -473,9 +473,10 @@ def sweep(bld, rel, e):
     THIS IS THIS LIBRARY'S MOST PLAUSIBLE WAY TO BE GREEN AND WRONG, and the
     reason is structural rather than hypothetical. `ntime`'s strongest claim is
     an exhaustive sweep (V-2, V-3: every day in [-9999-01-01, +9999-12-31],
-    both directions, 7 304 485 x 2) -- and an exhaustive loop that returns
-    early exits 0 exactly like one that ran. Exit code cannot tell them apart,
-    and neither can anything else OUTSIDE the program.
+    both directions, 7 304 484 x 2 -- 7 304 485 until cycle 0.1.1, TM-161)
+    -- and an exhaustive loop that returns early exits 0 exactly like one that
+    ran. Exit code cannot tell them apart, and neither can anything else
+    OUTSIDE the program.
 
     So the evidence has to come from the program: a sweep member prints
     `swept <N>` and the harness requires N to equal the `// sweep-count:` its

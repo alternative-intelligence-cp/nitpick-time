@@ -52,8 +52,11 @@ names it. Three parts:
   sweep that ran short, and a program whose `failsafe` has been deleted. Case 6
   (a generator differing by one line) is **pending until 0.5** and prints as
   pending rather than passing.
-- **Nine planted violations across the tree checks** — each check shown red on a
-  violation and silent on a clean control, in milliseconds, with no compilation.
+- **Twenty planted violations across the tree checks** — each check shown red on
+  a violation and silent on a clean control, in milliseconds, with no
+  compilation. *(This bullet said "nine" from cycle 0.0.3, when it was true, to
+  0.1.1; the run prints the number, derived from `selfcheck.TREE_PLANTS`, and
+  it is 20 since `check_literal_divisors` brought four rows — TM-163.)*
 - **The S-6 arm generator** diffed against `NITPICK-REACH-003`'s own identity
   list on three modules whose bills cycle 0.0.0 measured.
 
@@ -112,12 +115,13 @@ against the summary line rather than left to review.
 - **Not that a view into a `Bytes` is used correctly.** Every gate here is a
   leak gate and a use-after-free is a WRONG ANSWER (S-18e, TM-139). Two shipped
   in cycle 0.0 and both were found by reading, not by a gate.
-- **Not that the tree checks have anything to check.** Thirteen are live and
+- **Not that the tree checks have anything to check.** Fourteen are live and
   several report `0` over a small denominator, which is the right answer and is
   why the denominator is always printed (V-1b). Four print as `PEND` with the
   cycle that turns them on. *(Fourteen were live from cycle 0.1.0 to 0.1.0b —
-  `check_civil_literal` — and this said thirteen; it is true again since
-  0.1.0c retired that check, TM-158.)*
+  `check_civil_literal` — and this said thirteen; thirteen was true again
+  after 0.1.0c retired that check, TM-158; and cycle 0.1.1's
+  `check_literal_divisors`, TM-163, makes fourteen.)*
 - **Not that CI is green.** Until cycle 0.0.6 this repository had never pushed,
   so the workflow had never run; the 0.0 close is its first.
 
@@ -157,6 +161,14 @@ plants and two controls retired with it, TM-158), 3 arm specimens and the
 verdict mechanisms; parse over 88 files; the defect corpus at 24; and library +
 repro + suite at 51 (39 probe — five new, `probe16`…`probe16e` — 11 unit, 1
 conformance). `75 = 24 + 51`, as `70 = 24 + 46` was.
+
+**At cycle 0.1.1, the same pin, 78 units**: the self-check's 7 planted cases,
+**20** tree-check violations with 20 clean controls (`check_literal_divisors`'
+four, TM-163), 3 arm specimens and the verdict mechanisms; the tree checks at
+`11 live`; parse over 91 files; the defect corpus at 24; and library + repro +
+suite at 54 (39 probe, 14 unit — three new, `range_constants`,
+`day_number_vectors` and `days_to_date_refused` — 1 conformance).
+`78 = 24 + 54`.
 
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the

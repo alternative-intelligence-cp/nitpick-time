@@ -99,8 +99,50 @@ def strip_comments(text):
     return "".join(out)
 
 
+def strip_strings(text):
+    """Blank double-quoted string bodies, preserving length and line structure.
+
+    OPERATOR DETECTION CANNOT READ STRINGS. `use "./cal/cal.npk".*;` contains a
+    `/` and a `*` and arms nothing; a scanner that counted them would charge
+    every module in the library for a division it does not perform. Blanking the
+    body rather than deleting it keeps every line number and column honest.
+
+    (HERE SINCE CYCLE 0.1.1, moved from `arms.py`, which imports it: the S-6
+    generator and `check_literal_divisors` both read operators, and two copies
+    of "what is a string" are two answers to it. `strip_comments` above keeps
+    string bodies, and `code_lines` below is comments-only, so every check that
+    predates this move reads exactly what it read before.)
+    """
+    out, i, n, in_str = [], 0, len(text), False
+    while i < n:
+        c = text[i]
+        if in_str:
+            if c == "\\" and i + 1 < n:
+                out.append("  ")
+                i += 2
+                continue
+            if c == '"':
+                in_str = False
+                out.append(c)
+            else:
+                out.append(" " if c != "\n" else "\n")
+            i += 1
+            continue
+        if c == '"':
+            in_str = True
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
 def code_lines(path):
-    """`[(lineno, code_only_text)]` for a source file, comments blanked."""
+    """`[(lineno, code_only_text)]` for a source file, comments blanked.
+
+    COMMENTS ONLY -- a string's body is kept, whatever `check_civil_literal`'s
+    docstring said while it lived (cycle 0.1.0 to 0.1.0c: "blanks comments and
+    string bodies"; it never did). A check that must not read strings either
+    calls `strip_strings` itself, as `check_literal_divisors` does.
+    """
     with open(path, "r", encoding="utf-8", errors="replace") as fh:
         text = fh.read()
     return list(enumerate(strip_comments(text).splitlines(), 1))
@@ -450,6 +492,149 @@ def check_constants_named(tree, **_):
     headline = ("%d bound declaration(s) and %d owned-constant occurrence(s) "
                 "over %d file(s) in src/" % (bounds, hits, len(files)))
     return Result("check_constants_named", headline, problems)
+
+
+# ---------------------------------------------------------------------------
+# check_literal_divisors -- CALENDAR.md C-11 (TM-163)
+# ---------------------------------------------------------------------------
+
+# C-11 is the CALENDAR's rule, so the scope is `src/cal/`. `SAFETY.md` S-16's
+# library-wide rule admits a divisor PROVEN nonzero on the same path, which no
+# text check can see; C-11 admits only a literal, which one can.
+LITERAL_DIVISOR_SCOPE = "src/cal/"
+
+# `/` and `%`, and with a trailing `=` the compound forms, which divide too.
+_DIVIDE = re.compile(r"[/%]")
+# THE ONE SPELLING C-11 ADMITS: a positive decimal integer with its width
+# suffix, `400i64` -- this library's house spelling of every literal. Unsigned
+# because a NEGATIVE divisor opens `MIN / -1` (D-007's other trap), and in the
+# grammar `-4i64` is not a literal anyway: it is `-` applied to one. Anything
+# else -- a name, an expression, `4` bare, `146_097i64`, a hex literal -- is a
+# finding, including the legal nonzero spellings: the rule is a spelling a
+# reader can check at a glance, and refusing is the safe direction.
+_POSITIVE_LITERAL = re.compile(
+    r"[1-9][0-9]*[iu](?:8|16|32|64|128)(?![A-Za-z0-9_])")
+_ZERO_LITERAL = re.compile(r"0+(?:[iu](?:8|16|32|64|128))?(?![A-Za-z0-9_])")
+# AND WHAT MAY NOT FOLLOW IT: an operator that binds TIGHTER than `/` (the
+# compiler's `OP_REFERENCE.md` §0) takes the literal as ITS operand, so the
+# divisor is no longer the literal. `256i64 =>! uint8` is 0. A cast (`=>!`,
+# `=>`), a pipeline (`|>`, `<|`) and the postfix forms (`.`, `?.`, `(`, `[`).
+# `=>!` is tried before `=>` so a finding names the operator actually there.
+_TIGHTER_THAN_DIVIDE = re.compile(r"=>!|=>|\|>|<\||\?\.|[.(\[]")
+
+
+def _skip_ws(text, i):
+    while i < len(text) and text[i] in " \t\r\n":
+        i += 1
+    return i
+
+
+def _operand_text(code, k, limit=40):
+    """The divisor as written, for a finding: a balanced `( ... )` group, or
+    the token run from `k`, cut at `limit` characters and at the line's end."""
+    if k < len(code) and code[k] == "(":
+        depth, j = 0, k
+        while j < len(code) and j - k < limit and code[j] != "\n":
+            if code[j] == "(":
+                depth += 1
+            elif code[j] == ")":
+                depth -= 1
+                if depth == 0:
+                    return code[k:j + 1]
+            j += 1
+        return code[k:j].rstrip() + " ..."
+    m = re.match(r"[-!~]*[A-Za-z0-9_.]+", code[k:k + limit])
+    if m:
+        return m.group(0)
+    return code[k:k + 12].split("\n")[0].strip() or "nothing"
+
+
+def check_literal_divisors(tree, **_):
+    """Every `/` and `%` in `src/cal/` divides by a positive integer literal.
+
+    `CALENDAR.md` C-11: every divisor in the calendar is a literal, so D-007's
+    divide-by-zero trap is unreachable BY CONSTRUCTION and the obligation is
+    discharged by inspection -- the kind of claim `VERIFICATION.md` has to be
+    able to make. C-11 used to carry a LIST of the divisors, and the list was
+    incomplete the day `civil_from_days` arrived with eight more (TM-163). This
+    check is the list that cannot go stale: it reads every division in the
+    scope on every full run.
+
+    READS CODE, NEVER PROSE, AND NEVER A STRING. `strip_comments` and then
+    `strip_strings` -- because every `use "../core/limits.npk".X;` line in
+    `cal.npk` holds a `/`, and its header explains this rule in prose with
+    `/` and `%` in it. `code_lines` blanks comments only, whatever the
+    retired `check_civil_literal` said of it (0.1.1's record). The clean
+    control in `selfcheck.PLANTED` carries both shapes, so the exemption is
+    proven rather than assumed.
+
+    `+%`, `-%` AND `*%` ARE NOT DIVISIONS. They are the wrapping `+ - *`
+    (the compiler's D-312), and their `%` is the marker, not the operator.
+
+    WHAT IT DOES NOT MODEL, stated so it is not over-read. Block comments,
+    character literals, raw and block strings and template literals: `src/cal/`
+    holds none. In a block comment, a character literal or a template's text a
+    `/` or `%` reads as a division and fails LOUD -- the safe direction. A raw
+    string ending in a backslash would be mis-blanked by `strip_strings`,
+    which reads that backslash as an escape; that is the one shape that could
+    hide code, and it would take a raw string in the calendar to reach it.
+    """
+    files = [f for f in src_files(tree) if f.startswith(LITERAL_DIVISOR_SCOPE)]
+    problems, divisions = [], 0
+    for rel in files:
+        with open(os.path.join(tree, rel), "r", encoding="utf-8",
+                  errors="replace") as fh:
+            code = strip_strings(strip_comments(fh.read()))
+        for m in _DIVIDE.finditer(code):
+            i = m.start()
+            if code[i] == "%" and i > 0 and code[i - 1] in "+-*":
+                continue                  # `+%` `-%` `*%` -- wrapping (D-312)
+            divisions += 1
+            lineno = code.count("\n", 0, i) + 1
+            j = i + 1
+            if j < len(code) and code[j] == "=":
+                j += 1                    # `/=` and `%=` divide as well
+            k = _skip_ws(code, j)
+            lit = _POSITIVE_LITERAL.match(code, k)
+            if lit:
+                after = _skip_ws(code, lit.end())
+                tighter = _TIGHTER_THAN_DIVIDE.match(code, after)
+                if not tighter:
+                    continue
+                problems.append(
+                    "%s:%d divides by `%s` followed by `%s`, which binds "
+                    "tighter than `%s` (the compiler's OP_REFERENCE.md §0): the "
+                    "divisor is not the literal but what `%s` makes of it, and "
+                    "a narrowing cast can make it zero -- `256i64 =>! uint8` "
+                    "is 0. C-11's literal must stand alone."
+                    % (rel, lineno, lit.group(0), tighter.group(0), code[i],
+                       tighter.group(0)))
+                continue
+            if _ZERO_LITERAL.match(code, k):
+                problems.append(
+                    "%s:%d divides by `%s`, a literal zero: D-007's "
+                    "divide-by-zero trap is not merely reachable here, it is "
+                    "reached on every call (C-11)."
+                    % (rel, lineno, _operand_text(code, k)))
+                continue
+            problems.append(
+                "%s:%d divides by `%s`, which is not a nonzero literal in the "
+                "one spelling C-11 admits -- a positive decimal integer with "
+                "its width suffix, like `400i64` (C-11, TM-163): the "
+                "divide-by-zero trap, and `MIN / -1`'s, are no longer "
+                "unreachable by construction. A divisor proven nonzero on its "
+                "path is S-16's and belongs outside `src/cal/`."
+                % (rel, lineno, _operand_text(code, k)))
+    headline = ("%d division(s) over %d file(s) in %s, %s"
+                % (divisions, len(files), LITERAL_DIVISOR_SCOPE,
+                   "every divisor a positive integer literal" if not problems
+                   else "%d divisor(s) NOT a positive integer literal"
+                   % len(problems)))
+    if not files:
+        problems.append("check_literal_divisors opened 0 files under %s. An "
+                        "empty denominator reports green while checking "
+                        "nothing (V-1b)." % LITERAL_DIVISOR_SCOPE)
+    return Result("check_literal_divisors", headline, problems)
 
 
 # ---------------------------------------------------------------------------
@@ -1122,6 +1307,7 @@ LIVE = (
     check_layering,
     check_error_budget,
     check_constants_named,
+    check_literal_divisors,
     check_no_owning_fields,
     check_raw_index,
     check_purity,

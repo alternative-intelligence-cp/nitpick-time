@@ -9,8 +9,10 @@ WHAT A GREEN RUN HERE IS, AND IS NOT.
   wrong for three cycles (TM-142); the manifest read
   and schema-checked; the three tools held to the pin's exact patch release;
   every `.npk` in the tree put in front of the real parser; the tree diffed
-  against the documents that describe it by eight checks, each of which has
-  itself been seen red on a planted violation; the library emitted, optimised,
+  against the documents that describe it by nine checks, each of which has
+  itself been seen red on a planted violation (eight until cycle 0.1.1 added
+  `check_literal_divisors`, TM-163), and `check_specs_current` beside them,
+  which reports; the library emitted, optimised,
   assembled and scanned; the IR proved identical from two working directories;
   and every test file held to its own header at -O0 and again under `opt -O2`.
 
@@ -547,9 +549,9 @@ def run_parse(rep, root, bld):
     """Every `.npk` in the tree in front of the real parser, each exactly once.
 
     THE DENOMINATOR IS THE WHOLE TREE AND THAT IS WHY THE STAGE IS WORTH ITS
-    COST. Re-measured at cycle 0.1.0c: of the 88 `.npk` files here
-    [[sweep: npk_total=88]] the library build roots 5 [[sweep: lib_reach=5]],
-    the suite roots 51 [[sweep: suite_roots=51]], and 3 more are reached by
+    COST. Re-measured at cycle 0.1.1: of the 91 `.npk` files here
+    [[sweep: npk_total=91]] the library build roots 5 [[sweep: lib_reach=5]],
+    the suite roots 54 [[sweep: suite_roots=54]], and 3 more are reached by
     `use` from a suite root [[sweep: support_total=3]] -- so 29 are put in
     front of the compiler by NOTHING ELSE. Five of those are the remaining
     `src/` placeholders and 24 are the reproductions under

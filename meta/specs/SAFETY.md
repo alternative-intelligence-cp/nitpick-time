@@ -156,12 +156,19 @@ on a field its module never writes would be billed and not demanded, and
 A miniature of `cal` that declares **no error at all** cost an importing program
 whose own text contains no arithmetic **four extra arms**, and the twin that
 imports nothing compiles with the floor arms alone — four at cycle 0.0.0, six at
-`c3bdae2` (`tests/probe/probe11d_floor_only.npk`). `cal` divides by 4, 100, 400, 146097,
-86400 and 1000000000 (S-16), indexes the month and zone tables (S-17), and adds,
+`c3bdae2` (`tests/probe/probe11d_floor_only.npk`). `cal` divides by literals
+only (S-16, C-11), indexes its month table (S-17), and adds,
 so **a consumer that imports `ntime/cal.npk` owes `DivByZero`, `DivOverflow`,
 `IntOverflow` and `OutOfBounds` however pure its own code is** — arms a correct
 `ntime` can never enter, since every divisor is a nonzero literal and every index
-is checked, and arms it must write anyway.
+is checked, and arms it must write anyway. *(Amended at cycle 0.1.1, TM-163: the
+sentence read "`cal` divides by 4, 100, 400, 146097, 86400 and 1000000000
+(S-16), indexes the month and zone tables" — a prediction written at cycle
+0.0.0. At cycle 0.1.1 `cal` divides by eleven distinct literals — 4, 5, 7,
+100, 153, 365, 400, 1 460, 36 524, 146 096 and 146 097, a list that is
+`check_literal_divisors`' to keep and this note's only as a date-stamped
+reading — by neither 86400 nor 1000000000, and indexes no zone table; the four
+arms it predicted are the four it arms.)*
 
 That is the compiler's deliberate direction rather than a defect
 (`reach.npk`: *"Over-approximation is the safe direction"*), so what changes is
@@ -399,8 +406,19 @@ rediscovered: a positive `int128` narrowing to a negative `int64`, because what
 library that is a future instant reported as long past, with no error anywhere.
 
 **Rule S-16.** Nothing divides by a value it has not proven nonzero on the same
-path. The calendar algorithms divide by literals (4, 100, 400, 146097, 86400,
-1000000000) and nothing else.
+path. The calendar algorithms divide by literals and nothing else — among them
+4, 100, 400, 146097, 86400 and 1000000000, the six this rule was written with.
+In `src/cal/` the rule is `CALENDAR.md` C-11, whose list of divisors is
+`check_literal_divisors`' on every run.
+
+*(Amended at cycle 0.1.1, TM-163. The sentence read "divide by literals (4, 100,
+400, 146097, 86400, 1000000000) and nothing else" — a closed list, which
+Hinnant's `civil_from_days` falsified on arrival with 5, 153, 365, 1 460,
+36 524 and 146 096, and `weekday_number_sunday_first` with 7. The six stay
+named because `check_constants_named`'s owner map cites this rule for 86400 and
+1000000000, which `src/cal/` does not divide by yet: they are the conversions to
+come, and this rule and that map move together when a second module wants
+them.)*
 
 **Rule S-17.** Every index into the zone tables goes through one accessor pair,
 and the accessor is where the bound is checked. Callers do not index raw

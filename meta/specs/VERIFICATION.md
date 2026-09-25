@@ -50,8 +50,11 @@ so a premature `ensures` is a build failure, not a silent no-op.
 - **Every plain integer `+ - *` traps on overflow** (D-210). Calendar
   arithmetic cannot silently produce a wrong year.
 - **Division by zero and `MIN / −1` trap** (D-007), and `CALENDAR.md` C-11
-  makes every divisor in the calendar algorithms a nonzero literal, so those
-  are discharged by inspection.
+  makes every divisor in `src/cal/` a positive integer literal — nonzero, and
+  not −1 — so both are discharged by inspection, and `check_literal_divisors`
+  holds the tree to it. *(Until cycle 0.1.1, TM-163: "every divisor in the
+  calendar algorithms a nonzero literal", which discharges the zero and not,
+  on its own, the −1.)*
 - **`Result<T>` everywhere** with no unchecked unwrap outside a `never fails`
   callee (D-163).
 - **Owning values are move-only** and borrows cannot escape, so no table is
@@ -182,8 +185,13 @@ Rules:Minute    = { $ <= 59u8; };
 Rules:Second    = { $ <= 59u8; };
 Rules:Nanos     = { $ <= 999999999u32; };
 Rules:OffsetSec = { $ >= -64800i32; $ <= 64800i32; };
-Rules:DayNumber = { $ >= -4371588i64; $ <= 2932896i64; };
+Rules:DayNumber = { $ >= -4371587i64; $ <= 2932896i64; };
 ```
+
+*(Amended at cycle 0.1.1, TM-161: `DayNumber`'s lower bound read
+`-4371588i64`, the day number of −10000-12-31 — `CALENDAR.md` §2's first day,
+one day early. As a `limit` it would have admitted one day `days_to_date`
+refuses.)*
 
 The payoff is that a `limit`ed parameter's precondition is discharged **at the
 caller** where the caller's own knowledge proves it, and retained as a runtime
@@ -202,8 +210,8 @@ the gap is written down here.
 
 | Site | Proof |
 |---|---|
-| after `days_to_date` | the result is in the supported range, and `date_to_days` of it returns the input |
-| after `date_to_days` | the result is in `[DAY_MIN, DAY_MAX]` |
+| after `days_to_date` | the result is in the supported range, and `date_to_days` of it returns the input — **written as comments at 0.1.1 (Q-6, TM-164)**: `prove(date_to_days(answer) == n)`, and the range half as an `ensures` comment, since the result is `civil_date`'s |
+| after `date_to_days` | the result is in `[DAY_MIN, DAY_MAX]` — **written as a comment at 0.1.1 (Q-6, TM-164)**: `ensures answer >= NTIME_DAY_MIN && answer <= NTIME_DAY_MAX` |
 | after every `Timestamp` construction | `nanos < 1_000_000_000` (P-4) |
 | in the transition binary search | the invariant `trans[lo].at_utc <= target < trans[hi].at_utc` holds at every step |
 | after an offset lookup | `|offset| <= 64_800` |

@@ -15,6 +15,12 @@ strongest gate.
 > `aaffb87` — no longer compiled there. Each was checked by a dry run in a
 > scratch copy of the tree at `c3bdae2` before it was written; each says which
 > numbers came from that run and how to re-derive them.
+>
+> **`0.1.2.md` was written by a second planner the same day, after 0.1.1's
+> close**, and was rehearsed in the REAL checkout at `c3bdae2` rather than in a
+> copy: every fenced command in it was run verbatim there, the harness went
+> `GREEN -- 81 unit(s)` with the subcycle applied, and the tree was then put
+> back to `c7a60ac` exactly. Its §13 says which command ran where.
 
 ## Why here
 
@@ -70,8 +76,8 @@ C-8's guarantee. That is worth knowing before writing it.
 | 0.1.0b | **The adoption to compiler `c3bdae2`** — the CI pin as its own commit, a measure on every loop, the two new floor arms, `~0u64`, `vec_reserve` by `ralloc`, the defect corpus's landings, and the prose the pin made false — **[`0.1.0b.md`](0.1.0b.md), DONE 2026-09-25** | `GREEN -- 70 unit(s)` at `c3bdae2`, and CI green on the same pin — run `36152772081` |
 | 0.1.0c | **The access properties** — `Vec`/`Bytes` hidden, sealed and under `ListLen` (the board's item 13), `CivilDate`/`CivilTime` sealed, `check_civil_literal` retired — **[`0.1.0c.md`](0.1.0c.md), DONE 2026-09-25** | C-8 holds of the TYPE again for every module but `cal` (C-8c); `GREEN -- 75 unit(s)`, and CI green — run `36158556785` |
 | 0.1.1 | **The algorithms** — `date_to_days`, `days_to_date`, the leap rule, `days_in_month` — **[`0.1.1.md`](0.1.1.md), DONE 2026-09-25** | the published algorithms, cited, with their divisions by literals — and the range's first day corrected by the test that recomputes it (TM-161); `GREEN -- 78 unit(s)`, and CI green — run `36164292563` |
-| 0.1.2 | **The sweep** — the exhaustive round trip and its three riders | the cycle's gate |
-| 0.1.3 | **Derived fields** — weekday, day-of-year, ISO week date, ordinal date | computed, never stored |
+| 0.1.2 | **The sweep** — the exhaustive round trip both ways, monotonicity and month lengths, each assertion shown to fail; the weekday rider moves to 0.1.3 with `weekday()` (PD-16) — **[`0.1.2.md`](0.1.2.md), PLANNED** | the round trips and two of the gate's three riders; `GREEN -- 81 unit(s)` |
+| 0.1.3 | **Derived fields** — weekday, day-of-year, ISO week date, ordinal date — and **the weekday cycle on 0.1.2's walk** (PD-16) | computed, never stored; **the cycle's gate complete** |
 | 0.1.4 | **The cross-oracle** — the Python corpus and the agreement test | agreement over years 1 … 9999 |
 | 0.1.4b | **The managed-memory gate** — `NPK_HEAP_STATS`'s `peak_live`, carried from cycle 0.0 by `0.1.0.md` §8 — **NOT PLANNED YET; plan it before it is dispatched** | the four leak/no-leak pairs bounded by `peak_live`, and the `ulimit -v` cap a belt |
 | 0.1.5 | **Close** | `done/0.1/`, `0.2.0.md` written |
@@ -134,7 +140,7 @@ environment) and a control that fails.
 - [x] **in `0.1.1.md`'s plan and not in this checklist:** `tests/unit/day_number_vectors.npk` (§4a's twenty-six, both ways) and `days_to_date_refused.npk` (§4c), each shown to fail under a one-line mutation; and the contracts as comments per Q-6's A′ (TM-164), `cal` still 11 arms
 - [x] **found at execution, not planned:** 0.1.2's month-length count, 239 976, corrected to 239 988 — the range is 19 999 years (TM-161)
 
-### 0.1.2 — the sweep — THE GATE
+### 0.1.2 — the sweep — [`0.1.2.md`](0.1.2.md) §11 is the full list
 > ⚠ **Read `0.1.1.md` §1 before this section.** The first day of the range is
 > −4 371 587 and the range holds **7 304 484** days; the bound and the two
 > counts below were corrected by 0.1.1's worker together with `CALENDAR.md` §2
@@ -145,16 +151,19 @@ environment) and a control that fails.
 > trip over the whole corrected range took 1.23 s at `-O0` and 0.19 s under
 > `opt -O2`; `for (int64:i in lo..hi)` is inclusive and needs no measure and no
 > arm, while `till`/`loop` arm `BadStep` even with a literal step.
-- [ ] every day number in `[−4 371 587, +2 932 896]` satisfies `date_to_days(days_to_date(n)) == n` — 7 304 484 cases
-- [ ] every date in the range satisfies `days_to_date(date_to_days(d)) == d` — 7 304 484 cases
-- [ ] **monotonicity**: `date_to_days` strictly increasing over dates in order
-- [ ] **the weekday cycle**: advances by exactly one mod seven per day, across every century and 400-year boundary
-- [ ] **month lengths**: match the leap rule for every (year, month) in range — 239 988 cases
-- [ ] the sweep is a `sweep`-stage test, runs in full on a full invocation, and `--quick` skipping it is caught by the self-check's case 7
-- [ ] the wall-clock cost recorded; if it is over ~30 s, say so and decide whether to keep it in the default run
+- [ ] every day number in `[−4 371 587, +2 932 896]` satisfies `date_to_days(days_to_date(n)) == n` — 7 304 484 cases — `tests/unit/sweep/every_day_number.npk`
+- [ ] every date in the range satisfies `days_to_date(date_to_days(d)) == d` — 7 304 484 cases — `every_civil_date.npk`, its dates generated by the leap rule and the month table and never by `days_to_date`
+- [ ] **monotonicity**, on the same walk: each date's day number is the previous one's **plus one** — stronger than "strictly increasing", which a leap rule missing its 400-year day passes (PD-18, measured at planning)
+- [ ] ~~**the weekday cycle**: advances by exactly one mod seven per day, across every century and 400-year boundary~~ — **MOVED TO 0.1.3 (PD-16)**, where `weekday()` is written; 0.1.2 asserts the `+ 1` chain it rests on, at every one of the range's 7 304 483 steps
+- [ ] **month lengths**: match the leap rule for every (year, month) in range — 239 988 cases — `every_month_length.npk`, as the next month's first less this month's first, not "last less first plus one" (PD-18, measured at planning)
+- [ ] the sweep is a `sweep`-stage test, runs in full on a full invocation, and `--quick` skipping it is caught by the self-check's case 7 — **and on the real entry**: the `SKIP` line read from a `--quick` run, and the stage seen to reject the real `every_day_number.npk` cut one day short
+- [ ] **every assertion in the three files shown to fail** — the mutation matrix, `0.1.2.md` §5, fourteen rows — including M5, a mutant nothing else in the suite catches
+- [ ] **each domain recomputed three ways and diffed against every statement of it** (`0.1.2.md` §2), and every live statement tagged, so `check_denominators` diffs it on every run (PD-19)
+- [ ] the wall-clock cost recorded; if it is over ~30 s, say so and decide whether to keep it in the default run — **measured at planning: 4.5 s for the three members, both legs, compile included, against a 30 s threshold set in advance (`0.1.2.md` §6)**
 
 ### 0.1.3 — derived fields
 - [ ] `weekday()` derived from the day number (C-13), **never stored**
+- [ ] **the weekday cycle, C-17's second rider, on `tests/unit/sweep/every_civil_date.npk`'s walk** — moved here from 0.1.2 by PD-16 (`0.1.2.md` §9): each day's `weekday()` equals a count begun at −9999-01-01's **Monday** and advanced by one per day, so it is Monday … Sunday on every day of the range. **Not** "advances by one, mod seven": that check passes a weekday whose modulus correction is missing, over the whole range (measured at 0.1.2's planning), so that mutant is the rider's control and must exit red
 - [ ] `day_of_year()` and the ordinal-date round trip
 - [ ] `iso_week_year`, `iso_week_number` (1…53), `iso_weekday`, by the standard rule (C-14)
 - [ ] the ISO boundary cases as explicit tests: 1 January falling on each of the seven weekdays, in leap and common years — fourteen cases, each hand-checked
@@ -171,6 +180,12 @@ environment) and a control that fails.
 7 304 484 cases each way (7 304 485 until 0.1.1, TM-161), plus monotonicity,
 the weekday cycle and month lengths on the same sweep. This is the strongest
 statement `ntime` makes and it costs seconds.
+
+*(Since 0.1.2's planning, PD-16: the round trips, monotonicity and month
+lengths land at 0.1.2, and the weekday cycle at 0.1.3 with the function it
+asserts — so the gate is complete at 0.1.3, not 0.1.2. And each rider is stated
+in the form a wrong implementation fails, PD-18: every one of C-17's three, as
+first written, is passed by a mutant the plan measured.)*
 
 ## Watch for
 

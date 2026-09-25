@@ -69,7 +69,7 @@ C-8's guarantee. That is worth knowing before writing it.
 | 0.1.0 | **The types** — `CivilDate`, `CivilTime`, `CivilDateTime`, `Weekday`, `Month`, and the validating constructors | **DONE 2026-09-06.** Every date `ntime` PRODUCES is a date that exists — and C-8b is why that sentence is no longer "a date that exists is a date that exists": the struct literal is an unchecked constructor the language will not let us remove (TM-148) |
 | 0.1.0b | **The adoption to compiler `c3bdae2`** — the CI pin as its own commit, a measure on every loop, the two new floor arms, `~0u64`, `vec_reserve` by `ralloc`, the defect corpus's landings, and the prose the pin made false — **[`0.1.0b.md`](0.1.0b.md), DONE 2026-09-25** | `GREEN -- 70 unit(s)` at `c3bdae2`, and CI green on the same pin — run `36152772081` |
 | 0.1.0c | **The access properties** — `Vec`/`Bytes` hidden, sealed and under `ListLen` (the board's item 13), `CivilDate`/`CivilTime` sealed, `check_civil_literal` retired — **[`0.1.0c.md`](0.1.0c.md), DONE 2026-09-25** | C-8 holds of the TYPE again for every module but `cal` (C-8c); `GREEN -- 75 unit(s)`, and CI green — run `36158556785` |
-| 0.1.1 | **The algorithms** — `date_to_days`, `days_to_date`, the leap rule, `days_in_month` — **[`0.1.1.md`](0.1.1.md), PLANNED** | the published algorithms, cited, with their divisions by literals — and the range's first day corrected by the test that recomputes it |
+| 0.1.1 | **The algorithms** — `date_to_days`, `days_to_date`, the leap rule, `days_in_month` — **[`0.1.1.md`](0.1.1.md), DONE 2026-09-25** | the published algorithms, cited, with their divisions by literals — and the range's first day corrected by the test that recomputes it (TM-161); `GREEN -- 78 unit(s)`, and CI green — run `36164292563` |
 | 0.1.2 | **The sweep** — the exhaustive round trip and its three riders | the cycle's gate |
 | 0.1.3 | **Derived fields** — weekday, day-of-year, ISO week date, ordinal date | computed, never stored |
 | 0.1.4 | **The cross-oracle** — the Python corpus and the agreement test | agreement over years 1 … 9999 |
@@ -124,13 +124,15 @@ environment) and a control that fails.
 - [x] `GREEN -- 75 unit(s), 0 failures; 5 pending`, and CI green — run `36158556785`
 - [x] **added, not planned:** O-N8 discharged — fixed since pin `94874ce` by the compiler's D-248 (TM-160); the dispatch carried it
 
-### 0.1.1 — the algorithms — `0.1.1.md` §8 is the full list
-- [ ] `date_to_days` / `days_to_date` as Hinnant's `days_from_civil` /
-      `civil_from_days`, cited in the module header with the source
-- [ ] every division by a nonzero **literal** (C-11), so D-007's obligation is discharged by inspection — and a test that greps the module for a division by a non-literal — **planned as `check_literal_divisors`, a tree check with three plants (`0.1.1.md` §3)**
-- [ ] intermediates in `int64` (C-12)
+### 0.1.1 — the algorithms — `0.1.1.md` §8 is the full list — **DONE 2026-09-25**
+- [x] `date_to_days` / `days_to_date` as Hinnant's `days_from_civil` /
+      `civil_from_days`, cited in the module header with the source — `never fails` and total, and range-first and built through `civil_date`, respectively (TM-162)
+- [x] every division by a nonzero **literal** (C-11), so D-007's obligation is discharged by inspection — and a test that greps the module for a division by a non-literal — **`check_literal_divisors`, a live tree check, with FOUR plants, not three (TM-163)**: C-11 now says *positive* and carries no list, and the check reads 17 divisions in `src/cal/`
+- [x] intermediates in `int64` (C-12, amended by TM-162: its −4.4 × 10⁶ was the day number, not `era * 146097`)
 - [x] ~~`is_leap_year` and `days_in_month`, applied uniformly across negative years~~ — **DONE AT 0.1.0**, because `civil_date` cannot refuse February 30th without them and a constructor that validates three of its four conditions is not a validating constructor (`0.1.0.md` §3 took that decision at planning). `tests/unit/leap_rule.npk` covers the four century cases, their negative mirrors, and −1/−4/−100/−400 by name. **The negative-year correction turned out NOT to be needed in the leap rule** — every clause compares a remainder against ZERO, and zero has no sign — but it IS still owed by `days_from_civil`'s `era`, which uses a non-zero remainder
-- [ ] the range constants **recomputed by a test** rather than trusted from `limits.npk` (0.0.4's note) — **and the test is seen RED first: at planning it exits 10 against today's `NTIME_DAY_MIN`, which is one day off (`0.1.1.md` §1)**
+- [x] the range constants **recomputed by a test** rather than trusted from `limits.npk` (0.0.4's note) — **and the test is seen RED first: at planning it exits 10 against today's `NTIME_DAY_MIN`, which is one day off (`0.1.1.md` §1)** — `tests/unit/range_constants.npk`, red at exit 10 and then green; `NTIME_DAY_MIN` is −4 371 587 and the range 7 304 484 days (TM-161). `tests/probe/probe07_negative_div.npk` had asserted −4 371 587 since cycle 0.0.0, and nothing compared it with the constant
+- [x] **in `0.1.1.md`'s plan and not in this checklist:** `tests/unit/day_number_vectors.npk` (§4a's twenty-six, both ways) and `days_to_date_refused.npk` (§4c), each shown to fail under a one-line mutation; and the contracts as comments per Q-6's A′ (TM-164), `cal` still 11 arms
+- [x] **found at execution, not planned:** 0.1.2's month-length count, 239 976, corrected to 239 988 — the range is 19 999 years (TM-161)
 
 ### 0.1.2 — the sweep — THE GATE
 > ⚠ **Read `0.1.1.md` §1 before this section.** The first day of the range is

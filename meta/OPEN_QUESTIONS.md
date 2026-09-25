@@ -46,6 +46,75 @@ wrong. **TM-104** records that `date`'s `%` grammar is parsed in the *utility*
 and mapped onto this library's typed layout — the compatibility layer lives in
 the application, and the library stays principled.
 
+### Q-6 — what replaces `VERIFICATION.md` P-1, now that every construct it names is live?
+
+**Raised 2026-09-25 by the stream-2 planner, at the re-pin to compiler
+`c3bdae2`.** P-1 writes an obligation as a comment *"in the exact syntax it
+will take"* until its construct is live, and its safety argument is that *"the
+compiler's rungs refuse the constructs by name today, so a premature `ensures`
+is a build failure, not a silent no-op"*. **At `c3bdae2` none of them
+refuses**: `limit<Rules>` is live since the compiler's 1.5.2, `requires`,
+`ensures` and `invariant` since 1.5.3, `prove` and `assert_static` since 1.5.4,
+and a loop's `decreases` since 1.5.8c. The argument is gone, and what P-1
+should say instead is a design choice, so it is the author's.
+
+**What each construct costs, measured at `c3bdae2`** — a consumer importing one
+module that uses it once, `NITPICK-REACH-003`'s list against the six-identity
+floor:
+
+| Construct, live | Arm every consumer owes | In a plain build |
+|---|---|---|
+| `requires` | `RequiresViolated` | checked at the callee's entry, traps |
+| `ensures` | `EnsuresViolated` | checked at every return, traps |
+| `invariant` | `InvariantViolated` | checked at the loop head, traps |
+| `limit<R>` (a parameter or a field) | `LimitViolated` | checked after every write, traps |
+| `assert_static` | none | folded at compile time; a false one refuses the build |
+| `prove` | none | **lowers to nothing** — only the verified build (`npkg verify`, D-219) checks it, and refuses an undischarged one (`VERIFY-001`) |
+
+One arm per construct KIND, not per use: the set is a set.
+
+**The options:**
+
+- **A′ — comments by default, and a live clause is a budget decision
+  (RECOMMENDED).** `decreases`/`unbounded` are the language's and always live;
+  `assert_static` is live wherever it helps, at no cost. `requires`, `ensures`,
+  `invariant` and `limit` are written live **only where a numbered decision says
+  the check is worth the arm it adds to every consumer**, recorded in
+  `SAFETY.md` S-4 — and never a `requires` on an argument a caller supplies,
+  because S-12 answers caller input with a `Result`, not a trap. `prove` stays a
+  comment until the harness runs the verified build (cycle 0.8), because a
+  plain build lowers it to nothing and nothing here would check it. **A
+  comment-form obligation is documentation, and is never cited as a check.**
+- **A — live now.** `requires`/`ensures`/`invariant` written live from 0.1.1
+  on; `prove` still a comment until 0.8. Gains: every contract checked on every
+  call of every test — 0.1.2's sweep would run 0.1.1's one `ensures` 14.6
+  million times. Costs: an arm per kind in every consumer (0.1.1 alone takes
+  `cal` from 11 to 12 and the umbrella from 13 to 14, measured), a cross-stream
+  exit code per kind, and a check per call until the verified build elides the
+  discharged ones.
+- **B — every obligation a comment until cycle 0.8**, `assert_static` included.
+  The simplest, and the weakest: nothing checks a comment's syntax or its
+  truth.
+- **C — everything live now, `prove` included.** A live `prove` in a plain
+  build is exactly the silent no-op P-1 was written against, until 0.8.
+
+**Recommendation: A′.** It keeps P-1's mechanism — property tests stand in, and
+the switch is mechanical — and gives the true reason for it: the arm and the
+run-time cost, not a refusal that no longer happens. It charges consumers
+nothing until a decision says a check earns it, and it never claims something a
+plain build does not check. A's strongest argument, a contract checked on every
+call, is weakest in cycle 0.1, whose algorithms 0.1.2 proves over their whole
+domain; it is strongest at 0.4–0.6 (parsing, the zone lookup), where no
+exhaustive sweep exists — and A′ lets exactly those cycles choose live
+contracts, by decision.
+
+**What waits on it:** 0.1.1's contract form — `meta/roadmap/0.1/0.1.1.md` §6 is
+written for A′ and states A's exact alternative, so either answer is executable
+without re-planning — and every later cycle's. **What does not:** 0.1.0b and
+0.1.0c; 0.1.0b adds a dated note under P-1 saying its premise is false and this
+question is its replacement. **The same P-1 is in all six work repositories'
+`VERIFICATION.md`**, so one answer can serve all six, recorded in each.
+
 ### O-N1 — `npkg` cannot build a library, and `[dependencies]` resolves to nothing
 Measured at the compiler's 1.5.0 and recorded in `specs/BUILD.md` §1.
 `npkg build` is the compiler's own bootstrap ladder; `target = "library"` is
@@ -671,6 +740,26 @@ probe changes either way, and the entry in the manifest is true about the 25
 0.0.6 — a settled question's prose is history and is normally frozen, but this
 sentence is in the PRESENT tense about the tree as it is now, so it is a claim
 and not a record. TM-142.)*
+
+### O-X9 — should an IR call-edge scan answer "did this module touch the kernel"?
+
+**Raised 2026-09-25 by the stream-2 planner**, from the board's RX-120 entry,
+which recommends the call-edge scan for every library. At compiler `c3bdae2`
+the undefined-symbol scan SEES a syscall — a floor program has 5 undefined
+symbols and the same program calling `sys` has 8, the difference
+`npk_chain_push`, `npk_raise` and `npk_sys6` — but it can never FLAG one,
+because `npk_sys6` is the runtime's own and is in the allowlist. `check_purity`
+(S-10b) is SOURCE-level and remains the only thing here that answers the
+question; `meta/roadmap/0.1/0.1.0b.md` step 9 corrects the documents that said
+the two undefined sets were identical.
+
+*Recommendation:* build the call-edge scan — every `call` in the emitted IR of a
+module outside `src/host/`, against a reviewed allowlist — **at cycle 0.3**, the
+host boundary, where the first syscall enters `src/`. *Why it stays open until
+then:* it waits for something to check. Today no module but the placeholder
+`host` could name a syscall, `check_purity` refuses the spelling everywhere
+else, and a scan with nothing to find would be commissioned only against
+plants.
 
 ---
 

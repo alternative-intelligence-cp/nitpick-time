@@ -8,6 +8,13 @@ strongest gate.
 > 6), so this cycle is openable by a session that was not present for the
 > probes. That is the convention for every cycle: the opening subcycle file is
 > written by the cycle before it.
+>
+> **`0.1.0b.md`, `0.1.0c.md` and `0.1.1.md` were written by a planner on
+> 2026-09-25**, when the libraries resumed after the pause on compiler
+> `c3bdae2` (the close of its cycle 1.5) and this tree — last verified at
+> `aaffb87` — no longer compiled there. Each was checked by a dry run in a
+> scratch copy of the tree at `c3bdae2` before it was written; each says which
+> numbers came from that run and how to re-derive them.
 
 ## Why here
 
@@ -21,7 +28,23 @@ checked over its **whole domain** rather than sampled.
 TM-014 (the range and astronomical numbering), TM-015 (proleptic Gregorian
 only), TM-016 (Hinnant's algorithms as given), TM-017 (`cal` declares
 `ETimeValue` and nothing else), TM-026 (the sweep is the gate). All settled.
-**Nothing in this cycle is blocked on a question.**
+~~**Nothing in this cycle is blocked on a question.**~~ **Two things wait, and
+neither stops the next dispatch** (2026-09-25):
+
+- **the exit codes 108 and 109** (`DecreasesViolated`, `LimitViolated`) are
+  proposed in `0.1.0b.md` §2 and are the orchestrator's to confirm for both
+  streams — a gate of 0.1.0b's step 6 and of 0.1.0c;
+- **`../../OPEN_QUESTIONS.md` Q-6** — what replaces `VERIFICATION.md` P-1 now
+  that every construct it names is live — is the author's. 0.1.1 is written to
+  proceed on its recommended answer and states the exact alternative
+  (`0.1.1.md` §6), so no answer needs a new plan.
+
+**And one number this cycle has carried since TM-014 is wrong**: the first day
+of the range is −4 371 587, not −4 371 588 — so the range holds 7 304 484 days,
+not the 7 304 485 the checklist and gate below say. Found at planning;
+`0.1.1.md` §1 has the evidence, and 0.1.1 corrects it — specification first,
+with the test that recomputes it — which is why the numbers below are flagged
+rather than silently changed.
 
 **Decisions OUT, taken at 0.1.0 because the work revealed them:** TM-147 (an
 `error:` cannot carry a payload, so C-5's "`ETimeValue` with a `ValueFault`" is
@@ -39,11 +62,29 @@ C-8's guarantee. That is worth knowing before writing it.
 | # | Topic | Ends with |
 |---|---|---|
 | 0.1.0 | **The types** — `CivilDate`, `CivilTime`, `CivilDateTime`, `Weekday`, `Month`, and the validating constructors | **DONE 2026-09-06.** Every date `ntime` PRODUCES is a date that exists — and C-8b is why that sentence is no longer "a date that exists is a date that exists": the struct literal is an unchecked constructor the language will not let us remove (TM-148) |
-| 0.1.1 | **The algorithms** — `date_to_days`, `days_to_date`, the leap rule, `days_in_month` | the published algorithms, cited, with their divisions by literals |
+| 0.1.0b | **The adoption to compiler `c3bdae2`** — the CI pin as its own commit, a measure on every loop, the two new floor arms, `~0u64`, `vec_reserve` by `ralloc`, the defect corpus's landings, and the prose the pin made false — **[`0.1.0b.md`](0.1.0b.md), PLANNED** | `GREEN -- 70 unit(s)` at `c3bdae2`, and CI green on the same pin |
+| 0.1.0c | **The access properties** — `Vec`/`Bytes` hidden, sealed and under `ListLen` (the board's item 13), `CivilDate`/`CivilTime` sealed, `check_civil_literal` retired — **[`0.1.0c.md`](0.1.0c.md), PLANNED** | C-8 holds of the TYPE again for every module but `cal` (C-8c); `GREEN -- 75 unit(s)` |
+| 0.1.1 | **The algorithms** — `date_to_days`, `days_to_date`, the leap rule, `days_in_month` — **[`0.1.1.md`](0.1.1.md), PLANNED** | the published algorithms, cited, with their divisions by literals — and the range's first day corrected by the test that recomputes it |
 | 0.1.2 | **The sweep** — the exhaustive round trip and its three riders | the cycle's gate |
 | 0.1.3 | **Derived fields** — weekday, day-of-year, ISO week date, ordinal date | computed, never stored |
 | 0.1.4 | **The cross-oracle** — the Python corpus and the agreement test | agreement over years 1 … 9999 |
+| 0.1.4b | **The managed-memory gate** — `NPK_HEAP_STATS`'s `peak_live`, carried from cycle 0.0 by `0.1.0.md` §8 — **NOT PLANNED YET; plan it before it is dispatched** | the four leak/no-leak pairs bounded by `peak_live`, and the `ulimit -v` cap a belt |
 | 0.1.5 | **Close** | `done/0.1/`, `0.2.0.md` written |
+
+**Why 0.1.4b exists — a premise found false at planning, 2026-09-25.**
+`0.1.0.md` §8 carried the `peak_live` gate on the reading that `NPK_HEAP_STATS`
+*"is not in pin `aaffb87`"*. **It is**: the runtime object at `aaffb87` and at
+`c3bdae2` both carry it, and `NPK_HEAP_STATS=1` makes a program print
+`heap: allocated=… peak_live=… count=…` at exit. Measured on this tree's own
+pairs at `aaffb87`: `probe06b` **70 000 024** against `probe06c` **59**;
+`probe12` **70 000 059** against `probe12b` **94**; `bytes_growth` 2 048 587;
+`bytes_view_lifetime` 160 — the discrimination §8 asked for, at the numbers it
+predicted would need an instrument. §8's rule was *"if it is still not at the
+pin when 0.1 closes, carry it forward"*; it is at the pin, so the cycle owes the
+gate, and 0.1.4b is where it is placed — after the algorithms, before the close,
+touching nothing 0.1.1–0.1.4 depend on. Its three steps are §8's; its plan owes
+the harness's reading of the line (a header marker and the constructed
+environment) and a control that fails.
 
 ## Checklist
 
@@ -57,15 +98,43 @@ C-8's guarantee. That is worth knowing before writing it.
 - [x] ~~`check_failsafe_arms` goes live: a program importing only `cal` owes exactly one arm~~ — **the prediction was WRONG BY EIGHT and the corrected item is the measurement.** `check_failsafe_arms` was already live at 0.0.3; what went live here is its first non-floor row. **A program importing only `cal` owes the arms `NITPICK-REACH-003` names, measured and recorded: NINE** — `cal.ETimeValue`, `Unreachable`, `HeapOom`, `HeapBadRequest`, `WildLeak`, `DivByZero`, `DivOverflow`, `IntOverflow`, `OutOfBounds`. `9 = 4 (floor) + 1 (identity) + 4 (cal's own arithmetic, charged to the consumer)`. That is TM-107 exactly, `0.1.0.md` §4 predicted the falsification, and `SAFETY.md` S-4's totals column now carries the number with the command that produced it
 - [x] **added, not planned:** `check_civil_literal`, commissioned with two planted violations and two controls — one of them the banned form in a COMMENT, since `src/lib.npk`'s own header spells it out in prose
 
-### 0.1.1 — the algorithms
+### 0.1.0b — the adoption to compiler `c3bdae2` — `0.1.0b.md` §7 is the full list
+- [ ] commit 1 is the CI pin alone (`c3bdae2`, both digests), RED locally at the self-check and never pushed alone
+- [ ] `vec_reserve<T>` relocates with `ralloc`; `vec.npk` holds no loop (D-264)
+- [ ] every `while` states its measure — 29 by the tool, 19 by the committed reading `decreases_read.txt`, none `unbounded`
+- [ ] `U64_MAX = ~0u64` at both sites (D-311)
+- [ ] the tzdb spike's templates carry clauses and arms, and a re-run reproduces TM-135's table sizes exactly
+- [ ] every `failsafe` names what `REACH-002` asks — `StackExhausted` 106 and `MachineFault` 107 in 61 roots, `DecreasesViolated` 108 in 20 — and nothing more
+- [ ] the harness: floor six, calibration 6 / 7 / 10, the umbrella a generated row (12)
+- [ ] O-N18 and O-N19 asserted by markers, their exemptions gone, their controls at `aaffb87` recorded; `case3_hash_and_clone` answers 17
+- [ ] RX-120's evidence corrected; P-1's and P-9's notes in `VERIFICATION.md`; the pin-dependent prose swept with its denominators
+- [ ] `GREEN -- 70 unit(s), 0 failures; 5 pending` at `c3bdae2`, and CI green on the pushed adoption
+
+### 0.1.0c — the access properties — `0.1.0c.md` §4 is the full list
+- [ ] `Vec<T>`: `items` hidden, `count`/`cap` sealed under `ListLen`; `Bytes`: `body` sealed, `len` sealed under `ListLen`
+- [ ] `CivilDate` and `CivilTime` sealed; `CALENDAR.md` C-8c added
+- [ ] `LimitViolated` 109 in exactly the nine roots REACH names; the umbrella 13, generated
+- [ ] `probe15` asserts `TYPE-079`; `probe16`…`probe16e` pin the seal and its positive twin
+- [ ] `check_civil_literal` retired
+- [ ] `GREEN -- 75 unit(s), 0 failures; 5 pending`, and CI green
+
+### 0.1.1 — the algorithms — `0.1.1.md` §8 is the full list
 - [ ] `date_to_days` / `days_to_date` as Hinnant's `days_from_civil` /
       `civil_from_days`, cited in the module header with the source
-- [ ] every division by a nonzero **literal** (C-11), so D-007's obligation is discharged by inspection — and a test that greps the module for a division by a non-literal
+- [ ] every division by a nonzero **literal** (C-11), so D-007's obligation is discharged by inspection — and a test that greps the module for a division by a non-literal — **planned as `check_literal_divisors`, a tree check with three plants (`0.1.1.md` §3)**
 - [ ] intermediates in `int64` (C-12)
 - [x] ~~`is_leap_year` and `days_in_month`, applied uniformly across negative years~~ — **DONE AT 0.1.0**, because `civil_date` cannot refuse February 30th without them and a constructor that validates three of its four conditions is not a validating constructor (`0.1.0.md` §3 took that decision at planning). `tests/unit/leap_rule.npk` covers the four century cases, their negative mirrors, and −1/−4/−100/−400 by name. **The negative-year correction turned out NOT to be needed in the leap rule** — every clause compares a remainder against ZERO, and zero has no sign — but it IS still owed by `days_from_civil`'s `era`, which uses a non-zero remainder
-- [ ] the range constants **recomputed by a test** rather than trusted from `limits.npk` (0.0.4's note)
+- [ ] the range constants **recomputed by a test** rather than trusted from `limits.npk` (0.0.4's note) — **and the test is seen RED first: at planning it exits 10 against today's `NTIME_DAY_MIN`, which is one day off (`0.1.1.md` §1)**
 
 ### 0.1.2 — the sweep — THE GATE
+> ⚠ **Read `0.1.1.md` §1 before this section.** The first day of the range is
+> −4 371 587 and the range holds **7 304 484** days; the bound and the two
+> counts below are corrected by 0.1.1's worker together with `CALENDAR.md` §2
+> (PD-12), and are flagged here rather than changed ahead of the specification.
+> **And measured at planning, for this subcycle's own plan:** a forward round
+> trip over the whole corrected range took 1.23 s at `-O0` and 0.19 s under
+> `opt -O2`; `for (int64:i in lo..hi)` is inclusive and needs no measure and no
+> arm, while `till`/`loop` arm `BadStep` even with a literal step.
 - [ ] every day number in `[−4 371 588, +2 932 896]` satisfies `date_to_days(days_to_date(n)) == n` — 7 304 485 cases
 - [ ] every date in the range satisfies `days_to_date(date_to_days(d)) == d` — 7 304 485 cases
 - [ ] **monotonicity**: `date_to_days` strictly increasing over dates in order
@@ -114,4 +183,13 @@ costs seconds.
   construction — rather than to be correct only on valid input. A single
   unchecked constructor added for convenience would remove the library-side
   half of the guarantee as well.
+  **From 0.1.0c the consumer half closes too**: at compiler `c3bdae2` a field
+  can be `sealed`, and every field of `CivilDate` and `CivilTime` is, so the
+  struct literal is `NITPICK-TYPE-079` outside `cal` (measured at planning;
+  `0.1.0c.md` §1). `date_to_days` stays total anyway — it costs nothing, and
+  `wild` storage is still an opt-out.
+- **The arm codes are cross-stream** (`0.1.0b.md` §2): 106 `StackExhausted`,
+  107 `MachineFault`, 108 `DecreasesViolated`, 109 `LimitViolated`. A test whose
+  computed exit equals one of them cannot tell its answer from that trap — the
+  one such test in this tree is re-encoded at 0.1.0b.
 - **`limit` and `end` are keywords**, and a range-bounds module wants both.

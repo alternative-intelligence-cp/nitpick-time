@@ -61,7 +61,7 @@ sibling libraries.
 | Cycle | Topic | Gated on |
 |---|---|---|
 | ~~**0.0**~~ | **Foundations** — the language probes, the harness, `src/core/` — **CLOSED 2026-09-06, archived at [`done/0.0/`](done/0.0/README.md)** | — |
-| **0.1** | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **NEXT; [`0.1/0.1.0.md`](0.1/0.1.0.md) is written execution-grade** | 0.0 ✓ |
+| **0.1** | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **IN PROGRESS: 0.1.0 done; the adoption to compiler `c3bdae2` ([`0.1/0.1.0b.md`](0.1/0.1.0b.md)), the access properties ([`0.1/0.1.0c.md`](0.1/0.1.0c.md)) and the algorithms ([`0.1/0.1.1.md`](0.1/0.1.1.md)) planned execution-grade** | 0.0 ✓ |
 | **0.2** | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop | 0.1 |
 | **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double | 0.2 |
 | **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate | 0.2 |

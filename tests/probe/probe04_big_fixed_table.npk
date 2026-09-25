@@ -30075,7 +30075,7 @@ func:main = int32(cstring[]:argv) {
     // rather than the two ends the folder could have kept.
     int64:i = 1i64;
     int64:prev = TRANSITIONS[0].at_utc;
-    while (i < 30000i64) {
+    while (i < 30000i64) decreases 30000i64 - i {
         int64:at = TRANSITIONS[i].at_utc;
         if (at <= prev)                                 { exit 17i32; }
         prev = at;
@@ -30098,6 +30098,9 @@ func:failsafe = int32(Error:e) {
         (OutOfBounds)    { exit 94i32; },
         (Unreachable)    { exit 95i32; },
         (WildLeak)       { exit 96i32; },
+        (StackExhausted) { exit 106i32; },
+        (MachineFault)   { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
         (*)              { exit 99i32; }
     }
     exit 9i32;

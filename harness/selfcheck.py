@@ -72,6 +72,8 @@ func:failsafe = int32(Error:e) {
         (HeapOom)        { exit 92i32; },
         (Unreachable)    { exit 95i32; },
         (WildLeak)       { exit 96i32; },
+        (StackExhausted) { exit 106i32; },
+        (MachineFault)   { exit 107i32; },
         (*)              { exit 99i32; }
     }
     exit 9i32;
@@ -92,6 +94,8 @@ func:failsafe = int32(Error:e) {
         (HeapOom)        { exit 92i32; },
         (Unreachable)    { exit 95i32; },
         (WildLeak)       { exit 96i32; },
+        (StackExhausted) { exit 106i32; },
+        (MachineFault)   { exit 107i32; },
         (*)              { exit 99i32; }
     }
     exit 9i32;
@@ -718,7 +722,8 @@ PLANTED = [
       "pub fixed Row[2]:TABLE = [];\n"),
      "owning field"),
     # THE SAME VIOLATION, WRITTEN ON ONE LINE -- which is the form BOTH of
-    # this repository's own structs take (`vec.npk:111`, `bytes.npk:60`) and
+    # this repository's own structs take (`vec.npk`'s `Vec`, `bytes.npk`'s
+    # `Bytes` -- by name, since line numbers move) and
     # the form the check could not see until cycle 0.0.6 (TM-138). The row
     # above was the only plant for three cycles, so the check was red on the
     # fixture its author imagined and silent on the identical fault in the
@@ -892,30 +897,35 @@ def part_b_specs_current(rep, base):
 # PART C -- the S-6 arm generator, calibrated on TM-107's own specimens
 # ---------------------------------------------------------------------------
 
-# Measured at pin `0dfddac` from `NITPICK-REACH-003`'s own identity list. Each
-# row is one of TM-107's three constraints, and the arithmetic is written out
-# because a number embedded in prose travels with the prose:
+# Measured at pin `c3bdae2` from `NITPICK-REACH-003`'s own identity list (cycle
+# 0.1.0b). Each row is one of TM-107's three constraints, and the arithmetic is
+# written out because a number embedded in prose travels with the prose:
 #
-#   floor                                    = 4
-#   silent_lib  = floor + 0 (declared, never raised)   = 4   <- constraint 1
-#   arms_lib    = floor + 1 (one raised identity)      = 5
-#   calc_lib    = floor + 4 (its own arithmetic)       = 8   <- constraint 2
+#   floor                                    = 6
+#   silent_lib  = floor + 0 (declared, never raised)   = 6   <- constraint 1
+#   arms_lib    = floor + 1 (one raised identity)      = 7
+#   calc_lib    = floor + 4 (its own arithmetic)       = 10  <- constraint 2
 #
-# and 8 - 4 = 4 is `SAFETY.md` S-4b's measured "four extra arms" from a module
-# that declares no error at all.
+# and 10 - 6 = 4 is `SAFETY.md` S-4b's measured "four extra arms" from a module
+# that declares no error at all. At pin `0dfddac`, where these rows were first
+# measured, the floor was FOUR and the three bills were 4 / 5 / 8; `c3bdae2`'s
+# floor adds `StackExhausted` and `MachineFault` to every row and changes
+# nothing else, which is the constraint-2 difference holding across the pins.
 CALIBRATION = [
-    ("tests/probe/support/probe11_silent_lib.npk", 4,
-     {"Unreachable", "HeapOom", "HeapBadRequest", "WildLeak"},
+    ("tests/probe/support/probe11_silent_lib.npk", 6,
+     {"Unreachable", "HeapOom", "HeapBadRequest", "WildLeak",
+      "StackExhausted", "MachineFault"},
      "constraint 1: it declares `pub error:EProbeSilent` and never raises it, "
      "so the identity arms NOTHING. An implementation counting DECLARATIONS "
-     "would publish 5."),
-    ("tests/probe/support/probe11_arms_lib.npk", 5,
+     "would publish 7."),
+    ("tests/probe/support/probe11_arms_lib.npk", 7,
      {"Unreachable", "HeapOom", "HeapBadRequest", "WildLeak",
-      "probe11_arms_lib.EProbeZone"},
+      "StackExhausted", "MachineFault", "probe11_arms_lib.EProbeZone"},
      "a `fail` SITE puts the identity in, and it arrives module-qualified."),
-    ("tests/probe/support/probe11_calc_lib.npk", 8,
-     {"Unreachable", "HeapOom", "HeapBadRequest", "WildLeak", "DivByZero",
-      "DivOverflow", "IntOverflow", "OutOfBounds"},
+    ("tests/probe/support/probe11_calc_lib.npk", 10,
+     {"Unreachable", "HeapOom", "HeapBadRequest", "WildLeak",
+      "StackExhausted", "MachineFault", "DivByZero", "DivOverflow",
+      "IntOverflow", "OutOfBounds"},
      "constraint 2: it declares no error at all and still costs four extra "
      "arms, from its `/`, its `%`, its `+` and its one index."),
 ]
@@ -964,7 +974,11 @@ def part_c(rep, root, bld, base):
     # is the one nothing else can catch (TM-107 constraint 3: a superset of the
     # required arms COMPILES), so it is the branch that most needs driving.
     fake = set(arms_mod.FLOOR) | {"NotAnArm"}
-    real = {"Unreachable", "HeapOom", "HeapBadRequest", "WildLeak"}
+    # The floor as the compiler lists it at pin `c3bdae2`, so `NotAnArm` stays
+    # the ONLY overstatement this fixture plants (cycle 0.1.0b gave `FLOOR` its
+    # two new names; without them here the fixture would plant three).
+    real = {"Unreachable", "HeapOom", "HeapBadRequest", "WildLeak",
+            "StackExhausted", "MachineFault"}
     if not (fake - real):
         problems.append("the overstatement fixture does not overstate.")
     return problems

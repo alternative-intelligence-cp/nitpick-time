@@ -13,19 +13,20 @@ taken on trust:
   1. IT COUNTS `fail`, `?!` AND `!!!` SITES, NEVER `error:` DECLARATIONS.
      `tests/probe/support/probe11_silent_lib.npk` declares `pub
      error:EProbeSilent` and never raises it. Measured at pin `0dfddac`: a
-     program importing it owes FOUR identities -- the floor -- and
-     `EProbeSilent` is NOT among them. An implementation that counted
-     declarations would publish five and be wrong in the direction no build
-     can catch (constraint 3).
+     program importing it owed FOUR identities -- the floor as it was then --
+     and `EProbeSilent` was NOT among them. At pin `c3bdae2` it owes SIX, the
+     floor of six (cycle 0.1.0b), and `EProbeSilent` is still not among them.
+     An implementation that counted declarations would publish one too many
+     and be wrong in the direction no build can catch (constraint 3).
 
   2. IT INCLUDES THE SYSTEM ARMS THE IMPORTED SUBGRAPH'S ARITHMETIC ARMS.
      `probe11_calc_lib.npk` declares no error at all and costs an importing
-     program EIGHT: the floor of four, plus `DivByZero` and `DivOverflow` from
-     its `/` and `%`, `IntOverflow` from its `+` and `-`, and `OutOfBounds`
-     from its one index. 8 - 4 = 4, which is S-4b's measured "four extra arms"
-     from a module that declares nothing. A table that listed only declared
-     identities would be short by exactly those four for every row that
-     imports `cal`.
+     program TEN at pin `c3bdae2` (EIGHT at `0dfddac`): the floor of six, plus
+     `DivByZero` and `DivOverflow` from its `/` and `%`, `IntOverflow` from
+     its `+` and `-`, and `OutOfBounds` from its one index. 10 - 6 = 4, which
+     is S-4b's measured "four extra arms" from a module that declares
+     nothing. A table that listed only declared identities would be short by
+     exactly those four for every row that imports `cal`.
 
   3. "AND NO MORE" IS THIS HARNESS'S ASSERTION, NEVER THE COMPILER'S. A
      SUPERSET OF THE REQUIRED ARMS COMPILES -- `probe07_negative_div.npk`
@@ -61,14 +62,21 @@ from checks import Result, strip_comments
 
 
 # The unconditional floor, measured rather than read: a program with `main`, no
-# `failsafe`, no import, no arithmetic and no allocation owes exactly these four
-# (`tests/probe/probe11d_floor_only.npk`, and re-measured at this cycle).
-FLOOR = ("Unreachable", "HeapOom", "HeapBadRequest", "WildLeak")
+# `failsafe`, no import, no arithmetic and no allocation owes exactly these six
+# (`tests/probe/probe11d_floor_only.npk`). FOUR until pin `c3bdae2`; cycle
+# 0.1.0b added the two the compiler's cycle 1.5 made universal --
+# `StackExhausted` (D-305: every emitted function checks its stack) and
+# `MachineFault` (D-307: a hardware fault reaches `failsafe`) -- each read out
+# of the `NITPICK-REACH-002` lines of all 61 roots in this tree that reach the
+# reachability analysis before it was written here (TM-155).
+FLOOR = ("Unreachable", "HeapOom", "HeapBadRequest", "WildLeak",
+         "StackExhausted", "MachineFault")
 
 # The system arms, and the machinery in a module's TEXT that arms each. S-4b.
 DIV_ARMS = ("DivByZero", "DivOverflow")
 OVERFLOW_ARM = "IntOverflow"
 INDEX_ARM = "OutOfBounds"
+MEASURE_ARM = "DecreasesViolated"
 
 _REACH_003 = re.compile(r"--\s+(\d+)\s+identit(?:y|ies):\s+(.*?)\s+--")
 _FAIL_SITE = re.compile(r"\bfail\s+([A-Z][A-Za-z0-9_]*)")
@@ -131,6 +139,14 @@ def _arith_arms(text):
     # follows a name or a `]`.
     if re.search(r"[A-Za-z0-9_\]]\s*\[", text):
         arms.add(INDEX_ARM)
+    # A `decreases` clause (cycle 0.1.0b, TM-155). The compiler's D-304 checks a
+    # loop's measure in every build and traps `DecreasesViolated` when it fails
+    # to shrink, so a module whose text carries one arms it in every consumer.
+    # `unbounded` -- the other clause D-304 admits -- checks nothing and arms
+    # nothing. Comments and strings are already blanked by `code_only`, so a
+    # comment that EXPLAINS a measure does not charge the module for one.
+    if re.search(r"\bdecreases\b", text):
+        arms.add(MEASURE_ARM)
     return arms
 
 
@@ -248,16 +264,24 @@ def diff_bill(tree, bld, module_rel, scratch_dir):
 
 
 def public_modules(tree):
-    """The `src/` modules a consumer can import: every layer's own file.
+    """The `src/` modules a consumer can import: every layer's own file, AND
+    the umbrella `src/lib.npk`.
 
-    `src/lib.npk` is excluded -- it is the umbrella, and its bill is the union
-    of everything it re-exports, which is a row of its own once there is
-    anything to re-export.
+    The umbrella was excluded until cycle 0.1.0b, on the argument that its bill
+    is the union of everything it re-exports and becomes a row of its own
+    "once there is anything to re-export". There has been since cycle 0.0.4,
+    and it is the import a consumer actually writes -- so it is a row (TM-155).
+    It is also the row that CALIBRATES `MEASURE_ARM` on real code: the layer
+    files carry no loop, `src/core/bytes.npk` does, and only the umbrella
+    reaches it, so without the `decreases` rule this row is short by exactly
+    `DecreasesViolated`.
     """
     out = []
     base = os.path.join(tree, "src")
     if not os.path.isdir(base):
         return out
+    if os.path.isfile(os.path.join(base, "lib.npk")):
+        out.append("src/lib.npk")
     for d in sorted(os.listdir(base)):
         sub = os.path.join(base, d)
         if not os.path.isdir(sub):
@@ -271,10 +295,12 @@ def public_modules(tree):
 def check_failsafe_arms(tree, bld=None, scratch_dir=None, **_):
     """S-6: the per-import arm table, generated and diffed against the compiler.
 
-    ZERO ROWS TODAY, AND THAT IS THE RIGHT ANSWER (P-20). `src/` holds six
-    placeholder modules; none declares an error, none raises one, and none is
-    re-exported, so there is no consumer-visible bill to publish. The check is
-    wired now, reports its denominator, and is CALIBRATED against three modules
+    ONE ROW PER PUBLIC MODULE, THE UMBRELLA INCLUDED. This docstring said "zero
+    rows today" from cycle 0.0.3, when `src/` held six placeholder modules and
+    nothing was re-exported. `cal` has had a body and a `fail` site since
+    cycle 0.1.0, and the umbrella has re-exported names since 0.0.4, so at
+    cycle 0.1.0b there are seven rows (`SAFETY.md` S-4 publishes them). The
+    check reports its denominator and is CALIBRATED against three modules
     whose bills were measured at cycle 0.0.0 -- see `selfcheck.py` §C, which is
     where it is shown able to fail.
     """

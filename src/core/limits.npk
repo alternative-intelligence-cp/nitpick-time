@@ -31,7 +31,9 @@
 // decimal literal is fine here -- `-9999i64` scans and links, measured at pin
 // `0dfddac` -- because none of these is a type's *most negative* value. D-148
 // only forces construction at the extremes of a width (and for `uint64` above
-// 2^63-1, whose maximum is `0u64 - 1u64`). No constant in this file is there.
+// 2^63-1, whose maximum is `~0u64` at compiler `c3bdae2` -- D-311's spelling;
+// the `0u64 - 1u64` D-148 gave until then is refused there, `NITPICK-TYPE-076`,
+// TM-149). No constant in this file is there.
 mod:limits;
 
 // ---------------------------------------------------------------------------

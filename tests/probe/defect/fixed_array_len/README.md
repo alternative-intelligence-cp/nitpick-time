@@ -1,4 +1,17 @@
-# `fixed_array_len` — `.len` on a fixed-size array cannot be lowered
+# `fixed_array_len` — `.len` on a fixed-size array could not be lowered (O-N18); at compiler `c3bdae2` it can
+
+## Landed — cycle 0.1.0b, compiler `c3bdae2`
+
+**The compiler's DEF-22 fix (its cycle 1.5.2e) is at our pin.**
+`case1_local_array_len.npk` compiles, links, runs and exits 0 at `c3bdae2`, and
+now carries `// expect-exit: 0` as the fix's regression test; its
+`EXPECT_EXEMPT` entry is deleted (TM-154). The control is the same text at the
+kept `aaffb87` pin, re-run at 0.1.0b: `npkc` exit 1, no `.ll`,
+`NITPICK-EMIT-002` — the verdict the exemption had recorded, and the one
+`check_exemptions_live` saw move to `run:0` at the re-pin. **Everything below
+is the record as cycle 0.0.4 wrote it, in the tense that was true then**; its
+last section's "not yet numbered" was overtaken when the orchestrator issued
+O-N18.
 
 **`.len` on a `T[N]` is accepted by the frontend and refused by the emitter**
 with `NITPICK-EMIT-002`, whose own text says *"a defect in the compiler rather

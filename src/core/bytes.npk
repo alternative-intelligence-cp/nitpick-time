@@ -80,7 +80,13 @@ pub func:bytes_reserve = NIL(Bytes->:b, int64:need) never fails {
     uint8[]:from = #wild_slice<uint8>(b.body.ptr, b.len);
     uint8[]:into = #wild_slice<uint8>(fresh.ptr, b.len);
     int64:i = 0i64;
-    while (i < b.len) {
+    // `live` IS HOISTED SO THE MEASURE IS OVER TWO LOCALS (cycle 0.1.0b,
+    // TM-151). `b.len` is read through a pointer, and a measure over it keeps
+    // its `terminate` row open whatever the proof effort (the compiler's
+    // DEF-14 frame problem). Nothing in the loop writes `b.len`, so the hoist
+    // changes nothing at run time.
+    int64:live = b.len;
+    while (i < live) decreases live - i {
         into[i] = from[i];
         i = i + 1i64;
     }
@@ -108,7 +114,7 @@ pub func:bytes_extend = NIL(Bytes->:b, uint8[]:src) never fails {
     drop bytes_reserve(b, src.len);
     uint8[]:room = #wild_slice<uint8>(b.body.ptr, b.body.cap);
     int64:i = 0i64;
-    while (i < src.len) {
+    while (i < src.len) decreases src.len - i {
         room[b.len + i] = src[i];
         i = i + 1i64;
     }
@@ -166,7 +172,7 @@ pub func:bytes_put_uint = NIL(Bytes->:b, uint64:v) never fails {
         digits[0i64] = 48u8;
         n = 1i64;
     }
-    while (x > 0u64) {
+    while (x > 0u64) decreases x {
         uint64:d = x % 10u64;
         // `=>!` AND NOT `=>`: there is no checked narrowing in this language
         // (TM-105) -- the checked form at this narrowing is refused outright by
@@ -181,7 +187,7 @@ pub func:bytes_put_uint = NIL(Bytes->:b, uint64:v) never fails {
     drop bytes_reserve(b, n);
     // Backwards, because the digits were produced least-significant first.
     int64:i = n;
-    while (i > 0i64) {
+    while (i > 0i64) decreases i {
         i = i - 1i64;
         drop bytes_push(b, digits[i]);
     }
@@ -221,7 +227,13 @@ pub func:bytes_put_int = NIL(Bytes->:b, int64:v) never fails {
                         0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8];
     int64:n = 0i64;
     int64:x = v;                                     // stays negative throughout
-    while (x < 0i64) {
+    // THE MEASURE IS WIDENED, AND IT HAS TO BE (cycle 0.1.0b, TM-151). The
+    // obvious `decreases 0i64 - x` overflows at `int64` MIN -- the one input
+    // this function exists to get right -- and a measure's own arithmetic is
+    // checked, so it would trap `IntOverflow` on the first trip. Widened with
+    // the CHECKED cast, the negation cannot overflow, and a LOOP's measure may
+    // be wider than 64 bits (the compiler's TYPE-073 limits only a function's).
+    while (x < 0i64) decreases 0i128 - (x => int128) {
         int64:d = 0i64 - (x % 10i64);                // in [0, 9], never MIN
         digits[n] = 48u8 + (d =>! uint8);
         x = x / 10i64;
@@ -229,7 +241,7 @@ pub func:bytes_put_int = NIL(Bytes->:b, int64:v) never fails {
     }
     drop bytes_reserve(b, n);
     int64:i = n;
-    while (i > 0i64) {
+    while (i > 0i64) decreases i {
         i = i - 1i64;
         drop bytes_push(b, digits[i]);
     }
@@ -279,8 +291,9 @@ pub func:bytes_len = int64(Bytes->:b) never fails {
 // found by a test that reads, and by nothing else.
 //
 // `Vec<T>` DOES NOT HAVE THIS SHAPE, and the reason is worth writing down
-// rather than rediscovering: `vec_reserve` reallocates exactly the same way,
-// but no function in `vec.npk` RETURNS a slice, so there is no view for a
+// rather than rediscovering: `vec_reserve` reallocates too -- with `ralloc`
+// since cycle 0.1.0b, which invalidates the old pointer just as surely -- but
+// no function in `vec.npk` RETURNS a slice, so there is no view for a
 // caller to hold. Inside both files every `#wild_slice` binding is made AFTER
 // the `*_reserve` call in the same body, never before -- which is the rule
 // `SAFETY.md` S-18e states for `src/fmt/` to inherit.

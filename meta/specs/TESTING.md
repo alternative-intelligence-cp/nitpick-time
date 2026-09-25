@@ -35,7 +35,7 @@ them found something on its first run.
 
 | Check | Diffs |
 |---|---|
-| `check_purity` | `src/` outside `src/host/` against a ban list — `sys(`, `mono_now`, `environ`, `read_file`, `open`, `write`. **`SAFETY.md` S-10, and the most important check in the suite.** It is also the **only** one that answers the question: the build's undefined-symbol scan cannot see a syscall, because `npk_sys6` is the runtime's own and is in its allowlist by construction (`BUILD.md` B-2c, TM-118, `nitpick-regex`'s RX-120) |
+| `check_purity` | `src/` outside `src/host/` against a ban list — `sys(`, `mono_now`, `environ`, `read_file`, `open`, `write`. **`SAFETY.md` S-10, and the most important check in the suite.** It is also the **only** one that answers the question: the build's undefined-symbol scan cannot FLAG a syscall, because `npk_sys6` is the runtime's own and is in its allowlist by construction (`BUILD.md` B-2c, TM-118, TM-153, `nitpick-regex`'s RX-120) |
 | `check_host_isolation` | no module outside `src/host/` and `src/lib.npk` names a `host_` symbol |
 | `check_tables_regenerate` | the committed zone tables against a fresh generator run, byte for byte |
 | `check_table_invariants` | every transition slice sorted and strictly increasing; every type index in range; every name-pool offset in range; the zone-name index lexicographically sorted |
@@ -139,7 +139,9 @@ were well-formed; the `probe` entry is non-recursive and selected none of them;
 coverage — *"under `tests/` with an `expect-` marker of its own or a NAMED
 exemption"* — read as coverage and was, for those 21, membership in a bucket
 nobody evaluated. **The arithmetic is printed on every run and asserted:
-24 = 3 exempt + 21 asserted.**
+24 = 3 exempt + 21 asserted** — and **24 = 0 exempt + 24 asserted** at compiler
+`c3bdae2`, since cycle 0.1.0b, when O-N18 and O-N19 landed and the three
+exempt files took `expect-` markers of their own (TM-154).
 
 **Rule V-1i (TM-146) — "every `.npk` in the tree" means THIS repository, and
 what the walk prunes is PRINTED.** A directory holding a `.git` entry is a
@@ -166,6 +168,23 @@ frozen**, and is not tagged. The distinction is tense: present tense is a claim,
 past tense is a record.
 
 ---
+
+**Rule V-1j (TM-152) — a test's expected exit is never an arm code it does not
+assert.** This repository's `failsafe` arms exit 91 `HeapBadRequest`, 92
+`HeapOom`, 93 `IntOverflow`, 94 `OutOfBounds`, 95 `Unreachable`, 96 `WildLeak`,
+97 `DivByZero`, 98 `DivOverflow`, 99 for the `(*)` arm and 9 for the
+fall-through after the `pick`, with 80–90 for a file's own identities; 91–96
+are the same in every repository of the ecosystem, and so, by the
+orchestrator's cross-stream choice at compiler `c3bdae2`, are 106
+`StackExhausted`, 107 `MachineFault`, 108 `DecreasesViolated` and 109
+`LimitViolated`. A test whose COMPUTED answer equals one of these cannot tell
+its answer from that trap. The exception is a test that
+asserts the trap itself: the five that expect 94 assert `OutOfBounds`. The one
+collision this tree had, `derive_payload_enum/case3_hash_and_clone` answering
+107 when `MachineFault` took 107, was re-encoded at cycle 0.1.0b rather than the
+code moved. Checked whenever codes are assigned, by
+`git grep -hE '^// expect-exit: [0-9]+' -- tests | sort | uniq -c` — anchored at
+the line's start, because the same words appear in header prose.
 
 ## 3. The exhaustive gates
 

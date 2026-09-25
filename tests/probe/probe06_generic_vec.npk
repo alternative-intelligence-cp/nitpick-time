@@ -138,7 +138,7 @@ func:vec_reserve<T> = NIL(Vec<T>->:v, int64:need) never fails {
     int64:want = v.count + need;
     if (want <= v.cap) { pass NIL; }
     int64:nc = v.cap;
-    while (nc < want) { nc = nc * 2i64; }
+    while (nc < want) decreases want - nc { nc = nc * 2i64; }
     wild int8->:bigger = ralloc(v.items =>! wild int8->, nc * #size_of<T>());
     v.items = bigger =>! wild T->;
     v.cap = nc;
@@ -179,7 +179,7 @@ func:vec_free<T> = NIL(Vec<T>->:v) never fails {
 // >> it is now the gate `0.0.4.md` asserts.
 func:free_names = NIL(Vec<string>->:v) never fails {
     int64:i = 0i64;
-    while (i < v.count) {
+    while (i < v.count) decreases v.count - i {
         string:owned = move(v.items[i]);
         discard(string_byte_length(owned));
         i = i + 1i64;
@@ -262,6 +262,9 @@ func:failsafe = int32(Error:e) {
         (OutOfBounds)    { exit 94i32; },
         (Unreachable)    { exit 95i32; },
         (WildLeak)       { exit 96i32; },
+        (StackExhausted) { exit 106i32; },
+        (MachineFault)   { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
         (*)              { exit 99i32; }
     }
     exit 9i32;

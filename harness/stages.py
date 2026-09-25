@@ -360,10 +360,12 @@ def parse_verdict(bld, rel, e):
 
     THE RULE IS ONE LINE AND ITS CONSEQUENCE IS NOT OBVIOUS: a file must parse
     UNLESS its own header names a parse-phase code. That is what lets the stage
-    cover the 16 files in this tree [[sweep: tests_error=16]] that must NOT
+    cover the 19 files in this tree [[sweep: tests_error=19]] that must NOT
     compile -- they are refused at PARSE-001, LEX-004, PARSE-002, TYPE-009,
-    BORROW-001, BORROW-012, REACH-002, REACH-003 and EMIT-002, and every family
+    TYPE-046, BORROW-001, BORROW-012, REACH-002 and REACH-003, and every family
     after the first three is a phase that only runs on something that parsed.
+    (16, with EMIT-002 in place of TYPE-046, until cycle 0.1.0b: O-N18 and
+    O-N19 landed at compiler `c3bdae2`, TM-154.)
     TWO files in the tree are expected not to parse, and the check is that it
     is exactly those two: `probe02d_wide_literal_refused.npk` (LEX-004,
     PARSE-002) and, since cycle 0.1.0,

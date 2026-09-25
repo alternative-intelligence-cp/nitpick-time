@@ -13,14 +13,22 @@ WHAT THE SCAN CAN AND CANNOT SEE -- READ THIS BEFORE CITING IT AS A GUARANTEE.
   exactly B-2's claim -- no libc, no compiler-rt, no C anywhere -- and it is
   the whole of it.
 
-  It CANNOT see a SYSCALL. `npk_sys6` is the runtime's own generic syscall
+  It CANNOT FLAG a SYSCALL. `npk_sys6` is the runtime's own generic syscall
   trampoline and is therefore IN the allowlist by construction, so a module
-  that issues a raw syscall is indistinguishable, at the symbol level, from one
-  that does not. This is not a defect in the scan; it is the boundary of what a
-  symbol table can answer. It was measured in `nitpick-regex` (RX-120) as a
-  symbol diff coming out EMPTY -- 29 undefined each way -- across exactly that
-  change, and it reproduces here: an `ntime` program's undefined set is 29
-  symbols and `npk_sys6` is one of them, whether or not anything calls it.
+  that issues a raw syscall passes the scan exactly as one that does not. It
+  does not pass it UNSEEN: measured at pin `c3bdae2` (cycle 0.1.0b, TM-153) --
+  `npkc`, `llc -O0 -filetype=obj -relocation-model=static`, `nm -u` -- a
+  floor-only program has 5 undefined symbols (`__morestack`,
+  `npk_chain_reset`, `npk_dalloc`, `npk_ofd_close`, `npk_trap`) and the same
+  program calling `sys(39)` has 8, adding `npk_chain_push`, `npk_raise` and
+  `npk_sys6`. The scan sees the larger set and allows all of it. This is not a
+  defect in the scan; it is the boundary of what an allowlist of the runtime's
+  own symbols can answer. UNTIL 0.1.0b THIS PARAGRAPH SAID THE CALL WAS
+  INVISIBLE -- `nitpick-regex`'s RX-120, a symbol diff coming out EMPTY, 29
+  undefined each way, and "an `ntime` program's undefined set is 29 symbols and
+  `npk_sys6` is one of them, whether or not anything calls it". That was true
+  at pins that emitted the whole prelude into every program, and has been
+  false here since `aaffb87`, where the two sets are 2 and 5.
   PURITY IS A DIFFERENT CHECK: `check_purity` (`TESTING.md` §2, `SAFETY.md`
   S-10) is a SOURCE-level ban list over `src/` outside `src/host/`, and it is
   the only thing that answers "did this module touch the kernel". Do not read a
@@ -163,7 +171,8 @@ def runtime_allowlist(npkrt_path):
 
     Two halves, and both are derived:
 
-      what the runtime PROVIDES -- its global defined symbols, 111 at the pin.
+      what the runtime PROVIDES -- its global defined symbols: 111 at pins
+        `0dfddac` and `aaffb87`, 119 at `c3bdae2` (cycle 0.1.0b).
       what the runtime REQUIRES of the program -- its own undefined symbols,
         which are exactly `main` and `npk_failsafe`. P-14 said "plus `main`",
         and `main` alone is not enough: `src/lib.npk`'s object legitimately

@@ -39,7 +39,7 @@ func:main = int32(cstring[]:_~argv) {
     int64:reallocs = 0i64;
     int64:seen_cap = b.body.cap;
     int64:i = 0i64;
-    while (i < N) {
+    while (i < N) decreases N - i {
         drop bytes_push(@b, 65u8);
         if (b.body.cap != seen_cap) {
             reallocs = reallocs + 1i64;
@@ -108,6 +108,9 @@ func:failsafe = int32(Error:e) {
         (WildLeak)       { exit 96i32; },
         (DivByZero)      { exit 97i32; },
         (DivOverflow)    { exit 98i32; },
+        (StackExhausted) { exit 106i32; },
+        (MachineFault)   { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
         (*)              { exit 99i32; }
     }
     exit 9i32;

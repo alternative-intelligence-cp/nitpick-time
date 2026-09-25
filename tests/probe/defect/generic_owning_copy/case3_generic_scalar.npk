@@ -1,12 +1,20 @@
-// expect-exit: 0
+// expect-error: NITPICK-TYPE-046
 //
 // CASE 3 -- THE NON-OWNING CONTROL: case1's generic function at `T = int64`.
 //
-// It compiles and runs, and it SHOULD: there is nothing to move, so a copy of
-// an element is a copy of an integer. Its job is to place the fault at
-// GENERIC x OWNING and not at GENERIC alone -- the same three-control shape
-// `generic_element_move` used for O-N17, kept because it is what made that
-// finding exact.
+// REFUSED SINCE COMPILER `c3bdae2`, AND THAT IS D-264 RATHER THAN A
+// REGRESSION (cycle 0.1.0b, TM-154). It was written as the scalar control and
+// until then it compiled and ran, as it should have under the old rule: there
+// is nothing to move, so a copy of an element is a copy of an integer. Its job
+// was to place the fault at GENERIC x OWNING and not at GENERIC alone -- the
+// same three-control shape `generic_element_move` used for O-N17. D-264 moved
+// the check from the instantiation to the BODY: a generic body is checked
+// ONCE for every type it is instantiated at, so `T:answer = s[i]` is refused
+// whatever `T` the caller supplies, `int64` included, and the diagnostic says
+// so ("`T` is a type parameter, and this body is checked once for every type
+// it is instantiated at"). So this file now shows the fix's REACH -- the
+// refusal does not depend on the instantiation -- and it stays in the corpus
+// for that. Its control, at the kept `aaffb87` pin, is `run:0`.
 mod:case3_generic_scalar;
 
 struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };

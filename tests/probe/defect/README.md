@@ -253,6 +253,16 @@ with what `ntime` does in the meantime.
 
 ## O-N8 — a second defect, met by accident
 
+> **At compiler `c3bdae2` the recipe below no longer reproduces** (measured at
+> cycle 0.1.0b, with the two new floor arms added to `ARMS` and without them):
+> `npkc beta.npk` exits **1**, writes no `.ll`, and says
+> `NITPICK-RESOLVE-012 … file beta.npk declares mod:alpha; first: a file's
+> header names the file -- mod:beta;` — the compiler's D-248 enforcing the rule
+> this defect was about. O-N8 looks FIXED; striking it is a decision this
+> subcycle did not take, so it is reported to the orchestrator in
+> `../../../meta/roadmap/0.1/0.1.0b.md`'s execution record. The section below
+> is the record as written.
+
 Not committed as files, because it needs two source files with *deliberately*
 wrong names and the harness would trip over them from 0.0.2. Six lines
 reproduce it, so they are here instead.

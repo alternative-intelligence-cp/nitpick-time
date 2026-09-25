@@ -65,12 +65,14 @@ mod:lib;
 // whether it should be public at all -- which is the whole reason the umbrella
 // is written by hand rather than globbed.
 
-// `Vec<T>` -- FOR A NON-OWNING `T`. See `core/vec.npk`'s header, TM-132 and
-// TM-136. O-N17 -- the defect the restriction was first written against -- is
-// FIXED at pin `aaffb87`, and the restriction stands anyway: `NITPICK-TYPE-046`
-// does not fire inside a generic body, so a function here that read an owning
-// element without `move` would ship two owners of one body at exit 0 with
-// nothing to catch it (`SAFETY.md` S-18d).
+// `Vec<T>` -- FOR A NON-OWNING `T`. See `core/vec.npk`'s header, TM-132,
+// TM-136 and TM-150. O-N17 -- the defect the restriction was first written
+// against -- is FIXED at pin `aaffb87`, and O-N19 -- `NITPICK-TYPE-046` not
+// firing inside a generic body, the reason it stood on from 0.0.5 -- is FIXED
+// at `c3bdae2` by the compiler's D-264, which refuses a copy of a `T` place
+// where it is written. The restriction stands on the one reason left: four of
+// the nine operations owe an element drop at an owning `T` and perform none
+// (`SAFETY.md` S-18d).
 pub use "./core/vec.npk".Vec;
 pub use "./core/vec.npk".vec_init;
 pub use "./core/vec.npk".vec_reserve;
@@ -136,7 +138,9 @@ pub use "./core/limits.npk".NTIME_DIGITS_MAX;
 // `cal.ETimeValue` plus the four floor arms plus `DivByZero`, `DivOverflow`,
 // `IntOverflow` and `OutOfBounds`, which `cal`'s own `%`, `+` and table index
 // arm in the CONSUMER however pure the consumer's code is (S-4b, S-4c, TM-107).
-// The number is read from `NITPICK-REACH-003`'s own list on every run by
+// At pin `c3bdae2` it is ELEVEN: the floor is six, `StackExhausted` and
+// `MachineFault` having joined it (cycle 0.1.0b, TM-155), and nothing else
+// moved. The number is read from `NITPICK-REACH-003`'s own list on every run by
 // `check_failsafe_arms`, in both directions, and never predicted.
 pub use "./cal/cal.npk".ETimeValue;
 

@@ -31,6 +31,16 @@ a property test. The switch is then deleting a comment marker rather than
 inventing the clause. The compiler's rungs refuse the constructs by name today,
 so a premature `ensures` is a build failure, not a silent no-op.
 
+> **Status at compiler `c3bdae2` (cycle 0.1.0b): P-1's premise is false and its
+> replacement is `../OPEN_QUESTIONS.md` Q-6.** Every construct this rule names is
+> live and none refuses. Measured: a live `requires`, `ensures`, `invariant` or
+> `limit<R>` adds one trap identity to every consuming program's `failsafe`
+> (`RequiresViolated`, `EnsuresViolated`, `InvariantViolated`, `LimitViolated`);
+> `prove` and `assert_static` add none, and a plain build lowers `prove` to
+> nothing. Until Q-6 is answered, no comment-form obligation in `src/` becomes a
+> live clause, and **no comment-form obligation is evidence of anything** — it is
+> checked by nothing, at any pin.
+
 ---
 
 ## 2. What the language discharges for free
@@ -139,6 +149,12 @@ way that reads as fine:
   no expression. The **maximum** is fine, so a bound pair written by symmetry
   from a working upper bound is exactly what stops compiling.
   `tests/probe/probe02d_wide_literal_refused.npk` pins it.
+- **`uint64`'s maximum is spelled `~0u64`** (the compiler's D-311, TM-149). The
+  `0u64 - 1u64` that D-148 gave as the example is refused `NITPICK-TYPE-076` at
+  compiler `c3bdae2` even as a `fixed` initialiser — D-310 folds a constant
+  `+ - *` and refuses one whose value does not fit — and written in a function
+  body it was always an `IntOverflow` trap (TM-134). A bit operation cannot
+  overflow; a named constant keeps the spelling in one place.
 - **The `prove` does not stand alone.** `=>!` does not check at run time and
   `=>` at a narrowing is refused at compile time (TM-105), so a `prove` that is
   a comment until the compiler's cycle 1.5 would be the *only* thing between a
@@ -220,6 +236,18 @@ the bound is stated:
 `ntime` has **no unbounded loop and no recursion at all**. That is worth
 stating as a property rather than an accident: the calendar algorithms are
 closed-form, the searches are logarithmic, and the parsers are linear scans.
+
+> **Status at compiler `c3bdae2` (cycle 0.1.0b): P-9 is now the language's rule,
+> and this tree meets it mechanically.** The compiler's D-304 refuses a `while`
+> or `when` that states neither `decreases E` nor `unbounded`
+> (`NITPICK-TYPE-072`), checks the measure at the loop's head in every build,
+> and traps `DecreasesViolated` when it fails to shrink. Every one of this
+> tree's **48** loops carries `decreases` — six in `src/core/bytes.npk`, the rest
+> in `tests/` — 29 written by the compiler's sweep tool in its own proven shape
+> and 19 by the committed reading `../roadmap/0.1/decreases_read.txt`, and
+> **none is `unbounded`** (TM-151). So the property this rule claimed is
+> executed rather than stated. The table above is still the plan for the loops
+> later cycles write; each will carry its variant as the clause.
 
 ---
 

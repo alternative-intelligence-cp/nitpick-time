@@ -80,7 +80,7 @@ error. Step 7 builds the library because *building it is a check*; every program
 in step 9 carries its own copy of everything. That costs about 2.5 s per program
 and it is printed rather than hidden.
 
-**The undefined-symbol scan cannot see a syscall** (TM-118, RX-120).
+**The undefined-symbol scan cannot FLAG a syscall** (TM-118, TM-153, RX-120).
 `npk_sys6` is the runtime's own trampoline, so it is in the allowlist by
 construction. The scan supports B-2's claim — no C, ever — and nothing wider.
 **`check_purity` is a SOURCE-level check and is the only thing in this
@@ -138,6 +138,16 @@ took a full invocation from **241 s to 43 s** at unchanged content — that is
 the whole of the speed-up, same units, same verdicts. Cycle 0.0.6 then added 21
 defect-corpus units, one unit test, six placeholder modules per self-check
 scratch tree and a fourth self-check part, which put ~19 s back.
+
+**At compiler `c3bdae2`, cycle 0.1.0b, the table's rows are the same steps over
+larger denominators, and its times are not re-quoted.** A full invocation is
+**70 units**: the self-check's 7 planted cases (case 6 still `PEND`), 18
+tree-check violations with 18 clean controls, 3 arm specimens and the verdict
+mechanisms; parse over 83 files; the defect corpus at 24 units, all asserted;
+and library + repro + suite at 46 (34 probe, 11 unit, 1 conformance). The wall
+clock moves from run to run by more than any one change adds, which is why
+`meta/roadmap/0.1/0.1.0.md` stopped quoting it; the unit count is the number to
+compare.
 
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the

@@ -69,21 +69,31 @@ rule and it is what keeps the budget at three without losing information.
 **Rule S-4 — module decomposition is part of the budget**, because REACH is
 import-scoped:
 
-| Module | Declares | Identity arms a consumer importing only this owes | TOTAL arms, MEASURED at pin `aaffb87` |
+| Module | Declares | Identity arms a consumer importing only this owes | TOTAL arms, MEASURED at pin `c3bdae2` (at `aaffb87`) |
 |---|---|---|---|
-| `ntime/core.npk` | — | nothing | **4** — the floor; `core` is not yet reachable as its own public module, and the umbrella's bill is the row below the table |
-| `ntime/cal.npk` | `ETimeValue` | one arm | **9** — measured 2026-09-06 |
-| `ntime/span.npk` | — (raises `cal`'s) | one arm | placeholder; **4** today, and the number is meaningless until cycle 0.2 gives the module a body |
-| `ntime/zone.npk` | `ETimeZone` | two arms | placeholder; **4** today (cycle 0.3) |
-| `ntime/fmt.npk` | `ETimeParse` | three arms | placeholder; **4** today (cycle 0.4) |
-| `ntime/host.npk` | — (forwards errnos) | one arm | placeholder; **4** today |
+| `ntime/lib.npk` — **the umbrella**, the import a consumer writes | — (re-exports) | one arm today (`cal`'s) | **12** (—) — generated since cycle 0.1.0b (TM-155): the floor of six, `cal.ETimeValue`, the four arithmetic arms, and `DecreasesViolated` from `src/core/bytes.npk`'s measured loops |
+| `ntime/core.npk` | — | nothing | **6** (4) — the floor; `core` is not yet reachable as its own public module, and its code is billed through the umbrella's row |
+| `ntime/cal.npk` | `ETimeValue` | one arm | **11** (9) — measured 2026-09-06 and 2026-09-25 |
+| `ntime/span.npk` | — (raises `cal`'s) | one arm | placeholder; **6** (4) today, and the number is meaningless until cycle 0.2 gives the module a body |
+| `ntime/zone.npk` | `ETimeZone` | two arms | placeholder; **6** (4) today (cycle 0.3) |
+| `ntime/fmt.npk` | `ETimeParse` | three arms | placeholder; **6** (4) today (cycle 0.4) |
+| `ntime/host.npk` | — (forwards errnos) | one arm | placeholder; **6** (4) today |
+
+*(Amended at cycle 0.1.0b: the column read "MEASURED at pin `aaffb87`" with the
+bracketed numbers, and had no umbrella row. At compiler `c3bdae2` every row
+gained `StackExhausted` and `MachineFault`, the new floor (TM-155), and the
+umbrella became a generated row because it is the import a consumer actually
+writes.)*
 
 **A program that only wants calendar arithmetic owes one IDENTITY arm.** That is
 the decomposition working, and it is why `cal` does not import `zone`.
 
 **AND IT OWES NINE ARMS ALTOGETHER — the totals column is now real for the one
 module that has a body, and it is MEASURED rather than predicted**, which is
-what S-4b promised cycle 0.1 would deliver. Read out of `NITPICK-REACH-003`'s
+what S-4b promised cycle 0.1 would deliver. *(**Eleven** at compiler `c3bdae2`,
+cycle 0.1.0b: the two new floor identities, `StackExhausted` and
+`MachineFault`, and nothing else. The nine below is kept as the record at
+`aaffb87`.)* Read out of `NITPICK-REACH-003`'s
 own list by compiling a consumer that imports only `src/cal/cal.npk` and
 declares no handler:
 
@@ -121,12 +131,28 @@ is not yet the bill.** Measured at cycle 0.0.0 by
 armed by the machinery any module's text contains — `DivByZero` and
 `DivOverflow` by `/` or `%`, `IntOverflow` by plain-integer `+ - *`,
 `OutOfBounds` by an index — on top of an unconditional floor of `Unreachable`,
-`HeapOom`, `HeapBadRequest` and `WildLeak`.
+`HeapOom`, `HeapBadRequest`, `WildLeak`, **`StackExhausted` and `MachineFault`**.
+*(The floor was those first four until compiler `c3bdae2`; its cycle 1.5 made
+the last two universal — D-305 checks every emitted function's stack, D-307
+routes a hardware fault to `failsafe` — and cycle 0.1.0b read both out of the
+`NITPICK-REACH-002` lines of every root in this tree that reaches the
+reachability analysis, 61 of them, before writing them here. TM-155.)*
+
+**And one more piece of machinery arms an arm since `c3bdae2`:**
+
+| Machinery in a module's text | Arms | Measured |
+|---|---|---|
+| `/` or `%` | `DivByZero`, `DivOverflow` | cycle 0.0.0 |
+| plain-integer `+ - *` | `IntOverflow` | cycle 0.0.0 |
+| an index | `OutOfBounds` | cycle 0.0.0 |
+| **a loop's `decreases` clause** | **`DecreasesViolated`** | cycle 0.1.0b, at `c3bdae2`: 20 of this tree's 61 roots, every one through this tree's own loops (the compiler's D-304) |
+
+`unbounded`, the other clause D-304 admits, checks nothing and arms nothing.
 
 A miniature of `cal` that declares **no error at all** cost an importing program
 whose own text contains no arithmetic **four extra arms**, and the twin that
-imports nothing compiles with the four floor arms alone
-(`tests/probe/probe11d_floor_only.npk`). `cal` divides by 4, 100, 400, 146097,
+imports nothing compiles with the floor arms alone — four at cycle 0.0.0, six at
+`c3bdae2` (`tests/probe/probe11d_floor_only.npk`). `cal` divides by 4, 100, 400, 146097,
 86400 and 1000000000 (S-16), indexes the month and zone tables (S-17), and adds,
 so **a consumer that imports `ntime/cal.npk` owes `DivByZero`, `DivOverflow`,
 `IntOverflow` and `OutOfBounds` however pure its own code is** — arms a correct
@@ -176,17 +202,20 @@ never in the compiler, and it is a red run rather than a quiet drift.
 **And this is what makes constraint 3 above mechanical rather than aspirational.**
 "And no more" cannot be caught by any build — a superset of the required arms
 compiles — so it is caught by a set equality asserted here. Measured at pin
-`0dfddac` on the three specimens cycle 0.0.0 left behind, and the arithmetic is
-written out because a number embedded in prose travels with the prose:
+`0dfddac` on the three specimens cycle 0.0.0 left behind, **re-measured at
+compiler `c3bdae2` at cycle 0.1.0b** (the bracketed numbers are `0dfddac`'s),
+and the arithmetic is written out because a number embedded in prose travels
+with the prose:
 
 | Module | Owes | = floor + | Which constraint it pins |
 |---|---|---|---|
-| *(nothing imported)* | **4** | — | the floor: `Unreachable`, `HeapOom`, `HeapBadRequest`, `WildLeak` |
-| `probe11_silent_lib` | **4** | + 0 | **1** — it declares `pub error:EProbeSilent` and never raises it, and the identity is **absent** from the list |
-| `probe11_arms_lib` | **5** | + 1 | a `fail` SITE puts it in, module-qualified: `probe11_arms_lib.EProbeZone` |
-| `probe11_calc_lib` | **8** | + 4 | **2** — it declares no error at all; `DivByZero`, `DivOverflow` from its `/` and `%`, `IntOverflow` from its `+`, `OutOfBounds` from its one index |
+| *(nothing imported)* | **6** (4) | — | the floor: `Unreachable`, `HeapOom`, `HeapBadRequest`, `WildLeak`, and since `c3bdae2` `StackExhausted` and `MachineFault` |
+| `probe11_silent_lib` | **6** (4) | + 0 | **1** — it declares `pub error:EProbeSilent` and never raises it, and the identity is **absent** from the list |
+| `probe11_arms_lib` | **7** (5) | + 1 | a `fail` SITE puts it in, module-qualified: `probe11_arms_lib.EProbeZone` |
+| `probe11_calc_lib` | **10** (8) | + 4 | **2** — it declares no error at all; `DivByZero`, `DivOverflow` from its `/` and `%`, `IntOverflow` from its `+`, `OutOfBounds` from its one index |
 
-8 − 4 = 4 is S-4b's measured *"four extra arms"*, and none of the three
+10 − 6 = 4 (and 8 − 4 = 4 at `0dfddac`) is S-4b's measured *"four extra
+arms"*: the floor moved and the difference did not. None of the three
 functions is ever called by the generated program — S-4c, the arm is owed by the
 **import**.
 
@@ -265,10 +294,14 @@ SEEN TO FAIL.** Three separate claims, and each was missing:
 - **Source-level, and nothing else can stand in for it.** The build's
   undefined-symbol scan cannot answer this question at all: `npk_sys6` is the
   runtime's own syscall trampoline and is in its allowlist by construction, so a
-  module that issues a raw syscall has an *identical* undefined set to one that
-  does not — measured in `nitpick-regex` as RX-120 (29 symbols each way, the
-  diff empty) and reproduced here (`BUILD.md` B-2c, TM-118). **A green symbol
-  scan cited as a purity result is the failure mode.**
+  module that issues a raw syscall passes the scan exactly as one that does not
+  (`BUILD.md` B-2c, TM-118). **A green symbol scan cited as a purity result is
+  the failure mode.** *(Amended at cycle 0.1.0b, TM-153: this bullet said the
+  two undefined sets were **identical** — `nitpick-regex`'s RX-120, 29 symbols
+  each way, "reproduced here". At compiler `c3bdae2` they are 5 and 8, the call
+  adding `npk_chain_push`, `npk_raise` and `npk_sys6`, and at `aaffb87` they
+  were already 2 and 5. The scan sees the call; it can never flag it, which is
+  the half the rule rests on.)*
 - **Live from cycle 0.0.3**, not from 0.3. It runs over the six non-`host`
   files today and reports `0` findings with the denominator printed, which is
   the same answer `check_no_owning_fields` gives over an empty set and is
@@ -456,8 +489,10 @@ pass s[i];
 **THE EXCEPTION IS `push`, AND IT IS PART OF THE RULE RATHER THAN A DEPARTURE
 FROM IT (F2, TM-143).** This code block read *"over `count`, never over `cap`"*
 until cycle 0.0.6, and three sites in the library lay the slice over `cap` —
-`vec_push` (`vec.npk:180`) and `bytes_push`/`bytes_extend`
-(`bytes.npk:97,109`). Each argues the exception in a source comment, and
+`vec_push` and `bytes_push`/`bytes_extend`, each at its `#wild_slice` over `cap`
+(cited by function since cycle 0.1.0b: the line numbers this sentence gave had
+moved, and moved again when that subcycle added comments above them). Each
+argues the exception in a source comment, and
 `CLAUDE.md` forbids amending a specification by a comment, so the rule is
 amended here instead. **The rule in full:**
 
@@ -644,8 +679,29 @@ by construction, so there is nothing there to discard.
 > written at the instantiation, which is where this rule already puts element
 > lifetime. `tests/probe/defect/generic_element_move/`.
 
-**Rule S-18d (TM-136) — THE RESTRICTION IS NOT ENFORCEABLE BY THE COMPILER,
-AND THAT IS WHY IT STAYS.** *(Placed after S-18c since cycle 0.0.6. It was
+**Rule S-18d (TM-136, amended by TM-150) — THE RESTRICTION STAYS, AND WHAT IT
+RESTS ON NOW IS THE ELEMENT DROPS, WHICH NO COMPILER CHECK AND NO LEAK GATE
+SEES.**
+
+> **Amended at cycle 0.1.0b (TM-150).** This rule's title read *"THE
+> RESTRICTION IS NOT ENFORCEABLE BY THE COMPILER"*, and its reason — below, as
+> written — was that `NITPICK-TYPE-046` does not fire inside a generic function
+> body. **At compiler `c3bdae2` it does**: the compiler's D-264 makes a bare type
+> parameter move-only in the body that names it, so `T:answer = s[i]` is refused
+> where it is written, at every instantiation (`generic_owning_copy/case1`,
+> `case3` and `case4` assert it; `aaffb87`'s verdicts are their controls). A
+> future `Vec<T>` function that reads an owning element without `move` no longer
+> compiles. **What is still unenforced is the element drops:** at an owning `T`,
+> `vec_set`, `vec_clear`, `vec_truncate` and `vec_free` each discard elements
+> they do not drop — a leak that exits 0, because D-151 counts `wild` blocks and
+> cannot see a managed body (TM-106) — and `vec_at<T>` still removes the element
+> it reads (`pass` of a place moves; exit 11, the language as specified). So
+> `Vec<T>` stays restricted to a non-owning `T`, on that one reason. `vec_pop<T>`
+> is not among the four: its `move` hands the element to the caller, measured
+> at `T = string` at `c3bdae2` (two million push-then-pop cycles, `peak_live`
+> 120 bytes). The text below is the rule as it stood from cycle 0.0.5.
+
+*(Placed after S-18c since cycle 0.0.6. It was
 above it for one subcycle, which is why the two paragraphs read as one
 argument and their disagreement about O-N17 was invisible — F6, and the
 cosmetic finding that made D3 possible.)* S-18b puts element lifetime at the instantiation
@@ -708,9 +764,10 @@ into a `Bytes` will actually be held:
   it is a lexical property a check can hold them to when there is a second file
   that needs one;
 - `Vec<T>` does **not** have this shape and the reason is worth writing down
-  rather than rediscovering: `vec_reserve` reallocates identically, but **no
-  function in `vec.npk` returns a slice**, so there is no view for a caller to
-  hold. `vec_at<T>` returns by value.
+  rather than rediscovering: `vec_reserve` reallocates too — with `ralloc`
+  since cycle 0.1.0b (TM-150), which invalidates the old pointer just as surely
+  — but **no function in `vec.npk` returns a slice**, so there is no view for a
+  caller to hold. `vec_at<T>` returns by value.
 
 **Rule S-19.** The generated zone tables are `fixed` module state — read-only
 memory, no initialisation at startup, nothing to leak, and nothing to race.

@@ -35,8 +35,10 @@
 # ============================================================================
 #
 # WHAT A GREEN RUN PROVES TODAY. `src/core/` is real code since cycle 0.0.4 --
-# `Vec<T>`, `Bytes` and thirteen named bounds, re-exported as 35 public names --
-# so this IS evidence about behaviour, of the 62 units the runner reports. What
+# `Vec<T>`, `Bytes` and thirteen named bounds -- and `src/cal/` since 0.1.0 --
+# the civil types and their validating constructors -- re-exported together as
+# 48 public names, so this IS evidence about behaviour, of the 70 units the
+# runner reports at compiler `c3bdae2` (62 at cycle 0.0.6, 67 at 0.1.0). What
 # it is evidence of: the pinned compiler builds from a clean checkout at exactly
 # LLVM 20.1.2, every `.npk` under `src/` compiles, every unit under `tests/`
 # meets its own header at -O0 and again under `opt -O2`, the whole
@@ -44,7 +46,11 @@
 # `tests/conformance/import.npk` emits, assembles, links, RUNS and exits 0. The
 # run is what is judged -- `npkc` exiting 0 is NOT well-formedness (O-N11,
 # TM-112), and a stage that stopped at the `.ll` would have passed a program
-# with no handler.
+# with no handler. AND SINCE CYCLE 0.1.0b: every loop in the tree states a
+# measure the compiler checks on every trip (D-304, `DecreasesViolated`), and
+# every `failsafe` names the two identities the compiler's 1.5 added to the
+# floor, `StackExhausted` and `MachineFault` -- the pinned compiler refuses a
+# tree missing either, so a green run here is a tree that has both.
 #
 # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
 # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
@@ -61,9 +67,12 @@
 # Until 0.0.3 that was the honest gap here, and it was written in this comment
 # for three cycles.
 #
-# WHAT IT IS STILL NOT EVIDENCE OF. Five of the six `src/` directories are
-# still placeholders -- `cal/`, `span/`, `zone/`, `fmt/`, `host/` -- so nothing
-# here dates anything. And a green run is not a MEMORY result for the managed
+# WHAT IT IS STILL NOT EVIDENCE OF. Four of the six `src/` directories are
+# still placeholders -- `span/`, `zone/`, `fmt/`, `host/` -- and `cal/` holds
+# the types and constructors but not yet the day-number algorithms (cycle
+# 0.1.1), so nothing here converts a date to a day or a time to a zone. (This
+# said five placeholders, `cal/` among them, until cycle 0.1.0b; `cal/` had had
+# a body since 0.1.0.) And a green run is not a MEMORY result for the managed
 # half: D-151's exit-0 trap counts `wild` allocations and a `buffer` is managed
 # (TM-106), so `exit 0` says nothing about `Bytes` (S-18b, S-18e).
 #

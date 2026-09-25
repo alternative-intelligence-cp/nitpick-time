@@ -20,7 +20,9 @@
 // ==================== AS WRITTEN ON 2026-09-03 ==============================
 // THE CONTRAST, and the reason case 1 is evidence rather than an assertion.
 // Character for character `case1_no_failsafe.npk`, plus a `failsafe` naming
-// the four unconditional floor arms and the wildcard.
+// the four unconditional floor arms and the wildcard. [Cycle 0.1.0b: the floor
+// is six at compiler `c3bdae2` -- `StackExhausted` and `MachineFault` joined it
+// -- and the `failsafe` below names all six.]
 //
 // All four steps exit 0 and the program runs. So the difference between a file
 // `npkc` accepts and links, and a file `npkc` accepts and `llc` refuses, is
@@ -38,6 +40,8 @@ func:failsafe = int32(Error:e) {
         (HeapOom)        { exit 92i32; },
         (Unreachable)    { exit 95i32; },
         (WildLeak)       { exit 96i32; },
+        (StackExhausted) { exit 106i32; },
+        (MachineFault)   { exit 107i32; },
         (*)              { exit 99i32; }
     }
     exit 9i32;

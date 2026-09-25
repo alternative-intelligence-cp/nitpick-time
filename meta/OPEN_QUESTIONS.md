@@ -268,6 +268,13 @@ resolves elsewhere.
 **It costs `ntime` nothing and blocks nothing** — the house rule is already
 `mod:` = basename. Raised alongside O-N4; nothing here is shaped around it.
 
+> **Measured at compiler `c3bdae2`, cycle 0.1.0b: the reproduction no longer
+> reproduces.** The six-line pair is refused `NITPICK-RESOLVE-012` at
+> `beta.npk:1:1`, exit 1 and no `.ll` — *"a file's header names the file"*, the
+> compiler's D-248 — which is exactly the ask above. Not struck here: striking
+> an `O-N` is a decision, and this subcycle's scope did not include one, so it
+> is reported to the orchestrator for the next dispatch.
+
 ### ~~O-N9 — D-004's escape rule is unenforced for slice views~~ — **DISCHARGED 2026-09-04 (TM-110)**
 > **DISCHARGED, on this workbench's own measurement against pin `94874ce`, not
 > on a correspondent's report.** The fix landed as the compiler's DEF-3
@@ -828,7 +835,21 @@ checked rather than trusted.
 
 ---
 
-### O-N18 — `.len` on a fixed-size array `T[N]` is accepted by the frontend and cannot be lowered — **FIXED UPSTREAM in the compiler's 1.5.2e, NOT YET AT OUR PIN**
+### ~~O-N18 — `.len` on a fixed-size array `T[N]` is accepted by the frontend and cannot be lowered~~ — **FIXED at pin `c3bdae2`, verified here 2026-09-25 (TM-154)**
+
+> **Verified, not assumed.** At compiler `c3bdae2`
+> `tests/probe/defect/fixed_array_len/case1_local_array_len.npk` compiles,
+> links, runs and exits 0. `check_exemptions_live` reported exactly the landing
+> this entry predicted — *"the entry records that this file stops at `npkc`; it
+> now stops at `run:0`"* — and the response was the one written below: the file
+> carries `// expect-exit: 0`, its `EXPECT_EXEMPT` entry is deleted, and
+> `run_defect_corpus` asserts it on every full run. Its control, the same text
+> at the kept `aaffb87` pin, is `npkc` exit 1 with no `.ll` and
+> `NITPICK-EMIT-002` (`meta/roadmap/0.1/0.1.0b.md`'s execution record).
+>
+> The record below is what was raised at `0dfddac` and is left standing,
+> including its now-past heading status: *"FIXED UPSTREAM in the compiler's
+> 1.5.2e, NOT YET AT OUR PIN"*.
 
 **Raised** from this repository at cycle 0.0.4; **numbered O-N18** in the
 workbench registry (`../../meta/OPEN_QUESTIONS.md`); **accepted by the compiler
@@ -862,7 +883,26 @@ better style anyway (`src/core/limits.npk`).
 
 ---
 
-### O-N19 — `NITPICK-TYPE-046` is not enforced inside a generic function body — **ACCEPTED BY THE COMPILER AS A SOUNDNESS HOLE, with the author**
+### ~~O-N19 — `NITPICK-TYPE-046` is not enforced inside a generic function body~~ — **FIXED at pin `c3bdae2` by the compiler's D-264, verified here 2026-09-25 (TM-154)**
+
+> **Verified, not assumed.** At compiler `c3bdae2` a bare type parameter is
+> move-only in the body that names it (D-264, landed at its 1.5.2f step 1), so
+> `T:answer = s[i]` is refused `NITPICK-TYPE-046` inside the generic body.
+> `generic_owning_copy/case1` and `case4` went from `run:0` and `run:170` to
+> refused, `check_exemptions_live` named both moves, and both now carry
+> `// expect-error: NITPICK-TYPE-046`; their `EXPECT_EXEMPT` entries are
+> deleted. **`case3`, the scalar control, is refused too** — D-264 checks the
+> body once for every instantiation rather than at the one it is called with —
+> and its marker changed from `expect-exit: 0` to the same refusal. The
+> controls, the pre-adoption text at the kept `aaffb87` pin, reproduced the
+> recorded verdicts exactly: `run:0`, `run:0`, `run:170`
+> (`generic_owning_copy/TRANSCRIPT.txt` section 4).
+>
+> **What it changes for this library** (TM-150): `vec_reserve`'s element copy
+> was refused by the same check, so it relocates with `ralloc`; `vec_pop`'s
+> `move` is still the right spelling; and `Vec<T>` stays restricted to a
+> non-owning `T`, now on one reason — the four element drops it does not
+> perform. The record below is left standing.
 
 **Raised** from this repository at cycle 0.0.5 while checking whether O-N17's
 fix lifted TM-132's restriction; **numbered O-N19** in the workbench registry;

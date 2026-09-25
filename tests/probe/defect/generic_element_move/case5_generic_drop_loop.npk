@@ -55,7 +55,7 @@ func:vec_push<T> = NIL(Vec<T>->:v, move T:x) never fails {
 // `old`, because `old` is a reserved `VerificationKeyword` (TM-130, B-18).
 func:vec_clear<T> = NIL(Vec<T>->:v) never fails {
     int64:i = 0i64;
-    while (i < v.count) {
+    while (i < v.count) decreases v.count - i {
         T:dying = move(v.items[i]);
         discard(dying);
         i = i + 1i64;
@@ -87,6 +87,9 @@ func:failsafe = int32(Error:e) {
         (OutOfBounds)    { exit 94i32; },
         (Unreachable)    { exit 95i32; },
         (WildLeak)       { exit 96i32; },
+        (StackExhausted) { exit 106i32; },
+        (MachineFault)   { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
         (*)              { exit 99i32; }
     }
     exit 9i32;

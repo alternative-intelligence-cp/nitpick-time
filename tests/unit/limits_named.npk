@@ -19,14 +19,18 @@ mod:limits_named;
 
 use "../../src/core/limits.npk".*;
 
-// `uint64`'s maximum, AS A CONSTANT -- and the first draft of this file wrote
+// `uint64`'s maximum, AS A CONSTANT, spelled `~0u64` since cycle 0.1.0b: at
+// compiler `c3bdae2` `0u64 - 1u64` is refused even here, as a `fixed`
+// initialiser (`NITPICK-TYPE-076`, the compiler's D-310), and D-311 makes the
+// bit operation the spelling (TM-149). The rest is the record from pin
+// `0dfddac`: the first draft of this file wrote
 // it as a statement inside `main` and exited 93. D-148 gives `0u64 - 1u64` as
 // the spelling and does not say it must be constant-folded; written as a
 // runtime expression it underflows and D-210 traps `IntOverflow`. This file
 // tripped over that MINUTES AFTER `bytes_put_int.npk` recorded it, which is the
 // argument for the constant being named once, here and there, rather than the
 // expression being re-typed wherever the value is wanted.
-fixed uint64:U64_MAX = 0u64 - 1u64;
+fixed uint64:U64_MAX = ~0u64;
 
 func:main = int32(cstring[]:_~argv) {
     // ---- CALENDAR.md §2: the total-days figure ---------------------------
@@ -68,7 +72,7 @@ func:main = int32(cstring[]:_~argv) {
     // restating 20: divide by ten until nothing is left.
     uint64:u = U64_MAX;                  // the CONSTANT, never the expression
     int64:digits = 0i64;
-    while (u > 0u64) {
+    while (u > 0u64) decreases u {
         u = u / 10u64;
         digits = digits + 1i64;
     }
@@ -87,6 +91,9 @@ func:failsafe = int32(Error:e) {
         (WildLeak)       { exit 96i32; },
         (DivByZero)      { exit 97i32; },
         (DivOverflow)    { exit 98i32; },
+        (StackExhausted) { exit 106i32; },
+        (MachineFault)   { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
         (*)              { exit 99i32; }
     }
     exit 9i32;

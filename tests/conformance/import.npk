@@ -37,9 +37,32 @@ func:main = int32(cstring[]:_~argv) {
     exit 0i32;
 };
 
-// THE MOVE PREDICTED BY THIS COMMENT HAS HAPPENED TWICE NOW -- AT CYCLE 0.0.4
-// AND AGAIN AT 0.1.0 -- AND EVERY PREVIOUS TEXT IS KEPT SO THE WHOLE
+// THE MOVE PREDICTED BY THIS COMMENT HAS HAPPENED THREE TIMES NOW -- AT CYCLE
+// 0.0.4, AT 0.1.0 AND AT 0.1.0b -- AND EVERY PREVIOUS TEXT IS KEPT SO THE WHOLE
 // BEFORE-AND-AFTER IS ONE READ.
+//
+// ===========================================================================
+// CYCLE 0.1.0b: TWELVE, AND NONE OF THE THREE NEW ARMS IS AN IDENTITY
+// ===========================================================================
+//
+// The re-pin to compiler `c3bdae2`, the close of its cycle 1.5. This file went
+// red with every other root that reaches the reachability analysis,
+// `NITPICK-REACH-002` naming three arms. **The bill is now TWELVE:**
+//
+//     12 = 9 (the cycle-0.1.0 bill below, unchanged)
+//        + 1 StackExhausted     -- the new floor: D-305, every function checks
+//                                  its stack
+//        + 1 MachineFault       -- the new floor: D-307, a hardware fault
+//                                  reaches `failsafe`
+//        + 1 DecreasesViolated  -- `src/core/bytes.npk`'s six loops, which
+//                                  carry checked measures since D-304
+//
+// THE FIRST TWO ARE EVERY PROGRAM'S, in any library or none: the floor grew for
+// the whole language, so nothing an application imports could avoid them. The
+// third is MACHINERY, like S-4b's four arithmetic arms, and not an identity --
+// the identity half is still the one `cal.ETimeValue`. `SAFETY.md` S-4 publishes
+// the umbrella's row, which `check_failsafe_arms` generates since this cycle
+// (TM-155); the `failsafe` below names all twelve.
 //
 // ===========================================================================
 // CYCLE 0.1.0: NINE, AND THE NINTH IS THE FIRST THAT IS AN IDENTITY
@@ -117,6 +140,9 @@ func:failsafe = int32(Error:e) {
         (DivByZero)      { exit 97i32; },
         (DivOverflow)    { exit 98i32; },
         (ETimeValue)     { exit 87i32; },
+        (StackExhausted) { exit 106i32; },
+        (MachineFault)   { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
         (*)              { exit 99i32; }
     }
     exit 9i32;

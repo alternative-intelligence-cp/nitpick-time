@@ -226,3 +226,85 @@ $ $REPO/build/gotx/case4_use_after_free.94874ce
   exit=170
 
 END OF TRANSCRIPT
+
+### 4.  THE LANDING -- APPENDED AT CYCLE 0.1.0b, 2026-09-25. NOTHING ABOVE THIS
+###     SECTION WAS CHANGED: it is the record at the pins it names.
+==============================================================================
+The check this directory demanded is in the compiler at `c3bdae2`: its D-264
+makes a bare type parameter move-only in the body that names it, because a
+generic body is checked once for every type it is instantiated at.  Every
+status below is on its own line beside the artefact it should have produced
+(npkc -> .ll, llc -O0 -filetype=obj -relocation-model=static -> .o,
+ld.lld -static <o> <npkrt.o> -> binary, then the run).  The build scripts are
+scratch; the commands they run are the ones named here.
+
+A.  THE CONTROL -- the text as it stood before cycle 0.1.0b (commit 5bb2e6f,
+    each file extracted with `git show 5bb2e6f:<path>`), at the kept `aaffb87` pin:
+
+$ sha256sum $WB/.internal/toolchain/aaffb87/npkc $WB/.internal/toolchain/aaffb87/npkrt.o
+a3b0dadc650421b25ac24bfc073ee29e2b57659a48bd84338edd3b23c382c86e  $WB/.internal/toolchain/aaffb87/npkc
+c9ddbcffd32eccc7787bd71c39ebefd25913170a9fae48de32eb53ca68b2239e  $WB/.internal/toolchain/aaffb87/npkrt.o
+
+  case1_generic_bare_copy: npkc exit=0 ll=written
+  case1_generic_bare_copy: llc exit=0 o=written
+  case1_generic_bare_copy: ld exit=0 bin=written
+  case1_generic_bare_copy: run exit=0
+
+  case2_concrete_bare_copy: npkc exit=1 ll=ABSENT
+      | NITPICK-TYPE-046 .internal/adopt/ctl/case2_concrete_bare_copy.npk:40:5: `string` owns storage that is released at scope exit, so it is move-only (D-183): copying it here would leave two owners and one double free. Write `move(...)` to transfer it (invalidating the source), take an explicit copy with `.clone()`, or build the value in place — a temporary has no second name to invalidate
+
+  case3_generic_scalar: npkc exit=0 ll=written
+  case3_generic_scalar: llc exit=0 o=written
+  case3_generic_scalar: ld exit=0 bin=written
+  case3_generic_scalar: run exit=0
+
+  case4_use_after_free: npkc exit=0 ll=written
+  case4_use_after_free: llc exit=0 o=written
+  case4_use_after_free: ld exit=0 bin=written
+  case4_use_after_free: run exit=170
+
+  case5_vec_at_destructive is not re-run here: it imports `src/core/vec.npk`,
+  so building it alone against an older pin would mix two trees.  Its `aaffb87`
+  verdict is the full harness run at that pin over commit 5bb2e6f, which
+  printed `exit 11, both legs`.
+
+  WHY THE CONTROL IS THE PRE-ADOPTION TEXT: the adopted `case4` carries a
+  `decreases` clause on its loop (cycle 0.1.0b step 3), which `aaffb87` does not
+  parse.  The adopted file, copied to scratch as `adopted_case4.npk`:
+
+$ $WB/.internal/toolchain/aaffb87/npkc adopted_case4.npk -o adopted_case4.ll
+  exit=1   adopted_case4.ll = ABSENT
+  | NITPICK-PARSE-001 .internal/adopt/ctl/adopted_case4.npk:76:22: expected `{`, found `Ident`
+  | NITPICK-PARSE-001 .internal/adopt/ctl/adopted_case4.npk:76:41: expected `;`, found `{`
+  | NITPICK-PARSE-002 .internal/adopt/ctl/adopted_case4.npk:96:2: expected an expression
+  | NITPICK-PARSE-001 .internal/adopt/ctl/adopted_case4.npk:98:5: expected a type
+  | NITPICK-PARSE-002 .internal/adopt/ctl/adopted_case4.npk:98:17: expected an expression
+
+B.  THE LANDING -- the committed text, at `c3bdae2`, each file compiled from
+    its own directory:
+
+$ sha256sum $WB/.internal/toolchain/c3bdae2/npkc $WB/.internal/toolchain/c3bdae2/npkrt.o
+5fd636b9ab557c19a0738e6f316f3347cc4ed29dd9a77f72199d6380c0c36323  $WB/.internal/toolchain/c3bdae2/npkc
+162b897539285a773a6a1a0329750e148a6c9590b45dda2d017704743b591824  $WB/.internal/toolchain/c3bdae2/npkrt.o
+
+  tests/probe/defect/generic_owning_copy/case1_generic_bare_copy.npk: npkc exit=1 ll=ABSENT
+      | NITPICK-TYPE-046 tests/probe/defect/generic_owning_copy/case1_generic_bare_copy.npk:88:5: `T` is a type parameter, and this body is checked once for every type it is instantiated at -- some of which own storage (D-264): a copy here would leave two owners at those. Write `move(...)` to transfer it, which is a plain copy at a scalar, or `.clone()` under a `Clone` bound
+  tests/probe/defect/generic_owning_copy/case2_concrete_bare_copy.npk: npkc exit=1 ll=ABSENT
+      | NITPICK-TYPE-046 tests/probe/defect/generic_owning_copy/case2_concrete_bare_copy.npk:43:5: `string` owns storage that is released at scope exit, so it is move-only (D-183): copying it here would leave two owners and one double free. Write `move(...)` to transfer it (invalidating the source), take an explicit copy with `.clone()`, or build the value in place — a temporary has no second name to invalidate
+  tests/probe/defect/generic_owning_copy/case3_generic_scalar.npk: npkc exit=1 ll=ABSENT
+      | NITPICK-TYPE-046 tests/probe/defect/generic_owning_copy/case3_generic_scalar.npk:45:5: `T` is a type parameter, and this body is checked once for every type it is instantiated at -- some of which own storage (D-264): a copy here would leave two owners at those. Write `move(...)` to transfer it, which is a plain copy at a scalar, or `.clone()` under a `Clone` bound
+  tests/probe/defect/generic_owning_copy/case4_use_after_free.npk: npkc exit=1 ll=ABSENT
+      | NITPICK-TYPE-046 tests/probe/defect/generic_owning_copy/case4_use_after_free.npk:64:5: `T` is a type parameter, and this body is checked once for every type it is instantiated at -- some of which own storage (D-264): a copy here would leave two owners at those. Write `move(...)` to transfer it, which is a plain copy at a scalar, or `.clone()` under a `Clone` bound
+  tests/probe/defect/generic_owning_copy/case5_vec_at_destructive.npk: npkc exit=0 ll=written
+  tests/probe/defect/generic_owning_copy/case5_vec_at_destructive.npk: llc exit=0 o=written
+  tests/probe/defect/generic_owning_copy/case5_vec_at_destructive.npk: ld exit=0 bin=written
+  tests/probe/defect/generic_owning_copy/case5_vec_at_destructive.npk: run exit=11
+
+So: case1, case3 and case4 go from ACCEPTED at `aaffb87` (run 0, run 0, run
+170) to REFUSED `NITPICK-TYPE-046` at `c3bdae2`, and each now asserts that
+refusal as its `expect-error:` marker; case2 is refused at both pins; case5
+runs to 11 at both.  `case3` is refused although it is the SCALAR control,
+because D-264 checks the generic body rather than the instantiation -- the
+diagnostic says so in its own words.
+
+END OF SECTION 4

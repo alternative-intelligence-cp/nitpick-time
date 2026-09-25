@@ -49,7 +49,7 @@ mod:probe10_view_edges;
 func:make_view = string(int64:n) never fails {
     wild int8->:blk = alloc(n);
     int64:i = 0i64;
-    while (i < n) {
+    while (i < n) decreases n - i {
         <-(#ptr_add<int8>(blk, i)) = (65i64 + i) =>! int8;   // 'A', 'B', ...
         i = i + 1i64;
     }
@@ -110,7 +110,7 @@ func:tail_view = string(wild int8->:blk, int64:n, int64:from) never fails {
 func:count_upper = int64(uint8[]:src) never fails {
     int64:i = 0i64;
     int64:n = 0i64;
-    while (i < src.len) {
+    while (i < src.len) decreases src.len - i {
         if (src[i] >= 65u8) {
             if (src[i] <= 90u8) { n = n + 1i64; }
         }
@@ -189,6 +189,9 @@ func:failsafe = int32(Error:e) {
         (OutOfBounds)    { exit 94i32; },
         (Unreachable)    { exit 95i32; },
         (WildLeak)       { exit 96i32; },
+        (StackExhausted) { exit 106i32; },
+        (MachineFault)   { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
         (*)              { exit 99i32; }
     }
     exit 9i32;

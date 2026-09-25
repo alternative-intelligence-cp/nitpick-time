@@ -1,11 +1,18 @@
-// NO `expect-` MARKER IS SPELLABLE, and this one is a REFUSAL rather than a
-// link failure, so the reason differs from `generic_element_move/`: `npkc`
-// exits 1 and writes no `.ll`, which `expect-error:` COULD describe -- but the
-// code it would name is `NITPICK-EMIT-002`, and that diagnostic's own text
-// says the program is correct and the compiler is wrong. Asserting it as an
-// expected refusal would make the defect into a committed expectation and the
-// suite would go red on the day it is FIXED, silently rewarding the bug.
-// Named in `harness/run.py`'s `EXPECT_EXEMPT` with that reason.
+// expect-exit: 0
+//
+// O-N18'S REGRESSION TEST, SINCE CYCLE 0.1.0b. THE FIX LANDED: at compiler
+// `c3bdae2` this file compiles, links, runs and exits 0 -- the compiler's
+// DEF-22, fixed in its cycle 1.5.2e. Until 0.1.0b it carried NO marker and was
+// named in `harness/run.py`'s `EXPECT_EXEMPT` at the verdict `npkc`: the only
+// marker true of it was an expected `NITPICK-EMIT-002`, a diagnostic whose own
+// text says the program is correct and the compiler is wrong, and asserting it
+// would have made the defect a committed expectation. `check_exemptions_live`
+// saw the verdict move to `run:0` at the re-pin, as O-N18's entry said it
+// would. THE CONTROL is the same text at the kept `aaffb87` pin -- `npkc` exit
+// 1, no `.ll`, `NITPICK-EMIT-002` -- recorded in `meta/roadmap/0.1/0.1.0b.md`'s
+// execution record; that pair is what makes this a test of the fix rather than
+// of the file (TM-154). Everything below is the record as 0.0.4 wrote it, at
+// pin `0dfddac`, in the tense it was true in.
 //
 // THE DEFECT. `.len` on a FIXED-SIZE ARRAY (`T[N]`) is accepted by the frontend
 // and cannot be lowered by the emitter. Found 2026-09-05 at pin `0dfddac` by
@@ -32,16 +39,16 @@
 // digit buffer and NEVER asks its length -- the length is `NTIME_DIGITS_MAX`,
 // a named constant, which is what a reader should see anyway.
 //
-// NOT YET NUMBERED. The orchestrator assigns open-question ids; this subcycle's
-// predecessor assigned one itself and collided with a settled question in
-// another repository, which cost a correction across ten sites. Cited by PATH
-// until an id is issued.
+// NOT YET NUMBERED when this was written. The orchestrator assigns open-question
+// ids; this subcycle's predecessor assigned one itself and collided with a
+// settled question in another repository, which cost a correction across ten
+// sites. It was cited by PATH until the orchestrator issued O-N18.
 mod:case1_local_array_len;
 
 func:probe = int64() never fails {
     uint8[20]:digits = [0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8];
     digits[0i64] = 7u8;
-    // THE LINE. Everything above lowers; this does not.
+    // THE LINE. Everything above lowered at 0.0.4 and this did not, until DEF-22.
     pass digits.len;
 };
 
@@ -58,6 +65,8 @@ func:failsafe = int32(Error:e) {
         (OutOfBounds)    { exit 94i32; },
         (Unreachable)    { exit 95i32; },
         (WildLeak)       { exit 96i32; },
+        (StackExhausted) { exit 106i32; },
+        (MachineFault)   { exit 107i32; },
         (*)              { exit 99i32; }
     }
     exit 9i32;

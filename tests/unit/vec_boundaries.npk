@@ -73,7 +73,7 @@ func:main = int32(cstring[]:argv) {
     // this loop quadratic and visible in the harness's per-file timing.
     Vec<int64>:g = raw vec_init::<int64>(1i64);
     int64:i = 0i64;
-    while (i < 100000i64) {
+    while (i < 100000i64) decreases 100000i64 - i {
         drop vec_push(@g, i);
         i = i + 1i64;
     }
@@ -108,6 +108,9 @@ func:failsafe = int32(Error:e) {
         (OutOfBounds)    { exit 94i32; },
         (Unreachable)    { exit 95i32; },
         (WildLeak)       { exit 96i32; },
+        (StackExhausted) { exit 106i32; },
+        (MachineFault)   { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
         (*)              { exit 99i32; }
     }
     exit 9i32;

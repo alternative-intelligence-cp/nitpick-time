@@ -24,14 +24,19 @@ WHAT check_purity IS, AND WHAT NOTHING ELSE CAN BE READ AS.
   `check_purity` is a SOURCE-LEVEL check and it is the ONLY thing in this
   repository that answers "did this module touch the kernel". The build's
   undefined-symbol scan CANNOT: `npk_sys6` is the runtime's own syscall
-  trampoline and is in the allowlist by construction, so a module that issues a
-  raw syscall has exactly the same undefined set as one that does not. That was
-  measured in `nitpick-regex` as RX-120 -- a symbol diff coming out EMPTY, 29
-  symbols each way -- and reproduced here (`BUILD.md` B-2c, TM-118). A green
-  symbol scan cited as a purity result is the failure mode this paragraph
-  exists to prevent, and it is stated again in `elf.py`, `harness/README.md`,
-  `BUILD.md` B-2c and `TESTING.md` §2 so that no reader meets one description
-  without the other.
+  trampoline and is in the allowlist by construction, so the scan never FLAGS a
+  module that issues a raw syscall. It SEES one -- measured at pin `c3bdae2`, a
+  floor-only program has 5 undefined symbols and the same program calling
+  `sys` has 8, the extra three `npk_chain_push`, `npk_raise` and `npk_sys6` --
+  and allows every symbol it sees (`BUILD.md` B-2c, TM-153). Until cycle 0.1.0b
+  this paragraph said the two sets were IDENTICAL, after `nitpick-regex`'s
+  RX-120 (a symbol diff coming out EMPTY, 29 symbols each way) "reproduced
+  here". That was true at pins that emitted the whole prelude into every
+  program and has been false here since `aaffb87`, where the two sets are 2
+  and 5; the conclusion drawn from it stands. A green symbol scan cited as a
+  purity result is the failure mode this paragraph exists to prevent, and it is
+  stated again in `elf.py`, `harness/README.md`, `BUILD.md` B-2c and
+  `TESTING.md` §2 so that no reader meets one description without the other.
 """
 
 import os
@@ -742,11 +747,15 @@ def check_purity(tree, **_):
     AND SOURCE-LEVEL IS THE POINT, NOT A LIMITATION TO APOLOGISE FOR. The
     build's undefined-symbol scan cannot answer this question at all: the
     runtime's own syscall trampoline `npk_sys6` is in its allowlist by
-    construction, so a module that issues a raw syscall and one that does not
-    have IDENTICAL undefined sets -- measured as `nitpick-regex`'s RX-120 (29
-    symbols each way, diff empty) and reproduced here (TM-118, B-2c). This
-    check is the only thing in the repository that answers "did this module
-    touch the kernel", and a green symbol scan must never be cited for it.
+    construction, so a module that issues a raw syscall passes the scan exactly
+    as one that does not. Its undefined set GROWS -- 5 symbols to 8 at pin
+    `c3bdae2`, `npk_sys6` among the three -- and every one is allowed (TM-153,
+    B-2c). Until cycle 0.1.0b this said the two sets were IDENTICAL, after
+    `nitpick-regex`'s RX-120 (29 symbols each way) "reproduced here": true at
+    pins that emitted the whole prelude into every program, false here since
+    `aaffb87`. This check is the only thing in the repository that answers
+    "did this module touch the kernel", and a green symbol scan must never be
+    cited for it.
 
     WHAT IT CANNOT SEE, stated so nobody over-reads this one either: a syscall
     reached through a name it does not know -- an alias, or a helper in a file

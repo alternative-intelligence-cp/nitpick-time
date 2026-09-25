@@ -8,20 +8,20 @@
 // of it is this file's job.
 //
 // ===========================================================================
-// THE RESTRICTION, WHICH IS THE FIRST THING TO READ (TM-132, O-N17)
+// THE RESTRICTION, WHICH IS THE FIRST THING TO READ (TM-132, TM-136, TM-150)
 // ===========================================================================
 //
 // `Vec<T>` IS FOR A NON-OWNING `T`. Every function below is correct at a `T`
 // that owns nothing -- an integer, a float, an enum without a payload, a struct
 // of those. At an OWNING `T` (a `string`, a `buffer`, another `Vec`) this type
-// does not discharge its element-lifetime obligation, and the reason is a
-// COMPILER DEFECT that is raised and not worked around.
+// does not discharge its element-lifetime obligation. The restriction was
+// written against a compiler defect at cycle 0.0.4; its REASON has changed
+// twice since, and the restriction has not.
 //
-// THE REASON CHANGED AT CYCLE 0.0.5, AND THE RESTRICTION DID NOT (TM-136).
-// O-N17 -- the defect this restriction was written against -- IS FIXED at pin
-// `aaffb87`; all five of its reproduction cases now compile, link and run
-// (`../../tests/probe/defect/generic_element_move/`, TRANSCRIPT PART D). Two
-// things found in the same hour keep the restriction anyway:
+// AT CYCLE 0.0.5 (TM-136). O-N17 -- the defect this restriction was written
+// against -- IS FIXED at pin `aaffb87`; all five of its reproduction cases
+// compile, link and run (`../../tests/probe/defect/generic_element_move/`,
+// TRANSCRIPT PART D). Two things found in the same hour kept the restriction:
 //
 //   1. THE ELEMENT-DROP LOOP AS THIS FILE WOULD SPELL IT IS REFUSED. One
 //      hoisted `#wild_slice` binding with `move(s[i])` inside a loop is
@@ -31,29 +31,45 @@
 //      rule and not an ownership one. Re-making the slice inside the loop
 //      body compiles; so does `move(v.items[i])` through the bare pointer,
 //      which TM-129 forbids here because it loses the bounds guard.
+//      (Unchanged at compiler `c3bdae2`, measured again there at 0.1.0b.)
 //
-//   2. AND THE WORSE ONE: `NITPICK-TYPE-046` IS NOT ENFORCED INSIDE A GENERIC
-//      BODY. `T:answer = s[i]` at an owning `T` -- a COPY of an owner -- is
-//      accepted at exit 0, links, and runs; the identical statement with
-//      `string` written out is refused. So a future function here that read
-//      an element without `move` would ship two owners of one body and
-//      nothing would say a word. Reproduction, four cases and a control:
-//      `../../tests/probe/defect/generic_owning_copy/`, where `case4` reads
-//      the allocator's 0xAA poison through the second owner and exits 170.
+//   2. `NITPICK-TYPE-046` WAS NOT ENFORCED INSIDE A GENERIC BODY (O-N19).
+//      `T:answer = s[i]` at an owning `T` -- a COPY of an owner -- was
+//      accepted at exit 0, linked and ran, while the identical statement with
+//      `string` written out was refused; `case4` of
+//      `../../tests/probe/defect/generic_owning_copy/` read the allocator's
+//      0xAA poison through the second owner and exited 170.
 //
-// THAT SECOND ONE ALREADY BIT THIS FILE. `vec_pop<T>` shipped at 0.0.4 as
+// AT CYCLE 0.1.0b (TM-150), THE SECOND ONE CLOSED. At compiler `c3bdae2`
+// `NITPICK-TYPE-046` fires inside a generic body: the compiler's D-264 makes a
+// bare type parameter move-only in the body that names it, because a generic
+// body is checked ONCE for every type it is instantiated at, some of which own
+// storage. The copy is refused where it is written -- at a scalar
+// instantiation too -- and `generic_owning_copy/` now asserts the refusal,
+// with `aaffb87`'s verdicts as its control. It refused this file's own
+// `vec_reserve` loop, which is why that function now relocates with `ralloc`.
+//
+// THE SECOND ONE HAD ALREADY BITTEN THIS FILE. `vec_pop<T>` shipped at 0.0.4 as
 // `T:answer = s[v.count - 1i64]` -- `case1`'s function exactly -- and the
 // comment beside `vec_at` claimed such a copy was "refused by TYPE-046",
-// which is false at every pin this workbench has used. The `move` is written
-// now, where it always belonged.
+// which was false at every pin before `c3bdae2`. The `move` was written at
+// 0.0.5, where it always belonged, and it is still the right spelling: a pop
+// TRANSFERS ownership, and D-264 names `move(...)` as the way a `T` place is
+// copied out.
 //
-// FIVE OF THE NINE OPERATIONS BELOW OWE AN ELEMENT DROP AT AN OWNING `T` --
-// `vec_pop`, `vec_set`, `vec_clear`, `vec_truncate` and `vec_free` -- and none
-// of them discharges it. At a non-owning `T` none of them needs to and all
-// nine link and run. It is NOT approximated here: `SAFETY.md` S-18b puts
-// element lifetime AT THE INSTANTIATION, and the sanctioned concrete
-// spellings are measured and committed -- `probe06_generic_vec.npk`'s
-// `free_names` and `probe12b`'s `vec_set_string`.
+// SO THE RESTRICTION NOW STANDS ON ONE REASON: FOUR OF THE NINE OPERATIONS
+// BELOW OWE AN ELEMENT DROP AT AN OWNING `T` -- `vec_set`, `vec_clear`,
+// `vec_truncate` and `vec_free` -- and none of them discharges it. At a
+// non-owning `T` none of them needs to and all nine link and run. (This
+// paragraph said FIVE until 0.1.0b and named `vec_pop` among them. `vec_pop`
+// owes no drop: its `move` hands the element to the caller. Measured at
+// `c3bdae2` at `T = string`: two million push-then-pop cycles end with
+// `peak_live` 120 bytes, and the same cycles with `vec_clear` in place of the
+// pop end with all 48 000 096 retained, both at exit 0 -- TM-150.) It is NOT
+// approximated here: `SAFETY.md` S-18b puts element lifetime AT THE
+// INSTANTIATION, and the sanctioned concrete spellings are measured and
+// committed -- `probe06_generic_vec.npk`'s `free_names` and `probe12b`'s
+// `vec_set_string`.
 //
 // WHY THAT IS NOT A WORKAROUND (W-11). No function here is bent around the
 // bug; each is the one that would have been written anyway. `0.0.4.md` §2
@@ -149,26 +165,25 @@ pub func:vec_reserve<T> = NIL(Vec<T>->:v, int64:need) never fails {
     if (v.cap >= want) { pass NIL; }
     int64:n = v.cap * 2i64;
     if (n < want) { n = want; }
-    wild int8->:mem = alloc(n * #size_of<T>());
-    wild T->:fresh = mem =>! wild T->;
-    // COPYING IS A COPY AND NOT A MOVE, which is what confines this function to
-    // a non-owning `T` -- TYPE-046 makes an owning value move-only. AND THE
-    // CONFINEMENT IS THIS COMMENT, NOT A CHECK (TM-136): TYPE-046 does not
-    // fire inside a generic body, so at `T = string` this loop copies each
-    // handle into the new block and `dalloc` then releases the old one. That
-    // happens to leave exactly one owner -- measured, 0 vacate and 0 drop
-    // calls in the whole emitted body -- so this row is correct at an owning
-    // `T` BY ACCIDENT. Both slices are laid over the live element count, so
-    // both ends of the copy are guarded.
-    T[]:from = #wild_slice<T>(v.items, v.count);
-    T[]:into = #wild_slice<T>(fresh, v.count);
-    int64:i = 0i64;
-    while (i < v.count) {
-        into[i] = from[i];
-        i = i + 1i64;
-    }
-    dalloc(v.items =>! wild int8->);
-    v.items = fresh;
+    // THE RELOCATION IS ONE BITWISE MOVE OF THE WHOLE BLOCK, AND `ralloc` IS
+    // THAT OPERATION (cycle 0.1.0b, TM-150). Until then this body allocated a
+    // fresh block and copied element by element, `into[i] = from[i]`, and
+    // `dalloc`ed the old one. At compiler `c3bdae2` that line is refused
+    // `NITPICK-TYPE-046`: D-264 checks a generic body once for every type it
+    // is instantiated at, so a copy of a `T` place would leave two owners at an
+    // owning `T`. `ralloc` grows in place where it can, else allocates, copies
+    // the old block's bytes and frees it -- the same bytes the loop moved, in
+    // one call, with no element copy for D-264 to refuse and no loop to carry
+    // a measure. So this row is correct at ANY `T` by construction, where the
+    // loop was correct at an owning one by accident.
+    //
+    // `ralloc(p, 0)` traps and cannot happen here: past the early return,
+    // `want > cap >= 0`, so `n >= want >= 1`. And a push after `vec_free`
+    // still traps `Unreachable` (exit 95): the freed block now reaches the
+    // allocator's membership check in `ralloc` rather than in `dalloc`,
+    // measured at `c3bdae2`.
+    wild int8->:mem = ralloc(v.items =>! wild int8->, n * #size_of<T>());
+    v.items = mem =>! wild T->;
     v.cap = n;
     pass NIL;
 };
@@ -219,9 +234,12 @@ pub func:vec_at<T> = T(Vec<T>->:v, int64:i) never fails {
 // AT AN OWNING `T` THIS OWES AN ELEMENT DROP AND CANNOT DISCHARGE IT (TM-127,
 // TM-132). Overwriting discards the element that was there, and a `wild T->`
 // element does not drop for you -- `wild` is the manual regime. The correct
-// spelling moves the outgoing element into a dying local first, and that is
-// O-N17's blocked primitive when written generically. At a non-owning `T`, the
-// type this file is for, there is nothing to drop and this is complete.
+// spelling moves the outgoing element into a dying local first. That was
+// O-N17's blocked primitive when this was written at 0.0.4; O-N17 is fixed,
+// and written generically over this function's one slice it is refused
+// `NITPICK-MOVE-001` instead -- the header's reason 1, measured again at
+// compiler `c3bdae2` at cycle 0.1.0b. At a non-owning `T`, the type this file
+// is for, there is nothing to drop and this is complete.
 pub func:vec_set<T> = NIL(Vec<T>->:v, int64:i, move T:x) never fails {
     T[]:s = #wild_slice<T>(v.items, v.count);
     s[i] = move(x);
@@ -236,11 +254,15 @@ pub func:vec_set<T> = NIL(Vec<T>->:v, int64:i, move T:x) never fails {
 // THE `move` IS LOAD-BEARING AND WAS MISSING UNTIL 0.0.5 (TM-136). Without it
 // this body reads `T:answer = s[v.count - 1i64]`, which at an owning `T` is a
 // COPY of an owner: the returned value and the slot both hold the same
-// pointer. `NITPICK-TYPE-046` exists to refuse exactly that and does not fire
-// inside a generic body, so the row shipped at 0.0.4 with the bug and a green
-// suite beside it. A pop TRANSFERS ownership, so `move` is the spelling that
-// was always correct; at a non-owning `T` it costs nothing, which is the whole
-// reason writing it is not a workaround for the missing check.
+// pointer. `NITPICK-TYPE-046` exists to refuse exactly that and did not fire
+// inside a generic body before compiler `c3bdae2`, so the row shipped at 0.0.4
+// with the bug and a green suite beside it. AT `c3bdae2` IT DOES (D-264,
+// TM-150): the body without the `move` is refused `NITPICK-TYPE-046` at
+// compile time, whatever `T` it is instantiated at -- measured at 0.1.0b by
+// deleting the word. A pop TRANSFERS ownership, so `move` is the spelling that
+// was always correct; at a non-owning `T` it costs nothing, which is why
+// writing it was never a workaround for the check that was missing then and
+// is present now.
 pub func:vec_pop<T> = T(Vec<T>->:v) never fails {
     T[]:s = #wild_slice<T>(v.items, v.count);
     T:answer = move(s[v.count - 1i64]);
@@ -279,9 +301,12 @@ pub func:vec_clear<T> = NIL(Vec<T>->:v) never fails {
 // would `dalloc` the same pointer again whatever `cap` said. What actually
 // contains a double free is the RUNTIME: measured at pin `aaffb87`, one free
 // exits 0, and free-then-push-then-free exits **95** -- `Unreachable`, raised
-// by the allocator and taken by `failsafe`. So `cap == 0` is a statement about
-// the value's meaning to a CALLER -- an emptied `Vec` claims to hold nothing
-// and to have room for nothing -- and it is not a guard. Stating a mechanism
+// by the allocator and taken by `failsafe`. (Since `vec_reserve` relocates
+// with `ralloc`, cycle 0.1.0b, it is the PUSH that traps -- `ralloc` meets the
+// freed block first -- and the exit is still 95, measured at `c3bdae2`.) So
+// `cap == 0` is a statement about the value's meaning to a CALLER -- an
+// emptied `Vec` claims to hold nothing and to have room for nothing -- and it
+// is not a guard. Stating a mechanism
 // that is not the one doing the work is how a later reader removes the real
 // one.
 //

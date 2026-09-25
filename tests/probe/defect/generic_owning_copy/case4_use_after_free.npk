@@ -1,7 +1,18 @@
-// NO `expect-` MARKER, for case1's reason and one more: `// expect-exit: 170`
-// is spellable and TRUE, and writing it would make a USE-AFTER-FREE a
-// committed expectation of this suite. Named in `harness/run.py`'s
-// `EXPECT_EXEMPT` with the verdict `run:170` instead (TM-137).
+// expect-error: NITPICK-TYPE-046
+//
+// O-N19'S CONSEQUENCE, ASSERTED GONE, SINCE CYCLE 0.1.0b. At compiler
+// `c3bdae2` the copy this program needs is refused `NITPICK-TYPE-046` in
+// `peek<T>`'s body (the compiler's D-264), so the use-after-free below can no
+// longer be written. Until 0.1.0b it carried NO marker, for case1's reason and
+// one more: `expect-exit: 170` was spellable and TRUE, and writing it would
+// have made a USE-AFTER-FREE a committed expectation of this suite. It was
+// named in `harness/run.py`'s `EXPECT_EXEMPT` at `run:170` instead (TM-137),
+// and that entry failed at the re-pin as designed. THE CONTROL is the
+// pre-adoption text at the kept `aaffb87` pin -- run 170, the allocator's
+// poison -- recorded in `meta/roadmap/0.1/0.1.0b.md`'s execution record (the
+// adopted text cannot be the control: its loop now carries a `decreases`
+// clause, which `aaffb87` does not parse). Everything below is the record as
+// 0.0.5 wrote it.
 //
 // ===========================================================================
 // WHAT case1's COPY COSTS: TWO OWNERS OF ONE BODY
@@ -62,7 +73,7 @@ func:main = int32(cstring[]:_~argv) {
     // and not a bare block, because that is how this repository's other
     // element-lifetime probes spell a dying scope (`probe06c`).
     int64:k = 0i64;
-    while (k < 1i64) {
+    while (k < 1i64) decreases 1i64 - k {
         string:dying = raw peek::<string>(@v, 0i64);
         discard(string_byte_length(dying));
         k = k + 1i64;

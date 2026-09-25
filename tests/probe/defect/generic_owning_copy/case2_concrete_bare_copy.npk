@@ -5,11 +5,14 @@
 // `peek_string` is `case1`'s `peek<T>` with `T` replaced by `string`
 // throughout and NOTHING ELSE CHANGED. It is refused; case1 is not.
 //
-// THE MARKER IS ASSERTED HERE AND NOWHERE ELSE IN THIS DIRECTORY, and the
-// asymmetry is deliberate: this refusal is the compiler being RIGHT, so
-// committing it as an expectation commits nothing but correct behaviour. The
-// other three record what the compiler does WRONG, and an expectation of a
-// wrong answer goes green forever and red on the fix.
+// THE MARKER WAS ASSERTED HERE AND NOWHERE ELSE IN THIS DIRECTORY until cycle
+// 0.1.0b, and the asymmetry was deliberate: this refusal is the compiler being
+// RIGHT, so committing it as an expectation commits nothing but correct
+// behaviour, while the other three recorded what the compiler did WRONG, and an
+// expectation of a wrong answer goes green forever and red on the fix. At
+// compiler `c3bdae2` the compiler is right about all four -- D-264 refuses
+// `case1`, `case3` and `case4` in the generic body -- so all four assert the
+// same code now, and `case5` still runs (TM-154).
 mod:case2_concrete_bare_copy;
 
 struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };

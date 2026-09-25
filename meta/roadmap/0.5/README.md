@@ -52,6 +52,7 @@ came in as estimated, this cycle is the estimate made real.
 - [ ] **deterministic output**: no dictionary iteration order, no `set` iteration, no timestamps in the header — the `repro` check (B-4) is what catches a violation and this is the largest file in the tree
 - [ ] `#size_of` of each row asserted, so §3's arithmetic stays checkable
 - [ ] **the real emitted size measured and recorded** in `meta/research/tzdb-size.md`, beside 0.0.5's spike number and §3's estimate
+- [ ] **every loop the generator emits carries its `decreases` clause, and every `failsafe` it emits names the arms the pin's `NITPICK-REACH-002` demands** (the compiler's D-304; added at cycle 0.1.0b) — the compiler's loop sweep reads `.npk` files and never a Python string, so a template is swept by hand or not at all; `meta/scratch/tzdb_spike/emit.py`'s was, at 0.1.0b (`../0.1/0.1.0b.md` step 5)
 
 ### 0.5.3 — the checks
 - [ ] `check_tables_regenerate` — the committed tables byte-identical to a fresh generator run, and **seen to fail** against a one-character hand edit

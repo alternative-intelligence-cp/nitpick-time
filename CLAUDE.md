@@ -7,7 +7,25 @@ Guidance for Claude Code sessions working in this repository.
 `ntime` — a date, time and time-zone library for **Nitpick**, the
 safety-critical systems language at `../../nitpick`.
 
-**Status, after cycle 0.0.5: the first library code, and the tzdb sized.**
+**Status, after cycle 0.1.0b: the adoption to compiler `c3bdae2`** (the close of
+its cycle 1.5). No new library behaviour; everything the new pin refused or
+made false, corrected. **Every one of the tree's 48 loops states `decreases`**
+(D-304) — 29 in the compiler's sweep tool's own proven shape and 19 by the
+committed reading `meta/roadmap/0.1/decreases_read.txt`, none `unbounded`.
+**The `failsafe` floor is six** — `StackExhausted` (exit 106) and
+`MachineFault` (107) joined it — and a root that reaches a measured loop owes
+`DecreasesViolated` (108); every root names exactly what `NITPICK-REACH-002`
+asks, but for the three probes whose refusal is the point (`probe11b`,
+`probe11c`, `probe11e`). `vec_reserve<T>` relocates with `ralloc`, because
+D-264 refused its
+element copy. **O-N18 and O-N19 have landed** and their reproductions are
+asserted regression tests, each with its `aaffb87` verdict as its control. A
+full invocation is **70 units green** at pin `c3bdae2`; the wall clock is
+deliberately not quoted (`meta/roadmap/0.1/0.1.0.md` says why). The umbrella
+has re-exported **48** names since cycle 0.1.0, and its arm bill — **12** — is a
+generated row of `SAFETY.md` S-4 since this cycle.
+
+**After cycle 0.0.5: the first library code, and the tzdb sized.**
 TM-007's compiled-in database is **475 006 bytes** of read-only data for the
 four tables and two pools, **489 310** with `POSIX_RULES` — measured, not
 estimated, against a 348 KiB estimate that was wrong in four ways (TM-135).
@@ -21,8 +39,9 @@ umbrella re-exports **35** names, one line each. The other five directories are
 still placeholders that parse and are **replaced, not deleted**, by the cycle
 named in each header — and `src/core/core.npk` survives as that directory's
 LAYER NOTE, which is what the five point at. `harness/` is the runner
-`BUILD.md` describes — nine stages, ten modules — and a full invocation is
-**62 units green in about 62 s** at pin `aaffb87`. It was **241 s** at
+`BUILD.md` describes — nine stages, ten modules — and a full invocation was
+**62 units green in about 62 s** at pin `aaffb87` at cycle 0.0.6's close. It
+was **241 s** at
 `0dfddac` on the same content; the compiler's 1.5.2d close made every emitted
 module carry only the prelude functions it references, which took it to 43 s,
 and cycle 0.0.6 put ~19 s back by asserting 21 more units.
@@ -30,14 +49,19 @@ and cycle 0.0.6 put ~19 s back by asserting 21 more units.
 **THREE things to know before touching `src/core/`, and the third is the one
 cycle 0.0 paid most for.**
 
-- **`Vec<T>` is for a NON-OWNING `T`** (TM-132, and the reason changed at
-  0.0.5 — TM-136). **O-N17 is FIXED** at pin `aaffb87`; the restriction stays
-  because **`NITPICK-TYPE-046` does not fire inside a generic function body**,
-  so `T:x = s[i]` at an owning `T` — a copy of an owner — compiles, links,
-  runs, and leaves two owners of one heap body. Reading through the second
-  after the first has dropped returns the allocator's `0xAA` poison, exit 170
-  (`tests/probe/defect/generic_owning_copy/`). It bit this file: `vec_pop<T>`
-  shipped as that bare read at 0.0.4 and now writes the `move`. And
+- **`Vec<T>` is for a NON-OWNING `T`** (TM-132; the reason changed at 0.0.5 —
+  TM-136 — and again at 0.1.0b — TM-150). **O-N17 is FIXED** at pin `aaffb87`,
+  and **O-N19 is FIXED at `c3bdae2`**: `NITPICK-TYPE-046` did not fire inside
+  a generic function body, so `T:x = s[i]` at an owning `T` — a copy of an
+  owner — compiled, linked, ran, and left two owners of one heap body (exit
+  170 on the second read); the compiler's D-264 now refuses it where it is
+  written, at every instantiation, and
+  `tests/probe/defect/generic_owning_copy/` asserts that. It bit this file:
+  `vec_pop<T>` shipped as that bare read at 0.0.4 and writes the `move`, still
+  the right spelling. **The restriction now stands on one reason: four
+  operations — `vec_set`, `vec_clear`, `vec_truncate`, `vec_free` — owe an
+  element drop at an owning `T` and perform none**, a leak `exit 0` cannot
+  see. And
   **`vec_at<T>` at an owning `T` REMOVES the element** — `pass` of a place
   moves implicitly — which is the language behaving as specified and is why
   element lifetime at an owning `T` goes **at the instantiation**, where
@@ -191,6 +215,9 @@ All ten measured refused as local names at pin `0dfddac`. The last three are
 the compiler's D-221, and `old` and `result` are the dangerous pair, because
 this library's own contract syntax uses them — `ensures v.count == old(v.count)`
 — so you meet them as things to write. Use **`outgoing`** and **`answer`**.
+**At compiler `c3bdae2` there are twelve**: D-304 added **`decreases`** and
+**`unbounded`**, and the new field qualifiers **`sealed`** and **`hidden`** are
+refused as local names the same way (cycle 0.1.0b; `BUILD.md` B-18).
 
 And **`stack`**, which is not in this library's own list and is the one that
 costs an hour: it is a memory qualifier beside `wild`, and using it as a local
@@ -240,7 +267,7 @@ and carries the cost table.
   compilation: `npkc` emits the whole module graph a root reaches, so every
   program carries the prelude and `ld.lld p.o ntime.o npkrt.o` is a
   duplicate-symbol error. The library is built because *building it is a check*.
-- **The undefined-symbol scan cannot see a syscall** (TM-118). `npk_sys6` is the
+- **The undefined-symbol scan cannot FLAG a syscall** (TM-118, TM-153). `npk_sys6` is the
   runtime's own and is in the allowlist by construction. The scan supports
   B-2's "no C, ever" and nothing wider. **`check_purity` is SOURCE-level and is
   the only thing here that answers "did this module touch the kernel"** — never

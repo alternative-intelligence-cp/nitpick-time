@@ -1,0 +1,24 @@
+# nitpick-time's reading for the D-304 sweep -- cycle 0.1.0b, meta/roadmap/0.1/0.1.0b.md step 3.
+# Keyed to the tree AFTER step 2 (vec_reserve relocated; src/core/vec.npk has no loop).
+# Applied by the compiler's decreases_sweep.py at c3bdae2 (sha256 f55f609c...),
+# run from .internal/sweep/1.5/tools/ with a copy of this file beside it.
+# 48 loops: 29 in the tool's own shape (no line needed), 19 read below, 0 unbounded.
+hoist     src/core/bytes.npk:83 live
+measure   src/core/bytes.npk:169 x
+measure   src/core/bytes.npk:224 0i128 - (x => int128)
+measure   tests/probe/defect/generic_element_move/case5_generic_drop_loop.npk:58 v.count - i
+measure   tests/probe/probe06_generic_vec.npk:182 v.count - i
+measure   tests/probe/probe06c_element_drop.npk:72 v.count - i
+measure   tests/probe/probe06_generic_vec.npk:141 want - nc
+measure   tests/probe/probe06b_element_leak.npk:52 want - nc
+measure   tests/probe/probe06c_element_drop.npk:45 want - nc
+measure   tests/probe/probe08_readlink.npk:43 b.len - i
+measure   tests/probe/defect/view_escape/case6_view_param_legal.npk:20 src.len - i
+measure   tests/probe/probe05_payload_enum.npk:147 parts.count - i
+measure   tests/probe/probe08_readlink.npk:61 nlen - k
+measure   tests/probe/probe09_environ_split.npk:121 env.len - j
+stable    tests/unit/bytes_growth.npk:42
+stable    tests/unit/bytes_view_lifetime.npk:55
+stable    tests/unit/bytes_view_lifetime.npk:63
+stable    tests/unit/bytes_view_lifetime.npk:93
+measure   tests/unit/limits_named.npk:71 u

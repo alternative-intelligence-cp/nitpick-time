@@ -51,7 +51,7 @@ mod:probe09b_environ_view_returned;
 // precondition and a failed experiment the same event again.
 func:tz_index = int64(cstring[]:env) never fails {
     int64:j = 0i64;
-    while (j < env.len) {
+    while (j < env.len) decreases env.len - j {
         cstring:e = env[j];
         if (e.len >= 3i64) {
             string:entry = string_from_bytes(e.ptr, e.len);
@@ -72,7 +72,7 @@ func:tz_index = int64(cstring[]:env) never fails {
 // outlive every frame in the program.
 func:tz_entry = string(cstring[]:env) never fails {
     int64:j = 0i64;
-    while (j < env.len) {
+    while (j < env.len) decreases env.len - j {
         cstring:e = env[j];
         if (e.len >= 3i64) {
             string:entry = string_from_bytes(e.ptr, e.len);
@@ -110,7 +110,7 @@ func:main = int32(cstring[]:_~argv) {
     uint8[]:preb = string_bytes(pres);
     if (preb.len != web.len)                            { exit 39i32; }
     int64:w = 0i64;
-    while (w < web.len) {
+    while (w < web.len) decreases web.len - w {
         if (preb[w] != web[w])                          { exit 39i32; }
         w = w + 1i64;
     }
@@ -136,6 +136,9 @@ func:failsafe = int32(Error:e) {
         (OutOfBounds)    { exit 94i32; },
         (Unreachable)    { exit 95i32; },
         (WildLeak)       { exit 96i32; },
+        (StackExhausted) { exit 106i32; },
+        (MachineFault)   { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
         (*)              { exit 99i32; }
     }
     exit 9i32;

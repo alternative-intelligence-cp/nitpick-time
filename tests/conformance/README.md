@@ -31,7 +31,9 @@ imports nothing at all. Both declare only `main` and `failsafe`, which are
 root-level and unqualified, so there is nothing for a module name to
 distinguish. Two things follow. First, **importing `ntime` today costs a
 consumer exactly nothing**: no arms beyond `SAFETY.md` S-4b's floor of four
-(removing any one is `NITPICK-REACH-002`, checked), and no bytes. Second, the
+(removing any one is `NITPICK-REACH-002`, checked), and no bytes. *(The floor is
+six at compiler `c3bdae2` — `StackExhausted` and `MachineFault` joined it — and
+`import.npk`'s own header carries its bill at every pin since.)* Second, the
 day `src/lib.npk` exports its first name **these two files must stop being
 identical**, and that divergence is the first observable evidence that the
 surface became real.

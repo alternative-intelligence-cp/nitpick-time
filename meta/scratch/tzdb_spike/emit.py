@@ -156,12 +156,12 @@ func:main = int32(cstring[]:argv) {{
     int64:zi = 0i64;
     int64:visited_t = 0i64;
     int64:visited_ty = 0i64;
-    while (zi < {nz}i64) {{
+    while (zi < {nz}i64) decreases {nz}i64 - zi {{
         int64:first = (ZONES[zi].trans_first =>! int64);
         int64:n = (ZONES[zi].trans_count =>! int64);
         int64:k = 1i64;
         if (n > 0i64) {{ visited_t = visited_t + 1i64; }}
-        while (k < n) {{
+        while (k < n) decreases n - k {{
             if (TRANSITIONS[first + k].at_utc <= TRANSITIONS[first + k - 1i64].at_utc) {{
                 exit 23i32;
             }}
@@ -183,10 +183,10 @@ func:main = int32(cstring[]:argv) {{
 
     // Both pools walked end to end, so no byte of either can be folded away.
     int64:pi = 0i64; int64:psum = 0i64;
-    while (pi < {npool}i64) {{ psum = psum + (NAME_POOL[pi] =>! int64); pi = pi + 1i64; }}
+    while (pi < {npool}i64) decreases {npool}i64 - pi {{ psum = psum + (NAME_POOL[pi] =>! int64); pi = pi + 1i64; }}
     if (psum < 1i64) {{ exit 29i32; }}
     int64:ai = 0i64; int64:asum = 0i64;
-    while (ai < {apool}i64) {{ asum = asum + (ABBR_POOL[ai] =>! int64); ai = ai + 1i64; }}
+    while (ai < {apool}i64) decreases {apool}i64 - ai {{ asum = asum + (ABBR_POOL[ai] =>! int64); ai = ai + 1i64; }}
     if (asum < 1i64) {{ exit 30i32; }}
 
     cstring:s = to_cstring("{swept_text}") ?! EW;
@@ -204,6 +204,9 @@ func:failsafe = int32(Error:e) {{
         (OutOfBounds)    {{ exit 94i32; }},
         (Unreachable)    {{ exit 95i32; }},
         (WildLeak)       {{ exit 96i32; }},
+        (StackExhausted) {{ exit 106i32; }},
+        (MachineFault)   {{ exit 107i32; }},
+        (DecreasesViolated) {{ exit 108i32; }},
         (*)              {{ exit 99i32; }}
     }}
     exit 9i32;

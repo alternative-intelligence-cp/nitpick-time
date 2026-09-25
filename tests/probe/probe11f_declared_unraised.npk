@@ -5,8 +5,10 @@
 //
 // ASKS: `probe11_silent_lib` declares `pub error:EProbeSilent;` and never
 // raises it. This program imports that module, calls its one function, and its
-// `failsafe` names ONLY the four floor arms `probe11d_floor_only.npk` proves
-// are unconditional. `EProbeSilent` is nowhere in this file.
+// `failsafe` names ONLY the floor arms `probe11d_floor_only.npk` proves are
+// unconditional -- four when this was written, six at compiler `c3bdae2`, where
+// `StackExhausted` and `MachineFault` joined the floor (cycle 0.1.0b).
+// `EProbeSilent` is nowhere in this file.
 //
 // THE ANSWER: it compiles and runs at exit 0. **A declaration arms nothing.**
 // The reachable set is computed from `fail`, `?!` and `!!!` SITES
@@ -44,6 +46,8 @@ func:failsafe = int32(Error:e) {
         (HeapOom)        { exit 92i32; },
         (Unreachable)    { exit 95i32; },
         (WildLeak)       { exit 96i32; },
+        (StackExhausted) { exit 106i32; },
+        (MachineFault)   { exit 107i32; },
         (*)              { exit 99i32; }
     }
     exit 9i32;

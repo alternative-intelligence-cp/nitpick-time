@@ -90,7 +90,11 @@ emitted into every root and the handler is the program's. So both halves are
 derived from the linked artefact's own ELF symbol table: **what the runtime
 provides** (its global defined symbols) ∪ **what the runtime requires of the
 program** (its own undefined symbols). **113 symbols, measured at pin `0dfddac`
-and again at `aaffb87`.**
+and again at `aaffb87`** — and **121 at compiler `c3bdae2`** (cycle 0.1.0b):
+the runtime object's defined globals went from 111 to 119 with the compiler's
+cycle 1.5, and its undefined symbols are still exactly `main` and
+`npk_failsafe`. Nothing here had to change for it, which is the rule working:
+the list is read from the artefact, so it moved with the artefact.
 
 **AND THE NUMBER TO EXPECT ELSEWHERE IS 112, WHICH IS NOT A DISAGREEMENT
 (E3).** The compiler's own reconciliation, recorded on the workbench board,
@@ -112,14 +116,26 @@ tarball CI installs is built without `PACKAGE_VENDOR` and prints
 match would have failed the first CI run this repository ever had — and would
 have failed it as *"the SELF-CHECK failed"*, three levels from the cause.
 
-**Rule B-2c (TM-118) — the scan cannot see a syscall, and is not a purity
-result.** `npk_sys6` is the runtime's own syscall trampoline and is in the
-allowlist by construction, so a module that issues a raw syscall has the same
-undefined set as one that does not — measured as `nitpick-regex`'s RX-120 (a
-symbol diff coming out empty, 29 each way) and reproduced here. B-2's claim is
-"no C, ever" and that is the whole of what it supports. **`check_purity`
-(`TESTING.md` §2, `SAFETY.md` S-10) is a source-level check and is the only
-thing that answers "did this module touch the kernel".**
+**Rule B-2c (TM-118, amended by TM-153) — the scan cannot FLAG a syscall, and
+is not a purity result.** `npk_sys6` is the runtime's own syscall trampoline and
+is in the allowlist by construction, so a module that issues a raw syscall
+passes the scan exactly as one that does not. B-2's claim is "no C, ever" and
+that is the whole of what it supports. **`check_purity` (`TESTING.md` §2,
+`SAFETY.md` S-10) is a source-level check and is the only thing that answers
+"did this module touch the kernel".**
+
+> **Amended at cycle 0.1.0b (TM-153): the conclusion stands and its evidence
+> did not.** This rule said the scan *cannot see* a syscall — that a module
+> issuing one has *the same undefined set* as one that does not, measured as
+> `nitpick-regex`'s RX-120 (a symbol diff coming out empty, 29 each way) and
+> "reproduced here". That was true at pins that emitted the whole prelude into
+> every program. Measured at compiler `c3bdae2` (`npkc`, `llc -O0`, `nm -u`): a
+> floor-only program has **5** undefined symbols and the same program calling
+> `sys(39)` has **8**, adding `npk_chain_push`, `npk_raise` and `npk_sys6`; at
+> `aaffb87`, this repository's previous pin, the same pair gives **2** and
+> **5**, so the sentence had been false here since that re-pin. The scan SEES
+> the call and allows it. The IR call-edge scan that could flag one is
+> `../OPEN_QUESTIONS.md` O-X9.
 
 **Rule B-3.** The optimised leg runs on every program, every time: the same
 program re-emitted through `opt -O2` + `llc -O2` must produce the **same exit
@@ -251,27 +267,33 @@ expectations name.
 `NITPICK-LEX-*` comes from the compiler's `src/frontend/diag_codes.npk` and
 `NITPICK-PARSE-*` from `parse_codes.npk`; every other family belongs to a later
 phase, so a file reported with one of those **necessarily parsed**. That is what
-lets the stage cover the 16 files here that must not compile
-<!-- [[sweep: tests_error=16]] --> — they are
-refused at `PARSE-001`, `LEX-004`, `PARSE-002`, `TYPE-009`, `BORROW-001`,
-`BORROW-012`, `REACH-002`, `REACH-003` and `EMIT-002`, and every family after
+lets the stage cover the 19 files here that must not compile
+<!-- [[sweep: tests_error=19]] --> — they are
+refused at `PARSE-001`, `LEX-004`, `PARSE-002`, `TYPE-009`, `TYPE-046`,
+`BORROW-001`, `BORROW-012`, `REACH-002` and `REACH-003`, and every family after
 the first three runs only on something that parsed. Re-measured at pin
-`aaffb87`, cycle 0.1.0: **83 files = 66 parse cleanly + 15 parse and are
+`c3bdae2`, cycle 0.1.0b: **83 files = 64 parse cleanly + 17 parse and are
 refused later + 2 do not parse** <!-- [[sweep: npk_total=83]] -->, and the two
 are `probe02d_wide_literal_refused.npk` (LEX-004, PARSE-002) and
 `probe14_error_payload_refused.npk` (PARSE-001, TM-147). It read
 `50 = 36 + 13 + 1` for three subcycles after the tree stopped being that size,
-which is TM-142.
+which is TM-142; and at `aaffb87`, cycle 0.1.0, it read `66 + 15 + 2`, with 16
+files that must not compile and `EMIT-002` in place of `TYPE-046`. The
+difference is O-N18 and O-N19 landing (TM-154): three `generic_owning_copy`
+files became asserted `TYPE-046` refusals, and `fixed_array_len/case1` stopped
+being refused at all.
 
-**AND THE TWO SIXTEENS IN THAT PARAGRAPH ARE DIFFERENT SETS THAT HAPPEN TO BE
-THE SAME SIZE** — which is worth one sentence, because the previous version had
-two fifteens in the same position and read as though one number were being
+**AND THE TWO NUMBERS IN THAT PARAGRAPH ARE DIFFERENT SETS** — worth one
+sentence, because earlier versions had two sixteens, and before that two
+fifteens, in the same position, and read as though one number were being
 quoted twice. `tests_error` is *files under `tests/` whose header names an
 `expect-error:`*; "parse and are refused later" is *files the parse stage
-rooted that produced a non-parse diagnostic*, which also picks up the
-`tests/probe/support/` modules and the `src/` placeholders when rooted alone.
-Two of `tests_error`'s sixteen do not parse at all, so the sets overlap in
-fourteen. **Ask what was counted, not who miscounted.**
+rooted that produced a non-parse diagnostic*, whatever their header says. At
+`aaffb87` the second set held one file the first did not —
+`fixed_array_len/case1`, refused `EMIT-002` with no marker because it was
+exempt — so 16 and 15 overlapped in fourteen. At `c3bdae2` that file compiles,
+and the second set is exactly the first minus its two files that do not parse
+at all: **19 = 17 + 2**. **Ask what was counted, not who miscounted.**
 
 **Rule B-8 — the harness is itself tested.** A self-check feeds it wrong
 expectations and requires it to report every one as a failure. A suite that
@@ -428,6 +450,8 @@ these reads like an ordinary local name and is not:
 | `Ordering` | the prelude's enum (which we want, and must not shadow) |
 | `old`, `result`, `pure` | **VERIFICATION keywords** (D-221) — and the first two are the natural names for a value being replaced and for a computed answer |
 | `prove`, `assert_static`, `requires`, `ensures`, `acquires`, `gives`, `invariant` | the rest of the same production |
+| `decreases`, `unbounded` | **the loop clause's two words** (D-304), in the same production since compiler `c3bdae2` — and "unbounded" is what an open range wants to be called (TM-151) |
+| `sealed`, `hidden` | **field qualifiers** (D-313, D-314) since compiler `c3bdae2` — and "hidden" is what a flag wants to be called |
 
 **Rule B-18 (TM-130) — the ten `VerificationKeyword` spellings are reserved as
 ordinary names, and the diagnostic will not tell you.** Measured one at a time
@@ -436,6 +460,13 @@ at pin `0dfddac`, by declaring `int64:<name> = 1i64;`: **all ten refused, 10 of
 `invariant`, `old`, `result`, `pure`. `old`'s token is `KwOld` and `result`'s
 is `KwResultValue`; the compiler's D-221 added the last three at its 1.5.1 and
 renamed two locals and a field in its own tree to make room.
+
+> **At compiler `c3bdae2` (cycle 0.1.0b, TM-151) the production has TWELVE.**
+> D-304 added `decreases` and `unbounded`, and the same measurement — declaring
+> `int64:<name> = 1i64;` — refuses each, `NITPICK-PARSE-002` at the
+> declaration, with a local named `measure` compiling beside them as the
+> control. The field qualifiers `sealed` and `hidden` (D-313, D-314) are not in
+> this production and are refused the same way; §7's table carries all four.
 
 **`old` and `result` are the two that will actually bite here, and this
 library's own documents invite them.** `0.0.4.md` §2's API table writes

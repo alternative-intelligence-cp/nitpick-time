@@ -10,13 +10,17 @@
 >
 > | File | `npkc` | Identities the diagnostic lists | Header |
 > |---|---|---:|---|
-> | `case1_no_failsafe.npk` | **exit 1**, no `.ll` | **4** — `Unreachable`, `HeapOom`, `HeapBadRequest`, `WildLeak` | `expect-error: NITPICK-REACH-003` at `62:1` |
+> | `case1_no_failsafe.npk` | **exit 1**, no `.ll` | **4** — `Unreachable`, `HeapOom`, `HeapBadRequest`, `WildLeak`; **6 at `c3bdae2`**, adding `StackExhausted` and `MachineFault` | `expect-error: NITPICK-REACH-003` at `62:1` |
 > | `case2_failsafe_present.npk` | exit 0, `.ll` written, links, **runs exit 0** | — | `expect-exit: 0` |
-> | `case3_arm_contract_evaded.npk` | **exit 1**, no `.ll` | **6** — the four, plus `probe11_arms_lib.EProbeZone` and `IntOverflow` | `expect-error: NITPICK-REACH-003` at `58:1` |
+> | `case3_arm_contract_evaded.npk` | **exit 1**, no `.ll` | **6** — the four, plus `probe11_arms_lib.EProbeZone` and `IntOverflow`; **8 at `c3bdae2`**, the same two added | `expect-error: NITPICK-REACH-003` at `58:1` |
 >
 > **Four, not six, for `case1`** (TM-112): it has no import, no arithmetic and
 > no allocation, so its bill is `SAFETY.md` S-4b's unconditional floor. A board
-> carried six; the six is real and belongs to `case3`.
+> carried six; the six is real and belongs to `case3`. *(At compiler `c3bdae2`
+> the floor itself is six — cycle 0.1.0b re-read both lists out of
+> `NITPICK-REACH-003` — so the two counts are now 6 and 8, and the distinction
+> this paragraph draws is unchanged: `case1`'s bill is the floor, `case3`'s is
+> the floor plus two.)*
 >
 > **These three files had no `expect-` header at all until 2026-09-05** — not a
 > wrong one, none — so they sat outside the sweep that would have caught their

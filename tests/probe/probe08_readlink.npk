@@ -40,7 +40,7 @@ fixed uint8:SENTINEL       = 170u8;      // 0xAA, a byte no path contains
 // is a testable statement rather than an assumption about zeroed memory.
 func:paint = NIL(buffer->:b) never fails {
     int64:i = 0i64;
-    while (i < b.len) {
+    while (i < b.len) decreases b.len - i {
         <-(#ptr_add<uint8>(b.ptr, i)) = SENTINEL;
         i = i + 1i64;
     }
@@ -55,10 +55,10 @@ func:find_after = int64(buffer->:hay, int64:hlen, uint8[]:needle) never fails {
     if (nlen <= 0i64)   { pass 0i64; }
     if (hlen < nlen)    { pass (0i64 - 1i64); }
     int64:start = 0i64;
-    while (start <= (hlen - nlen)) {
+    while (start <= (hlen - nlen)) decreases ((hlen - nlen)) - start {
         int64:k = 0i64;
         bool:same = true;
-        while (k < nlen) {
+        while (k < nlen) decreases nlen - k {
             if (hay.ptr[start + k] != needle[k]) { same = false; k = nlen; }
             else { k = k + 1i64; }
         }
@@ -92,7 +92,7 @@ func:main = int32(cstring[]:_~argv) {
     // ...and there is no NUL INSIDE the result either, so "find the NUL"
     // does not accidentally work.
     int64:i = 0i64;
-    while (i < n1) {
+    while (i < n1) decreases n1 - i {
         if (b1.ptr[i] == 0u8)                           { exit 16i32; }
         if (b1.ptr[i] == SENTINEL)                      { exit 17i32; }
         i = i + 1i64;
@@ -115,7 +115,7 @@ func:main = int32(cstring[]:_~argv) {
     // No error, no signal, no NUL -- and the bytes match the real target's
     // first eight, which is what makes the truncation undetectable.
     int64:j = 0i64;
-    while (j < 8i64) {
+    while (j < 8i64) decreases 8i64 - j {
         if (small.ptr[j] != b1.ptr[j])                  { exit 21i32; }
         j = j + 1i64;
     }
@@ -157,7 +157,7 @@ func:main = int32(cstring[]:_~argv) {
         if (after < 0i64)                               { exit 43i32; }
         if (after >= n3)                                { exit 44i32; }
         int64:k = after;
-        while (k < n3) {
+        while (k < n3) decreases n3 - k {
             if (b3.ptr[k] == 0u8)                       { exit 45i32; }
             k = k + 1i64;
         }
@@ -168,7 +168,7 @@ func:main = int32(cstring[]:_~argv) {
         // the count is checked rather than required.)
         int64:seps = 0i64;
         int64:t = after;
-        while (t < n3) {
+        while (t < n3) decreases n3 - t {
             if (b3.ptr[t] == 47u8) {
                 if (t == after)         { exit 46i32; }   // tail starts with `/`
                 if (t == (n3 - 1i64))   { exit 47i32; }   // tail ends with `/`
@@ -200,6 +200,9 @@ func:failsafe = int32(Error:e) {
         (OutOfBounds)    { exit 94i32; },
         (Unreachable)    { exit 95i32; },
         (WildLeak)       { exit 96i32; },
+        (StackExhausted) { exit 106i32; },
+        (MachineFault)   { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
         (*)              { exit 99i32; }
     }
     exit 9i32;

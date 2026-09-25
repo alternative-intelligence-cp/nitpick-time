@@ -52,7 +52,7 @@ func:main = int32(cstring[]:_~argv) {
     // =======================================================================
     Bytes:b = raw bytes_init(64i64);
     int64:i = 0i64;
-    while (i < HELD) { drop bytes_push(@b, A); i = i + 1i64; }
+    while (i < HELD) decreases HELD - i { drop bytes_push(@b, A); i = i + 1i64; }
 
     int64:cap_before = b.body.cap;
     uint8[]:v = raw bytes_view(@b);
@@ -60,7 +60,7 @@ func:main = int32(cstring[]:_~argv) {
     if (v[0i64] != A)                           { exit 11i32; }
 
     i = 0i64;
-    while (i < PUSHES) { drop bytes_push(@b, B); i = i + 1i64; }
+    while (i < PUSHES) decreases PUSHES - i { drop bytes_push(@b, B); i = i + 1i64; }
 
     // THE CONTROL'S OWN CONTROL. 8 + 40 = 48 <= 64, so `bytes_reserve` must
     // have returned early every time. If capacity moved here the section
@@ -80,7 +80,7 @@ func:main = int32(cstring[]:_~argv) {
     // =======================================================================
     Bytes:c = raw bytes_init(2i64);
     i = 0i64;
-    while (i < 2i64) { drop bytes_push(@c, A); i = i + 1i64; }
+    while (i < 2i64) decreases 2i64 - i { drop bytes_push(@c, A); i = i + 1i64; }
 
     int64:cap_small = c.body.cap;
     uint8[]:w = raw bytes_view(@c);
@@ -90,7 +90,7 @@ func:main = int32(cstring[]:_~argv) {
     if (w[0i64] != A)                           { exit 21i32; }
 
     i = 0i64;
-    while (i < PUSHES) { drop bytes_push(@c, B); i = i + 1i64; }
+    while (i < PUSHES) decreases PUSHES - i { drop bytes_push(@c, B); i = i + 1i64; }
 
     // Growth must actually have happened, or section 2 is section 1 again.
     if (c.body.cap == cap_small)                { exit 22i32; }
@@ -126,6 +126,9 @@ func:failsafe = int32(Error:e) {
         (WildLeak)       { exit 96i32; },
         (DivByZero)      { exit 97i32; },
         (DivOverflow)    { exit 98i32; },
+        (StackExhausted) { exit 106i32; },
+        (MachineFault)   { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
         (*)              { exit 99i32; }
     }
     exit 9i32;

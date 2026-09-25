@@ -1550,6 +1550,14 @@ missing feature rather than a defect.
   a harness that cannot run until they land is not a harness.
 
 ### TM-118 — the runtime allowlist is derived from `npkrt.o`, not from `npkrt.ll`, and the scan cannot see a syscall
+> **SUPERSEDED IN PART by TM-153 (2026-09-25).** Its "what the scan cannot
+> see" paragraph says a module issuing a raw syscall has an *identical*
+> undefined set to one that does not, 29 symbols each way. At compiler
+> `c3bdae2` the two sets are 5 and 8, and at `aaffb87` they were already 2 and
+> 5. The allowlist decision stands, and so does the conclusion that matters:
+> the scan never FLAGS a syscall and is not a purity result. The text below is
+> left exactly as written.
+
 **2026-09-05. Measured** at pin `0dfddac`. **Corrects `BUILD.md` B-2 and
 `meta/roadmap/done/0.0/0.0.2.md` P-14.**
 
@@ -1950,6 +1958,13 @@ what it is.
   that depends on nobody reaching for it under deadline is not a rule.
 
 ### TM-126 — a tree check is COMMISSIONED, not merely written; `check_purity` and `check_host_isolation` go live now
+> **SUPERSEDED IN PART by TM-153 (2026-09-25).** Its closing evidence — *"an
+> identical undefined set … 29 symbols each way, diff empty, and reproduced
+> here"* — is false at compiler `c3bdae2` (5 and 8) and was at `aaffb87` (2 and
+> 5). The decision itself stands: every tree check is commissioned, and
+> `check_purity` is the source-level answer the symbol scan cannot give. The
+> text below is left exactly as written.
+
 **2026-09-05. Supersedes the dormancy half of `meta/roadmap/done/0.0/0.0.3.md` P-21**
 — which said `check_purity` and `check_host_isolation` are *"written now and
 dormant"*, to go live at cycle 0.3 when `src/host/` exists.
@@ -2363,6 +2378,10 @@ happens when it is run at every point rather than at the ends.
 > compiler check and no leak gate can catch. This is the decision a reader
 > reaches when asking *why is `Vec<T>` restricted*, so the forward pointer
 > matters most here (D5, added at cycle 0.0.6).
+>
+> **And at cycle 0.1.0b, read TM-150.** O-N19 is fixed at compiler `c3bdae2`,
+> so the restriction no longer rests on it; it stands on the four element drops
+> `Vec<T>` does not perform at an owning `T`.
 
 **2026-09-05, cycle 0.0.4. Establishes the extent of O-N17, amends `SAFETY.md`
 S-18c and `0.0.4.md` §2's API table, and settles what `src/core/vec.npk` ships.**
@@ -2478,6 +2497,12 @@ says why in the file rather than only here. `0.0.4.md` §3's list is corrected.*
   named for what it does.
 
 ### TM-134 — `uint64`'s maximum is a CONSTANT spelling, not an expression; D-148 does not say so, and this cost a red run twice in one hour
+> **SUPERSEDED IN PART by TM-149 (2026-09-25).** Its spelling is refused at
+> compiler `c3bdae2`: `0u64 - 1u64` is `NITPICK-TYPE-076` even as a `fixed`
+> initialiser (the compiler's D-310), and D-311 makes `~0u64` the spelling. Its
+> lesson — a named constant, declared once, never an expression in a function
+> body — stands. The text below is left exactly as written.
+
 **2026-09-05, cycle 0.0.4. A language fact, measured at pin `0dfddac`, that the
 compiler's `LEXICAL_REFERENCE.md` states incompletely.**
 
@@ -2651,6 +2676,14 @@ line at all.
   of error this spike exists to prevent. Both numbers are reported.
 
 ### TM-136 — `NITPICK-TYPE-046` is not enforced inside a generic body; `vec_pop<T>` shipped a duplicate owner, `vec_at<T>` is destructive, and TM-132's restriction stands for a NEW reason
+> **SUPERSEDED IN PART by TM-150 (2026-09-25).** Its reason 2 — `NITPICK-TYPE-046`
+> does not fire inside a generic body — is false at compiler `c3bdae2`, where
+> the compiler's D-264 refuses the copy in the generic body at every
+> instantiation (O-N19, fixed; TM-154). Its reason 1 stands, and so does the
+> restriction, now resting on the four element drops `Vec<T>` does not
+> perform; `vec_reserve`'s row relocates with `ralloc`. The text below is left
+> exactly as written.
+
 **2026-09-05, cycle 0.0.5. Amends `SAFETY.md` S-18, `src/core/vec.npk`,
 `src/lib.npk` and `0.0.4.md` §2's API table. Does not supersede TM-132: that
 decision's conclusion survives and its premise is replaced.**
@@ -3522,3 +3555,243 @@ simply not the one C-8 claimed.
   visibility model is a settled compiler decision, not a gap, and O-N ids are
   for gaps. If a sibling library meets the same wall the case is stronger made
   once, jointly.
+
+---
+
+# Cycle 0.1.0b — the adoption to compiler `c3bdae2`, ratified 2026-09-25
+
+Seven decisions, each drafted at planning (`meta/roadmap/0.1/0.1.0b.md` §8,
+PD-1 … PD-7, in that order) and recorded here by the worker in the commit that
+makes the change it describes. Every measurement below was taken at compiler
+`c3bdae2`, the close of its cycle 1.5, unless it names another pin.
+
+### TM-149 — `uint64`'s maximum is `~0u64`
+
+**2026-09-25, cycle 0.1.0b (PD-1). Supersedes TM-134 in part.** The compiler's
+D-310 folds an integer `+ - *` whose operands are compile-time constants and
+refuses one whose value does not fit, `NITPICK-TYPE-076`; D-311 makes `uint64`'s
+upper half a bit operation, which never overflows, and changes D-148's example
+to `~0u64`. **Measured:** `fixed uint64:U64_MAX = 0u64 - 1u64;` — the spelling
+TM-134 settled — is refused `NITPICK-TYPE-076` at both of this tree's sites
+(`tests/unit/bytes_put_int.npk`, `tests/unit/limits_named.npk`), **even as the
+`fixed` initialiser TM-134 said was the one place it worked**; `~0u64` compiles
+and both tests pass, `limits_named` counting twenty digits off the constant and
+`bytes_put_int` formatting it.
+
+*The decision:* this library's `uint64` maximum is `fixed uint64:U64_MAX =
+~0u64;`. **TM-134's lesson stands** — the value is a named constant, declared
+once and never an expression re-typed in a function body — and its spelling
+does not.
+
+*Alternatives declined:* `(1u64 << 63u64) | ((1u64 << 63u64) - 1u64)` — D-311
+admits it, and it is a longer spelling of the same value that a reader has to
+verify; `0u64 -% 1u64` — a wrapping operator where nothing wraps by design hides
+what the constant is.
+
+### TM-150 — `vec_reserve<T>` relocates with `ralloc`, and TM-132's restriction now stands on the element drops alone
+
+**2026-09-25, cycle 0.1.0b (PD-2). Supersedes TM-136 in part.** The compiler's
+D-264 makes a bare type parameter move-only in the body that names it, because
+a generic body is checked once for every type it is instantiated at. It refused
+`vec_reserve<T>`'s element copy, `into[i] = from[i]`, `NITPICK-TYPE-046` at
+`src/core/vec.npk:167`. A relocation is a bitwise move of the whole block, and
+`ralloc` is that operation: it grows in place where it can, else allocates,
+copies the old block's bytes and frees it — correct at any `T`, with no element
+copy for D-264 to refuse and no loop to carry a measure. `vec.npk` now holds no
+loop, compiles with no diagnostic, and **its row is correct at an owning `T` by
+construction where the loop was correct by accident** (TM-136's extent table).
+
+**TM-136's reason 2 is false at `c3bdae2`** — `NITPICK-TYPE-046` does fire
+inside a generic body — and reason 1, the element-drop loop refused
+`NITPICK-MOVE-001` in this file's spelling, is unchanged (measured again: the
+hoisted-slice `move(from[i])` loop and a generic dropping `vec_set` over one
+slice are both `MOVE-001`). **So `Vec<T>` stays restricted to a non-owning `T`,
+and the restriction rests on the element drops alone:** at an owning `T`,
+`vec_set`, `vec_clear`, `vec_truncate` and `vec_free` each discard elements they
+do not drop — a leak `exit 0` cannot see (TM-106).
+
+**Four, not five — the plan's draft named `vec_pop` among them and the
+measurement removed it.** `vec.npk`'s header and this decision's draft both said
+five operations owe a drop, `vec_pop` included; that list descends from TM-132's
+five rows, which were the rows *built on the move-out primitive*, and a row
+built on a move is not a row that owes a drop. `vec_pop`'s `move` hands the
+element to the caller. Measured at `T = string`: two million push-then-pop
+cycles end with `NPK_HEAP_STATS`'s `peak_live` at **120** bytes, and the same
+cycles with `vec_clear` in place of the pop end with **48 000 096** retained,
+both at exit 0. The decision is unchanged by the correction; its extent is
+stated as measured.
+
+*Consequences, measured:* a push after `vec_free` still traps `Unreachable`,
+exit 95 — the freed block now reaches the allocator's check in `ralloc` instead
+of `dalloc`; `ralloc(p, 0)` cannot happen, since past the early return
+`want > cap >= 0` and so `n >= want >= 1`; and `vec_pop`'s `move`, written at
+cycle 0.0.5, is still the right spelling — the same body without it is refused
+`NITPICK-TYPE-046`.
+
+*Alternatives, measured and declined:* `into[i] = move(from[i])` over the
+hoisted slices — `NITPICK-MOVE-001`; the slices re-made inside the loop with
+`move` — compiles, and spends a loop, a measure and a `DecreasesViolated` arm to
+express a bitwise copy; a byte-wise copy over `uint8` slices — re-implements
+`ralloc`.
+
+### TM-151 — every loop states the measure a reader can defend, and the reading is a committed record
+
+**2026-09-25, cycle 0.1.0b (PD-3).** The compiler's D-304 refuses a `while` or
+`when` that states neither `decreases E` nor `unbounded` (`NITPICK-TYPE-072`),
+checks the measure at the loop's head in every build and traps
+`DecreasesViolated` when it fails to shrink. **Measured before the sweep:** 49
+loops refused, 7 in `src/core/` and 42 in `tests/`; `vec_reserve`'s went with
+TM-150, leaving 48. The compiler's own sweep tool (`decreases_sweep.py`, with the
+loop dump built from the pinned compiler's source) wrote **29** in the shape it
+proves monotone and listed **19** for a reader. The reading is
+`meta/roadmap/0.1/decreases_read.txt`, applied by the tool: 29 written, 19 read,
+0 listed, 0 stale, 0 errors — and **none `unbounded`**, so `VERIFICATION.md`
+P-9's claim is now the language's check.
+
+*Two readings that are not the obvious one, and why:*
+
+- `bytes_reserve`'s copy loop is bounded by `b.len`, read through a pointer. A
+  `decreases b.len - i` row stays `open` whatever the proof effort (the
+  compiler's DEF-14 frame problem), so the bound is **hoisted** into a local
+  `live` first; the body never writes `b.len`, so nothing changes at run time.
+- `bytes_put_int`'s negative loop runs `x` from a negative value toward zero.
+  The obvious measure, `0i64 - x`, **overflows at `int64` MIN** — the one input
+  the function exists to get right — and a measure's own arithmetic is checked,
+  so it would trap `IntOverflow` there. `decreases 0i128 - (x => int128)` widens
+  with the checked cast and cannot overflow; a loop's measure may be wider than
+  64 bits (TYPE-073 limits only a function's). The unit test's `int64` MIN case
+  passes.
+
+**And the clause's two words are reserved now.** D-304 added `decreases` and
+`unbounded` to the compiler's `VerificationKeyword` production, so each is
+refused as a local name at `c3bdae2` — measured, `int64:decreases = 1i64;` and
+`int64:unbounded = 1i64;` are each `NITPICK-PARSE-002` at the declaration, while
+the same program naming the local `measure` compiles. `BUILD.md` B-18's "ten"
+is twelve at this pin, and §7's table gains both — beside `sealed` and
+`hidden`, the field qualifiers of the compiler's D-313 and D-314, measured the
+same way and refused the same way, which cycle 0.1.0c is the first here to
+write.
+
+*Alternatives declined:* `decreases b.len - i` for the pointer bound — `open`
+under DEF-14 forever; `NTIME_DIGITS_MAX - n` for the digit loop — a trip budget,
+which D-304 refuses as a measure because it is not why the loop ends;
+`(0i64 -% x) =>! uint64` — correct, and relies on wrapping at exactly MIN, which
+reads as a trick.
+
+### TM-152 — the arm codes are the same in every repository, and a test's answer never equals one
+
+**2026-09-25, cycle 0.1.0b (PD-4).** The four identities the compiler's cycle 1.5
+added get one code each, chosen by the orchestrator for every library so that
+two streams cannot choose differently: **`StackExhausted` 106, `MachineFault`
+107, `DecreasesViolated` 108, `LimitViolated` 109** (the last used from cycle
+0.1.0c). They extend the uniform run 91–96 rather than forking it; the board
+found every code 80…99 already in use somewhere in the six work repositories,
+and 97, 89 and 90 meaning different things in different ones.
+
+**The collision rule: no test's expected exit equals an arm code unless the test
+asserts that trap.** The five tests expecting 94 assert `OutOfBounds`, which is
+the exception the rule names. `tests/probe/defect/derive_payload_enum/case3_hash_and_clone.npk`
+expected **107** as its *computed* answer, `(same_hash * 100) + payload`, and
+once its `failsafe` named `(MachineFault) { exit 107i32; }` a hardware-fault trap
+and the measured answer were the same exit code — the planning dry run's
+`ok … exit 107` could not say which it saw. It answers `(same_hash * 10) +
+payload` now, expecting **17**. Checked with `git grep -hE '^// expect-exit:
+[0-9]+' -- tests`: `0` ×43, `94` ×5, `11`, `17`, `121` — none an arm code it does
+not assert.
+
+*Alternatives declined:* a different `MachineFault` code in this repository —
+the point of the codes is that they are the same everywhere, and the collision
+was a test's encoding, not the code; leaving 107 — a verdict that cannot tell a
+trap from the answer is not a verdict.
+
+### TM-153 — the undefined-symbol scan still never FLAGS a syscall; at `c3bdae2` it SEES one
+
+**2026-09-25, cycle 0.1.0b (PD-5). Supersedes TM-118 and TM-126 in part.** Both
+said a module that issues a raw syscall has an **identical** undefined set to one
+that does not — `nitpick-regex`'s RX-120, 29 symbols each way, "reproduced
+here". **Measured** (`npkc`, `llc -O0 -filetype=obj -relocation-model=static`,
+`nm -u`, on a floor-only program and the same program calling `sys(39)`):
+
+| pin | floor-only | + `sys(39)` | the difference |
+|---|---:|---:|---|
+| `c3bdae2` | 5 | 8 | `npk_chain_push`, `npk_raise`, `npk_sys6` |
+| `aaffb87` | 2 | 5 | `npk_chain_push`, `npk_sys6`, `npk_trap` |
+
+So the sentence was false at this repository's previous pin as well: it held at
+pins that emitted the whole prelude into every program, and the compiler's 1.5.2d
+prelude trim — already in `aaffb87` — ended that. **What stays true, and is the
+claim that matters:** `npk_sys6` is defined by `npkrt.o`, so it is in the
+allowlist, and the scan never FLAGS a syscall. It is still not a purity result,
+and `check_purity` (S-10b) is still the only thing here that answers "did this
+module touch the kernel". The five live sites that carried the evidence are
+corrected, each with the measurement and its pin (`harness/checks.py` twice,
+`harness/elf.py`, `BUILD.md` B-2c, `SAFETY.md` S-10b), and the five that said
+the scan "cannot see" a syscall now say it cannot **flag** one, which is true at
+every pin. The plan listed three of those five; `harness/build.py`'s `scan`
+docstring and `TESTING.md` §2's `check_purity` row were found by the sweep.
+
+*Alternative declined:* replace the scan with the IR call-edge scan now — outside
+an adoption, and with nothing yet to find; `../OPEN_QUESTIONS.md` O-X9 holds it,
+with its reason for waiting.
+
+### TM-154 — O-N18 and O-N19 have landed, and the corpus asserts it
+
+**2026-09-25, cycle 0.1.0b (PD-6).** At `c3bdae2`, `check_exemptions_live`
+reported three recorded verdicts moved — the mechanism TM-137 built, working as
+designed: `fixed_array_len/case1_local_array_len.npk` from `npkc` to `run:0`
+(O-N18, the compiler's DEF-22), and `generic_owning_copy`'s `case1` and `case4`
+from `run:0` and `run:170` to `npkc` (O-N19, fixed by the compiler's D-264).
+
+*The decision:* each file carries the marker that is now true of it —
+`case1_local_array_len` `// expect-exit: 0`; `case1_generic_bare_copy` and
+`case4_use_after_free` `// expect-error: NITPICK-TYPE-046` — and the three
+`EXPECT_EXEMPT` entries are deleted, leaving only the three support modules.
+**`case3_generic_scalar`, the scalar control, takes `// expect-error:
+NITPICK-TYPE-046` too**: D-264 checks the generic body once for every
+instantiation rather than at the scalar it happens to be called with, and the
+diagnostic says so. The corpus arithmetic is now `24 = 0 exempt + 24 asserted
+(13 run, 11 refusal)`.
+
+*The controls* are the pre-adoption text at the kept `aaffb87` pin, re-run at
+0.1.0b: `npkc` exit 1 with `NITPICK-EMIT-002` for `case1_local_array_len`, and
+`run:0`, `run:0`, `run:170` for `case1`, `case3`, `case4` — the verdicts the
+exemptions had recorded, exactly. The pair, accepted at one pin and refused at
+the next, is what makes each file a test of the fix and not of the file. (The
+adopted `case4` could not be its own control: its loop carries a `decreases`
+clause, which `aaffb87` does not parse — measured, `NITPICK-PARSE-001`.)
+
+*Alternative declined:* leave the files exempt with updated verdicts — an
+exemption exists for a file no marker can describe, and a marker now can.
+
+### TM-155 — the harness's floor is six, the umbrella is a generated row, and a `decreases` clause arms `DecreasesViolated`
+
+**2026-09-25, cycle 0.1.0b (PD-7).** Three changes to `harness/arms.py`, each
+forced by what the compiler's `NITPICK-REACH-002` lines said over every root:
+
+1. **`FLOOR` names six.** `StackExhausted` (D-305: every emitted function checks
+   its stack) and `MachineFault` (D-307: a hardware fault reaches `failsafe`)
+   were demanded by all 61 roots that reach the reachability analysis. The
+   self-check's calibration moves with it: `probe11_silent_lib` **6**,
+   `probe11_arms_lib` **7**, `probe11_calc_lib` **10** — each 4 / 5 / 8 plus the
+   same two — and the overstatement fixture's `real` set gains them, so
+   `NotAnArm` stays the only overstatement it plants.
+2. **A `decreases` clause in a module's code text arms `DecreasesViolated`**
+   (`MEASURE_ARM`), beside S-4b's three arithmetic rules; `unbounded` arms
+   nothing. Measured over the tree: `DecreasesViolated` was demanded by 20 of
+   the 61 roots, every one reaching one of this tree's own measured loops — no
+   prelude call this library makes arms it.
+3. **`src/lib.npk` is a row.** `public_modules` excluded the umbrella *"until
+   there is anything to re-export"*, and there has been since cycle 0.0.4; it
+   is the import a consumer writes. Its bill is **12** (`DecreasesViolated`,
+   `DivByZero`, `DivOverflow`, `HeapBadRequest`, `HeapOom`, `IntOverflow`,
+   `MachineFault`, `OutOfBounds`, `StackExhausted`, `Unreachable`, `WildLeak`,
+   `cal.ETimeValue`), and it is the row that **calibrates rule 2 on real code**:
+   without the rule it is short by exactly `DecreasesViolated`, because only the
+   umbrella reaches `src/core/bytes.npk`'s loops. `check_failsafe_arms` reports
+   seven public modules and seven rows — `cal` 11, the umbrella 12, the five
+   others 6 — each diffed against `NITPICK-REACH-003` in both directions.
+
+*Alternatives declined:* keep excluding the umbrella — it is the import
+consumers write, and its own exclusion named the condition for including it; a
+support specimen for rule 2 instead of the row — redundant, since the row is
+real code and fails without the rule.

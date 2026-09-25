@@ -19,6 +19,8 @@
 //
 //   the four unconditional floor arms                      probe 11d proves
 //     Unreachable, HeapOom, HeapBadRequest, WildLeak        these are the floor
+//     (six at compiler `c3bdae2`: + StackExhausted,
+//      MachineFault -- cycle 0.1.0b; the rest is unchanged)
 //   + EProbeZone                                            the import's identity
 //   + DivByZero, DivOverflow, IntOverflow, OutOfBounds      the import's ARITHMETIC
 //
@@ -105,6 +107,8 @@ func:failsafe = int32(Error:e) {
         (OutOfBounds)    { exit 94i32; },
         (Unreachable)    { exit 95i32; },
         (WildLeak)       { exit 96i32; },
+        (StackExhausted) { exit 106i32; },
+        (MachineFault)   { exit 107i32; },
         (*)              { exit 99i32; }
     }
     exit 9i32;

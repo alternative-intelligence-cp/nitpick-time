@@ -52,9 +52,12 @@
 // THIS PAIR IS UNCHANGED AND MEASURES WHAT IT ALWAYS DID -- the leak and its
 // remedy at the instantiation, which is where `SAFETY.md` S-18b puts element
 // lifetime and where TM-136 keeps it. The reason moved: not that the generic
-// spelling cannot be written, but that `NITPICK-TYPE-046` does not fire inside
-// a generic body, so nothing would catch the next one written without a
-// `move` (`defect/generic_owning_copy/`).
+// spelling cannot be written, but that `NITPICK-TYPE-046` did not fire inside
+// a generic body, so nothing would have caught the next one written without a
+// `move` (`defect/generic_owning_copy/`). IT FIRES AT COMPILER `c3bdae2` (the
+// compiler's D-264, cycle 0.1.0b, TM-150), so that reason has closed too; the
+// pair stays at the instantiation because `Vec<T>` still performs no element
+// drop at an owning `T`, which is the restriction's one remaining reason.
 mod:probe12b_set_overwrite_drop;
 
 struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };
@@ -99,7 +102,7 @@ func:main = int32(cstring[]:_~argv) {
     b.items[0i64] = string_concat("Australia/Lord_Howe_", "Europe/Kyiv_xyz");
     b.count = 1i64;
     int64:i = 0i64;
-    while (i < 2000000i64) {
+    while (i < 2000000i64) decreases 2000000i64 - i {
         // THE REMEDY: `vec_set` empties the slot before it fills it.
         drop vec_set_string(@b, 0i64, string_concat("Australia/Lord_Howe_", "Europe/Kyiv_xyz"));
         i = i + 1i64;
@@ -123,6 +126,9 @@ func:failsafe = int32(Error:e) {
         (OutOfBounds)    { exit 94i32; },
         (Unreachable)    { exit 95i32; },
         (WildLeak)       { exit 96i32; },
+        (StackExhausted) { exit 106i32; },
+        (MachineFault)   { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
         (*)              { exit 99i32; }
     }
     exit 9i32;

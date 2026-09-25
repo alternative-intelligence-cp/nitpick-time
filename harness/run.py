@@ -15,8 +15,8 @@ WHAT A GREEN RUN HERE IS, AND IS NOT.
   and every test file held to its own header at -O0 and again under `opt -O2`.
 
   IT IS NOT a purity result from the SYMBOL SCAN. The undefined-symbol scan
-  CANNOT SEE A SYSCALL -- `npk_sys6` is the runtime's own and is in the
-  allowlist by construction (`elf.py`, B-2c, TM-118, RX-120). `check_purity` is
+  CANNOT FLAG A SYSCALL -- `npk_sys6` is the runtime's own and is in the
+  allowlist by construction (`elf.py`, B-2c, TM-118, TM-153, RX-120). `check_purity` is
   a SOURCE-level check and is the only thing that answers that question.
 
   IT IS NOT evidence that the WHOLE library works. `src/core/` is real code
@@ -102,40 +102,17 @@ EXPECT_EXEMPT = {
     # `expect-exit:` was true of them. O-N17 landed at pin `aaffb87`: both now
     # link and run, both carry `// expect-exit: 0`, and both are ordinary
     # members of the `probe` stage. TM-137.
-    "tests/probe/defect/fixed_array_len/case1_local_array_len.npk": ("npkc",
-        "O-N18, a SECOND compiler defect, found at 0.0.4 (the compiler's "
-        "DEF-22, FIXED in its 1.5.2e which is AHEAD of our pin): `.len` on a "
-        "fixed-size "
-        "array `T[N]` is accepted by the frontend and cannot be lowered "
-        "(`NITPICK-EMIT-002`). `expect-error:` would be spellable here -- "
-        "`npkc` DOES refuse it -- and is WRONG ANYWAY: EMIT-002's own text "
-        "says the program is correct and the compiler is at fault, so "
-        "asserting the refusal would turn the bug into a committed "
-        "expectation and go RED on the day it is fixed. The controls (a slice "
-        "`.len`, and the same array indexed without `.len`) are in that "
-        "directory's README"),
-    "tests/probe/defect/generic_owning_copy/case1_generic_bare_copy.npk":
-        ("run:0",
-        "O-N19, a THIRD compiler defect, found at 0.0.5, ACCEPTED as a "
-        "soundness hole in the checker: `NITPICK-TYPE-046` is not "
-        "enforced inside a GENERIC function body, so `T:answer = s[i]` at an "
-        "owning `T` compiles, links and runs -- and the identical statement "
-        "with `string` written out is refused (`case2`). No marker is right: "
-        "`expect-error:` is false, because nothing refuses it; and "
-        "`expect-exit: 0` would commit the repository to a program whose "
-        "whole point is that exiting 0 is WRONG, and would go red on the day "
-        "the check lands. The recorded verdict above is what makes that "
-        "landing visible instead: `run:0` becomes `npkc` and this entry "
-        "fails. TM-136"),
-    "tests/probe/defect/generic_owning_copy/case4_use_after_free.npk":
-        ("run:170",
-        "the same defect's CONSEQUENCE: two owners of one body, the first "
-        "dropped, the second read -- exit 170 is the allocator's 0xAA poison "
-        "(D-183), which is the evidence that the copy was real. `expect-exit: "
-        "170` is spellable and is declined for `case1`'s reason: it would "
-        "make a use-after-free a committed expectation of this suite. The "
-        "recorded verdict carries it instead, and `run:170` becomes `npkc` "
-        "when the check lands. TM-136"),
+    # AND O-N18's AND O-N19's THREE ARE GONE THE SAME WAY, at cycle 0.1.0b.
+    # `fixed_array_len/case1` was here at `npkc` (O-N18, the compiler's
+    # DEF-22) and `generic_owning_copy`'s `case1` and `case4` at `run:0` and
+    # `run:170` (O-N19). At pin `c3bdae2` all three verdicts MOVED --
+    # `check_exemptions_live` reported "3 moved", naming each -- because both
+    # fixes had landed: `case1_local_array_len` now runs clean and carries
+    # `// expect-exit: 0`, and the other two are refused `NITPICK-TYPE-046`
+    # inside the generic body (the compiler's D-264) and carry that as their
+    # `expect-error:`. Each was run once against the kept `aaffb87` pin as its
+    # control, and the three verdicts recorded here reproduced exactly
+    # (`meta/roadmap/0.1/0.1.0b.md`'s execution record, TM-154).
 }
 
 # The directories a `.npk` may not live in and be missed: none. This walk is
@@ -453,7 +430,9 @@ def run_defect_corpus(rep, root, bld, subdir=None):
     the directory, so a NEW subdirectory is covered the day it is created --
     which is the property that failed here.
 
-    THE ARITHMETIC IS PRINTED AND ASSERTED: 24 = 3 exempt + 21 asserted.  A
+    THE ARITHMETIC IS PRINTED AND ASSERTED: 24 = 0 exempt + 24 asserted at
+    compiler `c3bdae2`, and 24 = 3 + 21 until cycle 0.1.0b, when O-N18's and
+    O-N19's three exemptions expired and their files took markers (TM-154).  A
     corpus that grew a file nobody judged would change the sum.
 
     `subdir` IS A PARAMETER FOR THE SAME REASON `check_exemptions_live` takes
@@ -914,10 +893,11 @@ def main(argv):
     #     wrong, and this one cannot be taken at all without one.
     check_exemptions_live(rep, root, bld)
 
-    # 4c. and the OTHER 21 files in the same directory, whose `expect-` markers
+    # 4c. and the OTHER files in the same directory, whose `expect-` markers
     #     were asserted by nothing (TM-141). It runs beside 4b because the two
     #     together are what make the coverage claim in `TESTING.md` §1 true:
-    #     3 exempt + 21 asserted = the whole corpus. Not under `--only`'s or
+    #     exempt + asserted = the whole corpus -- 3 + 21 when this was written,
+    #     0 + 24 since cycle 0.1.0b (TM-154). Not under `--only`'s or
     #     `--quick`'s control, for 4b's reason -- this is coverage, not a
     #     suite a developer iterates on.
     run_defect_corpus(rep, root, bld)

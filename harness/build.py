@@ -182,7 +182,7 @@ class Build:
         """B-2: a BUILD step, not a test. Any forbidden symbol fails the build.
 
         See `elf.py` for what this can and cannot see -- in particular it CANNOT
-        see a syscall, and it is not a purity result.
+        FLAG a syscall, and it is not a purity result (TM-153).
         """
         bad = elf.scan(obj, self.allowlist)
         if bad:

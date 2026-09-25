@@ -1,10 +1,20 @@
-// NO `expect-` MARKER, AND THE ONE THAT IS TRUE IS THE ONE THAT MUST NOT BE
-// WRITTEN. This file compiles, links and exits 0, so `// expect-exit: 0` would
-// be accurate -- and it would commit this repository to a program whose whole
-// point is that exiting 0 is WRONG, and would go red on the day the missing
-// check lands. Named in `harness/run.py`'s `EXPECT_EXEMPT` with the verdict
-// `run:0`, which `check_exemptions_live` re-derives on every full run (TM-137),
-// so the landing fails the entry instead of passing unnoticed.
+// expect-error: NITPICK-TYPE-046
+//
+// O-N19'S REGRESSION TEST, SINCE CYCLE 0.1.0b. THE CHECK LANDED: at compiler
+// `c3bdae2` `peek<T>`'s bare copy is refused `NITPICK-TYPE-046` inside the
+// generic body -- the compiler's D-264, which makes a bare type parameter
+// move-only in the body that names it because a generic body is checked once
+// for every type it is instantiated at. Until 0.1.0b this file carried NO
+// marker: it compiled, linked and exited 0, the one true marker was
+// `expect-exit: 0`, and writing it would have committed the suite to the
+// defect. It was named in `harness/run.py`'s `EXPECT_EXEMPT` at the verdict
+// `run:0` instead, and `check_exemptions_live` failed that entry at the re-pin
+// -- "it now stops at `npkc`" -- which is the landing arriving as designed.
+// THE CONTROL is this text at the kept `aaffb87` pin: `npkc` 0, `llc` 0, `ld`
+// 0, run 0, recorded in `meta/roadmap/0.1/0.1.0b.md`'s execution record. The
+// pair is what makes this a test of the fix and not of the file (TM-154).
+// Everything below is the record as 0.0.5 wrote it, in the tense it was true
+// in; `README.md` beside this file has the landing.
 //
 // ===========================================================================
 // THE DEFECT: `NITPICK-TYPE-046` IS NOT ENFORCED INSIDE A GENERIC FUNCTION BODY

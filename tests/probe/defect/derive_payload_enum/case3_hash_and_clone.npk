@@ -1,13 +1,20 @@
-// expect-exit: 107
+// expect-exit: 17
 // NOT A PROBE. The answer is the measurement.
 //
 // CASE 3 — the same question of the other two derives that could lose a
 // payload, so the report says which of them do and which do not.
 //
-// Two digits, from `(same_hash * 100) + payload_after_clone`:
+// Two digits, from `(same_hash * 10) + payload_after_clone`:
 //
-//   1xx   `Literal(7).hash()` == `Literal(9).hash()`  -- the hash is the TAG's
-//   x07   `Literal(7).clone()` still carries 7        -- Clone is CORRECT
+//   1x    `Literal(7).hash()` == `Literal(9).hash()`  -- the hash is the TAG's
+//   x7    `Literal(7).clone()` still carries 7        -- Clone is CORRECT
+//
+// (It was `(same_hash * 100) + payload`, answering 107, until cycle 0.1.0b.
+// Then `(MachineFault)` took exit 107 in every `failsafe` in this ecosystem,
+// this one included, and a hardware-fault trap and the measured answer would
+// have been the same exit code -- a verdict that could not say which it saw.
+// The encoding moved rather than the arm code, because the codes are the same
+// in every repository by design: TM-152.)
 //
 // A hash colliding is legal in isolation and is recorded rather than asked
 // about: it matters only because `Eq` will not compile on the same type, so
@@ -40,7 +47,7 @@ func:main = int32(cstring[]:_~argv) {
     int32:same_hash = 0i32;
     if (ha == hb) { same_hash = 1i32; }
     Part:c = a.clone() ?! E9;
-    exit ((same_hash * 100i32) + (raw payload(c)));
+    exit ((same_hash * 10i32) + (raw payload(c)));
 };
 
 func:failsafe = int32(Error:e) {
@@ -49,6 +56,8 @@ func:failsafe = int32(Error:e) {
         (HeapBadRequest) { exit 91i32; }, (HeapOom) { exit 92i32; },
         (IntOverflow) { exit 93i32; },    (OutOfBounds) { exit 94i32; },
         (Unreachable) { exit 95i32; },    (WildLeak) { exit 96i32; },
+        (StackExhausted) { exit 106i32; },
+        (MachineFault) { exit 107i32; },
         (*) { exit 99i32; }
     }
     exit 9i32;

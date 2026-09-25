@@ -144,7 +144,7 @@ func:main = int32(cstring[]:_~argv) {
     // total the widths: 4 + 1003 + 2 + 1004 + 2.
     int64:total = 0i64;
     int64:i = 0i64;
-    while (i < parts.count) {
+    while (i < parts.count) decreases parts.count - i {
         total = total + (raw width_of(parts.items[i]));
         i = i + 1i64;
     }
@@ -184,6 +184,9 @@ func:failsafe = int32(Error:e) {
         (OutOfBounds)    { exit 94i32; },
         (Unreachable)    { exit 95i32; },
         (WildLeak)       { exit 96i32; },
+        (StackExhausted) { exit 106i32; },
+        (MachineFault)   { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
         (*)              { exit 99i32; }
     }
     exit 9i32;

@@ -42,7 +42,7 @@ mod:probe09_environ_split;
 // shape.
 func:find_byte = int64(uint8[]:src, uint8:want) never fails {
     int64:i = 0i64;
-    while (i < src.len) {
+    while (i < src.len) decreases src.len - i {
         if (src[i] == want) { pass i; }
         i = i + 1i64;
     }
@@ -53,7 +53,7 @@ func:find_byte = int64(uint8[]:src, uint8:want) never fails {
 func:starts_with = bool(uint8[]:src, uint8[]:lit) never fails {
     if (lit.len > src.len) { pass false; }
     int64:i = 0i64;
-    while (i < lit.len) {
+    while (i < lit.len) decreases lit.len - i {
         if (src[i] != lit[i]) { pass false; }
         i = i + 1i64;
     }
@@ -66,7 +66,7 @@ func:starts_with = bool(uint8[]:src, uint8[]:lit) never fails {
 func:count_in = int64(uint8[]:src, int64:lo, int64:hi) never fails {
     int64:i = lo;
     int64:n = 0i64;
-    while (i < hi) {
+    while (i < hi) decreases hi - i {
         if (i >= src.len) { pass n; }
         n = n + 1i64;
         i = i + 1i64;
@@ -87,7 +87,7 @@ func:main = int32(cstring[]:_~argv) {
     // environment it runs in.
     int64:k = 0i64;
     int64:checked = 0i64;
-    while (k < env.len) {
+    while (k < env.len) decreases env.len - k {
         cstring:e = env[k];
         if (e.len <= 0i64)                              { exit 11i32; }
         // A view of the kernel's bytes. `e.ptr` is POINTER-SHAPED, so this
@@ -118,7 +118,7 @@ func:main = int32(cstring[]:_~argv) {
     int64:vlo = -1i64;
     int64:vhi = -1i64;
     int64:j = 0i64;
-    while (j < env.len) {
+    while (j < env.len) decreases env.len - j {
         cstring:e2 = env[j];
         string:entry2 = string_from_bytes(e2.ptr, e2.len);
         uint8[]:b2 = string_bytes(entry2);
@@ -151,7 +151,7 @@ func:main = int32(cstring[]:_~argv) {
     uint8[]:preb = string_bytes(pres);
     if (preb.len != web.len)                            { exit 39i32; }
     int64:w = 0i64;
-    while (w < web.len) {
+    while (w < web.len) decreases web.len - w {
         if (preb[w] != web[w])                          { exit 39i32; }
         w = w + 1i64;
     }
@@ -180,7 +180,7 @@ func:main = int32(cstring[]:_~argv) {
     string:hs2 = string_from_bytes(hit2.ptr, hit2.len);
     uint8[]:hb2 = string_bytes(hs2);
     int64:m = 0i64;
-    while (m < hb2.len) {
+    while (m < hb2.len) decreases hb2.len - m {
         if (hb2[m] != hb[m])                            { exit 42i32; }
         m = m + 1i64;
     }
@@ -207,6 +207,9 @@ func:failsafe = int32(Error:e) {
         (OutOfBounds)    { exit 94i32; },
         (Unreachable)    { exit 95i32; },
         (WildLeak)       { exit 96i32; },
+        (StackExhausted) { exit 106i32; },
+        (MachineFault)   { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
         (*)              { exit 99i32; }
     }
     exit 9i32;

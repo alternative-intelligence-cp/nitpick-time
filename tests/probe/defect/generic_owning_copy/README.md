@@ -1,4 +1,32 @@
-# `generic_owning_copy` — TYPE-046 is not enforced inside a generic body
+# `generic_owning_copy` — TYPE-046 was not enforced inside a generic body (O-N19); at compiler `c3bdae2` it is
+
+## Landed — cycle 0.1.0b, compiler `c3bdae2`
+
+**The check this directory was written to demand is in the compiler.** Its
+D-264 makes a bare type parameter MOVE-ONLY in the body that names it: a
+generic body is checked ONCE for every type it is instantiated at, some of
+which own storage, so the only sound answer for the type it does not know is
+"owns". The bare copy below is now refused where it is written, at every
+instantiation — the scalar one too. **Every file here is now asserted by an
+`expect-` marker** and none is in `harness/run.py`'s `EXPECT_EXEMPT`; the
+verdicts at the pin that raised it are each file's control (TM-154):
+
+| File | at `aaffb87` — the control | at `c3bdae2` — the marker |
+|---|---|---|
+| `case1_generic_bare_copy.npk` | `npkc` 0, `llc` 0, `ld` 0, **run 0** — the defect | **refused `NITPICK-TYPE-046`** |
+| `case2_concrete_bare_copy.npk` | refused `NITPICK-TYPE-046` | refused `NITPICK-TYPE-046` — unchanged |
+| `case3_generic_scalar.npk` | run 0 — the scalar control | **refused `NITPICK-TYPE-046`** — D-264 checks the body, not the instantiation |
+| `case4_use_after_free.npk` | **run 170** — the poison | **refused `NITPICK-TYPE-046`** |
+| `case5_vec_at_destructive.npk` | run 11 | run 11 — unchanged: `pass` of a place still moves |
+
+The `aaffb87` column was re-run at cycle 0.1.0b against the kept toolchain, on
+the text as it stood before that subcycle (`case4`'s adopted loop carries a
+`decreases` clause, which `aaffb87` does not parse); the `c3bdae2` column is
+what the harness asserts on every full run. `TRANSCRIPT.txt`'s last section
+has both, command by command. **Everything below this section is the record as
+cycle 0.0.5 wrote it, in the tense that was true then.**
+
+## The record, as raised
 
 **A GENERIC function may read an owning element into a local WITHOUT `move`,
 producing two owners of one heap body. The identical statement with the type
@@ -8,10 +36,9 @@ dropped returns the allocator's `0xAA` poison.
 
 Raised by cycle **0.0.5**, 2026-09-05, at pin `aaffb87` — and **reproduced
 unchanged at `0dfddac`, `950bb1d` and `94874ce`**, so it is not a regression at
-the new pin. This directory carries no open-question id: `O-N` is the
-workbench registry's namespace and a worker cannot see what it has issued
-(`../../../../../PLAYBOOK.md`). Cite this directory by path; the orchestrator
-numbers it.
+the new pin. This directory carried no open-question id when it was written:
+`O-N` is the workbench registry's namespace and a worker cannot see what it has
+issued (`../../../../../PLAYBOOK.md`). The orchestrator numbered it **O-N19**.
 
 ## The pair that is the whole finding
 
@@ -33,7 +60,7 @@ func:peek_string = string(Vec<string>->:v, int64:i) never fails {
 storage that is released at scope exit, so it is move-only (D-183): copying it
 here would leave two owners and one double free."*
 
-## The files
+## The files, at `aaffb87`
 
 | File | What it is | `npkc` | `llc` | `ld` | run |
 |---|---|---|---|---|---|
@@ -96,6 +123,16 @@ one silently duplicates. The previously known failures were all leaks, which is
 why "restricted to a non-owning `T`" had felt like a statement about tidiness.
 
 ## What it does to the restriction
+
+> **At cycle 0.1.0b this section's reason closed and the restriction did not
+> lift** (TM-150). At `c3bdae2` a `Vec<T>` function that reads an owning element
+> without `move` is refused `NITPICK-TYPE-046`, so the compiler DOES police the
+> type now. `Vec<T>` stays restricted to a non-owning `T` because four of its
+> operations — `vec_set`, `vec_clear`, `vec_truncate`, `vec_free` — owe an
+> element drop at an owning `T` and perform none (`../../../../src/core/vec.npk`'s
+> header). `vec_reserve`'s row above no longer exists in that form either: it
+> relocates with `ralloc`, a bitwise move of the whole block, because D-264
+> refused its `into[i] = from[i]`.
 
 **It keeps it, for a stronger reason than the one it had.** TM-132 restricted
 `Vec<T>` to a non-owning `T` because O-N17 blocked the element-drop path.

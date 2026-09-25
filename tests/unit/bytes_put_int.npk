@@ -34,6 +34,14 @@ use "../../src/core/bytes.npk".*;
 fixed int64:I64_MAX = 9223372036854775807i64;
 
 // `uint64`'s MAXIMUM, AND IT MUST BE A CONSTANT -- which D-148 does not say.
+//
+// SPELLED `~0u64` SINCE CYCLE 0.1.0b (TM-149). At compiler `c3bdae2` the
+// compiler's D-310 folds a constant integer `+ - *` and REFUSES one whose value
+// does not fit (`NITPICK-TYPE-076`), so `0u64 - 1u64` is refused even as the
+// `fixed` initialiser it was here; D-311 makes the bit operation the spelling,
+// and `~0u64` cannot overflow. The record below is from pin `0dfddac`, and its
+// lesson -- a named constant, never an expression re-typed in a body -- stands:
+//
 // `LEXICAL_REFERENCE.md` D-148 gives `0u64 - 1u64` as the spelling for "uint64
 // above 2^63-1", and that is correct HERE, as a `fixed` initialiser, where it
 // is constant-folded: measured at pin `0dfddac`, this value divides by 2 to
@@ -45,7 +53,7 @@ fixed int64:I64_MAX = 9223372036854775807i64;
 // Both halves were measured with the un-foldable form (`0u64 - argv.len`) as the
 // control. So the documented spelling is a CONSTANT spelling, and this file
 // found that by exiting 93 on its first green compile.
-fixed uint64:U64_MAX = 0u64 - 1u64;
+fixed uint64:U64_MAX = ~0u64;
 
 // The two answers, as bytes, so the comparison is against text and not against
 // a re-implementation of the thing being tested.
@@ -54,7 +62,7 @@ func:expect = int32(Bytes->:b, string:want, int32:code) never fails {
     uint8[]:wanted = string_bytes(want);
     if (got.len != wanted.len) { pass code; }
     int64:i = 0i64;
-    while (i < got.len) {
+    while (i < got.len) decreases got.len - i {
         if (got[i] != wanted[i]) { pass code; }
         i = i + 1i64;
     }
@@ -146,6 +154,9 @@ func:failsafe = int32(Error:e) {
         // (D-179), so they are named.
         (DivByZero)      { exit 97i32; },
         (DivOverflow)    { exit 98i32; },
+        (StackExhausted) { exit 106i32; },
+        (MachineFault)   { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
         (*)              { exit 99i32; }
     }
     exit 9i32;

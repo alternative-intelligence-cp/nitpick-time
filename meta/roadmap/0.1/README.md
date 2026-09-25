@@ -31,9 +31,10 @@ only), TM-016 (Hinnant's algorithms as given), TM-017 (`cal` declares
 ~~**Nothing in this cycle is blocked on a question.**~~ **Two things wait, and
 neither stops the next dispatch** (2026-09-25):
 
-- **the exit codes 108 and 109** (`DecreasesViolated`, `LimitViolated`) are
+- ~~**the exit codes 108 and 109** (`DecreasesViolated`, `LimitViolated`) are
   proposed in `0.1.0b.md` §2 and are the orchestrator's to confirm for both
-  streams — a gate of 0.1.0b's step 6 and of 0.1.0c;
+  streams — a gate of 0.1.0b's step 6 and of 0.1.0c;~~ **confirmed by the
+  orchestrator for both streams, 2026-09-25, and recorded as TM-152;**
 - **`../../OPEN_QUESTIONS.md` Q-6** — what replaces `VERIFICATION.md` P-1 now
   that every construct it names is live — is the author's. 0.1.1 is written to
   proceed on its recommended answer and states the exact alternative
@@ -62,7 +63,7 @@ C-8's guarantee. That is worth knowing before writing it.
 | # | Topic | Ends with |
 |---|---|---|
 | 0.1.0 | **The types** — `CivilDate`, `CivilTime`, `CivilDateTime`, `Weekday`, `Month`, and the validating constructors | **DONE 2026-09-06.** Every date `ntime` PRODUCES is a date that exists — and C-8b is why that sentence is no longer "a date that exists is a date that exists": the struct literal is an unchecked constructor the language will not let us remove (TM-148) |
-| 0.1.0b | **The adoption to compiler `c3bdae2`** — the CI pin as its own commit, a measure on every loop, the two new floor arms, `~0u64`, `vec_reserve` by `ralloc`, the defect corpus's landings, and the prose the pin made false — **[`0.1.0b.md`](0.1.0b.md), PLANNED** | `GREEN -- 70 unit(s)` at `c3bdae2`, and CI green on the same pin |
+| 0.1.0b | **The adoption to compiler `c3bdae2`** — the CI pin as its own commit, a measure on every loop, the two new floor arms, `~0u64`, `vec_reserve` by `ralloc`, the defect corpus's landings, and the prose the pin made false — **[`0.1.0b.md`](0.1.0b.md), DONE 2026-09-25** | `GREEN -- 70 unit(s)` at `c3bdae2`, and CI green on the same pin — run `36152772081` |
 | 0.1.0c | **The access properties** — `Vec`/`Bytes` hidden, sealed and under `ListLen` (the board's item 13), `CivilDate`/`CivilTime` sealed, `check_civil_literal` retired — **[`0.1.0c.md`](0.1.0c.md), PLANNED** | C-8 holds of the TYPE again for every module but `cal` (C-8c); `GREEN -- 75 unit(s)` |
 | 0.1.1 | **The algorithms** — `date_to_days`, `days_to_date`, the leap rule, `days_in_month` — **[`0.1.1.md`](0.1.1.md), PLANNED** | the published algorithms, cited, with their divisions by literals — and the range's first day corrected by the test that recomputes it |
 | 0.1.2 | **The sweep** — the exhaustive round trip and its three riders | the cycle's gate |
@@ -98,17 +99,17 @@ environment) and a control that fails.
 - [x] ~~`check_failsafe_arms` goes live: a program importing only `cal` owes exactly one arm~~ — **the prediction was WRONG BY EIGHT and the corrected item is the measurement.** `check_failsafe_arms` was already live at 0.0.3; what went live here is its first non-floor row. **A program importing only `cal` owes the arms `NITPICK-REACH-003` names, measured and recorded: NINE** — `cal.ETimeValue`, `Unreachable`, `HeapOom`, `HeapBadRequest`, `WildLeak`, `DivByZero`, `DivOverflow`, `IntOverflow`, `OutOfBounds`. `9 = 4 (floor) + 1 (identity) + 4 (cal's own arithmetic, charged to the consumer)`. That is TM-107 exactly, `0.1.0.md` §4 predicted the falsification, and `SAFETY.md` S-4's totals column now carries the number with the command that produced it
 - [x] **added, not planned:** `check_civil_literal`, commissioned with two planted violations and two controls — one of them the banned form in a COMMENT, since `src/lib.npk`'s own header spells it out in prose
 
-### 0.1.0b — the adoption to compiler `c3bdae2` — `0.1.0b.md` §7 is the full list
-- [ ] commit 1 is the CI pin alone (`c3bdae2`, both digests), RED locally at the self-check and never pushed alone
-- [ ] `vec_reserve<T>` relocates with `ralloc`; `vec.npk` holds no loop (D-264)
-- [ ] every `while` states its measure — 29 by the tool, 19 by the committed reading `decreases_read.txt`, none `unbounded`
-- [ ] `U64_MAX = ~0u64` at both sites (D-311)
-- [ ] the tzdb spike's templates carry clauses and arms, and a re-run reproduces TM-135's table sizes exactly
-- [ ] every `failsafe` names what `REACH-002` asks — `StackExhausted` 106 and `MachineFault` 107 in 61 roots, `DecreasesViolated` 108 in 20 — and nothing more
-- [ ] the harness: floor six, calibration 6 / 7 / 10, the umbrella a generated row (12)
-- [ ] O-N18 and O-N19 asserted by markers, their exemptions gone, their controls at `aaffb87` recorded; `case3_hash_and_clone` answers 17
-- [ ] RX-120's evidence corrected; P-1's and P-9's notes in `VERIFICATION.md`; the pin-dependent prose swept with its denominators
-- [ ] `GREEN -- 70 unit(s), 0 failures; 5 pending` at `c3bdae2`, and CI green on the pushed adoption
+### 0.1.0b — the adoption to compiler `c3bdae2` — `0.1.0b.md` §7 is the full list — **DONE 2026-09-25**
+- [x] commit 1 is the CI pin alone (`c3bdae2`, both digests), RED locally at the self-check and never pushed alone
+- [x] `vec_reserve<T>` relocates with `ralloc`; `vec.npk` holds no loop (D-264, TM-150)
+- [x] every `while` states its measure — 29 by the tool, 19 by the committed reading `decreases_read.txt`, none `unbounded`
+- [x] `U64_MAX = ~0u64` at both sites (D-311, TM-149)
+- [x] the tzdb spike's templates carry clauses and arms, and a re-run reproduces TM-135's table sizes exactly
+- [x] every `failsafe` names what `REACH-002` asks — `StackExhausted` 106 and `MachineFault` 107 in 61 roots, `DecreasesViolated` 108 in 20 — and nothing more
+- [x] the harness: floor six, calibration 6 / 7 / 10, the umbrella a generated row (12) — TM-155
+- [x] O-N18 and O-N19 asserted by markers, their exemptions gone, their controls at `aaffb87` recorded; `case3_hash_and_clone` answers 17 (TM-154, TM-152)
+- [x] RX-120's evidence corrected (TM-153); P-1's and P-9's notes in `VERIFICATION.md`; the pin-dependent prose swept with its denominators
+- [x] `GREEN -- 70 unit(s), 0 failures; 5 pending` at `c3bdae2`, and CI green on the pushed adoption — run `36152772081`, read from its own log
 
 ### 0.1.0c — the access properties — `0.1.0c.md` §4 is the full list
 - [ ] `Vec<T>`: `items` hidden, `count`/`cap` sealed under `ListLen`; `Bytes`: `body` sealed, `len` sealed under `ListLen`

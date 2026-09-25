@@ -64,7 +64,7 @@ C-8's guarantee. That is worth knowing before writing it.
 |---|---|---|
 | 0.1.0 | **The types** — `CivilDate`, `CivilTime`, `CivilDateTime`, `Weekday`, `Month`, and the validating constructors | **DONE 2026-09-06.** Every date `ntime` PRODUCES is a date that exists — and C-8b is why that sentence is no longer "a date that exists is a date that exists": the struct literal is an unchecked constructor the language will not let us remove (TM-148) |
 | 0.1.0b | **The adoption to compiler `c3bdae2`** — the CI pin as its own commit, a measure on every loop, the two new floor arms, `~0u64`, `vec_reserve` by `ralloc`, the defect corpus's landings, and the prose the pin made false — **[`0.1.0b.md`](0.1.0b.md), DONE 2026-09-25** | `GREEN -- 70 unit(s)` at `c3bdae2`, and CI green on the same pin — run `36152772081` |
-| 0.1.0c | **The access properties** — `Vec`/`Bytes` hidden, sealed and under `ListLen` (the board's item 13), `CivilDate`/`CivilTime` sealed, `check_civil_literal` retired — **[`0.1.0c.md`](0.1.0c.md), PLANNED** | C-8 holds of the TYPE again for every module but `cal` (C-8c); `GREEN -- 75 unit(s)` |
+| 0.1.0c | **The access properties** — `Vec`/`Bytes` hidden, sealed and under `ListLen` (the board's item 13), `CivilDate`/`CivilTime` sealed, `check_civil_literal` retired — **[`0.1.0c.md`](0.1.0c.md), DONE 2026-09-25** | C-8 holds of the TYPE again for every module but `cal` (C-8c); `GREEN -- 75 unit(s)`, and CI green — run `36158556785` |
 | 0.1.1 | **The algorithms** — `date_to_days`, `days_to_date`, the leap rule, `days_in_month` — **[`0.1.1.md`](0.1.1.md), PLANNED** | the published algorithms, cited, with their divisions by literals — and the range's first day corrected by the test that recomputes it |
 | 0.1.2 | **The sweep** — the exhaustive round trip and its three riders | the cycle's gate |
 | 0.1.3 | **Derived fields** — weekday, day-of-year, ISO week date, ordinal date | computed, never stored |
@@ -111,13 +111,14 @@ environment) and a control that fails.
 - [x] RX-120's evidence corrected (TM-153); P-1's and P-9's notes in `VERIFICATION.md`; the pin-dependent prose swept with its denominators
 - [x] `GREEN -- 70 unit(s), 0 failures; 5 pending` at `c3bdae2`, and CI green on the pushed adoption — run `36152772081`, read from its own log
 
-### 0.1.0c — the access properties — `0.1.0c.md` §4 is the full list
-- [ ] `Vec<T>`: `items` hidden, `count`/`cap` sealed under `ListLen`; `Bytes`: `body` sealed, `len` sealed under `ListLen`
-- [ ] `CivilDate` and `CivilTime` sealed; `CALENDAR.md` C-8c added
-- [ ] `LimitViolated` 109 in exactly the nine roots REACH names; the umbrella 13, generated
-- [ ] `probe15` asserts `TYPE-079`; `probe16`…`probe16e` pin the seal and its positive twin
-- [ ] `check_civil_literal` retired
-- [ ] `GREEN -- 75 unit(s), 0 failures; 5 pending`, and CI green
+### 0.1.0c — the access properties — `0.1.0c.md` §4 is the full list — **DONE 2026-09-25**
+- [x] `Vec<T>`: `items` hidden, `count`/`cap` sealed under `ListLen`; `Bytes`: `body` sealed, `len` sealed under `ListLen` (TM-156) — and what the seal does not stop, measured and with the author: a write THROUGH `b.body.ptr`, and a whole-struct copy of a `Vec` (the workbench's question 9)
+- [x] `CivilDate` and `CivilTime` sealed; `CALENDAR.md` C-8c added (TM-157)
+- [x] `LimitViolated` 109 in exactly the nine roots REACH names — plus `probe16e`, a tenth, which the plan's own step 6 adds; the umbrella 13, generated (TM-159)
+- [x] `probe15` asserts `TYPE-079`; `probe16`…`probe16e` pin the seal and its positive twin
+- [x] `check_civil_literal` retired (TM-158)
+- [x] `GREEN -- 75 unit(s), 0 failures; 5 pending`, and CI green — run `36158556785`
+- [x] **added, not planned:** O-N8 discharged — fixed since pin `94874ce` by the compiler's D-248 (TM-160); the dispatch carried it
 
 ### 0.1.1 — the algorithms — `0.1.1.md` §8 is the full list
 - [ ] `date_to_days` / `days_to_date` as Hinnant's `days_from_civil` /

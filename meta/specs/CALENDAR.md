@@ -311,6 +311,17 @@ year and every pair of `uint8`s, with `|era| ≤ 5.4 × 10⁶` and
 `|era × 146 097| ≤ 7.9 × 10¹¹` (TM-162), and `days_to_date` refuses a day
 outside §2's range through its `Result` before its first addition.
 
+*(Cycle 0.1.5's second half, the cycle audit's U1: the totality was argued —
+here and in `src/cal/cal.npk`'s comments — and asserted by nothing, since no
+test hands `date_to_days` a field outside C-4's range, and inside it an
+`int32` cannot overflow anyway. `tests/unit/civil_total_edges.npk` asserts it
+at its edges now: fourteen `CivilDate`s built in `wild` storage — C-8c's
+opt-out — at the `int32` years' extremes and 0, and months and days of 0 and
+255, each read back field by field and each answered, with the value
+Hinnant's formula gives over the integers; up to 7.84 × 10¹¹ in magnitude, and
+`|era|` 5 368 710. Computed in `int32`, `era * 146097` traps there — 93, on
+both legs — and nowhere else in the suite.)*
+
 *(Amended at cycle 0.1.1, TM-162. This rule read "`era * 146097` at year −9999
 is about −4.4 × 10⁶" — that is the day number, not the product, which is
 −3 652 425 — and ended "so that a caller who somehow supplies an out-of-range

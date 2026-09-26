@@ -108,7 +108,10 @@ That is the argument for making it a **harness check** rather than a thing to
 remember. `check_no_view_returns` — fail any function in `src/` whose return
 type is a slice — is **proposed** for cycle 0.0.3's list and is not on it yet:
 it is part of what Q-5 decides, and this dispatch deliberately landed nothing
-that depends on that answer.
+that depends on that answer. *(Cycle 0.1.5's second half: it was never built,
+and `SAFETY.md` S-22 said it was on 0.0.3's list until then — the cycle audit's
+C3. It is cycle 0.2.3's now, after `check_check_registry`, and S-22 names the
+one function that returns a view on purpose, `bytes_view` (TM-204).)*
 
 ## What `ntime` does meanwhile — and what it is NOT doing
 

@@ -304,6 +304,12 @@ _ERROR_DECL = re.compile(r"(?<![A-Za-z0-9_.])(pub%s+)?error%s*:%s*"
                          r"([A-Za-z_][A-Za-z0-9_]*)" % (_W, _W, _W))
 # `SAFETY.md` §2's table rows: `| `ETimeValue` | raised when ... |`
 _BUDGET_ROW = re.compile(r"^\|\s*`(E[A-Za-z][A-Za-z0-9_]*)`\s*\|")
+# And S-4's, in the same section: `| `ntime/cal.npk` | `ETimeValue` | ... |` --
+# the module that DECLARES each identity (cycle 0.1.5, TM-203). A row whose
+# second cell is not one identity in backticks (`—`, `— (raises `cal`'s)`)
+# declares nothing.
+_MODULE_ROW = re.compile(r"^\|\s*`ntime/([a-z_]+)\.npk`[^|]*\|\s*"
+                         r"`(E[A-Za-z][A-Za-z0-9_]*)`\s*\|")
 
 
 def budget_from_spec(tree):
@@ -314,13 +320,27 @@ def budget_from_spec(tree):
     next stale copy, and S-2 makes the ceiling a decision -- so the ceiling has
     to come from where the decision is recorded.
     """
+    rows = _spec_rows(tree)
+    return None if rows is None else rows[0]
+
+
+def budget_modules_from_spec(tree):
+    """`{identity: module}` from S-4's table, the column that says which module
+    DECLARES each budgeted identity (TM-203). READ, never written, for the
+    reason `budget_from_spec` gives."""
+    rows = _spec_rows(tree)
+    return None if rows is None else rows[1]
+
+
+def _spec_rows(tree):
+    """`(names, {name: module})` from `SAFETY.md` §2, or None if it is gone."""
     path = os.path.join(tree, "meta", "specs", "SAFETY.md")
     if not os.path.isfile(path):
         # NOT A TRACEBACK. A check whose document is missing has a finding to
         # report -- "the thing I diff against is gone" -- and a stack trace is
         # the one shape that is neither a pass nor a legible failure.
         return None
-    names, in_section = [], False
+    names, owners, in_section = [], {}, False
     with open(path, "r", encoding="utf-8", errors="replace") as fh:
         for line in fh:
             if line.startswith("## "):
@@ -331,29 +351,47 @@ def budget_from_spec(tree):
             m = _BUDGET_ROW.match(line)
             if m and m.group(1) not in names:
                 names.append(m.group(1))
-    return names
+            m = _MODULE_ROW.match(line)
+            if m:
+                owners.setdefault(m.group(2), m.group(1))
+    return names, owners
 
 
 def check_error_budget(tree, **_):
     """Public `error:` declarations against `SAFETY.md` §2's table.
 
-    TWO ASSERTIONS AND ONE REPORT, and the split is deliberate.
+    THE UNIT IS THE COMPILER'S: A MODULE-QUALIFIED IDENTITY (cycle 0.1.5's
+    audit, C2; TM-203). `NITPICK-REACH-003` names an identity by the module
+    that declares it -- two modules that each declare `pub error:ETimeValue`
+    and fail with it owe a consumer `moda.ETimeValue` AND `modb.ETimeValue`,
+    two arms, measured at compiler `c970483` and at `c3bdae2`. Until the close's
+    second half this check keyed its count by the bare NAME, so that pair read
+    as one identity against a budget of three, and the only guard the budget
+    has passed a second arm in silence. The module is the file's own name --
+    `mod:` is its basename (D-248), which is what REACH qualifies with.
 
-      FAILS on an identity the table does not name, and on the count exceeding
-      the ceiling. S-2 makes a fourth identity a recorded decision AND a major
-      version (TM-013), so it must not be possible to acquire one by writing a
-      line of code.
+    FOUR ASSERTIONS AND ONE REPORT, and the split is deliberate.
+
+      FAILS on an identity the table does not name; on a budgeted name declared
+      in more than one module; on a budgeted name declared in a module other
+      than the one S-4's table names for it; and on the count of qualified
+      identities exceeding the ceiling. S-2 makes a fourth identity a recorded
+      decision AND a major version (TM-013), so it must not be possible to
+      acquire one by writing a line of code -- and a second module's copy of a
+      budgeted name IS a fourth identity to every consumer.
 
       REPORTS the identities the table names and the library has not declared
       yet -- two since cycle 0.1.0 declared `ETimeValue` in `cal`: `ETimeZone`
       and `ETimeParse`, each declared by the cycle `SAFETY.md` S-4's table
-      names for its module. Failing on them would make the check red until the
-      last of those cycles, and a red that means "not written yet" is a red
-      people learn to ignore. (Until cycle 0.1.5 this said "Today that is all
-      three, because no module computes anything", and the report below said
-      "no module raises anything before cycle 0.1" on every run since then.)
+      names for its module, and held to that module when it arrives. Failing on
+      them would make the check red until the last of those cycles, and a red
+      that means "not written yet" is a red people learn to ignore. (Until cycle
+      0.1.5 this said "Today that is all three, because no module computes
+      anything", and the report below said "no module raises anything before
+      cycle 0.1" on every run since then.)
     """
     named = budget_from_spec(tree)
+    owners = budget_modules_from_spec(tree) or {}
     files = src_files(tree)
     if named is None:
         return Result(
@@ -363,14 +401,21 @@ def check_error_budget(tree, **_):
              "IT rather than against a copy of its table. Without the document "
              "there is no budget to hold the tree to, and reporting green "
              "would be reporting that a check ran when it did not."])
+    # `(module, name)` -> the sites that declare it.
     declared, problems = {}, []
     for rel in files:
+        mod = os.path.basename(rel)[:-4]
         code = blank_code(lexical.read(os.path.join(tree, rel)))
         for m in _ERROR_DECL.finditer(code):
-            declared.setdefault(m.group(2), []).append(
+            declared.setdefault((mod, m.group(2)), []).append(
                 "%s:%d" % (rel, _line(code, m.start())))
+    by_name = {}
+    for mod, name in sorted(declared):
+        by_name.setdefault(name, []).append(mod)
 
-    for name in sorted(declared):
+    for name in sorted(by_name):
+        mods = by_name[name]
+        sites = [s for mod in mods for s in declared[(mod, name)]]
         if name not in named:
             problems.append(
                 "`error:%s` is declared at %s and `SAFETY.md` §2's table does "
@@ -379,27 +424,57 @@ def check_error_budget(tree, **_):
                 "every consuming program, which REACH-002 enforces, so it is a "
                 "recorded decision and a MAJOR version (TM-013) -- never a "
                 "line of code."
-                % (name, ", ".join(declared[name]), ", ".join(named)))
+                % (name, ", ".join(sites), ", ".join(named)))
+        elif len(mods) > 1:
+            problems.append(
+                "`error:%s` is declared in %d modules -- %s -- at %s. The "
+                "compiler counts MODULE-QUALIFIED identities (TM-203): each "
+                "copy is its own arm in every consuming program, so a budgeted "
+                "name declared twice is a fourth identity reached by a line of "
+                "code, which S-2 forbids."
+                % (name, len(mods), ", ".join("%s.%s" % (m, name) for m in mods),
+                   ", ".join(sites)))
+        elif name in owners and mods[0] != owners[name]:
+            problems.append(
+                "`error:%s` is declared in module `%s` (%s), and `SAFETY.md` "
+                "S-4's table names module `%s` for it. A consumer's `failsafe` "
+                "names `%s.%s`, so the module IS the identity (TM-203): moving "
+                "one is a decision that amends S-4, never a line of code."
+                % (name, mods[0], ", ".join(sites), owners[name], owners[name],
+                   name))
     if len(declared) > len(named):
         problems.append(
-            "%d error identities are declared and `SAFETY.md` §2's table names "
-            "%d." % (len(declared), len(named)))
+            "%d error identities are declared, each qualified by its module as "
+            "the compiler counts them, and `SAFETY.md` §2's table names %d."
+            % (len(declared), len(named)))
 
-    missing = [n for n in named if n not in declared]
+    missing = [n for n in named if n not in by_name]
     reports = []
     if missing:
         reports.append(
             "%d of %d budgeted identities are not declared yet (%s) -- "
             "expected: each arrives with the module `SAFETY.md` S-4's table "
-            "names for it."
-            % (len(missing), len(named), ", ".join(missing)))
-    headline = ("%d identit(y|ies) declared over %d file(s) in src/, against a "
-                "budget of %d" % (len(declared), len(files), len(named)))
+            "names for it, which this check holds it to."
+            % (len(missing), len(named),
+               ", ".join("%s.%s" % (owners[n], n) if n in owners else n
+                         for n in missing)))
+    headline = ("%d identit(y|ies) declared over %d file(s) in src/ (%s), "
+                "against a budget of %d"
+                % (len(declared), len(files),
+                   ", ".join("%s.%s" % k for k in sorted(declared)) or "none",
+                   len(named)))
     if not named:
         problems.append("`SAFETY.md` §2's table parsed to 0 identities. The "
                         "check reads the document rather than a copy, so an "
                         "empty parse means the document moved and this check "
                         "is now checking nothing (V-1b).")
+    unowned = [n for n in named if n not in owners]
+    if unowned:
+        problems.append("`SAFETY.md` S-4's table names no module for %s, so "
+                        "the module that may declare it is not stated and this "
+                        "check cannot hold it to one (TM-203). The table is "
+                        "read rather than copied, so a row missing from it is "
+                        "the document moving (V-1b)." % ", ".join(unowned))
     return Result("check_error_budget", headline, problems, reports)
 
 
@@ -823,8 +898,15 @@ RAW_INDEX_OWNERS = {
 _WILD_BINDING = re.compile(r"\bwild%s+[A-Za-z_][A-Za-z0-9_<>]*%s*->%s*:%s*"
                            r"([A-Za-z_][A-Za-z0-9_]*)" % (_W, _W, _W, _W))
 # Each owned field's INDEX, however it is spaced (TM-200): `v.items [0i64]`,
-# and a `[` on the line after, index the bare pointer exactly as `v.items[`.
-_RAW_INDEX = dict((needle, re.compile(re.escape(needle[:-1]) + _W + "*\\["))
+# and a `[` on the line after, index the bare pointer exactly as `v.items[` --
+# AND SO DO `v.` WITH `items[0i64]` ON THE NEXT LINE, AND `v . items [0i64]`:
+# the `.` is a token of its own, so the lexer's whitespace may stand AFTER it as
+# well as before the `[`. Until the close's second half the pattern allowed
+# none there (the audit's C12): `b .` then ` arr [2i64]` on the next line
+# compiles and reads the element at `c970483`, and the check was silent on
+# `v.` then `items[0i64]` on the next line, and on `b.body. ptr[0i64]`.
+_RAW_INDEX = dict((needle, re.compile(re.escape(needle[0]) + _W + "*"
+                                      + re.escape(needle[1:-1]) + _W + "*\\["))
                   for needle in RAW_INDEX_OWNERS)
 
 
@@ -1024,7 +1106,16 @@ CITATION_SOURCES = {
     "F": ("meta/specs/FORMAT_MODEL.md", r"^\*\*Rule F-%s\b"),
     "C": ("meta/specs/CALENDAR.md", r"^\*\*Rule C-%s\b"),
 }
-_CITATION = re.compile(r"\b(TM|S|B|V|M|Z|N|F|C)-(\d+[a-z]?)\b")
+# A citation's ENDS ARE ASCII LOOK-AROUNDS, NOT `\b` (cycle 0.1.5's second
+# half, TM-206). This scanner reads every kind of file through `lexical.read`,
+# one character per BYTE (TM-199), so in UTF-8 prose the lead byte of any
+# multi-byte character is a latin-1 LETTER -- an em dash's 0xE2 is `â` -- and a
+# `\b` after `TM-107` then an em dash, or `S-4b` then a curly apostrophe, found
+# no boundary there: the citation was neither counted nor resolved nor reported
+# (the first half's execution finding 1, the audit's C11). ASCII look-arounds
+# read the same under either decoding.
+_CITATION = re.compile(r"(?<![A-Za-z0-9_])(TM|S|B|V|M|Z|N|F|C)-(\d+[a-z]?)"
+                       r"(?![A-Za-z0-9_])")
 SPEC_SCAN_DIRS = ("meta/specs", "meta/roadmap", "harness", "src", "tests")
 SPEC_SCAN_ROOT_FILES = ("CLAUDE.md", "CONTRIBUTING.md", "README.md",
                         "nitpick.toml", "meta/DECISIONS.md",
@@ -1235,8 +1326,13 @@ def nested_repos(root):
     return sorted(out)
 
 # `[[sweep: name=N]]`. Deliberately ugly, deliberately greppable, and it
-# renders as nothing in markdown.
-_SWEEP_MARK = re.compile(r"\[\[sweep:\s*([a-z_]+)\s*=\s*(-?\d+)\s*\]\]")
+# renders as nothing in markdown. Its spaces are ASCII `[ \t]`, not `\s`, since
+# the close's second half (TM-206): this scanner reads every file one character
+# per byte (TM-199), where `\s` also matches the bytes 0x85 and 0xA0 -- halves
+# of UTF-8 characters -- so the pattern read differently under the two
+# decodings. No tag in the tree spells anything but a space there.
+_SWEEP_MARK = re.compile(r"\[\[sweep:[ \t]*([a-z_]+)[ \t]*=[ \t]*(-?\d+)[ \t]*"
+                         r"\]\]")
 
 _TAGGABLE = (".md", ".py", ".toml", ".yml", ".yaml", ".npk", ".txt")
 
@@ -1349,6 +1445,21 @@ def denominators(tree, extra=None):
         # words, a `pub use` inside a `/* */` included.
         d["lib_reexports"] = sum(
             1 for _, _, pub in lexical.imports(lexical.read(lib)) if pub)
+    # THE ARM BILLS `SAFETY.md` S-4 PUBLISHES, one per public module, as
+    # `arms_<module>` -- the umbrella's is `arms_lib` (cycle 0.1.5's second
+    # half, the audit's C6; TM-205). The bill is `arms.compute_bill`'s, from
+    # SOURCE, and `check_failsafe_arms` holds that to `NITPICK-REACH-003`'s own
+    # list on every full run, so on a green run this number is the compiler's.
+    # Until the close's second half nothing read the totals S-4 and the summary
+    # pages WRITE -- S-4 said its row "cannot go stale in silence" and it could:
+    # the generated bill was checked and the written one was not. Every
+    # present-tense statement of one is tagged now, and this is what the tag is
+    # held to. Imported here and not at the top, because `arms` imports THIS
+    # module.
+    import arms as arms_mod
+    for rel in arms_mod.public_modules(tree):
+        d["arms_" + os.path.basename(rel)[:-4]] = len(
+            arms_mod.compute_bill(tree, rel)[0])
     d.update(extra or {})
     return d
 
@@ -1436,8 +1547,14 @@ PENDING = (
      "gap."),
     ("check_no_format_string", "0.4",
      "F-5's rule is that no function takes a pattern `string` and interprets "
-     "it. There is no function in `src/` at all yet, so the check would have "
-     "no signature to read."),
+     "it, and the functions it governs are `src/fmt/`'s, which cycle 0.4 "
+     "writes. `src/` has held functions since cycle 0.0.4 -- `bytes_extend_str` "
+     "takes a `string` and copies it -- so a check that read signatures alone "
+     "would fire on those; what it needs is the layout interpreter F-5 is "
+     "written against, to tell interpreting from copying. Until 0.4 nothing "
+     "enforces F-5, and a format-string function added now would leave the run "
+     "green. (This said \"There is no function in `src/` at all yet\" until "
+     "cycle 0.1.5's second half -- false since 0.0.4, the audit's C8.)"),
     ("check_tables_regenerate", "0.5",
      "the mechanism EXISTS -- `repro.py --between` runs a generator between "
      "two builds and requires the IR unchanged, and it has been seen red "

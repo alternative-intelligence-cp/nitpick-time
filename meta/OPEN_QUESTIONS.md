@@ -17,6 +17,15 @@ question is part of the record of how the answer was reached.
 > O-N2 are the *same underlying request* to the compiler; the numbers differ
 > because each library numbers its own list. Where that happens it is said, so
 > that raising one raises both.
+>
+> *(Dated at cycle 0.1.5's second half — the cycle audit's C10. The paragraph
+> above was true of O-N1 … O-N4 and has not been since cycle 0.0.0's second
+> step, which recorded that an `O-N` id is the WORKBENCH registry's: a compiler
+> gap is raised once for the whole ecosystem, the registry
+> (`../../meta/OPEN_QUESTIONS.md`) allocates the number, and this file
+> restates the ones `ntime` raised or depends on — the section at its end,
+> and `../../PLAYBOOK.md` §7. Never take the next number after the highest
+> one here.)*
 
 ---
 
@@ -1178,6 +1187,41 @@ generated `fixed` tables of `ZoneTransition`, `ZoneType` and `ZoneEntry` that
 the lookup module will import — until a pin carries the fix: importing each
 row type by name is a belt, not the guarantee, and
 `meta/roadmap/0.5/README.md`'s "Watch for" points here.
+
+---
+
+### O-N25 — a view's root can be written while the view is live, so the view reads rewritten or freed memory — **OPEN here: the compiler's D-325 settles it, in pin `c970483`, and its refusal, `NITPICK-BORROW-015`, is at no pin of ours**
+
+**Raised** from this repository's cycle 0.1.4b planning, 2026-09-25, at pin
+`c3bdae2`, where `bytes_take` was found handing back a view of its sink typed
+as an owned `string` (TM-188, `SAFETY.md` S-18f): sent as a QUESTION by the
+workbench seat, which reproduced it on both legs; **numbered O-N25** in the
+workbench registry (`../../meta/OPEN_QUESTIONS.md`); **confirmed by the
+compiler as a defect of the RULES, its DEF-107**; and **settled by the author as
+its D-325** — ratified 2026-09-26 and declared at `c970483`: a view's root is
+FROZEN for the view's lexical lifetime, every write-capable access to it
+refused. **The refusal, `NITPICK-BORROW-015`, is its 1.6.1 step 0 — announced
+in advance and at no pin of ours**: `c970483` carries D-325's text and not its
+check (a `git grep` of the pin for the code finds nothing).
+
+**What it is.** The compiler's D-249 makes a view-maker's result a borrow for
+ESCAPE only, and nothing froze the root while the view lived: a caller could
+clear the sink, and the view's text was rewritten (13), or grow it, and the
+view read freed memory (12) — reproduced at `c3bdae2`, both legs.
+
+**What it holds here: nothing.** `bytes_take` copies since cycle 0.1.4b
+(TM-188). `bytes_view`'s view — S-18e's growth hazard, a view of a `Bytes`
+reached through a pointer, and S-22's one named exemption (TM-204) — is the
+adoption's to re-measure at the pin that carries `BORROW-015`; the registry's
+entry records that the compiler seat's sweep of this ecosystem's files against
+the check moved no site of ours. `tests/unit/bytes_view_lifetime.npk` holds a
+view across a growth on purpose, and is the file to read first there.
+
+**Why this entry exists only now** (the cycle audit's C10): the question was
+raised from here, the section below says this file restates the ids `ntime`
+raised, and it never restated this one — and the cycle's findings list
+recorded `bytes_take` and not the language decision it produced
+(`roadmap/done/0.1/0.1.5.md`'s record, the second half).
 
 ---
 

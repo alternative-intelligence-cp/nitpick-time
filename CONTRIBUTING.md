@@ -55,7 +55,9 @@ had asserted — which is why they are here rather than in a specification only.
 3. **There is no format string, and there never will be.** No `strftime`, no
    `layout_from_pattern("%Y-%m-%d")`. A layout is a typed value the compiler
    checks. The temptation to add the convenience is obvious, which is why
-   `check_no_format_string` exists.
+   `check_no_format_string` is on the harness's list — **pending until cycle
+   0.4**, which writes the formatters it reads, so until then nothing but this
+   rule stands in the way (`meta/specs/TESTING.md` V-1a).
 
 4. **Calendar arithmetic is not associative and not invertible**, on purpose.
    `2026-01-31 + 1 month + 1 month` is not `+ 2 months`, and

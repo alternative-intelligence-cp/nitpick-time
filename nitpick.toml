@@ -100,8 +100,10 @@ lld-flags     = ["-static"]
 # `expect-exit:`. (Cycle 0.1.5: that last sentence was true at cycle 0.0.6 and
 # not since cycle 0.1.0, when `probe14` joined as a refusal. The refusals are
 # the seven above and fourteen more -- `probe14`, `probe15`, `probe16`,
-# `probe16b` ... `probe16i`, `probe17b`, `probe17c`, `probe18b` and `probe19`
-# -- and the tagged count above is the one that is checked.)
+# `probe16b` ... `probe16d`, `probe16f` ... `probe16i`, `probe17b`, `probe17c`,
+# `probe18b` and `probe19`; `probe16e` runs, `expect-exit: 0` -- and the tagged
+# count above is the one that is checked. The range read "`probe16b` ...
+# `probe16i`" until cycle 0.1.5's second half, one too many: the audit's K2.)
 [[test]]
 name  = "probe"
 stage = "program"
@@ -116,7 +118,7 @@ path  = "tests/probe"
 #   `parse`   HAS NO ENTRY BY DESIGN, not by omission (TM-123). It is a
 #             WHOLE-TREE stage: `BUILD.md` §3's Directory column for it reads
 #             "every `.npk` in the tree", and that is where its value is — of
-#             the 127 files here [[sweep: npk_total=127]], 41 are put in front of
+#             the 128 files here [[sweep: npk_total=128]], 41 are put in front of
 #             the compiler by nothing
 #             else. An entry would narrow it to one directory and silently
 #             un-cover the rest, so `stage = "parse"` is REFUSED BY NAME.

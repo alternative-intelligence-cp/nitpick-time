@@ -612,9 +612,11 @@ def run_parse(rep, root, bld):
     """Every `.npk` in the tree in front of the real parser, each exactly once.
 
     THE DENOMINATOR IS THE WHOLE TREE AND THAT IS WHY THE STAGE IS WORTH ITS
-    COST. Re-measured at cycle 0.1.3c: of the 127 `.npk` files here
-    [[sweep: npk_total=127]] the library build roots 5 [[sweep: lib_reach=5]],
-    the suite roots 77 [[sweep: suite_roots=77]], and 3 more are reached by
+    COST. Re-measured at cycle 0.1.5's second half: of the 128 `.npk` files
+    here [[sweep: npk_total=128]] the library build roots 5
+    [[sweep: lib_reach=5]], the suite roots 78 [[sweep: suite_roots=78]]
+    (127 and 77 from cycle 0.1.3c until `tests/unit/civil_total_edges.npk`
+    joined), and 3 more are reached by
     `use` from a suite root [[sweep: support_total=3]] -- and since cycle
     0.1.4 so is the civil cross-oracle's corpus, which only its member
     imports -- so 41 are put in front of the compiler by NOTHING ELSE. Five

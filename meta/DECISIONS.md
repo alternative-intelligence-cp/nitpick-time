@@ -928,6 +928,13 @@ them.
 > it records what was believed on 2026-09-03; read TM-110 for what was
 > measured. What survives unchanged: the house rule itself, and the reason it
 > is kept as a belt.
+>
+> **SUPERSEDED IN PART by TM-204 as well (2026-09-26).** The house rule's
+> absolute — *no function in `src/` returns a view* — was false of this
+> library's own surface from cycle 0.0.4: `bytes_view` returns one, and its
+> check was never built. The belt stands with one exemption named, a
+> container's accessor over its own storage through a pointer parameter, whose
+> lifetime is `SAFETY.md` S-18e's rule.
 
 **2026-09-03. Read out of the compiler's source and its written cycle 1.5.1b
 plan** at commit `950bb1d`. Nothing was compiled for this decision.
@@ -5493,6 +5500,17 @@ prelude's `Clone` is fallible (TM-194).
 # Cycle 0.1.5 — the close of cycle 0.1, ratified 2026-09-26
 
 ### TM-199 — the harness reads `.npk` source as the compiler's lexer does, through one module, `harness/lexical.py`: `nitpick-regex`'s reader, its code ported statement for statement
+> **SUPERSEDED IN PART by TM-202 (2026-09-26, the close's second half).** Its
+> part E's second half, *"the pinned compiler, on one program of every form a
+> run can observe"*: the program held seven forms, none of them a block, raw,
+> escaped or empty string or an interpolation, and the one lexer move between
+> the kept pins passed it at both (the cycle audit's C1). The reader and the
+> rest of this decision stand; TM-202 is what E2 asks now.
+>
+> **And SUPERSEDED IN PART by TM-206 as well (2026-09-26).** Its two
+> whole-tree scanners read prose one character per byte, and the citation
+> scan's `\b` saw no boundary before a multi-byte character; they read the
+> same under either decoding now.
 
 **2026-09-26, cycle 0.1.5 (PD-50). Adds `harness/lexical.py`; amends
 `harness/build.py`, `arms.py`, `run.py`, `stages.py`, `checks.py` and
@@ -5618,6 +5636,13 @@ name in another function, stay `check_purity`'s and `check_raw_index`'s stated
 limits (their docstrings; `../OPEN_QUESTIONS.md` O-X9 for the first).
 
 ### TM-201 — the two checks cycle 0.0 deferred to cycle 0.1, which cycle 0.1 did not build, are re-homed with their reasons
+> **SUPERSEDED IN PART by TM-207 (2026-09-26, the close's second half).** Its
+> *"nothing checks a slice's length argument"*: the compiler checks
+> `0 <= len <= 2^47` at every `#wild_slice` call (its D-315); what nothing
+> checks is that the length is the live `count` rather than `cap`. And its
+> length check's home, *"the hardening cycle's, 0.8"*, was in no checklist of
+> cycle 0.8 — it is `meta/roadmap/0.8/README.md`'s 0.8.4 item now. The two
+> re-homings stand as decided.
 
 **2026-09-26, cycle 0.1.5 (PD-52). Amends `TESTING.md` V-14e; replaces TM-144's and
 TM-145's deferrals in part.** Found at planning by the close's promise sweep —
@@ -5656,3 +5681,241 @@ totals the audit reads, the registry check reads §2's first column as data —
 a change to that document's form — and neither has a subject the close
 changes; **both declined** — the registry check's argument got stronger in
 this cycle, and the length check's gap is real for the next accessor.
+
+---
+
+# Cycle 0.1.5's second half — the cycle audit's triage, ratified 2026-09-26
+
+### TM-202 — part E's second half asks the pinned compiler about the forms it names, each literal's value asserted, and the adoption that moves the pin re-reads the compiler's lexer whatever part E says
+
+**2026-09-26, cycle 0.1.5's second half, from the cycle audit's C1 (the
+workbench's `meta/audits/nitpick-time-0.1-2026-09-26.md`). Amends
+`harness/selfcheck.py`'s part E and `harness/lexical.py`'s header;
+`TESTING.md` V-1k and V-14c; `CLAUDE.md`. It supersedes TM-199 in part.**
+
+**What was found.** TM-199 made part E's second half *"one program of every
+form a run can observe"*, compiled and run by the pinned compiler, *"so a
+re-pin that moves the lexer is a red run"*. The program held seven forms —
+`_FORMS_EXIT`'s 10 … 16: a lone CR in a `//` comment, a `//` inside a
+`/* */`, an unnested `/* */`, `'"'`, a template's text, a call spelled across
+whitespace, and an escaped `use` path. It held no block string, raw string,
+escaped quote, empty string or interpolation, though `lexical.py` mirrors each
+and a run can observe each. **And the one lexer move between the kept pins —
+the block string's close, the compiler's DEF-98, which `lexical.py`'s own
+header records — passed it**: measured here, the committed part E is green at
+`c970483` and at `c3bdae2`. E1 cannot see a move at all: its expectations are
+fixed in Python.
+
+**The decision.** *E2's program gains six forms, each with an exit code of its
+own and its VALUE asserted by its length: a block string `"""a""b"""` — 4
+bytes, closed at its first unescaped three quotes (17); a raw string `r"a\"` —
+2 bytes, closed by the next quote, since a raw string has no escapes (18); an
+escaped quote `"a\"b"` — 3 bytes (19); the empty string (20); an interpolation
+`` `<&{ e }>` `` — 5 bytes, its inside code (21); and an escaped character
+`'\''` (22). Its import path decodes `\u{5F}` beside `\x2f` (16). The reader
+half requires the statement after each literal to survive the blanking and no
+quote to survive inside one. What E2 claims is the forms `_FORMS_EXIT` names
+and no more: a form it does not hold — a nested interpolation, an escape
+inside a block string, a `\x` or `\u{…}` character — is not asked, so the
+adoption that moves the pin re-reads `src/frontend/lexer.npk` at the new pin
+whatever part E says, and brings `lexical.py` to it in both libraries.*
+
+**Measured at the two kept pins** (the record of 0.1.5's second half): the new
+program runs 0 at `c970483` and is refused at `c3bdae2` — `NITPICK-PARSE-001`
+at 21:23, its block string — so DEF-98's move is a red part E now, where the
+committed program ran 0 at both. And five reader mutants, each a way
+`lexical.py` could read a form wrong — the block string closed at its first
+two quotes (`c3bdae2`'s rule), a raw string honouring a backslash, an
+interpolation read as template text, a plain string whose backslash escapes
+nothing, a character whose escape is one code point — each turn part E red at
+`c970483` by a named E2 line; two of them, the raw string and the character,
+by E2 alone.
+
+*Alternatives declined:* **the claim restated and the lexer re-read at every
+re-pin, and no new forms** (the audit's second remedy) — the forms cost one
+program's lines and turn the one known move red; the re-read is kept as well,
+because the list is finite. **E1's text compiled as a second program** — it
+is `nitpick-regex`'s case 18 text for text and imports files that do not
+exist; the forms in it that a run can observe are E2's now. **A change to
+`lexical.py`'s code** — none was needed: every new form reads as the compiler
+reads it at `c970483`, and the code stays `nitpick-regex`'s statement for
+statement (TM-199); only its header's claim moved.
+
+### TM-203 — the error budget counts identities as the compiler does, qualified by their module: a budgeted name declared in two modules, or outside the module `SAFETY.md` S-4 names for it, fails `check_error_budget`
+
+**2026-09-26, cycle 0.1.5's second half, from the cycle audit's C2. Amends
+`harness/checks.py` (`check_error_budget`, `budget_from_spec`) and
+`harness/selfcheck.py`; `SAFETY.md` S-4; `TESTING.md` §2.**
+
+**What was found.** `check_error_budget` keyed what it counted by the bare
+NAME. The compiler names an identity by the module that declares it: two
+modules that each declare `pub error:ETimeValue;` and fail with it owe a
+consumer `moda.ETimeValue` and `modb.ETimeValue` — `NITPICK-REACH-003` lists
+both among 8 identities, measured here at `c970483` and at `c3bdae2`. The
+check read that pair as one identity against a budget of three, and
+`check_failsafe_arms` agrees with REACH-003 and so cannot catch it either: the
+budget's only guard passed a second arm in silence. And the control the first
+half added — `pub error:ETimeValue; pub error:ETimeParse;` in `cal` — required
+silence for `ETimeParse` in a module S-4 does not give it to, beside a report
+saying each identity *"arrives with the module `SAFETY.md` S-4's table names
+for it"*. No instance in the tree: `src/` declares `cal.ETimeValue` alone.
+
+**The decision.** *The check keys its count by `(module, name)`, the module
+being the declaring file's `mod:` name — its basename, the compiler's D-248 —
+and reads S-4's "Declares" column as the module each budgeted identity
+belongs to. It fails on an identity §2's table does not name; on a budgeted
+name declared in more than one module; on a budgeted name declared outside the
+module S-4 names for it; on more qualified identities than the table's count;
+and on a budgeted identity S-4 gives no module. Two plants — `ETimeValue` in
+`cal` and in `zone`, and `ETimeParse` in `cal` — each red by its named line
+beside its control; the first half's control declares `cal`'s `ValueFault`
+after its identity instead.*
+
+*Alternatives declined:* **failing only a second declaration of a budgeted
+name** — `ETimeParse` alone in `cal` is one declaration, and a consumer would
+owe `cal.ETimeParse`, an identity no row names; **the layer as the module** —
+REACH qualifies by the file's module name, so two files of one layer declaring
+one name are two identities as well; **deferring it to cycle 0.2** — `span`,
+S-4's next module, *"raises `cal`'s"*, which is exactly where a second
+declaration would be the easy spelling.
+
+### TM-204 — `SAFETY.md` S-22 names its one exemption, a container's accessor over its own storage through a pointer parameter — `bytes_view`, whose lifetime is S-18e's rule — and `check_no_view_returns` is built at cycle 0.2.3, after `check_check_registry`
+
+**2026-09-26, cycle 0.1.5's second half, from the cycle audit's C3. Amends
+`SAFETY.md` S-22, cycle 0.2's README and
+`tests/probe/defect/view_escape/README.md`. It supersedes TM-109 in part.**
+
+**What was found.** S-22 says *"No function in `src/` returns a `uint8[]`, a
+`cstring`, or a struct containing one … `check_no_view_returns` on cycle
+0.0.3's harness list is what makes it enforced"*. `pub func:bytes_view =
+uint8[] (Bytes->:b)` has stood in `src/core/bytes.npk` since cycle 0.0.4,
+re-exported by the umbrella; and the check was never built — it is in neither
+`checks.LIVE` nor `checks.PENDING` nor `TESTING.md` §2, the one `check_*` name
+in the documents with no decision behind it, and cycle 0.0.0's own record had
+said *"It is not on any list"*. No decision exempted `bytes_view`, and S-22
+says a loosening takes one. Measured at this close: `src/`'s ten files hold 40
+`func` declarations; one declares a view as its result, `bytes_view`; no
+struct in `src/` holds a view.
+
+**The decision.** *S-22 keeps its belt and names its exemption: no function in
+`src/` returns a `uint8[]`, a `cstring` or a struct containing one, except a
+container's own accessor over the container's own storage, reached through a
+pointer parameter and named in S-22 beside the rule that governs its lifetime.
+One is named: `bytes_view`, whose view roots at a pointer-shaped binding —
+S-22's own legal row — and whose hazard is not escape but growth, which S-18e
+governs. `check_no_view_returns` is built at cycle 0.2.3, after
+`check_check_registry`, live — a planted return red, the named exemption's
+function re-derived rather than merely present (TM-137) — and so before cycle
+0.4, whose parsers are the first code that could want another.*
+
+**Why not at this close.** TM-201 makes the next subcycle that adds or retires
+a check build `check_check_registry` first, because that is when the family's
+four statements can drift, and adding this check, live or pending, moves the
+family. The two together are a subcycle's work, and cycle 0.2.3 carries the
+registry check already. Until then the rule is S-22's sentence and the census
+above.
+
+*Alternatives declined:* **changing `bytes_view`** — making it private or
+removing it takes away the read path cycle 0.4's formatters are planned
+against (`meta/roadmap/0.4/README.md`) and the lifetime tests stand on, and a
+copy is `bytes_take`'s job (S-18f); **loosening S-22 to the language's rule**
+— the language admits a view of any plain or pointer-shaped parameter, and the
+belt's worth is that each such return is a decision; **building both checks at
+this close** — each moves the self-check's counts and V-1a's arithmetic at the
+close whose totals the audit read, and the registry check reads §2's first
+column as data, a change to that document's form: TM-201 declined the same
+pair at the same point, for the same reasons.
+
+### TM-205 — every present-tense statement of an arm bill is tagged, and `check_denominators` holds it to the bill `check_failsafe_arms` generates
+
+**2026-09-26, cycle 0.1.5's second half, from the cycle audit's C6. Amends
+`harness/checks.py` (`denominators`) and `harness/selfcheck.py`; `SAFETY.md`
+S-4; `README.md`, `CLAUDE.md`, `src/lib.npk`, `src/cal/README.md`,
+`src/cal/cal.npk` and `meta/roadmap/ROADMAP.md`.**
+
+**What was found.** S-4 says its totals *"cannot go stale in silence"*, and the
+public `README.md`, new at the close's first half, that the table is
+*"generated and checked against the compiler on every run"*. What is checked is
+the GENERATED bill: `check_failsafe_arms` computes it from source and diffs it
+with `NITPICK-REACH-003`'s own list. Nothing read the numbers WRITTEN in S-4's
+totals column or in the pages that repeat them — none was tagged — so a moved
+bill would have left every one of them stale under a green run.
+
+**The decision.** *`check_denominators` measures `arms_<module>` for every
+public module — the umbrella's is `arms_lib` — as `arms.compute_bill`'s count,
+the bill `check_failsafe_arms` holds to REACH-003 on every full run; and every
+present-tense statement of a bill carries its tag: S-4's seven totals, the
+public README's two, `CLAUDE.md`'s, `src/lib.npk`'s two, `src/cal/README.md`'s,
+`src/cal/cal.npk`'s three and `ROADMAP.md`'s. A statement dated to a cycle or a
+pin that is not the present is history and is not tagged (V-1h). One plant: a
+tag one above the mini-tree's floor.*
+
+*Alternatives declined:* **rewording the claims** (the audit's second remedy)
+— the numbers stay on the pages a reader reads first, untagged; **reading the
+totals out of `check_failsafe_arms`' run** — the source computation is pure and
+costs nothing, and on a green run `check_failsafe_arms` makes it the
+compiler's.
+
+### TM-206 — the two whole-tree scanners match patterns that read the same under either decoding — ASCII look-arounds at a citation's ends, ASCII spaces in a tag — and `TESTING.md` V-1k names the harness's three kinds of read
+
+**2026-09-26, cycle 0.1.5's second half, from the first half's execution
+finding 1 and the cycle audit's C11. Amends `harness/checks.py` (`_CITATION`,
+`_SWEEP_MARK`) and `harness/selfcheck.py`; `TESTING.md` V-1k. It supersedes
+TM-199 in part.**
+
+**What was found.** TM-199 reads the two whole-tree scanners' files —
+`check_specs_current`'s and `check_denominators'`, every kind — through
+`lexical.read`, one character per byte, so their line numbers are
+`git grep -n`'s. Over UTF-8 prose that changes what a pattern means: the lead
+byte of a multi-byte character is a latin-1 LETTER — an em dash's 0xE2 is `â`
+— so `\b(TM|…)-(\d+[a-z]?)\b` finds no boundary after `TM-107` then an em
+dash, or `S-4b` then a curly apostrophe, and the citation is neither counted
+nor resolved nor reported; and `_SWEEP_MARK`'s `\s` matches 0x85 and 0xA0,
+halves of UTF-8 characters. `TESTING.md` V-1k said the files that are not
+Nitpick source are *"read as text"*, which these two scanners do not do.
+**Latent**: over the scan's 219 targets at this close, the old pattern over
+latin-1, the new one over latin-1 and the old one over UTF-8 each find the
+same 6 844 citations at the same lines.
+
+**The decision.** *A citation's ends are ASCII look-arounds,
+`(?<![A-Za-z0-9_])` and `(?![A-Za-z0-9_])`, and a tag's spaces are `[ \t]`, so
+each pattern reads the same under either decoding, and both scanners keep
+TM-199's reading and its line numbers. V-1k names the three kinds of read:
+Nitpick source, through `lexical.py`; every kind of file the two scanners
+walk, through `lexical.read`, with patterns that read the same under latin-1
+and UTF-8; and the files the checks diff against, read as text.
+`check_specs_current`'s commissioning plants a dangling citation before an em
+dash and one before a curly apostrophe, each required to be reported.*
+
+*Alternatives declined:* **prose read as UTF-8 with `newline=""` and split at
+`"\n"`** (the first half's other repair) — the same line numbers, but two
+readings where TM-199 made one; **no change, the finding being latent** — the
+first document to write `S-4b` before a curly apostrophe would be its first
+instance, and invisible.
+
+### TM-207 — TM-201's `#wild_slice` length check is cycle 0.8.4's checklist item, `TESTING.md` V-14e states TM-201's trigger, and what the compiler checks of a slice's length is stated
+
+**2026-09-26, cycle 0.1.5's second half, from the cycle audit's D1 and K3.
+Amends `TESTING.md` V-14e and `meta/roadmap/0.8/README.md`. It supersedes
+TM-201 in part.**
+
+**What was found.** TM-201 made the length check *"the hardening cycle's, 0.8,
+if none arrives before it"*, and cycle 0.8's README had no item for it — no
+cycle's checklist named it, the shape of TM-144's deferral that was lost.
+`TESTING.md` V-14e narrowed TM-201's trigger for `check_check_registry` — *"the
+next subcycle that adds or retires a check"* — to *"cycle 0.2's
+`check_int128_sites`, when it goes live"*, which `OPEN_QUESTIONS.md` O-X6 says
+waits on a question. And TM-201 said *"nothing checks a slice's length
+argument"*: the compiler checks `0 <= len <= 2^47` at every `#wild_slice`
+call, trapping `OutOfBounds` outside it (its D-315, at `c970483`); what nothing
+checks is that a read's length is the live `count` rather than `cap`.
+
+**The decision.** *Cycle 0.8.4's checklist carries the length check — built,
+with a planted read laid over `cap` red and the three appending sites of
+`SAFETY.md` S-17c silent, unless its second subject arrives first; V-14e
+states TM-201's trigger in TM-201's words; and the gap is stated as D-315
+leaves it: whether a read's length is `count`.*
+
+*Alternatives declined:* **the item in cycle 0.5's checklist**, where the zone
+tables arrive — they are `fixed` arrays, `T[N]`, which trap on their own and
+lay no slice (`SAFETY.md` S-17b), so they are not the second subject.

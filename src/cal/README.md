@@ -9,9 +9,10 @@ from a date's day number — `weekday`, `day_of_year`, `iso_week_year`,
 date (TM-169). Proleptic Gregorian, astronomical year numbering, ±9999.
 
 **Declares `ETimeValue` and nothing else**, so a program that only wants
-calendar arithmetic owes exactly one IDENTITY arm — and eleven arms in all at
-compiler `c3bdae2`, because the floor and `cal`'s own arithmetic are charged to
-the consumer too (`meta/specs/SAFETY.md` S-4, S-4b). Governed by
+calendar arithmetic owes exactly one IDENTITY arm — and 11 arms in all
+<!-- [[sweep: arms_cal=11]] --> at compilers `c3bdae2` and `c970483`, because
+the floor and `cal`'s own arithmetic are charged to the consumer too
+(`meta/specs/SAFETY.md` S-4, S-4b). Governed by
 `meta/specs/CALENDAR.md`. Built in cycle 0.1, whose gate is an exhaustive
 round trip over all 7 304 484 days in the range. <!-- [[sweep: domain_every_day_number=7304484]] -->
 

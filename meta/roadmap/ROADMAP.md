@@ -3,12 +3,20 @@
 The specification set (`meta/specs/`) is written and the decisions it rests on
 are in `meta/DECISIONS.md`. This is the plan built on them.
 
-**One decision batch is settled**, TM-001 … TM-030, written with the
-specification set. What remains open in `../OPEN_QUESTIONS.md` is open *by
-design*: one measurement taken in the cycle that can take it, one item gated on
-the compiler's tooling, two performance questions that want a benchmark first,
-and three that are the compiler's rather than ours. **No cycle in this plan is
-blocked on a decision.**
+**At cycle 0.1's close, 138 decisions are settled** — TM-001 … TM-030, the
+founding batch written with the specification set, and 108 more, each batch
+appended whole by the subcycle that settled it, the last TM-207 at the close.
+**Eleven questions are open** in `../OPEN_QUESTIONS.md`, each with a
+recommendation and the cycle that settles it or the reason it waits: four are
+the compiler's — O-N1, O-N2, O-N3 and O-N25 — and seven ours: O-X1, O-B1,
+O-X3, O-X4, O-X6, O-X8 and O-X9. **No cycle in this plan is blocked on a
+decision** — but one CHECK is: `check_int128_sites` does not go live before
+O-X6 is answered, and cycle 0.2's README puts the two in order. *(Re-derived at
+cycle 0.1.5's second half — the cycle audit's S2. From the founding plan to
+that close this paragraph read "One decision batch is settled, TM-001 …
+TM-030" and counted seven open questions "open by design" — 132 decisions and
+ten questions when the audit read it — with O-X6's hold on a check beside
+it.)*
 
 ## How this is organised
 
@@ -44,8 +52,9 @@ And the one that shapes the *architecture*:
 
 The first capped the error budget at three (TM-017) and decided the module
 decomposition — `cal` does not import `zone`, so a program doing calendar
-arithmetic owes one IDENTITY arm (and, measured at compiler `c970483`, eleven
-arms in all, the floor and `cal`'s arithmetic included — `specs/SAFETY.md` S-4;
+arithmetic owes one IDENTITY arm (and, measured at compiler `c970483`, 11 arms
+in all <!-- [[sweep: arms_cal=11]] -->, the floor and `cal`'s arithmetic
+included — `specs/SAFETY.md` S-4;
 this said "owes one arm" until cycle 0.1.5). The second made every range a checked bound rather
 than a hope. The third replaced `strftime` with a typed layout (TM-009,
 TM-023).

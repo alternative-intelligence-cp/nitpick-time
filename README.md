@@ -84,9 +84,11 @@ handler, so the number is an API decision, not an implementation detail.
 charges an arm for each kind of trap the imported code can reach — a division,
 an overflow, an index, a loop's measure, a length's limit — on top of a floor
 every program owes: measured at compiler `c970483`, a program importing only
-the calendar owes **11** arms, and one importing the whole library **13**. The
-table is `meta/specs/SAFETY.md` S-4, generated and checked against the
-compiler on every run. *(Until cycle 0.1.5 this paragraph said importing
+the calendar owes **11** <!-- [[sweep: arms_cal=11]] --> arms, and one importing
+the whole library **13** <!-- [[sweep: arms_lib=13]] -->. The table is
+`meta/specs/SAFETY.md` S-4, generated and checked against the compiler on
+every run — and since the close's second half the two numbers here are held to
+it too, so a bill that moves turns this page's run red (TM-205). *(Until cycle 0.1.5 this paragraph said importing
 `ntime` "costs a consumer three `failsafe` arms", which counted the identities
 and not the bill.)*
 

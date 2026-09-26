@@ -289,9 +289,10 @@ refused at `PARSE-001`, `LEX-004`, `PARSE-002`, `TYPE-009`, `TYPE-017`,
 `TYPE-046`, `TYPE-047`, `TYPE-079`, `TYPE-080`, `TYPE-084`, `BORROW-001`,
 `BORROW-012`, `RESOLVE-001`, `REACH-002` and `REACH-003`, and every family
 after the first three runs only on something that parsed. Re-measured at pin
-`c970483`, cycle 0.1.3c: **127 files = 90 parse cleanly + 35 parse and are
-refused later + 2 do not parse**
-<!-- [[sweep: npk_total=127]] -->, and the two
+`c970483`, cycle 0.1.5's second half: **128 files = 91 parse cleanly + 35
+parse and are refused later + 2 do not parse**
+<!-- [[sweep: npk_total=128]] --> (`127 = 90 + 35 + 2` from cycle 0.1.3c until
+`tests/unit/civil_total_edges.npk` joined), and the two
 are `probe02d_wide_literal_refused.npk` (LEX-004, PARSE-002) and
 `probe14_error_payload_refused.npk` (PARSE-001, TM-147). It read
 `50 = 36 + 13 + 1` for three subcycles after the tree stopped being that size,

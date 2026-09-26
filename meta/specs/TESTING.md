@@ -17,7 +17,7 @@ than sampled. Where that is possible it is the gate, and §3 says where.
 
 | Stage | Answers |
 |---|---|
-| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **41 files of 127 that no other stage roots** <!-- [[sweep: npk_total=127]] --> |
+| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **41 files of 128 that no other stage roots** <!-- [[sweep: npk_total=128]] --> |
 | `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
 | `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
 | `check` | every documented refusal actually refuses, with exactly its code |
@@ -39,20 +39,20 @@ them found something on its first run.
 | `check_host_isolation` | no module outside `src/host/` and `src/lib.npk` names a `host_` symbol |
 | `check_tables_regenerate` | every committed generated file against a fresh run of its generator, byte for byte: the zone tables from cycle 0.5, and the civil cross-oracle's corpus (V-6), which exists from cycle 0.1.4 and joins the check when it goes live (TM-183) |
 | `check_table_invariants` | every transition slice sorted and strictly increasing; every type index in range; every name-pool offset in range; the zone-name index lexicographically sorted |
-| `check_error_budget` | the count and names of public `error:` declarations against `SAFETY.md` §2's table |
+| `check_error_budget` | the count and names of public `error:` declarations against `SAFETY.md` §2's table — each identity QUALIFIED BY ITS DECLARING MODULE, as `NITPICK-REACH-003` counts it, and held to the module S-4's table names for it (TM-203): a budgeted name declared in two modules, or outside its module, is a second arm in every consumer. *(Until cycle 0.1.5's second half the count was keyed by the bare name, and `cal.ETimeValue` beside `zone.ETimeValue` read as one identity — the cycle audit's C2.)* |
 | `check_failsafe_arms` | the generated per-module arm list against programs that import each module and compile their `failsafe` |
 | `check_layering` | `BUILD.md` §6's diagram against `src/` — its **edges** (every `use`) and its **nodes** (every layer the diagram names holds at least one module). The node half is D1's repair: cycle 0.0.1's acceptance claimed `run.py` "asserts the count is at least 7" and no such assertion was in the tree, so *"a directory whose placeholder was deleted rather than replaced is invisible to the sweep"* was live for four subcycles inside a ticked box |
 | `check_no_owning_fields` | **no `fixed` table's element owns — itself, or through a field at any depth** (`SAFETY.md` S-19b). **It could not see a SINGLE-LINE struct until cycle 0.0.6 and both of this repository's structs are one** (TM-138), so neither type's real fields had ever been examined while the check reported `0 of 0`; the self-check now plants the same violation in both spellings. **And until cycle 0.1.3b it could not see an owning ELEMENT (`fixed string[2]`) or an owner two structs down, and it matched owners by substring**, so a field named `string_off` read as one — all three found by re-measuring the premise the check was written on, which was false (TM-177), and all three planted now |
 | `check_int128_sites` | `int128` appears at exactly the three sites `SPAN_MODEL.md` §5 names, and nowhere else |
 | `check_constants_named` | no bound outside `src/core/limits.npk`; no magic 86400, 146097, 719468 or 1000000000 outside the algorithm module that owns it |
 | `check_literal_divisors` (TM-163) | **every `/`, `%`, `/=` and `%=` in `src/cal/` against `CALENDAR.md` C-11**: the divisor must be a positive decimal integer literal with its width suffix, standing alone — nothing after it that binds tighter than `/`, since `256i64 =>! uint8` is 0 — so D-007's divide-by-zero and `MIN / −1` traps are unreachable by construction. It reads code with comments AND strings blanked, because every `use` path in `cal.npk` holds a `/`; `+%`, `-%` and `*%` are the wrapping operators and not divisions. It is C-11's list of divisors, which a list in the rule's text could not be: the one C-11 carried was short by eight the day `civil_from_days` arrived. *(Until cycle 0.1.5 this row said its docstring's limits — block comments, character literals, raw strings and templates "not modelled", `src/cal/` having none — and the docstring called the gap the safe direction. Measured at 0.1.5's planning, a `'"'`, a template's `//` and a lone CR in a `//` comment each HID a division, and a `//` inside a `/* */` hid a clock call and a declaration from the checks beside this one; since then it reads through V-1k's reader, and each shape is planted.)* |
-| `check_no_format_string` | no function anywhere takes a pattern `string` and interprets it — `FORMAT_MODEL.md` F-5's rule, made checkable |
+| `check_no_format_string` | no function anywhere takes a pattern `string` and interprets it — `FORMAT_MODEL.md` F-5's rule, made checkable. **Pending until cycle 0.4**: nothing enforces F-5 before then, and V-1a's table says why |
 | `check_raw_index` | **no index through a bare pointer in `src/`, by FIELD or by BINDING.** `Vec<T>.items` and `Bytes`' buffer body are bare pointers, which the language does not bounds-check (TM-108, `SAFETY.md` S-17b), so the accessor pair is the only bound there is. It was two literal substrings until cycle 0.0.6 and was **evadable in one line** — bind the pointer to a local and index the local, which was built at `aaffb87`, ran, and read four elements past the live prefix while the check reported `0 sites` (TM-144). Every `wild T->:name` in a file is now watched. **The limit is stated: it is lexical and per-file**, so a bare pointer passed to another function and indexed there is still not covered; cycle 0.5 gets the widening |
 | `check_expect_headers` | **the tree partitioned three ways, with the denominator printed** (TM-115): every `.npk` is under `src/` (judged by "it compiles"), or under `tests/` with an `expect-` marker of its own or a NAMED exemption, or it is unowned — and unowned is a failure. The exemption list is diffed in both directions, so an exemption naming a file that is gone fails too. **It says a marker is WELL-FORMED and nothing about whether it is TRUE**; that is `check_exemptions_live`'s and `run_defect_corpus`'s job, and the gap between the two readings was TM-141 |
 | `check_exemptions_live` (TM-137) | **every exemption's recorded VERDICT, re-derived from the file on every run.** An exemption's reason is a claim about what the compiler does, and the compiler moves. The superseded mechanism checked only that the named file still existed: O-N17 landed, two files went from stopping at `llc` to running clean, the suite stayed green and nothing said a word |
 | `run_defect_corpus` (TM-141) | **every `expect-` marker under `tests/probe/defect/`, asserted.** The `probe` entry is non-recursive by design, so the suite selected 0 of these 24 files and 21 committed expectations — the whole regression corpus for four discharged compiler defects — were evaluated by nothing. The inversion was sharp: the 3 files EXEMPT from having an expectation had their verdict re-derived every run, and the 21 that HAD one did not |
-| `check_denominators` (TM-142) | **every number TAGGED `[[sweep: name=N]]` against what the tree measures.** The tree went from 50 `.npk` to 78 and eleven sites in six live files still carried the 0.0.3 figures. The harness PRINTS every denominator on every run (V-1b) and no document was diffed against the print. **The mechanism is narrower than "every number": it checks the tagged ones**, and an untagged number is not covered — which is why the marker is ugly enough to notice in review. **And since cycle 0.1.2 it measures what each `sweep` member DECLARES**, as `domain_<stem>`, so a specification's statement of a domain and the test's are one list (TM-161, TM-168) |
-| `check_specs_current` | **reports** spec citations that no longer resolve — a renumbering is not a reason to stop a build — and **FAILS on a stale exemption** (TM-145). Those are different animals: a stale exemption is V-1c's both-directions rule, a failure everywhere else in this harness, and the one thing here a green run would otherwise hide. It matters at a cycle close, when archiving `meta/roadmap/<cycle>/` moves the paths two of its keys name. **There is no whole-file entry in its table, as a rule**: `checks.py` marks one excused as long as the file EXISTS, so its reason is never re-derived — TM-137's shape inside the mechanism written to prevent it |
+| `check_denominators` (TM-142) | **every number TAGGED `[[sweep: name=N]]` against what the tree measures.** The tree went from 50 `.npk` to 78 and eleven sites in six live files still carried the 0.0.3 figures. The harness PRINTS every denominator on every run (V-1b) and no document was diffed against the print. **The mechanism is narrower than "every number": it checks the tagged ones**, and an untagged number is not covered — which is why the marker is ugly enough to notice in review. **And since cycle 0.1.2 it measures what each `sweep` member DECLARES**, as `domain_<stem>`, so a specification's statement of a domain and the test's are one list (TM-161, TM-168). **And since cycle 0.1.5's second half it measures every public module's arm bill as `arms_<module>`** — `arms.compute_bill`'s, which `check_failsafe_arms` holds to `NITPICK-REACH-003` on every run — so the totals `SAFETY.md` S-4 and the summary pages WRITE are held to the bill as well as the bill to the compiler (TM-205; the cycle audit's C6) |
+| `check_specs_current` | **reports** spec citations that no longer resolve — a renumbering is not a reason to stop a build — and **FAILS on a stale exemption** (TM-145). Those are different animals: a stale exemption is V-1c's both-directions rule, a failure everywhere else in this harness, and the one thing here a green run would otherwise hide. It matters at a cycle close, when archiving `meta/roadmap/<cycle>/` moves the paths two of its keys name. **There is no whole-file entry in its table, as a rule**: `checks.py` marks one excused as long as the file EXISTS, so its reason is never re-derived — TM-137's shape inside the mechanism written to prevent it. **It reads every kind of file one character per byte (TM-199), so its citation pattern's ends are ASCII look-arounds** rather than `\b`, which found no boundary before an em dash or a curly apostrophe read that way (TM-206) |
 
 **Rule V-1.** `check_purity` and `check_int128_sites` are the two that matter
 most, because they guard the two claims this library makes that are easy to
@@ -105,7 +105,7 @@ completes:
 | Pending | Live from | Why not now |
 |---|---|---|
 | `check_int128_sites` | 0.2 | `SPAN_MODEL.md` N-20 says three sites and §5's table marks one (O-X6). A rule invented to make a count come out right is worse than an acknowledged gap |
-| `check_no_format_string` | 0.4 | there is no function in `src/` yet, so there is no signature to read |
+| `check_no_format_string` | 0.4 | the functions F-5 governs are `src/fmt/`'s, which cycle 0.4 writes, and telling a function that INTERPRETS a pattern `string` from one that copies it — `bytes_extend_str`, here since cycle 0.0.4 — needs the layout interpreter F-5 is written against; a check that read signatures alone would fire on the copy. Until 0.4 nothing enforces F-5, and a format-string function added today would leave the run green. *(This cell said "there is no function in `src/` yet, so there is no signature to read" until cycle 0.1.5's second half — false since 0.0.4; the cycle audit's C8.)* |
 | `check_tables_regenerate` | 0.5 | the mechanism exists and has been red (`repro.py --between`); what is missing is the zone generator and its tables. The civil cross-oracle's corpus is the first generated file in the tree (cycle 0.1.4), and regenerating it takes about 11 s of Python for a file that changes only when its generator does, so until 0.5.3 the subcycle that changes the generator regenerates and compares it (V-6, TM-183) |
 | `check_table_invariants` | 0.5 | sorted, in range, indices valid — of tables that do not exist |
 
@@ -250,6 +250,28 @@ reads that are NOT Nitpick source — the manifest, the specifications the check
 diff against, the emitted IR, the verdicts file — are read as text, each named
 in `0.1.5.md` section 1.5.
 
+*(Amended at cycle 0.1.5's second half — TM-202 and TM-206, from the cycle
+audit's C1 and C11. Two sentences above said more than was true.)* **Part E's
+second half asks the pinned compiler about the forms its program names, and
+no others**: `selfcheck._FORMS_EXIT`'s — the seven the close's first half
+wrote, and since its second half a block string, a raw string, an escaped
+quote, the empty string, an interpolation and an escaped character, each
+literal's VALUE asserted by its length, and a `\u{…}` beside the `\x` in its
+path. Measured then, the program runs 0 at `c970483` and is refused at
+`c3bdae2`, so the block string's close — the compiler's DEF-98, the one lexer
+move between the kept pins, which the seven-form program passed at both — is a
+red run now. A form the program does not hold is not asked, so **the adoption
+that moves the pin re-reads the compiler's `src/frontend/lexer.npk` whatever
+part E says**. **And the harness reads files three ways, not two**: (1)
+Nitpick source, through `lexical.py`, as above; (2) EVERY kind of file the two
+whole-tree scanners walk — `check_specs_current` and `check_denominators`,
+over `.md`, `.py`, `.toml`, `.txt` and `.npk` — through `lexical.read`, one
+character per byte, so a line number is `git grep -n`'s, with patterns whose
+ends are ASCII look-arounds and whose spaces are ASCII, because a `\b` or a
+`\s` reads UTF-8 prose differently one character per byte (an em dash's first
+byte is a latin-1 letter); and (3) the files the checks diff against, read as
+text, as above.
+
 **Rule V-1l (TM-200) — a check matches TOKENS, not lines.** Every pattern a tree
 check matches runs over the file's WHOLE blanked text and allows the lexer's
 whitespace — a newline included — between any two tokens it names, because the
@@ -261,6 +283,13 @@ passed by the pattern matched against one line that stood here until cycle
 whose patterns this rule rewrote — `check_purity`, `check_raw_index`,
 `check_error_budget`, `check_constants_named`, `check_no_owning_fields` — and
 `run._verdict` are each planted with a spelling across a line end (V-14c).
+*(Cycle 0.1.5's second half, the cycle audit's C12: `check_raw_index`'s field
+pattern allowed none of that whitespace AFTER the dot — `v.`, a line end,
+then `items[0i64]` was silent, where `b .` then `arr [2i64]` on the next line
+compiles and reads the element at `c970483`. The `.` is a token of its own,
+so it allows the whitespace on both sides now, and a plant spells it across a
+line end. No exposure: outside their modules `items` and `body` are `hidden`,
+`NITPICK-TYPE-080`.)*
 
 ## 3. The exhaustive gates
 
@@ -509,7 +538,7 @@ been driven. Cycle 0.0.6 made the sentence true rather than softening it:
 | `selfcheck.part_b_specs_current` | `check_specs_current`, which reports and never fails, so it is shown REPORTING |
 | `selfcheck.part_c` (`CALIBRATION`) | `check_failsafe_arms`, against `NITPICK-REACH-003`'s own identity list on three modules with known bills |
 | `selfcheck.part_d` | `run._verdict` on four specimens — the fourth, since cycle 0.1.5, a `main` whose `func` and `:main` stand on two lines (V-1l); `check_exemptions_live` on a MOVED verdict; `run_defect_corpus` on an `expect-exit:` wrong by one; `check_expect_headers` on all three of its branches |
-| `selfcheck.part_e` (cycle 0.1.5) | `lexical.py`, the reader every check reads through (V-1k): one text of every lexical form written to a file and read back — `nitpick-regex`'s case 18, text for text — and one program of every form a run can observe, compiled and run by the pinned compiler, which must exit 0 while the reader sees exactly the code that ran. And seventeen more `PLANTED` rows: V-1k's eight and V-1l's nine |
+| `selfcheck.part_e` (cycle 0.1.5) | `lexical.py`, the reader every check reads through (V-1k): one text of every lexical form written to a file and read back — `nitpick-regex`'s case 18, text for text — and one program of the forms `_FORMS_EXIT` names, each literal's value asserted, compiled and run by the pinned compiler, which must exit 0 while the reader sees exactly the code that ran (TM-202; it said "every form a run can observe" until the close's second half). And seventeen more `PLANTED` rows: V-1k's eight and V-1l's nine — and four since the second half: `check_error_budget`'s two module-qualified plants (TM-203), `check_raw_index`'s line end after the dot (V-1l's note) and a written arm bill for `check_denominators` (TM-205); `part_b_specs_current` plants two citations before a multi-byte character (TM-206) |
 
 **The four `PEND` rows are the named exception**, and they are exempt for the
 reason each states: there is nothing in the tree for them to be red about.
@@ -549,7 +578,16 @@ not build it, and V-1a's arithmetic went stale inside the cycle — 0.1.0 to
 subcycle that adds or retires a check, the next time the family moves: cycle
 0.2's `check_int128_sites`, when it goes live, builds `check_check_registry`
 first. Until then the four statements of the family are re-read row by row at
-every close, and agree at this one.)*
+every close, and agree at this one.)* *(Cycle 0.1.5's second half, TM-207 —
+the cycle audit's D1: "cycle 0.2's `check_int128_sites`" narrowed TM-201's
+trigger to one check that `OPEN_QUESTIONS.md` O-X6 says waits on a question.
+The trigger is TM-201's own: **the next subcycle that adds or retires a
+check**, whichever check it is. The first scheduled is cycle 0.2.3's
+`check_no_view_returns` (TM-204), which is why 0.2.3 builds
+`check_check_registry` first. The four statements were re-read row by row at
+the close's second half as well, and agree: §2's 18 rows, 14 live and 4
+pending — `checks.LIVE`'s ten, `check_failsafe_arms`, and the three `run.py`
+drives outside step 5.)*
 
 **Rule V-15.** The self-check runs **first** in every full invocation, and its
 failure is **fatal** — nothing below it runs. A harness that has not proven it

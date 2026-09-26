@@ -646,6 +646,12 @@ MINI_SAFETY = """# Safety
 | `ETimeParse` | input text did not match the format asked for |
 | `ETimeZone` | a zone name is not in the compiled table |
 
+| Module | Declares |
+|---|---|
+| `ntime/cal.npk` | `ETimeValue` |
+| `ntime/zone.npk` | `ETimeZone` |
+| `ntime/fmt.npk` | `ETimeParse` |
+
 ## 3. Purity
 """
 
@@ -742,6 +748,16 @@ PLANTED = [
       "// expect-exit: 0\n// sweep-count: 10\n// "
       + _TAG % ("domain_tiny", 10) + "\nmod:tiny;\n"),
      "the tree says 10"),
+    # AND AN ARM BILL A DOCUMENT WRITES (the close's second half, the audit's
+    # C6; TM-205). The mini-tree's `cal` is `mod:cal;` alone and owes the
+    # floor, so a tag one higher is stale -- the floor's size DERIVED from
+    # `arms.FLOOR`, never typed, for `_MINI_NPK`'s reason.
+    (checks_mod.check_denominators,
+     ("src/cal/cal.npk",
+      "mod:cal;\n// " + _TAG % ("arms_cal", len(arms_mod.FLOOR) + 1) + "\n"),
+     ("src/cal/cal.npk",
+      "mod:cal;\n// " + _TAG % ("arms_cal", len(arms_mod.FLOOR)) + "\n"),
+     "the tree says %d" % len(arms_mod.FLOOR)),
     (checks_mod.check_purity,
      ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() never fails "
                          "{ pass mono_now(); };\n"),
@@ -975,6 +991,15 @@ PLANTED = [
      ("src/core/vec.npk", "mod:vec;\nfunc:f = int64(Vec:v) never fails "
                           "{ pass v.items\n[0i64]; };\n"),
      "That is a BARE POINTER"),
+    # AND THE LEXER'S WHITESPACE AFTER THE DOT (the close's second half, the
+    # audit's C12): `.` and `items` are two tokens, so a line end between them
+    # is an index to the compiler -- which the pattern had not allowed.
+    (checks_mod.check_raw_index,
+     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64(Vec:v) never fails "
+                         "{ pass v.\n    items [0i64]; };\n"),
+     ("src/core/vec.npk", "mod:vec;\nfunc:f = int64(Vec:v) never fails "
+                          "{ pass v.\n    items [0i64]; };\n"),
+     "That is a BARE POINTER"),
     (checks_mod.check_raw_index,
      ("src/core/vec.npk",
       "mod:vec;\nfunc:f = int64(Vec:v) never fails {\n"
@@ -989,12 +1014,35 @@ PLANTED = [
      ("src/cal/cal.npk", "mod:cal;\nerror\n:ETimeOops;\n"),
      ("src/cal/cal.npk", "mod:cal;\nerror\n:ETimeValue;\n"),
      "three is a ceiling"),
+    # A SECOND DECLARATION AFTER A `;`. The control's second declaration is not
+    # an `error:` -- `cal.npk`'s own `ValueFault` follows its identity -- because
+    # S-4 gives each module ONE identity, so no module can declare two budgeted
+    # ones on a line; until the close's second half the control declared
+    # `ETimeParse` in `cal`, which S-4 gives to `fmt`, and required silence
+    # (the audit's C2; TM-203 makes that a violation, planted two rows down).
     (checks_mod.check_error_budget,
      ("src/cal/cal.npk",
       "mod:cal;\npub error:ETimeValue; pub error:ETimeOops;\n"),
      ("src/cal/cal.npk",
-      "mod:cal;\npub error:ETimeValue; pub error:ETimeParse;\n"),
+      "mod:cal;\npub error:ETimeValue; pub enum:ValueFault = { YearRange; };\n"),
      "three is a ceiling"),
+    # ---- THE CLOSE'S SECOND HALF: THE COMPILER'S UNIT (TM-203). An identity is
+    # its MODULE and its name -- `NITPICK-REACH-003` names `moda.ETimeValue` and
+    # `modb.ETimeValue` as two arms, measured at `c970483` and `c3bdae2` -- and
+    # the count was keyed by the bare name. A budgeted name in TWO modules: two
+    # files planted, and the control holds each module to its own identity.
+    (checks_mod.check_error_budget,
+     [("src/cal/cal.npk", "mod:cal;\npub error:ETimeValue;\n"),
+      ("src/zone/zone.npk", "mod:zone;\npub error:ETimeValue;\n")],
+     [("src/cal/cal.npk", "mod:cal;\npub error:ETimeValue;\n"),
+      ("src/zone/zone.npk", "mod:zone;\npub error:ETimeZone;\n")],
+     "is declared in 2 modules"),
+    # AND A BUDGETED NAME OUTSIDE THE MODULE S-4 NAMES FOR IT: `ETimeParse` is
+    # `fmt`'s, so in `cal` it is `cal.ETimeParse`, an identity no table names.
+    (checks_mod.check_error_budget,
+     ("src/cal/cal.npk", "mod:cal;\npub error:ETimeParse;\n"),
+     ("src/fmt/fmt.npk", "mod:fmt;\npub error:ETimeParse;\n"),
+     "S-4's table names module `fmt`"),
     (checks_mod.check_constants_named,
      ("src/cal/cal.npk", "mod:cal;\nfixed\nint64:YEAR_MAX = 9999i64;\n"),
      ("src/core/limits.npk", "mod:limits;\nfixed\nint64:YEAR_MAX = 9999i64;\n"),
@@ -1040,30 +1088,36 @@ def part_b(rep, base):
     problems = []
     for i, (fn, bad, good, needle) in enumerate(PLANTED):
         name = fn.__name__
+        # A row plants ONE file, or -- since the close's second half, whose
+        # violation is two modules agreeing on a name (TM-203) -- a LIST.
+        bads = bad if isinstance(bad, list) else [bad]
+        goods = good if isinstance(good, list) else [good]
         red = _mini_tree(os.path.join(base, "planted", "%s_%d_bad" % (name, i)),
-                         [bad])
+                         bads)
         res = fn(red)
         if not res.problems:
             problems.append(
                 "%s did not fire on a planted violation in %s. A check that "
                 "has never failed has never been shown to work.\n      the "
-                "plant was:\n%s" % (name, bad[0],
+                "plant was:\n%s" % (name, ", ".join(r for r, _ in bads),
                                     "\n".join("        " + l
-                                              for l in bad[1].splitlines())))
+                                              for _, body in bads
+                                              for l in body.splitlines())))
         elif not any(needle in p for p in res.problems):
             problems.append(
                 "%s fired on the plant in %s but never said %r, so it may have "
                 "fired for a different reason.\n      it said: %s"
-                % (name, bad[0], needle, res.problems[0].splitlines()[0]))
+                % (name, ", ".join(r for r, _ in bads), needle,
+                   res.problems[0].splitlines()[0]))
 
         green = _mini_tree(
-            os.path.join(base, "planted", "%s_%d_good" % (name, i)), [good])
+            os.path.join(base, "planted", "%s_%d_good" % (name, i)), goods)
         res = fn(green)
         if res.problems:
             problems.append(
                 "%s fired on the CLEAN control in %s, so its red above is not "
                 "evidence about the plant.\n      it said: %s"
-                % (name, good[0], res.problems[0]))
+                % (name, ", ".join(r for r, _ in goods), res.problems[0]))
 
     # THE NODE HALF OF check_layering, WHICH NO `PLANTED` ROW CAN EXPRESS: the
     # fault is a file that is NOT THERE, and every row above plants a file that
@@ -1142,6 +1196,11 @@ def part_b_specs_current(rep, base):
     # this file's own dozen REAL citations are checked like everybody else's.
     ok_tm, bad_tm = "TM-" + "100", "TM-" + "999"
     ok_s, bad_s = "S-" + "1", "S-" + "77"
+    # AND TWO BEFORE A MULTI-BYTE CHARACTER (the close's second half, TM-206):
+    # read one character per byte, an em dash's first byte and a curly
+    # apostrophe's are latin-1 LETTERS, and a pattern ending in `\b` saw no
+    # boundary after the citation -- so neither of these was reported.
+    bad_dash, bad_quote = "TM-" + "998", "S-" + "78"
     _write(os.path.join(where, "meta", "DECISIONS.md"),
            "# Decisions\n\n### %s - a decision that exists\n" % ok_tm)
     _write(os.path.join(where, "meta", "specs", "SAFETY.md"),
@@ -1149,7 +1208,8 @@ def part_b_specs_current(rep, base):
     _write(os.path.join(where, "CLAUDE.md"),
            "This cites %s, which resolves, and %s, which does not.\n"
            "It cites %s, which resolves, and %s, which does not.\n"
-           % (ok_tm, bad_tm, ok_s, bad_s))
+           "And %s—with a dash, and %s’s own tail, neither.\n"
+           % (ok_tm, bad_tm, ok_s, bad_s, bad_dash, bad_quote))
     res = checks_mod.check_specs_current(where)
     if res.problems:
         problems.append(
@@ -1157,7 +1217,7 @@ def part_b_specs_current(rep, base):
             "(TESTING.md §2): a renumbered citation is not a reason to stop a "
             "build.\n      it said: %s" % res.problems[0])
     got = " ".join(res.reports)
-    for want in (bad_tm, bad_s):
+    for want in (bad_tm, bad_s, bad_dash, bad_quote):
         if want not in got:
             problems.append(
                 "check_specs_current did not report the planted dangling "
@@ -1489,12 +1549,25 @@ def part_d(rep, root, man, base, npkc, npkrt):
 # CR is lost in the READ, before any scanning begins. Its expectations are the
 # compiler's reading at `c970483`, measured there (`0.1.5.md` section 1.3).
 #
-# E2 ASKS THE COMPILER, AGAINST WHAT THE READER MIRRORS: every form a RUN can
-# observe, in one program the pinned `npkc` compiles and runs -- exit 0 when
-# each form reads as `lexical.py` reads it, and a code naming the form when one
-# does not -- read by the reader as well, which must see exactly the statements
-# that ran. So a re-pin that moves the lexer is a red run here rather than a
-# reader quietly mirroring a compiler that is gone.
+# E2 ASKS THE COMPILER, AGAINST WHAT THE READER MIRRORS: the forms a RUN can
+# observe that `_FORMS_EXIT` names, in one program the pinned `npkc` compiles
+# and runs -- exit 0 when each form reads as `lexical.py` reads it, and a code
+# naming the form when one does not -- read by the reader as well, which must
+# see exactly the statements that ran. So a re-pin that moves the lexer ON ONE
+# OF THOSE FORMS is a red run here rather than a reader quietly mirroring a
+# compiler that is gone.
+#
+# AND ONLY ON THOSE (cycle 0.1.5's audit, C1; TM-202). Until the close's second
+# half E2 held seven forms and said "every form a run can observe"; it had no
+# block string, raw string, escaped quote, empty string or interpolation, and
+# the one lexer move between the kept pins -- the block string's close, the
+# compiler's DEF-98, `c3bdae2` to `c970483` -- passed it at both. Each of those
+# is here now with its VALUE asserted, and the program is refused at `c3bdae2`
+# (its block string, line 21), so that move is a red run. A form E2 does not
+# hold -- a nested interpolation, an escape inside a block string, an escape
+# in a character literal beyond `\'` -- is not asked, and that is why the
+# adoption re-reads `src/frontend/lexer.npk` at every re-pin whatever part E
+# says.
 _LEX_TEXT = (
     'mod:lexcase;\n'                                        # 1
     'use "./real_a.npk".*;\n'                               # 2  an import
@@ -1529,10 +1602,12 @@ _LEX_IMPORTS = [(2, "./real_a.npk", False), (3, "./real_b.npk", True),
 
 # THE FORMS A RUN CAN OBSERVE. Each guarded assignment after a form runs
 # exactly when the form reads as `lexical.py` reads it; line 6's does not run,
-# because the lone CR before it is not a line end.
+# because the lone CR before it is not a line end. And from line 21 each
+# literal's VALUE is asserted too, by its length (TM-202): a lexer that read the
+# form another way would give the program another string, or refuse it.
 _FORMS_TEXT = (
     "mod:lexical_forms;\n"                                     # 1
-    "use \".\\x2flexical_six.npk\".*;\n"                       # 2  decoded: ./lexical_six.npk
+    "use \".\\x2flexical\\u{5F}six.npk\".*;\n"               # 2  decoded: ./lexical_six.npk
     "func:seven = int32() never fails { pass 7i32; };\n"       # 3
     "func:main = int32(cstring[]:_~argv) {\n"                  # 4
     "    int32:a = 0i32;\n"                                    # 5
@@ -1551,7 +1626,24 @@ _FORMS_TEXT = (
     "    ();\n"                                                # 18 a call across a line end
     "    if (b != c) { exit 15i32; }\n"                        # 19
     "    if ((raw six()) != 6i32) { exit 16i32; }\n"           # 20 the decoded import
-    "    exit 0i32;\n"                                         # 21
+    "    string:k = \"\"\"a\"\"b\"\"\"; a = 5i32;\n"           # 21 a block string: 4 bytes
+    "    if (a != 5i32) { exit 17i32; }\n"                     # 22
+    "    if (string_byte_length(k) != 4i64) { exit 17i32; }\n" # 23
+    "    string:w = r\"a\\\"; a = 6i32;\n"                     # 24 a raw string: 2 bytes
+    "    if (a != 6i32) { exit 18i32; }\n"                     # 25
+    "    if (string_byte_length(w) != 2i64) { exit 18i32; }\n" # 26
+    "    string:e = \"a\\\"b\"; a = 7i32;\n"                   # 27 an escaped quote: 3 bytes
+    "    if (a != 7i32) { exit 19i32; }\n"                     # 28
+    "    if (string_byte_length(e) != 3i64) { exit 19i32; }\n" # 29
+    "    string:z = \"\"; a = 8i32;\n"                         # 30 the empty string
+    "    if (a != 8i32) { exit 20i32; }\n"                     # 31
+    "    if (string_byte_length(z) != 0i64) { exit 20i32; }\n" # 32
+    "    string:u = `<&{ e }>`; a = 9i32;\n"                   # 33 an interpolation is code
+    "    if (a != 9i32) { exit 21i32; }\n"                     # 34
+    "    if (string_byte_length(u) != 5i64) { exit 21i32; }\n" # 35
+    "    char8:s = '\\''; a = 20i32;\n"                        # 36 an escaped character
+    "    if (a != 20i32) { exit 22i32; }\n"                    # 37
+    "    exit 0i32;\n"                                         # 38
     "};\n") + FAILSAFE
 _FORMS_SIX = ("mod:lexical_six;\n\n"
               "pub func:six = int32() never fails { pass 6i32; };\n")
@@ -1562,8 +1654,23 @@ _FORMS_EXIT = {
     13: "the character literal `'\"'` hid the code after it",
     14: "a `//` in a template's text ended the line",
     15: "a call's `(` could not follow whitespace",
-    16: "the escaped `use` path was not decoded",
+    16: "the escaped `use` path -- `\\x2f` and `\\u{5F}` -- was not decoded",
+    17: "a block string did not close at its first unescaped three quotes "
+        "(DEF-98), or its value is not the 4 bytes `a\"\"b`",
+    18: "a raw string read `\\\"` as an escape, or its value is not the 2 "
+        "bytes `a\\`",
+    19: "an escaped quote ended its string, or its value is not the 3 bytes "
+        "`a\"b`",
+    20: "`\"\"` was not the empty string",
+    21: "an interpolation's code was read as template text, or its value is "
+        "not the 5 bytes `<a\"b>`",
+    22: "the escaped character `'\\''` hid the code after it",
 }
+# The lines whose literal must be blanked WHOLE -- no quote, backtick or
+# apostrophe survives the reader there -- and the statement after each, which
+# must survive it. `33`'s interpolation is code and must survive too.
+_FORMS_LITERALS = ((21, "a = 5i32"), (24, "a = 6i32"), (27, "a = 7i32"),
+                   (30, "a = 8i32"), (33, "a = 9i32"), (36, "a = 20i32"))
 
 
 def part_e(rep, root, man, base, npkc, npkrt):
@@ -1608,8 +1715,8 @@ def part_e(rep, root, man, base, npkc, npkrt):
         problems.append("E1: line 19: the `/*` inside line 18's comment was "
                         "read as a block comment and hid the code after it.")
 
-    # E2 -- the compiler, on every form a run can observe, and the reader on
-    # the same file.
+    # E2 -- the compiler, on the forms `_FORMS_EXIT` names (TM-202), and the
+    # reader on the same file.
     _write(os.path.join(where, "lexical_forms.npk"), _FORMS_TEXT)
     _write(os.path.join(where, "lexical_six.npk"), _FORMS_SIX)
     text = lexical.read(os.path.join(where, "lexical_forms.npk"))
@@ -1623,10 +1730,14 @@ def part_e(rep, root, man, base, npkc, npkrt):
                         "a `//` comment.")
     for ln, stmt in ((8, "a = 1i32"), (10, "a = 2i32"), (12, "a = 3i32"),
                      (14, "a = 4i32"), (16, "seven ("), (17, "seven"),
-                     (18, "();")):
+                     (18, "();")) + _FORMS_LITERALS + ((33, "{ e }"),):
         if stmt not in lines[ln - 1]:
             problems.append("E2: line %d: the reader blanked `%s`, which the "
                             "compiler runs." % (ln, stmt))
+    for ln, _stmt in _FORMS_LITERALS:
+        if any(ch in lines[ln - 1] for ch in "\"'`"):
+            problems.append("E2: line %d: a quote survived the reader, so part "
+                            "of the literal was read as code." % ln)
     bld = build_mod.Build(where, man, npkc, npkrt, os.path.join(where, "build"))
     out_dir = os.path.join(where, "build", "forms")
     os.makedirs(out_dir, exist_ok=True)
@@ -1754,9 +1865,10 @@ def run(rep, root, steps):
         rep.say("  ok    %-46s %s"
                 % ("the reader (lexical.py)",
                    "E1: %d lines of every form read back, %d import(s) as the "
-                   "compiler reads them; E2: the pinned compiler runs every "
-                   "observable form to 0"
-                   % (_LEX_TEXT.count("\n"), len(_LEX_IMPORTS))))
+                   "compiler reads them; E2: the pinned compiler runs the %d "
+                   "observable forms it names to 0"
+                   % (_LEX_TEXT.count("\n"), len(_LEX_IMPORTS),
+                      len(_FORMS_EXIT))))
     return ok
 
 

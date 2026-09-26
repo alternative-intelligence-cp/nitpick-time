@@ -164,8 +164,10 @@ pub use "./core/limits.npk".NTIME_DIGITS_MAX;
 // arm in the CONSUMER however pure the consumer's code is (S-4b, S-4c, TM-107).
 // At pin `c3bdae2` it is ELEVEN: the floor is six, `StackExhausted` and
 // `MachineFault` having joined it (cycle 0.1.0b, TM-155), and nothing else
-// moved. The number is read from `NITPICK-REACH-003`'s own list on every run by
-// `check_failsafe_arms`, in both directions, and never predicted.
+// moved -- and at `c970483` it is 11 still [[sweep: arms_cal=11]]. The number
+// is read from `NITPICK-REACH-003`'s own list on every run by
+// `check_failsafe_arms`, in both directions, and never predicted; and the one
+// written here is held to it by `check_denominators` (TM-205).
 pub use "./cal/cal.npk".ETimeValue;
 
 // The detail enum (S-3). PAYLOAD-FREE BECAUSE AN `error:` CANNOT CARRY ONE --
@@ -228,7 +230,8 @@ pub use "./cal/cal.npk".weekday_number_sunday_first;
 // MAJOR version to take away (TM-013), and none carries `cal_`: `BUILD.md` B-15, as
 // amended at cycle 0.1.3, says a public name is the one its specification gives
 // it, and `CALENDAR.md` C-13 ... C-15 give these. They move the arm bill by
-// nothing -- measured, eleven for `cal` and thirteen here, as before.
+// nothing -- measured, 11 for `cal` [[sweep: arms_cal=11]] and 13 here
+// [[sweep: arms_lib=13]], as before.
 pub use "./cal/cal.npk".weekday;
 pub use "./cal/cal.npk".day_of_year;
 pub use "./cal/cal.npk".ordinal_to_date;

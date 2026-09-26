@@ -81,20 +81,30 @@ import-scoped:
 
 | Module | Declares | Identity arms a consumer importing only this owes | TOTAL arms, MEASURED at pin `c3bdae2` (at `aaffb87`) |
 |---|---|---|---|
-| `ntime/lib.npk` — **the umbrella**, the import a consumer writes | — (re-exports) | one arm today (`cal`'s) | **13** (—) — generated since cycle 0.1.0b (TM-155): the floor of six, `cal.ETimeValue`, the four arithmetic arms, `DecreasesViolated` from `src/core/bytes.npk`'s measured loops, and — since cycle 0.1.0c (TM-156, TM-159) — `LimitViolated` from the `ListLen` on `src/core/`'s sealed lengths. It was **12** until then |
-| `ntime/core.npk` | — | nothing | **6** (4) — the floor; `core` is not yet reachable as its own public module, and its code is billed through the umbrella's row |
-| `ntime/cal.npk` | `ETimeValue` | one arm | **11** (9) — measured 2026-09-06 and 2026-09-25 |
-| `ntime/span.npk` | — (raises `cal`'s) | one arm | placeholder; **6** (4) today, and the number is meaningless until cycle 0.2 gives the module a body |
-| `ntime/zone.npk` | `ETimeZone` | two arms | placeholder; **6** (4) today (cycle 0.3) |
-| `ntime/fmt.npk` | `ETimeParse` | three arms | placeholder; **6** (4) today (cycle 0.4) |
-| `ntime/host.npk` | — (forwards errnos) | one arm | placeholder; **6** (4) today |
+| `ntime/lib.npk` — **the umbrella**, the import a consumer writes | — (re-exports) | one arm today (`cal`'s) | **13** <!-- [[sweep: arms_lib=13]] --> (—) — generated since cycle 0.1.0b (TM-155): the floor of six, `cal.ETimeValue`, the four arithmetic arms, `DecreasesViolated` from `src/core/bytes.npk`'s measured loops, and — since cycle 0.1.0c (TM-156, TM-159) — `LimitViolated` from the `ListLen` on `src/core/`'s sealed lengths. It was **12** until then |
+| `ntime/core.npk` | — | nothing | **6** <!-- [[sweep: arms_core=6]] --> (4) — the floor; `core` is not yet reachable as its own public module, and its code is billed through the umbrella's row |
+| `ntime/cal.npk` | `ETimeValue` | one arm | **11** <!-- [[sweep: arms_cal=11]] --> (9) — measured 2026-09-06 and 2026-09-25 |
+| `ntime/span.npk` | — (raises `cal`'s) | one arm | placeholder; **6** <!-- [[sweep: arms_span=6]] --> (4) today, and the number is meaningless until cycle 0.2 gives the module a body |
+| `ntime/zone.npk` | `ETimeZone` | two arms | placeholder; **6** <!-- [[sweep: arms_zone=6]] --> (4) today (cycle 0.3) |
+| `ntime/fmt.npk` | `ETimeParse` | three arms | placeholder; **6** <!-- [[sweep: arms_fmt=6]] --> (4) today (cycle 0.4) |
+| `ntime/host.npk` | — (forwards errnos) | one arm | placeholder; **6** <!-- [[sweep: arms_host=6]] --> (4) today |
 
 *(Amended at cycle 0.1.0b: the column read "MEASURED at pin `aaffb87`" with the
 bracketed numbers, and had no umbrella row. At compiler `c3bdae2` every row
 gained `StackExhausted` and `MachineFault`, the new floor (TM-155), and the
 umbrella became a generated row because it is the import a consumer actually
 writes.)* *(Re-measured at compiler `c970483` by cycles 0.1.4c and 0.1.5:
-every row is unchanged.)*
+every row is unchanged.)* *(Since cycle 0.1.5's second half every total in
+this column is TAGGED, and `check_denominators` holds each to the bill
+`check_failsafe_arms` generates from source and diffs against
+`NITPICK-REACH-003` on every run (TM-205) — so a bill that moves turns this
+column red rather than stale. Until then nothing read the WRITTEN column: the
+cycle audit's C6.)* *(And the "Declares" column is what `check_error_budget`
+holds each identity to since the same half (TM-203): the compiler names an
+identity by its declaring module — `cal.ETimeValue` — so a budgeted name
+declared in a second module, or outside the module this column names, is a
+second arm in every consumer, measured at `c970483` as `moda.ETimeValue` and
+`modb.ETimeValue` for one name in two modules, and the check fails on either.)*
 
 **A program that only wants calendar arithmetic owes one IDENTITY arm.** That is
 the decomposition working, and it is why `cal` does not import `zone`.
@@ -116,7 +126,11 @@ NITPICK-REACH-003 … 9 identities: cal.ETimeValue, Unreachable, HeapOom,
 
 `check_failsafe_arms` runs that generation on every full invocation and diffs
 the list against the set computed from source **in both directions**, so this
-row cannot go stale in silence.
+row cannot go stale in silence. *(Cycle 0.1.5's second half, the cycle audit's
+C6: that held of the GENERATED bill, and nothing compared it with the numbers
+WRITTEN here and on the summary pages, none of which was tagged — a moved bill
+would have left them stale under a green run. Each written total is tagged
+now, and `check_denominators` holds it to the generated bill (TM-205).)*
 
 **9 = 4 + 1 + 4**: the floor, plus `cal.ETimeValue`, plus the four system arms
 `cal`'s own `%`, `+` and `MONTH_LENGTH[m - 1]` arm in the CONSUMER however pure
@@ -134,6 +148,17 @@ half is **front-loaded** — it arrives with the first module that computes
 anything and never grows again — while the identity half grows one per module
 that declares *and raises*. `ETimeParse` (0.4) and `ETimeZone` (0.3) are the two
 still to come, and `import.npk` is where each will first show.
+
+*(Cycle 0.1.5's second half, the cycle audit's C7: "never grows again" is true
+of the four ARITHMETIC arms and of nothing else. The machinery half grew twice
+after this was written — `DecreasesViolated` with the first measured loop, at
+cycle 0.1.0b (TM-155), and `LimitViolated` with the first limited field, at
+0.1.0c (TM-159), two of the umbrella's four arms from 9 to 13, the floor's
+two new identities the other two — and a `till` or `loop` with a COMPUTED step
+arms `BadStep` (with a literal step too, through compiler `c3bdae2`: measured
+at 0.1.2's planning, and the compiler's DEF-95, fixed at `c970483`). What is
+front-loaded is the arithmetic; each new kind of machinery arrives with the
+first module that writes it, as the table below says.)*
 
 **Rule S-4b (TM-107) — the identity column is not the whole bill, and this table
 is not yet the bill.** Measured at cycle 0.0.0 by
@@ -891,8 +916,10 @@ and by nothing else.** `tests/unit/bytes_view_lifetime.npk` is that test, with
 its control: a view held across forty NON-growing pushes reads back correctly,
 and the same program at a capacity that forces growth does not.
 
-**The obligation this puts on `src/fmt/` at cycle 0.3**, which is where views
-into a `Bytes` will actually be held:
+**The obligation this puts on `src/fmt/` at cycle 0.4** *(it said "0.3" until
+cycle 0.1.5's second half; `src/fmt/` is cycle 0.4's, as S-18f below and the
+module's own header say)*, which is where views into a `Bytes` will actually
+be held:
 
 - a function that returns or stores a view states the invalidation rule at the
   site, in the words above;
@@ -1049,6 +1076,26 @@ struct containing one. A parser takes a `uint8[]` and returns a value and an
 offset — which is what `FORMAT_MODEL.md` already specifies, so the rule costs
 this library nothing. `check_no_view_returns` on cycle 0.0.3's harness list is
 what makes it enforced rather than remembered.
+
+*(Amended at cycle 0.1.5's second half, TM-204 — the cycle audit's C3.)* **Both
+sentences were false of this library from cycle 0.0.4.** `pub func:bytes_view
+= uint8[] (Bytes->:b)` returns a view of a `Bytes`' body and the umbrella
+re-exports it; and `check_no_view_returns` was never built — it is on no list,
+which cycle 0.0.0's own record said (*"It is not on any list"*) while this
+rule went on saying otherwise. **The rule is now: no function in `src/`
+returns a `uint8[]`, a `cstring` or a struct containing one, EXCEPT a
+container's own accessor over the container's own storage, reached through a
+pointer parameter, named here beside the rule that governs its lifetime.** One
+is named — **`bytes_view`**, whose view roots at a pointer-shaped binding, the
+last row of the table below and legal in the language, and whose hazard is
+not escape but growth: S-18e is its rule. Measured at that close, `src/`'s ten
+files hold 40 `func` declarations, one declaring a view as its result —
+`bytes_view` — and no struct holding one. **`check_no_view_returns` is cycle
+0.2.3's**, built after `check_check_registry` (TM-201: the subcycle that adds a
+check builds the registry check first), live, with a planted return red and
+the named exemption re-derived — before cycle 0.4, whose parsers are the first
+code that could want another view back. Until it is built, this sentence and
+that census are the rule's whole enforcement.
 
 **Why it was written as a belt, and why it stays one.** O-N9 measured that
 D-004's escape rule was **unenforced for slice views**: `string_bytes` on a

@@ -14,6 +14,20 @@ by the harness as ordinary `program`-stage entries from cycle 0.0.2.
 
 - **A probe is a program**, never a library file (0.0.0 P-1). It has its own
   `main` and `failsafe` and imports nothing from `src/`.
+  *(Cycle 0.1.5's second half, the cycle audit's C9: the last clause has been
+  false since cycle 0.1.0c, and no decision said so. P-1 was written for
+  questions about the LANGUAGE, which a probe asks with no library in the
+  way. From 0.1.0c the questions included the language's verdict on this
+  library's own declarations — a consumer's struct literal of a sealed type,
+  a read of a hidden field, a copy of a `Vec`, `Pod` for an owner — and the
+  decisions that asked them put each probe here importing the module it
+  asks about: TM-156, TM-157, TM-193, TM-194 and TM-195. **Eleven import from
+  `src/`**, by `lexical.imports` at that close: `probe15`, `probe16`,
+  `probe16b` … `probe16i` and `probe19`. **The rule is now:** a probe asks the
+  compiler one question; one about the language imports nothing from `src/`,
+  and one about the language's verdict on the library imports the module it
+  asks about and nothing more. Either way it is a program, with its own `main`
+  and `failsafe`.)*
 - **A probe is never deleted** (P-5). The verdicts are a regression suite; a
   probe that has served its purpose has not stopped being evidence.
 - **Every probe exits 0 on success** and a distinct positive code per assertion

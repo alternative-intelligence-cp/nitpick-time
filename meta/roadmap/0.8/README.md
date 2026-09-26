@@ -55,6 +55,15 @@ buffer, decided here against the benchmark rather than in advance.
 - [ ] every numbered rule either implemented, refused with a reason, or struck by a decision
 - [ ] the tree checks' coverage reviewed: **is there a document nothing diffs against?**
 - [ ] `check_specs_current`'s backlog drained
+- [ ] **the `#wild_slice` length check** (TM-201, TM-207): every slice a READ
+      accessor lays over a bare pointer is laid over the live `count`, never
+      `cap` — the compiler checks only `0 <= len <= 2^47` (its D-315) — built,
+      with a planted read laid over `cap` red and `SAFETY.md` S-17c's three
+      appending sites silent; **unless its second subject — the first accessor
+      over a bare pointer outside `src/core/vec.npk` and `bytes.npk` — arrived
+      first and brought the check with it**, in which case this item names that
+      subcycle. Until built, `vec_at_past_end`, `vec_set_past_end` and the
+      `Bytes` tests guard the length by behaviour (TM-201's measurement)
 - [ ] the `failsafe` arm table (`COMPAT.md` §6) regenerated and checked against real programs
 
 ## Gate

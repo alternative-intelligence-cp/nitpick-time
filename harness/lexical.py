@@ -80,9 +80,16 @@ and a path that begins neither `./`, `../` nor `/`.
 ITS OWN TEST IS THE SELF-CHECK'S PART E (`selfcheck.part_e`): one text holding
 every form above, written to a FILE, read back through `read()`, and required
 to give exactly the imports and the code the compiler would see -- and one
-program holding every form a run can observe, compiled by the pinned `npkc`
-and required to exit 0, so a re-pin that moves the lexer is a red run and not
-a silent disagreement.
+program holding the forms a run can observe that `selfcheck._FORMS_EXIT` names,
+each literal's VALUE asserted, compiled by the pinned `npkc` and
+required to exit 0, so a re-pin that moves the lexer ON ONE OF THOSE FORMS is a
+red run and not a silent disagreement. A form it does not hold is not asked --
+which is why the adoption that moves the pin re-reads `src/frontend/lexer.npk`
+whatever part E says (TM-202). *(Until cycle 0.1.5's second half this said
+"every form a run can observe" over a program of seven, with no block, raw,
+escaped or empty string and no interpolation, and the block string's close --
+the one move between the kept pins, DEF-98 -- passed it at both: the audit's
+C1.)*
 """
 import os
 import re

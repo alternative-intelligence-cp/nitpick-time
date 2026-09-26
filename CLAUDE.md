@@ -7,8 +7,30 @@ Guidance for Claude Code sessions working in this repository.
 `ntime` — a date, time and time-zone library for **Nitpick**, the
 safety-critical systems language at `../../nitpick`.
 
-**Status, after cycle 0.1.5: cycle 0.1's close — the harness reads source as
-the compiler does, and the audit that closes the cycle is next.** Measured at
+**Status, at cycle 0.1.5's second half: cycle 0.1's audit triaged — the
+archive to `meta/roadmap/done/0.1/` and cycle 0.2's opening are the close's
+last commits.** **The close's second half triaged the cycle audit's nineteen
+findings**, every one fixed but for the check half of one, which a decision
+places on cycle 0.2.3, and the four the audit asked to be fixed rather than
+declined are fixed: part E's program asks the pinned compiler about thirteen
+named forms, each literal's value asserted, and is refused at the older pin, so
+the block string's close — the one lexer move between the kept pins, which the
+seven-form program passed at both — is a red run (TM-202); the error budget
+counts identities qualified by their module, as the compiler does, and holds
+each to the module `SAFETY.md` S-4 names for it (TM-203); S-22 names its one
+exemption, `bytes_view`, whose lifetime is S-18e's, and its check is cycle
+0.2.3's (TM-204); and `VERIFICATION.md` no longer says every index traps. Every
+arm bill a page writes is tagged and held to the generated one — the calendar
+costs 11 <!-- [[sweep: arms_cal=11]] --> and the umbrella 13
+<!-- [[sweep: arms_lib=13]] --> (TM-205); the two whole-tree scanners read the
+same under either decoding (TM-206); and `CALENDAR.md` C-12's totality is
+asserted at its edges by `tests/unit/civil_total_edges.npk`, seen red on an
+`int32` mutant and on nothing else. The self-check plants 44 tree-check
+violations. `src/` changed in comments only. A full invocation is **113 units
+green** at pin `c970483`.
+
+**After cycle 0.1.5's first half: the harness reads source as the compiler
+does, and the audit that closes the cycle was next.** Measured at
 the close's planning, eight shapes of source made the harness disagree with
 the compiler's lexer at `c970483`, and six of them passed a violation silently:
 a lone CR in a `//` comment, a `//` inside a `/* */`, a `'"'` character
@@ -23,10 +45,11 @@ text, where `mono_now ()`, a `[` on the line after `v.items`, and `error` then
 `:ETimeOops` on the next line had each hidden from a pattern matched against
 one line. The self-check plants 40 tree-check violations (23 before) and, in
 its part E, asks both the reader and the pinned compiler about one text of
-every form, so a re-pin that moves the lexer is a red run. **And the close's
-corrections**: the public `README.md` no longer says there is no code, nor that
-importing `ntime` costs three arms — the calendar costs 11 and the umbrella 13
-(`SAFETY.md` S-4); `tests/probe/README.md` lists every probe; and the two
+every form, so a re-pin that moves the lexer is a red run *(the program held
+seven forms and the one move between the kept pins passed it — the cycle
+audit's C1, and TM-202)*. **And the close's corrections**: the public
+`README.md` no longer says there is no code, nor that importing `ntime` costs
+three arms — the calendar costs 11 and the umbrella 13 (`SAFETY.md` S-4); `tests/probe/README.md` lists every probe; and the two
 checks cycle 0.0 deferred to this cycle, which it did not build, are re-homed
 with their reasons (TM-201). No library code changed. A full invocation is
 **112 units green** at pin `c970483`.
@@ -400,7 +423,10 @@ what to do when a cross-stream gate is not ready yet.
   to and from.
 - **There is no format string** (TM-009, TM-023). No `strftime`, no
   `layout_from_pattern`. A layout is a typed value, and
-  `check_no_format_string` makes adding one a red run.
+  `check_no_format_string` makes adding one a red run **from cycle 0.4, when it
+  goes live** — until then it is a `PENDING` name, and a format-string function
+  added today would leave the run green (`TESTING.md` V-1a; the cycle audit's
+  C8, at 0.1.5's second half).
 - **No dependencies** (TM-027). Not the compiler's `src/`, not its `lib/`, not
   `nitpick-parse`, not `/usr/share/zoneinfo`.
 - **Never work around a compiler defect.** Record the reproduction, stop, and

@@ -82,8 +82,21 @@ decision that accepts its arm — which is what P-1 promised and still delivers.
 
 ## 2. What the language discharges for free
 
-- **Every index is bounds-checked and traps** (D-070). The question is only
-  whether a *reachable* index is out of bounds — §3.
+- **Every index into a type that carries a length — a slice, a fixed array, a
+  `simd` lane — is bounds-checked and traps** (D-070). The question is only
+  whether a *reachable* index is out of bounds — §3. **An index through a bare
+  pointer is not checked at all**, and `Vec<T>.items` and `Bytes`' body are
+  both bare pointers: that residue is not discharged for free — it is
+  `SAFETY.md` S-17b's obligation, carried by S-17c's accessor pair, and §3's
+  `Vec<T>` row is its proof obligation. *(Amended at cycle 0.1.5's second
+  half, the cycle audit's C4. This bullet read "Every index is bounds-checked
+  and traps (D-070)", while D-070's own title is "bounds live in the array
+  type, not the pointer type", the compiler's emitter at `c970483` guards a
+  slice's, an array's and a `simd` lane's index and says of its pointer branch
+  that pointers "carry nothing to check", and
+  `tests/probe/probe13d_vec_bare_pointer_unchecked.npk` reads a planted
+  sentinel past the end at that pin. `SAFETY.md` §1's row was narrowed to the
+  same scope at cycle 0.0.4, TM-108; this one was missed.)*
 - **Every plain integer `+ - *` traps on overflow** (D-210). Calendar
   arithmetic cannot silently produce a wrong year.
 - **Division by zero and `MIN / −1` trap** (D-007), and `CALENDAR.md` C-11
@@ -305,6 +318,16 @@ closed-form, the searches are logarithmic, and the parsers are linear scans.
 > *(Cycle 0.1.3: its two sweep members add six more `for` — thirteen, none
 > with a measure — and the derived fields add no loop at all: every one is
 > closed-form. The `while` count stays 48.)*
+>
+> *(Cycle 0.1.5's second half, the cycle audit's S1: the counts above are
+> each dated to their cycle, and moved after the last of them. Re-counted at
+> that close over the tree's 128 `.npk`, comments and literals blanked by the
+> harness's reader: **52 `while`**, the four new ones cycle 0.1.3c's
+> (`probe18`, `vec_churn_clear`, `vec_churn_pop`, `vec_moves`), **52
+> `decreases`**, **0 `unbounded`**, and **16 `for`**, the three new ones cycle
+> 0.1.4's `every_oracle_date`; no `loop`, `till` or `when`. The property this
+> rule claims holds at every one; the numbers are a record of that close,
+> not a claim about the tree after it.)*
 
 ---
 

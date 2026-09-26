@@ -40,10 +40,11 @@
 # the civil types and their validating constructors, and since 0.1.1 Hinnant's
 # `date_to_days` and `days_to_date`, and since 0.1.3 the derived fields --
 # re-exported together as 59 public names [[sweep: lib_reexports=59]],
-# so this IS evidence about behaviour, of the 112 units the runner reports at
+# so this IS evidence about behaviour, of the 113 units the runner reports at
 # compiler `c970483` (62 at cycle 0.0.6, 67 at 0.1.0, 70 at 0.1.0b, 75 at
 # 0.1.0c, 78 at 0.1.1, 81 at 0.1.2, 86 at 0.1.3, 90 at 0.1.3b, 91 at 0.1.4 and
-# 0.1.4b, all at `c3bdae2` from 0.1.0b on, and 101 at 0.1.4c). What
+# 0.1.4b, all at `c3bdae2` from 0.1.0b on, 101 at 0.1.4c, and 112 at 0.1.3c and
+# at the first half of 0.1.5, cycle 0.1's close). What
 # it is evidence of: the pinned compiler builds from a clean checkout at exactly
 # LLVM 20.1.2, every `.npk` under `src/` compiles, every unit under `tests/`
 # meets its own header at -O0 and again under `opt -O2`, the whole
@@ -124,8 +125,11 @@
 # against the compiler's own `NITPICK-REACH-003` identity list; then the
 # verdict mechanisms of TM-137 and TM-141 driven red; then, since cycle
 # 0.1.5, the reader asked about one text of every lexical form and the
-# pinned compiler about one program of them. It runs FIRST and its
-# failure is fatal, so
+# pinned compiler about one program of the forms a run can observe that the
+# self-check names -- each literal's value asserted since the close's second
+# half (TM-202), which is what turns a lexer move on one of them red; a move
+# on a form the program does not hold is the adoption's to find, by reading
+# the compiler's lexer. It runs FIRST and its failure is fatal, so
 # a green run below a broken runner is not a state this workflow can report.
 # Until 0.0.3 that was the honest gap here, and it was written in this comment
 # for three cycles.

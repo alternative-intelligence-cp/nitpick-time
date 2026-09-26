@@ -57,10 +57,13 @@ running unlisted since cycle 0.0.6)*:
   header, five ways beside one control (TM-187). Case 6
   (a generator differing by one line) is **pending until 0.5** and prints as
   pending rather than passing.
-- **Forty planted violations across the tree checks since cycle 0.1.5** (twenty-three
-  before; the seventeen new are V-1k's reader rows and V-1l's token rows) — each check
-  shown red on a violation and silent on a clean control, in milliseconds, with
-  no compilation. *(This bullet said "nine" from cycle 0.0.3, when it was true,
+- **Forty-four planted violations across the tree checks since cycle 0.1.5's
+  second half** (forty after its first half, twenty-three before it; the first
+  half's seventeen are V-1k's reader rows and V-1l's token rows, the second
+  half's four `check_error_budget`'s module-qualified pair (TM-203),
+  `check_raw_index`'s line end after the dot (V-1l) and a written arm bill for
+  `check_denominators` (TM-205)) — each check shown red on a violation and
+  silent on a clean control, in milliseconds, with no compilation. *(This bullet said "nine" from cycle 0.0.3, when it was true,
   to 0.1.1, "twenty" at 0.1.1 and "twenty-one" at 0.1.2; the run prints the
   number, derived from `selfcheck.TREE_PLANTS`, and it is 20 since
   `check_literal_divisors` brought four rows — TM-163 — 21 since cycle 0.1.2
@@ -74,9 +77,12 @@ running unlisted since cycle 0.0.6)*:
   driven red and silent on a control (`TESTING.md` V-14c; TM-141).
 - **The reader, against the compiler's lexer** — since cycle 0.1.5, part E:
   one text of every lexical form read back from a file through `lexical.py`,
-  and one program of every form a run can observe compiled and run by the
+  and one program of the forms `selfcheck._FORMS_EXIT` names — each literal's
+  value asserted since the close's second half — compiled and run by the
   pinned compiler, which must exit 0 while the reader sees exactly the code
-  that ran (`TESTING.md` V-1k).
+  that ran (`TESTING.md` V-1k, TM-202). A re-pin that moves the lexer on one
+  of those forms is a red run; one that moves it on a form the program does
+  not hold is not, so the adoption re-reads the compiler's lexer anyway.
 
 **Every case carries a CONTROL in the same run.** Without one, a red proves only
 that *something* went wrong — the tree, the manifest, the toolchain — and a
@@ -302,6 +308,17 @@ exempt + 35 asserted; and library + repro + suite at 77. `112 = 35 + 77`. At the
 close's planning the six sweeps took 2.8 + 2.0 + 8.1 + 0.5 + 5.5 + 3.6 = 22.5 s,
 7.5 s under the 30 s threshold, and `BUILD.md` B-9 says which member crosses it
 next.
+
+**At cycle 0.1.5's second half, the same pin, 113 units**: one test added,
+`tests/unit/civil_total_edges.npk` (`CALENDAR.md` C-12 asserted at its edges,
+the cycle audit's U1). The self-check plants 8 of V-14's 9 cases, **44**
+tree-check violations with 44 clean controls, 3 arm specimens, 4 verdict
+specimens, and part E's program now thirteen forms, each literal's value
+asserted (TM-202); the tree checks at `11 live`, `check_error_budget` counting
+module-qualified identities (TM-203) and `check_denominators` 31 measured
+denominators, the seven arm bills among them (TM-205); parse over 128 files,
+`91 + 35 + 2`; the defect corpus at 36 = 1 exempt + 35 asserted; and library +
+repro + suite at **78** (**22 unit**). `113 = 35 + 78`.
 
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the

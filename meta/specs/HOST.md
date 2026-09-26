@@ -75,6 +75,16 @@ impossible branch still returns the error rather than trapping, because "cannot
 fail" is a claim and claims are checked — the compiler's own posture on the
 same call (D-061).
 
+*(Amended at cycle 0.1.5's second half, the cycle audit's C5: the last clause
+gave the compiler the opposite posture, under the wrong decision. D-061
+removes the `(!)` marker and prescribes `#unreachable()`, which TRAPS; the
+compiler's posture on this call is its D-176 §3 — `mono_now` is `never fails`,
+and the floor guards the impossible branch of `clock_gettime(CLOCK_MONOTONIC,
+valid-ptr)` with that trap, read at `c970483`. Both treat "cannot fail" as a
+claim to check. Returning the forwarded errno instead is `ntime`'s own choice,
+S-5's: `host_now_utc` is fallible already, for H-8's range check, and a
+forwarded errno costs no arm.)*
+
 **Rule H-8 — the returned `Timestamp` is range-checked.** A `CLOCK_REALTIME`
 reading from a machine whose clock is unset can be anything; if it is outside
 `CALENDAR.md` §2's range the answer is `ETimeValue`/`YearRange`, not a

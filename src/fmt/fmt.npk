@@ -15,5 +15,6 @@
 // `layout_from_pattern` (TM-009, TM-023) — the language has no
 // format-specifier language and no closures (D-053, D-018), so a layout is a
 // TYPED VALUE the formatter interprets. `check_no_format_string` makes adding
-// one a red run.
+// one a red run once it goes live, with this module's body, at cycle 0.4; it is
+// a PENDING name until then (`TESTING.md` V-1a), and nothing else enforces it.
 mod:fmt;

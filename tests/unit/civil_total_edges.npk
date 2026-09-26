@@ -1,0 +1,122 @@
+// expect-exit: 0
+//
+// `CALENDAR.md` C-12, ASSERTED AT ITS EDGES: `date_to_days` is total over
+// every `int32` year and every pair of `uint8`s. Written at cycle 0.1.5's
+// second half, from the cycle audit's U1: C-12 was "certified" by
+// `every_month_length`, which cites the rule only to explain its formula and
+// never passes a field outside C-4's range -- inside which, by C-12's own
+// arithmetic, an `int32` cannot overflow anyway. The totality was ARGUED in
+// `src/cal/cal.npk`'s comments and asserted nowhere.
+//
+// HOW A `CivilDate` OUTSIDE C-4 IS BUILT AT ALL. Every field is `sealed`
+// (C-8c), so neither a struct literal nor a field write can make one outside
+// `cal`, and `civil_date` refuses it. What remains is the opt-out C-8c names:
+// `wild` bytes reinterpreted by `=>!`. `forged` writes the year through an
+// `int32` view of eight fresh bytes and the month and day through a `uint8`
+// view -- `CivilDate` is `{ int32 year; uint8 month; uint8 day }`, the year at
+// offset 0 and the two bytes at 4 and 5 -- and reads the struct back through a
+// `wild CivilDate->`. Each case reads its three fields back BEFORE it asks for
+// the day number, so a forge that wrote the wrong bytes exits with its own
+// code rather than passing a test of some other date.
+//
+// WHAT IS ASSERTED. Fourteen dates: each `int32` edge with a month and day
+// from C-4's range, and every corner of years {min, 0, max} x months {0, 255}
+// x days {0, 255}. Each call must RETURN -- a trap inside the algorithm stops
+// the program at an arm code, and no case expects one -- and return the value
+// Hinnant's formula gives over the integers, computed by an independent
+// transcription in Python at planning (`meta/roadmap/done/0.1/0.1.5.md`'s
+// execution record). The extremes are about +-7.84e11, inside C-12's bound on
+// `era * 146097`, 7.9e11, with `|era|` at most 5 368 710.
+//
+// IT HAS BEEN SEEN RED. With `days_from_civil`'s last product computed in
+// `int32` -- `era * 146097` narrowed, the shape C-12's widening exists to
+// prevent -- this file stops at 93, `IntOverflow`, on its first case, and the
+// rest of the suite, whose dates all keep `|era| <= 25`, stays green (the
+// record's mutation row).
+//
+// EXIT CODES. 10 ... 23, one per case, and 30 ... 32 for a forge whose field
+// did not read back; clear of every arm code (`TESTING.md` V-1j). `cal`'s
+// identity arm, 80, is owed by the import (`SAFETY.md` S-4c) and never entered:
+// nothing here calls a function that can fail.
+mod:civil_total_edges;
+
+use "../../src/cal/cal.npk".CivilDate;
+use "../../src/cal/cal.npk".date_to_days;
+
+// The case's code when the day number is wrong; 30, 31 or 32 when the forged
+// year, month or day did not read back; 0 when all four hold.
+func:forged = int32(wild int8->:mem, int32:y, uint8:m, uint8:d, int64:want,
+                    int32:code) never fails {
+    int32[]:yw = #wild_slice<int32>(mem =>! wild int32->, 2i64);
+    yw[0i64] = y;
+    uint8[]:bw = #wild_slice<uint8>(mem =>! wild uint8->, 8i64);
+    bw[4i64] = m;
+    bw[5i64] = d;
+    wild CivilDate->:p = mem =>! wild CivilDate->;
+    CivilDate:cd = <-p;
+    if (cd.year != y)  { pass 30i32; }
+    if (cd.month != m) { pass 31i32; }
+    if (cd.day != d)   { pass 32i32; }
+    if (raw date_to_days(cd) != want) { pass code; }
+    pass 0i32;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    wild int8->:mem = alloc(8i64);
+    int32:ymin = (0i32 - 2147483647i32) - 1i32;
+    int32:ymax = 2147483647i32;
+    int32:r = 0i32;
+
+    // ---- the two year edges, with a month and day of C-4's range ----------
+    r = raw forged(mem, ymin, 1u8, 1u8, 0i64 - 784353015833i64, 10i32);
+    if (r != 0i32) { dalloc(mem); exit r; }
+    r = raw forged(mem, ymax, 12u8, 31u8, 784351576776i64, 11i32);
+    if (r != 0i32) { dalloc(mem); exit r; }
+
+    // ---- every corner: years {min, 0, max} x months {0, 255} x days {0, 255}
+    r = raw forged(mem, ymin, 0u8, 0u8, 0i64 - 784353015865i64, 12i32);
+    if (r != 0i32) { dalloc(mem); exit r; }
+    r = raw forged(mem, ymin, 0u8, 255u8, 0i64 - 784353015610i64, 13i32);
+    if (r != 0i32) { dalloc(mem); exit r; }
+    r = raw forged(mem, ymin, 255u8, 0u8, 0i64 - 784353008063i64, 14i32);
+    if (r != 0i32) { dalloc(mem); exit r; }
+    r = raw forged(mem, ymin, 255u8, 255u8, 0i64 - 784353007808i64, 15i32);
+    if (r != 0i32) { dalloc(mem); exit r; }
+    r = raw forged(mem, 0i32, 0u8, 0u8, 0i64 - 719560i64, 16i32);
+    if (r != 0i32) { dalloc(mem); exit r; }
+    r = raw forged(mem, 0i32, 0u8, 255u8, 0i64 - 719305i64, 17i32);
+    if (r != 0i32) { dalloc(mem); exit r; }
+    r = raw forged(mem, 0i32, 255u8, 0u8, 0i64 - 711758i64, 18i32);
+    if (r != 0i32) { dalloc(mem); exit r; }
+    r = raw forged(mem, 0i32, 255u8, 255u8, 0i64 - 711503i64, 19i32);
+    if (r != 0i32) { dalloc(mem); exit r; }
+    r = raw forged(mem, ymax, 0u8, 0u8, 784351576380i64, 20i32);
+    if (r != 0i32) { dalloc(mem); exit r; }
+    r = raw forged(mem, ymax, 0u8, 255u8, 784351576635i64, 21i32);
+    if (r != 0i32) { dalloc(mem); exit r; }
+    r = raw forged(mem, ymax, 255u8, 0u8, 784351584181i64, 22i32);
+    if (r != 0i32) { dalloc(mem); exit r; }
+    r = raw forged(mem, ymax, 255u8, 255u8, 784351584436i64, 23i32);
+    if (r != 0i32) { dalloc(mem); exit r; }
+
+    dalloc(mem);
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

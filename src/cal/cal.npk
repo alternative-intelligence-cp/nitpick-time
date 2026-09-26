@@ -25,8 +25,8 @@
 // which makes the arithmetic total on inputs his `unsigned` would wrap.
 //
 // NO LOOP IN THIS MODULE. The first function here that loops adds
-// `DecreasesViolated` to every consumer's bill (the compiler's D-304,
-// `SAFETY.md` S-4b), which is eleven arms today -- a budget cost that would
+// `DecreasesViolated` to every consumer's bill (D-304, `SAFETY.md` S-4b),
+// which is 11 arms today [[sweep: arms_cal=11]] -- a budget cost that would
 // arrive with a `while` rather than with a decision, so it is written here.
 //
 // (Until cycle 0.1.1 this header's second paragraph read "NO ALGORITHM HERE.
@@ -329,8 +329,8 @@ pub func:days_in_month = int64(int64:y, int64:m) {
 // than remembered.
 //
 // NO LOOP. So no measure, and no `DecreasesViolated` in any consumer: `cal`'s
-// bill stays 11 (`SAFETY.md` S-4). The first function here that loops adds
-// that arm to every program importing this module.
+// bill stays 11 [[sweep: arms_cal=11]] (`SAFETY.md` S-4). The first function
+// here that loops adds that arm to every program importing this module.
 
 // HINNANT'S `days_from_civil`, OVER ITS THREE INTEGERS -- the day number of
 // `(y, m, d)`, epoch 1970-01-01 = 0. NOT PUBLIC. This is the body
@@ -581,9 +581,9 @@ pub func:weekday_number_sunday_first = int64(Weekday:w) never fails {
 // negative on six days in seven before 1969-12-29, and the correction is what
 // makes it a weekday at all (C-13).
 //
-// NO LOOP, SO NO MEASURE AND NO `DecreasesViolated`: `cal`'s bill stays 11,
-// measured at planning with every function below in place. `#unreachable()`
-// arms `Unreachable`, which is in the floor already.
+// NO LOOP, SO NO MEASURE AND NO `DecreasesViolated`: `cal`'s bill stays 11
+// [[sweep: arms_cal=11]], measured at planning with every function below in
+// place. `#unreachable()` arms `Unreachable`, which is in the floor already.
 
 // Monday = 0 ... Sunday = 6, the weekday of a DAY NUMBER (C-13): 1970-01-01 is
 // a Thursday, index 3, so the index is `(n + 3) mod 7`, with the modulus made

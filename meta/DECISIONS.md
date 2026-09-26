@@ -2706,6 +2706,11 @@ line at all.
 > restriction, now resting on the four element drops `Vec<T>` does not
 > perform; `vec_reserve`'s row relocates with `ralloc`. The text below is left
 > exactly as written.
+>
+> **SUPERSEDED IN PART by TM-194 as well (2026-09-26).** Its finding that
+> `vec_at<T>` is destructive at an owning `T`: since `vec_at` takes `T: Pod`,
+> that read is refused at the call, `NITPICK-TYPE-017`, and `case5` asserts
+> the refusal. The restriction stands, on the four element drops.
 
 **2026-09-05, cycle 0.0.5. Amends `SAFETY.md` S-18, `src/core/vec.npk`,
 `src/lib.npk` and `0.0.4.md` §2's API table. Does not supersede TM-132: that
@@ -3840,6 +3845,12 @@ pin, and each is a program run in the subcycle's scratch, recorded with its
 command in `0.1.0c.md`'s execution record.
 
 ### TM-156 — `Vec<T>` and `Bytes` carry the access properties: `items` hidden, the lengths sealed under `ListLen`
+> **SUPERSEDED IN PART by TM-193 and TM-195 (2026-09-26).** Its "What it
+> does NOT do" is answered — a whole-struct copy of a `Vec` is refused
+> `NITPICK-TYPE-046` since the marker (TM-193), and a write through
+> `Bytes.body`'s pointer is `NITPICK-TYPE-080` since `body` is hidden
+> (TM-195) — and the alternative it declined, `body` hidden, is taken. The
+> qualifiers it chose stand. The text below is left exactly as written.
 
 **2026-09-25, cycle 0.1.0c (PD-8).** The workbench board's re-pin worklist
 item 13, decided on safety by the compiler seat with the author (*"keep our
@@ -5209,3 +5220,252 @@ does not ask for, and this tree's roots name what it asks and nothing more
 (0.1.0b's rule); dropping the by-name import from `every_oracle_date.npk` — a
 gate member edited for nothing it checks, and 0.5's tables will import their
 row types by name anyway.
+
+---
+
+# Cycle 0.1.3c — `Vec` move-only by construction, ratified 2026-09-26
+
+Six decisions, drafted at planning (`meta/roadmap/0.1/0.1.3c.md` §2, PD-44 …
+PD-49, in that order) and recorded here by the worker in the commit that makes
+the change each describes. Every measurement is at compiler `c970483` and,
+where it says so, at `c3bdae2`, taken at planning and re-derived at execution
+by the plan's `facts.py`, `transcript.py` and `mut.py` — `0.1.3c.md` §1 and
+§7, line for line. PD-46 was put to the orchestrator at planning as the
+planner's judgement under the author's answer to question 9, and PD-49 was
+taken at planning on the orchestrator's instruction, when the compiler's D-327
+was ratified.
+
+### TM-193 — `Vec<T>` is move-only by construction: its last field is a hidden zero-length array of an owning type, so a copy of a `Vec`, one `Vec` assigned over another, and a copy of a struct holding one are each refused `NITPICK-TYPE-046`
+
+**2026-09-26, cycle 0.1.3c (PD-44) — the author's answer to the workbench's
+question 9 (2026-09-25 15:45), which left the shape to the port of
+`nitpick-regex`'s design (its RX-161). Replaces TM-156 in part — its "What
+it does NOT do", for `Vec` — and adds `SAFETY.md` S-18g.** `struct:Vec<T>`
+ends `hidden string[0]:move_only`, and `vec_init` fills it `[]`. The compiler
+answers whether an array owns by its element, whatever the length, and marks a
+struct owning when any field is (its D-183); an owner is move-only.
+**Measured at compiler `c970483`, and the same at `c3bdae2`:** with the marker
+alone, a per-file sweep of the 116 tracked `.npk` moves no file;
+`#size_of<Vec<int64>>()` is 24, as before; no module's arm bill moves — the
+umbrella 13, `cal` 11, the rest 6; a `Vec` never freed still traps
+`WildLeak`, 96, because the drop the compiler now generates for one walks the
+empty array and frees nothing, so `vec_free` is still the block's release;
+`Vec<int64>:w = v;`, `v = u;` and a copy of a struct holding a `Vec` are each
+`NITPICK-TYPE-046`, once, at the copy (`probe16f`, `probe16g`, `probe16h`); and
+`move(v)`, a struct built by moving a `Vec` in and then moved, a `move
+Vec<int64>:v` parameter, and a lent `Vec` read through `vec_at` all run
+(`tests/unit/vec_moves.npk`). **Two controls**: against the library before,
+the three fixtures compile and read the allocator's free poison through their
+second handle, exit 70 on both legs; and with the marker's element `int64` —
+`hidden int64[0]:move_only`, which owns nothing — they compile again, so the
+element's ownership is the mechanism and not the zero length. `probe18` and
+`probe18b` pin that language fact with no library code.
+
+*Alternatives declined* — `nitpick-regex`'s list (its `0.0.4d.md` §1.2
+measured each at `c3bdae2`), re-read for this library: **a `string` marker
+holding `""`** — the same verdicts and 24 bytes more on every `Vec`; it is the
+fallback if a compiler refuses `T[0]`, which `probe18` would show first; **a
+`buffer` marker** — 24 bytes, and a runtime call in every constructor; **a
+`string?`** — 32 bytes, nothing bought; **an `OwnedFd`** — its drop is a
+`close`, a syscall path under every `Vec` in a library whose one impure
+module is `host` (TM-018); **the block itself in a managed `buffer`** — its
+drop would free the block, `vec_free` would be redundant and D-151's gate would
+stop covering a `Vec` (S-18): a redesign; **the prelude's `List<T>`** —
+declined when the container question was answered on 2026-09-19 (keep our
+`Vec`, give it the properties); **a language marker** — none exists at
+`c970483`; **a harness check refusing a `Vec` copy in `src/`** — a house rule
+where the compiler can refuse, blind to every consumer, which the author's
+standing call on memory safety declines; **accept and document** — declined by
+the author on question 9.
+
+### TM-194 — `vec_at` takes `T: Pod` and reads through a loan: `Pod` is `nitpick-regex`'s trait, text for text, which an owning type cannot implement as it is declared, so `vec_at` at an owning `T` is refused `NITPICK-TYPE-017`, and `generic_owning_copy/case5` asserts that refusal
+
+**2026-09-26, cycle 0.1.3c (PD-45). Replaces TM-136 in part — its "`vec_at<T>`
+is destructive" — adds `SAFETY.md` S-18h, and puts `Pod` on the umbrella.**
+`pub trait:Pod = { func:pod_copy = Self(Self:self) never fails; };` and its
+nine impls — `int8` to `int64`, `uint8` to `uint64` and `bool`, each `pass
+self` of a LENT `self` — are `nitpick-regex`'s (its RX-168), the parameter
+modes exact, declared in `src/core/vec.npk`. `vec_at` becomes `vec_at<T: Pod>
+= T(Vec<T>:v, int64:i)`: the same slice over `count` (TM-129), and `pass raw
+s[i].pod_copy();`. **Measured at compiler `c970483`, and the same at
+`c3bdae2`:** the umbrella and every `src/` file compile, and no arm bill moves
+— `pod_copy` is `never fails` and adds no identity; `impl:string:Pod`, an impl
+for a struct holding a `string`, and `impl:Vec<int64>:Pod`, each written as
+declared, are each `NITPICK-TYPE-047` (`probe19` asserts the first); a
+consumer's struct of integers and a four-variant payload enum each implement
+it in one line through the umbrella, and read back twice
+(`tests/unit/vec_at_pod.npk`); and the read past `count` and the negative read
+still trap `OutOfBounds`, 94. **`case5`** — the library's `vec_at` at `T =
+string`, which exited 11 because the read REMOVED the element — is
+`NITPICK-TYPE-017` at both of its calls, and asserts it: its marker moves, its
+calls read the `Vec` as a loan, its record stays in its header, and
+`TRANSCRIPT.txt` gains the three rows that say why — the text and the library
+before, 11; this text against a loan `vec_at` WITHOUT the bound, 11; the
+library, `NITPICK-TYPE-017`.
+
+**Why a loan, where every other function here takes `Vec<T>->`:** the marker
+makes a `Vec` an owner (TM-193), and at `c970483` the address of a lent
+owner is `NITPICK-TYPE-085` (the compiler's DEF-102). Measured: a function
+handed a `Vec` by loan cannot call a pointer `vec_at` at all, nor can one handed
+a struct that holds one, and `@` of another module's `sealed` `Vec` field is
+`NITPICK-TYPE-079`. As a loan, `vec_at` reads all three, a local as `vec_at(v,
+i)` and a pointer's pointee as `vec_at(<-p, i)`; and it is read-only by the
+compiler's rule rather than by its own restraint. Every call in the tree moves
+from `@v` to `v`: thirteen, in `vec_boundaries`, `vec_at_past_end` and `case5`.
+
+**The one hole, stated.** An impl declaring `move string:self` where the trait
+lends it is accepted at `c970483` — the compiler's DEF-116, raised by
+`nitpick-regex` and fixed at no pin of ours — and through `vec_at` it hands
+back a second owner of the element: read twice, one body freed twice, 95 on
+both legs, measured. No impl here does it. This library adds no second pin of
+the shape: `nitpick-regex`'s `probe18_impl_adds_move.npk` pins it, and the
+compiler seat measured that pin as the whole of the ecosystem's exposure to
+the fix.
+
+*Alternatives declined:* **`vec_at` unchanged** — it compiles at `c970483`,
+its slice being local where DEF-104's gate reads a lent or pointed-to
+container, and at an owning `T` it goes on removing the element: the language
+as specified, and the library saying so to no consumer; **`T: Pod` with
+`Vec<T>->` kept** — the reads above, refused; **a loan WITHOUT the bound** —
+measured, `case5` then exits 11: a move out of the caller's block through the
+loan, the refusal routed around; **`.clone()` under the prelude's `Clone`** —
+the prelude declares `clone` MAY FAIL, so in a `never fails` body it is
+`Result<T>` (`NITPICK-TYPE-007`, and `NITPICK-TYPE-042` under `raw`, both
+measured by `nitpick-regex`), an error channel on every read; **`struct:Vec<T:
+Pod>`**, the four drops stated at the type for every verb — it refuses the
+churn pair (TM-196) and every owning measurement the restriction rests on,
+and it waits on DEF-116, since an impl adding `move` would satisfy it;
+`nitpick-regex` holds it open with a recommendation, and this library follows
+that answer; **renaming `vec_at` to `vec_get`** — churn at every call site and
+on the umbrella for a name, where the name is this library's since cycle 0.0.4
+(TM-013); **`Pod` imported from `nitpick-regex`** — this library has no
+dependencies (TM-027); **the name `Copy`** — a prelude may declare it, and
+D-239 would then refuse ours; **a second pin of DEF-116's shape here** —
+above.
+
+### TM-195 — `Bytes.body` is `hidden`, and the capacity is read through `bytes_capacity`
+
+**2026-09-26, cycle 0.1.3c (PD-46) — the author's answer to question 9 let this
+ride with `Vec`'s move-only property where the planner judged it cheaper, and
+it is. Replaces TM-156 in part — `body` among the sealed fields, and its
+declined "`body` hidden now" — and amends `SAFETY.md` S-17b and `BUILD.md`
+B-12.** A sealed field admitted a write THROUGH its pointer (D-313): a
+consumer's `b.body.ptr[0i64] = 65u8;` compiled and ran, `bytes_view` then read
+65 where the sink had written 97, and a write one byte past the allocation ran
+at exit 0. `hidden` refuses the member access itself (D-314): the same write is
+`NITPICK-TYPE-080`, once (`probe16i`); against the library before, the fixture
+compiles and reads the consumer's byte, exit 70. `pub func:bytes_capacity =
+int64(Bytes->:b)` reads `b.body.cap`, and the umbrella re-exports it. **The
+cost, measured:** sixteen code lines in three test files read `b.body.cap` —
+`bytes_growth` 11, `bytes_view_lifetime` 4, `probe16e` 1 — and each reads
+`bytes_capacity(@b)` now; nothing in `src/` outside `bytes.npk` read `body`;
+the two heap-bounded `Bytes` tests measure what they did, 2 048 636 and 160;
+and no arm bill moves. It takes the sink by pointer, as `bytes_len` does.
+
+*Alternatives declined:* **`body` sealed, as TM-156 left it** — a consumer
+corrupts a sink's bytes, or writes one past its allocation, with no
+diagnostic: the argument that made `Vec.items` hidden; **its own subcycle after
+the close** — the same sixteen lines and one accessor, later, and after cycle
+0.4's formatters were written against the sealed field; `nitpick-regex` took
+the same change in the subcycle of its marker (its RX-163); **a loan,
+`bytes_capacity(Bytes:b)`** — every other `Bytes` reader takes `Bytes->`, and
+whether they should read loans is cycle 0.4's to shape with a caller in hand
+(TM-013).
+
+### TM-196 — TM-150's churn pair is committed: `tests/unit/vec_churn_pop.npk` and `vec_churn_clear.npk`, two million push-then-pop cycles at `T = string` against the same with `vec_clear`, held to the runtime's count by TM-185's rule and under TM-186's cap
+
+**2026-09-26, cycle 0.1.3c (PD-47), carried here by `0.1.4b.md` §15.** TM-150
+measured the pair at cycle 0.1.0b in a scratch directory — `peak_live` 120 for
+the pop and 48 000 096 for the clear — and `SAFETY.md` S-18d,
+`src/core/vec.npk` and the workbench's playbook quoted it with no program
+behind it. **Derived from the source first**: a block of four 24-byte `string`
+headers, 96 bytes, never grown; one 24-byte body a cycle; so the pop half peaks
+at 96 + 24 = 120, the clear half at 96 + 2 000 000 × 24 = 48 000 096, and each
+makes 2 000 001 allocations. **Measured at compiler `c970483` and at
+`c3bdae2`, on both legs**: exactly those numbers, and `allocated=48000096` for
+both halves. **The bounds, by TM-185's rule**: the leaking half `peak_live >=
+48000000`, the leak's arithmetic; the remedy `count >= 2000000`, its work, and
+`peak_live <= 75000` — the geometric mean of 120 and 48 000 096, 75 894,
+rounded down to two significant figures. **The belt, by TM-186's**: both under
+`cap: 65536 KiB`, the remedy exiting 0 and the leak 92, measured — `TESTING.md`
+V-17 puts a cap on a pair with opposite outcomes under it, and this is one.
+**Every bound was seen red on its mutant** (`0.1.3c.md` §7): the remedy with the
+clear in the pop's place, by its ceiling and its cap; the leak with the pop in
+the clear's place, by its floor and its cap; the remedy's loop emptied, by its
+work floor, where a ceiling alone is fooled; and `vec_pop` without its `count`
+decrement, by the remedy's exit and its ceiling.
+
+*Alternatives declined:* **one program running both** — `peak_live` is a
+whole-run high-water mark, so the clear's 48 MB would hide the pop's 120;
+**in `tests/probe/`** — the pair asserts this library's own `vec_pop` and
+`vec_clear`, which is `tests/unit/`'s business; the twin pairs in
+`tests/probe/` carry their own look-alike `Vec`s; **no cap** — V-17's rule
+admits one here, and then every twin pair carries the same two instruments.
+
+### TM-197 — A′ replaces `VERIFICATION.md` P-1: an obligation is a comment unless a numbered decision accepts the arm its live clause costs every consumer; `prove` stays a comment until the verified build; Q-6 is struck
+
+**2026-09-26, cycle 0.1.3c (PD-48) — the author's answer to Q-6, 2026-09-25
+15:56: *"the recommendation on q-6 seems fine to me."* Adds `VERIFICATION.md`
+rule P-1b and marks P-1 superseded; restates `meta/roadmap/0.8/README.md`'s
+P-1 item.** P-1's argument — every construct it names refuses, so a premature
+clause is a build failure — has been false since compiler `c3bdae2` (Q-6's
+table): `requires`, `ensures`, `invariant` and `limit` are live and each adds
+one identity to every consuming program, and a plain build lowers `prove` to
+nothing. **Rule P-1b**: a live contract only where a numbered decision accepts
+its arm — today TM-156's `ListLen` alone; every other obligation a comment,
+evidence of nothing, stood in for by a property test; `prove` a comment until
+cycle 0.8's verified build; `decreases` and `unbounded` always live; a check
+that guards something may be code on an arm consumers already owe (S-15c's
+`#unreachable()`); and never a `requires` on caller input (S-12), nor on an
+accessor whose body already stops. **Measured for that last clause at compiler
+`c970483`, and the same at `c3bdae2`**: a live `requires i >= 0i64 && i <
+v.count` on `vec_at` adds `RequiresViolated` to a consumer's bill — nine
+identities to ten — and the read past the end stops at 116 where the slice
+guard stops it at 94. Nothing in `src/` changes but the sentences that cited P-1
+or Q-6 as open — two in `vec.npk`, three in `cal.npk`. `nitpick-regex`
+records the same answer as its P-1b (its RX-164).
+
+*Alternatives declined* — Q-6's own list: **A, live now** — an arm per
+contract kind in every consumer, and a check per call until the verified build
+elides it; measured at cycles 0.1.1 to 0.1.3, it adds no evidence the sweeps do
+not already give; **B, every obligation a comment until 0.8, `assert_static`
+included** — nothing checks a comment's syntax or its truth; **C, everything
+live, `prove` included** — a plain build lowers `prove` to nothing, the silent
+no-op P-1 was written against.
+
+### TM-198 — `Pod` is ported now, at `c970483`, and the prelude's `Copy` replaces it mechanically at the re-pin that carries the compiler's D-327; nothing in this library is named `Copy`
+
+**2026-09-26, cycle 0.1.3c (PD-49) — taken at planning on the orchestrator's
+instruction of 2026-09-26, when the author ratified the copy marker the
+compiler seat had put to him, as the compiler's D-327: a PRELUDE marker trait
+`Copy`, with impls for every copyable scalar in the generated scalar region, a
+derivable form for a struct of copyables, and `List<T: Copy>`'s `list_get`
+returning `T` `never fails`; and no `never fails` clone for an owning type. It lands at the compiler's 1.6.1c, after an advance
+notice, and makes `Copy` a prelude-owned name (D-239); it is in no pin of
+ours.** **The choice**: `vec_at<T: Pod>` now (TM-194), shaped so that the
+adoption of the pin carrying D-327 replaces it by edit and not by design —
+`Pod` is one block of `src/core/vec.npk` (the trait and its nine impls), one
+bound, one `pod_copy()` call, one umbrella line, and three impls in `tests/`
+(`vec_at_pod`'s two and `probe19`'s), and it is used nowhere else. **At that
+re-pin**, in this library and in `nitpick-regex`, whose `vec_get` has the same
+shape: the block is deleted, the bound reads `T: Copy`, the call becomes the
+copy D-327 spells, the umbrella's line goes, and the tests' impls take `Copy`'s
+form — each measured then, since D-327's spellings are in no pin; and
+`SAFETY.md` S-18h is restated for `Copy` by a decision that replaces this one
+in part. **What it costs**: thirteen lines of trait and impls that a later
+adoption deletes, and one public name taken away — which TM-013 allows while
+the library is `0.x`, as it is.
+
+*Alternatives declined:* **defer the bound until `Copy` lands** — `case5`'s
+destructive read stays the library's public behaviour for three landings and a
+re-pin, and `vec_at` has no good interim shape: after the marker (TM-193) a
+pointer reader cannot read a lent `Vec` (`meta/roadmap/0.1/0.1.3c.md` §1.5),
+and a loan without the bound moves an owning element out of the CALLER's block
+(`case5` against the loan without the bound, 11) — so deferring the bound means
+deferring the marker, and question 9's answer with it; **naming the trait `Copy` now**, so
+that the replacement is a deletion — at that re-pin it collides with the
+prelude-owned name and the tree is red for a reason that is not the re-pin's;
+**holding 0.1.3c until D-327 lands** — the orchestrator's order is 0.1.3c and
+then 0.1.5, and the cycle's close would wait on three landings and a re-pin;
+**a `never fails` clone** — D-327 declines one for owning types, and the
+prelude's `Clone` is fallible (TM-194).

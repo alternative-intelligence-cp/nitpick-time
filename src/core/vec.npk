@@ -71,6 +71,18 @@
 // committed -- `probe06_generic_vec.npk`'s `free_names` and `probe12b`'s
 // `vec_set_string`.
 //
+// AT CYCLE 0.1.3c (TM-193, TM-194, TM-196) THE TYPE SAYS TWO THINGS THIS HEADER
+// USED TO SAY FOR IT. `Vec<T>` IS MOVE-ONLY -- a copy of one is
+// `NITPICK-TYPE-046`, and the section above the struct says how -- and THE ONE
+// VERB THAT HANDS AN ELEMENT BACK BY VALUE ASKS FOR A `T` THAT OWNS NOTHING:
+// `vec_at<T: Pod>` at an owning `T` is `NITPICK-TYPE-017` at the call, where
+// it used to move the element out (its own comment says how). The four drops
+// above are unchanged, and nothing in the language refuses them: a bound on
+// the TYPE, `struct:Vec<T: Pod>`, would, and it is not taken (TM-194 says
+// why). And the pair TM-150 measured in a scratch directory is committed:
+// `../../tests/unit/vec_churn_pop.npk` and `vec_churn_clear.npk` hold 120 and
+// 48 000 096 to the runtime's own count on every run.
+//
 // WHY THAT IS NOT A WORKAROUND (W-11). No function here is bent around the
 // bug; each is the one that would have been written anyway. `0.0.4.md` §2
 // required each element-discarding entry to have *"an element-drop path for an
@@ -98,7 +110,7 @@
 // indexes THAT, and the check becomes the compiler's own:
 //
 //     T[]:s = #wild_slice<T>(v.items, v.count);
-//     pass s[i];
+//     pass raw s[i].pod_copy();       // `vec_at`; until cycle 0.1.3c, `pass s[i];`
 //
 // ONE UNSIGNED COMPARE COVERS BOTH ENDS. `emit_bounds_guard` emits `icmp ult`
 // -- unsigned -- and `index_as_i64` sign-extends first, so a negative index
@@ -151,22 +163,49 @@
 // (`VERIFICATION_REFERENCE.md` §2.1 at the pin: "every read is a fact") --
 // which is what makes the bounds rows of the `#wild_slice` producer calls
 // below, and `vec_reserve`'s `v.cap * 2i64` overflow row, dischargeable
-// rather than opaque. That build is cycle 0.8's (Q-6); nothing here claims it
-// yet.
+// rather than opaque. That build is cycle 0.8's (`VERIFICATION.md` P-1b);
+// nothing here claims it yet.
 //
-// WHAT HIDING AND SEALING DO NOT STOP: A WHOLE-STRUCT COPY. A `Vec<T>` is a
-// plain struct over a `wild` pointer, so `Vec<int64>:w = v;` compiles and
-// makes a SECOND HANDLE on the same block, and `v = u;` overwrites all three
-// fields at once from outside this module -- neither names a field, so
-// neither is a write the seal sees. Measured at `c3bdae2`: after the copy,
-// `vec_free(@v)` and then `vec_at(@w, 0i64)` reads the allocator's `0xAA`
-// poison (exit 170) -- a use-after-free with no hidden or sealed field ever
-// named. It is the manual `wild` regime this type chose -- `bytes.npk`'s
-// header says why the two containers differ -- and the workbench's question 9
-// carries it to the author beside `Bytes`' pointee.
+// WHAT HIDING AND SEALING DID NOT STOP, UNTIL CYCLE 0.1.3c: A WHOLE-STRUCT
+// COPY. A `Vec<T>` was a plain struct over a `wild` pointer, so
+// `Vec<int64>:w = v;` compiled and made a SECOND HANDLE on the same block, and
+// `v = u;` overwrote all three fields at once from outside this module --
+// neither names a field, so neither is a write the seal sees. Measured at
+// `c3bdae2`: after the copy, `vec_free(@v)` and then `vec_at(@w, 0i64)` read
+// the allocator's `0xAA` poison (exit 170) -- a use-after-free with no hidden
+// or sealed field ever named. The workbench's question 9 carried it to the
+// author beside `Bytes`' pointee, and the next section is the answer.
+//
+// ===========================================================================
+// MOVE-ONLY BY CONSTRUCTION (cycle 0.1.3c, TM-193; `SAFETY.md` S-18g)
+// ===========================================================================
+//
+// THE AUTHOR'S ANSWER TO QUESTION 9 (2026-09-25), AND `nitpick-regex`'S
+// DESIGN, PORTED (its RX-161). The struct's last field is
+// `hidden string[0]:move_only`, and each shape above is `NITPICK-TYPE-046`
+// where it is written: a copy of a `Vec`, one `Vec` assigned over another, and
+// a copy of a struct holding one (`../../tests/probe/probe16f_vec_copy_refused.npk`,
+// `probe16g_vec_assign_refused.npk` and `probe16h_vec_holder_copy_refused.npk`;
+// against the tree before, each compiles and reads the free poison). A transfer
+// is `move(v)`, after which `v` is refused (`NITPICK-MOVE-001`), and a
+// `move Vec<T>:v` parameter takes one; `../../tests/unit/vec_moves.npk` runs
+// every shape the property still allows. It costs nothing measured: a `Vec`
+// is 24 bytes, as before; no module's arm bill moves; and the drop the
+// compiler now generates for a `Vec` walks the empty array and frees NOTHING,
+// so the block is still `wild`, `vec_free` is still its release, and a `Vec`
+// never freed still traps `WildLeak` at `exit 0` (96, measured).
+//
+// A BY-VALUE `Vec` PARAMETER IS A LOAN, AND A LOAN OF AN OWNER IS READ-ONLY.
+// An ordinary parameter is one the callee may read and may not keep (the
+// compiler's D-065 and D-183), so a `Vec` is passed to one without `move`, and
+// every write through it -- `@v`, an assignment into it -- is
+// `NITPICK-TYPE-085` (the compiler's DEF-102). That is why `vec_at`, the one
+// function here that only reads, takes its `Vec` as a loan, and every function
+// that changes one takes `Vec<T>->`.
 mod:vec;
 
-// The three fields, in this order, matching `BUILD.md` B-12 exactly.
+// The fields, in this order, matching `BUILD.md` B-12 exactly -- three until
+// cycle 0.1.3c added `move_only` (TM-193).
 // `Ord` derives in declaration order (the compiler's **D-123**, whose table
 // reads "`Ord`, `PartialOrd` | lexicographic comparison in declaration order"),
 // so field order is semantic even where nothing derives today.
@@ -191,12 +230,22 @@ mod:vec;
 // NO ADDRESS (`NITPICK-TYPE-063`): nothing here takes `@v.count` -- every
 // function reaches the struct through a pointer and assigns the field, which is
 // a write point, not an address.
-pub struct:Vec<T> = { hidden wild T->:items; sealed limit<ListLen> int64:count; sealed limit<ListLen> int64:cap; };
+//
+// `move_only`, THE FOURTH FIELD (cycle 0.1.3c, TM-193): a fixed array of NO
+// strings. It holds nothing and occupies nothing -- `#size_of<Vec<int64>>()`
+// is 24, as it was -- and because its ELEMENT owns, the compiler's layout walk
+// marks every `Vec<T>` as owning (its D-183), and an owning type is move-only.
+// That is the whole mechanism; the header's last section says what it refuses.
+// The same field over `int64[0]`, whose element owns nothing, changes nothing
+// at all (measured): the element's ownership is what does it. `hidden`, so no
+// module but this one can name it, and `vec_init` fills it with `[]`.
+pub struct:Vec<T> = { hidden wild T->:items; sealed limit<ListLen> int64:count; sealed limit<ListLen> int64:cap; hidden string[0]:move_only; };
 
 // `ensures answer.count == 0 && answer.cap >= 1`
 //
-// (`VERIFICATION.md` P-1: contracts are written as comments in the syntax they
-// will take at 1.5. `answer` and not `result` -- `result` is a reserved
+// (`VERIFICATION.md` P-1b: an obligation is a comment in the syntax it would
+// take unless a numbered decision accepts the arm its live clause costs every
+// consumer. `answer` and not `result` -- `result` is a reserved
 // `VerificationKeyword`, TM-130/B-18.)
 //
 // A REQUEST OF ZERO OR LESS BECOMES ONE, rather than an error or a null block.
@@ -210,7 +259,7 @@ pub func:vec_init<T> = Vec<T>(int64:cap) never fails {
     // and D-210 traps rather than wrapping -- so a caller asking for an absurd
     // capacity gets a trap and not a short block silently sized modulo 2^64.
     wild int8->:mem = alloc(n * #size_of<T>());
-    pass Vec{ items: mem =>! wild T->, count: 0i64, cap: n };
+    pass Vec{ items: mem =>! wild T->, count: 0i64, cap: n, move_only: [] };
 };
 
 // `ensures v.cap >= v.count + need`
@@ -265,27 +314,103 @@ pub func:vec_push<T> = NIL(Vec<T>->:v, move T:x) never fails {
     pass NIL;
 };
 
+// ---- `Pod`: what `vec_at` may hand back by value (TM-194; `SAFETY.md` S-18h) --
+//
+// ONE METHOD, AND THE LANGUAGE DECIDES WHO MAY IMPLEMENT IT. `pod_copy` takes
+// its `self` LENT and returns a `Self`, never failing. For a type that owns
+// nothing, `pass self` is its copy. For an owning type the same body is
+// `NITPICK-TYPE-047` -- a lent owner cannot be passed on (the compiler's
+// D-065) -- so an impl the compiler admits for one would have to build an
+// independent value, and a `never fails` body cannot allocate one. Measured at
+// compiler `c970483`: `impl:string:Pod`, an impl for a struct holding a
+// `string`, and `impl:Vec<int64>:Pod`, each written `pass self`, are each
+// `TYPE-047` (`../../tests/probe/probe19_pod_owner_refused.npk` asserts the
+// first). So `T: Pod` on `vec_at` states TM-132's restriction TO THE COMPILER
+// for the one verb that hands an element back, at every consumer's call.
+//
+// THE TRAIT AND ITS NINE IMPLS ARE `nitpick-regex`'s, TEXT FOR TEXT, THE
+// PARAMETER MODES INCLUDED (its RX-168); this library imports nothing
+// (TM-027), so the trait is declared here rather than shared. The integers to
+// 64 bits and `bool`: every scalar a specification here stores in a `Vec`. A
+// type of a consumer's that owns nothing implements it in one line where the
+// type is declared -- a struct of integers, or a payload enum such as
+// `FORMAT_MODEL.md`'s parts -- and the umbrella re-exports the name so a
+// consumer can (`../../tests/unit/vec_at_pod.npk`). A wider scalar is one line
+// here.
+//
+// THE HOLE, SAID WHERE A READER MEETS IT: at compiler `c970483` an impl may
+// declare its `self` `move` where the trait lends it, and the compiler accepts
+// it -- the compiler's DEF-116, raised by `nitpick-regex`'s planning, whose
+// fix (a parameter's `move` made part of the signature, refused
+// `NITPICK-TYPE-014`) is at no pin of ours. Through `vec_at` such an impl hands
+// back a second owner of the element: `impl:string:Pod` written with
+// `move string:self`, read twice, frees one body twice, exit 95 on both legs
+// (measured, `meta/roadmap/0.1/0.1.3c.md` §1.6). `TYPE-047`'s own message
+// suggests exactly that `move` -- DO NOT TAKE IT HERE. No impl in this library
+// does, and `nitpick-regex`'s `probe18_impl_adds_move.npk` pins the shape for
+// the ecosystem.
+//
+// THE PRELUDE'S `Copy` WILL REPLACE THIS TRAIT (TM-198). On 2026-09-26 the
+// author ratified the copy marker the compiler seat put to him, as its D-327:
+// a prelude marker trait `Copy`, with impls for every copyable scalar and a
+// derivable form for a struct of copyables, landing at the compiler's 1.6.1c,
+// after this pin; `Copy` becomes a prelude-owned name, so nothing here is
+// called that. At the re-pin that carries it the replacement is MECHANICAL AND
+// CONFINED: this block -- the trait and its nine impls -- deleted;
+// `vec_at<T: Pod>` bounded `T: Copy`, and its one `pod_copy()` call the copy
+// D-327 spells; the umbrella's `Pod` line gone; and the three impls in
+// `tests/` -- `vec_at_pod`'s two and `probe19`'s -- in `Copy`'s form. `Pod` is
+// used nowhere else, on purpose.
+pub trait:Pod = {
+    func:pod_copy = Self(Self:self) never fails;
+};
+impl:int8:Pod = { func:pod_copy = int8(int8:self) never fails { pass self; }; };
+impl:int16:Pod = { func:pod_copy = int16(int16:self) never fails { pass self; }; };
+impl:int32:Pod = { func:pod_copy = int32(int32:self) never fails { pass self; }; };
+impl:int64:Pod = { func:pod_copy = int64(int64:self) never fails { pass self; }; };
+impl:uint8:Pod = { func:pod_copy = uint8(uint8:self) never fails { pass self; }; };
+impl:uint16:Pod = { func:pod_copy = uint16(uint16:self) never fails { pass self; }; };
+impl:uint32:Pod = { func:pod_copy = uint32(uint32:self) never fails { pass self; }; };
+impl:uint64:Pod = { func:pod_copy = uint64(uint64:self) never fails { pass self; }; };
+impl:bool:Pod = { func:pod_copy = bool(bool:self) never fails { pass self; }; };
+
 // `requires i >= 0 && i < v.count`
 //
-// RETURNS BY VALUE, SO THIS IS FOR A SCALAR `T` -- and the reason is not the
-// one written here until 0.0.5, which was wrong in both halves. It said "at an
-// owning `T` a copy is refused by TYPE-046". Nothing refuses it, and what
-// happens instead is not a copy: `pass` of a PLACE at an owning type MOVES
-// IMPLICITLY, so at `T = string` this function REMOVES the element from the
-// `Vec` -- the emitted body stores `zeroinitializer` over the slot and calls
-// `npk.vacant.<dty>` on it -- while leaving `count` untouched, so the
-// container still claims to hold it. Measured: a second `vec_at` of the same
-// index returns a length-0 string
-// (`../../tests/probe/defect/generic_owning_copy/case5_vec_at_destructive.npk`,
-// exit 11). That is the LANGUAGE behaving as specified and is not a defect;
-// it is a reason this row is for a non-owning `T` (TM-136).
+// A READ, AND SINCE CYCLE 0.1.3c (TM-194) THE LANGUAGE HOLDS IT TO BEING ONE.
+// It hands back a COPY of the element, through `Pod`'s `pod_copy`, which only a
+// type that owns nothing can implement as declared (above), so at
+// `T = string` the call is `NITPICK-TYPE-017`: *"`string` does not implement
+// `Pod`, which `vec_at`'s parameter `T` requires"*. And it takes its `Vec` as
+// a LOAN, the language's read-only parameter, where it took `Vec<T>->`: a
+// `Vec` owns since the same cycle (the header's last section), and `@` of a
+// lent owner is `NITPICK-TYPE-085`, so a pointer reader could not be handed a
+// `Vec` its caller holds only on loan -- a by-value parameter, a field of a
+// lent struct, another module's `sealed` field (`@` of one is
+// `NITPICK-TYPE-079`). As a loan it reads all of them, and a local, as
+// `vec_at(v, i)`, and through a pointer as `vec_at(<-p, i)`; and it can write
+// none of them, which the compiler checks (`TYPE-085`). Measured,
+// `meta/roadmap/0.1/0.1.3c.md` §1.5.
 //
-// A family that wants an owning element reads through `v.items[i]` at the site
-// that knows the element's shape. That is the compiler's own note on `List<T>`
-// and the reason there is no generic `list_at` there either.
-pub func:vec_at<T> = T(Vec<T>->:v, int64:i) never fails {
+// THE GUARD IS UNCHANGED (TM-129, `SAFETY.md` S-17c): the index still goes
+// through a slice laid over `count`, so an index out of range traps
+// `OutOfBounds` at every `T`.
+//
+// UNTIL CYCLE 0.1.3c THIS WAS `vec_at<T> = T(Vec<T>->:v, int64:i)` ENDING
+// `pass s[i];`, AND AT AN OWNING `T` IT REMOVED THE ELEMENT. `pass` of a PLACE
+// moves implicitly, so at `T = string` the emitted body stored
+// `zeroinitializer` over the slot and called `npk.vacant.<dty>` on it while
+// leaving `count` untouched, and a second `vec_at` of the same index returned a
+// length-0 string -- exit 11,
+// `../../tests/probe/defect/generic_owning_copy/case5_vec_at_destructive.npk`,
+// which asserts the refusal now. The language behaving as specified, and the
+// reason the row was for a non-owning `T` (TM-136); the bound makes the reason
+// the compiler's. (And until cycle 0.0.5 this comment said "at an owning `T` a
+// copy is refused by TYPE-046", which was false in both halves.) A cycle that
+// needs an owning element lifts TM-132's restriction by a decision, and the
+// compiler's own `List<T>` is the shape it would take: no by-value get at all.
+pub func:vec_at<T: Pod> = T(Vec<T>:v, int64:i) never fails {
     T[]:s = #wild_slice<T>(v.items, v.count);
-    pass s[i];
+    pass raw s[i].pod_copy();
 };
 
 // `requires i >= 0 && i < v.count`
@@ -322,6 +447,13 @@ pub func:vec_set<T> = NIL(Vec<T>->:v, int64:i, move T:x) never fails {
 // was always correct; at a non-owning `T` it costs nothing, which is why
 // writing it was never a workaround for the check that was missing then and
 // is present now.
+//
+// AND IT IS OWNERSHIP-CORRECT AT AN OWNING `T`, which is why `vec_pop` is not
+// among the header's four: the popped element leaves with its ownership and
+// drops at the caller's binding. `../../tests/unit/vec_churn_pop.npk` holds two
+// million push-then-pop cycles of `string`s to `peak_live <= 75000` -- it
+// measures 120 -- where `vec_churn_clear.npk`, `vec_clear` in the pop's place,
+// holds all 48 000 096 bytes (TM-196).
 pub func:vec_pop<T> = T(Vec<T>->:v) never fails {
     T[]:s = #wild_slice<T>(v.items, v.count);
     T:answer = move(s[v.count - 1i64]);
@@ -374,6 +506,10 @@ pub func:vec_clear<T> = NIL(Vec<T>->:v) never fails {
 // ABOUT THE BLOCK ALONE (TM-106, S-18b): D-151 cannot see a managed body, so an
 // unemptied `Vec<string>` would pass `exit 0` and still leak. It is the reason
 // this type is restricted to a non-owning `T` rather than trusted at any `T`.
+// (Since cycle 0.1.3c a `Vec` owns, so the compiler generates a drop for one:
+// it walks `move_only`'s empty array and frees nothing, and this is still the
+// only release of the block -- a `Vec` never freed still exits 96, measured,
+// TM-193.)
 pub func:vec_free<T> = NIL(Vec<T>->:v) never fails {
     dalloc(v.items =>! wild int8->);
     v.count = 0i64;

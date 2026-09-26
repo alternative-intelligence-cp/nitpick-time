@@ -15,7 +15,9 @@
 // exactly once. THE REFUSAL IS THE ASSERTION (B-7). What the seal does NOT
 // stop — a write THROUGH `b.body.ptr`, which the compiler's D-313 lets pass —
 // is written down in `src/core/bytes.npk`'s header and is the workbench's
-// question 9; this file pins only what the seal does.
+// question 9; this file pins only what the seal does. *(Since cycle 0.1.3c
+// `body` is `hidden` (TM-195), so that write is refused too, and
+// `probe16i_bytes_body_write_refused.npk` asserts it.)*
 mod:probe16c_bytes_len_write_refused;
 
 use "../../src/core/bytes.npk".*;

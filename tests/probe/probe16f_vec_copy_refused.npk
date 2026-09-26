@@ -1,0 +1,63 @@
+// expect-error: NITPICK-TYPE-046
+//
+// PROBE 16f — A CONSUMER CANNOT COPY A `Vec`. The whole-struct copy the seal
+// did not stop, asserted by a refusal.
+//
+// ASKS: may code outside `src/core/vec.npk` bind a second `Vec` to the first,
+// `Vec<int64>:w = v;`?
+//
+// MATTERS BECAUSE a copy of a `Vec` is a second handle on one `wild` block:
+// the two headers free it, grow it and read it independently, so after
+// `vec_free(@v)` everything done through `w` is done to freed memory. Cycle
+// 0.1.0c measured it and hiding and sealing could not stop it -- a copy names
+// no field (TM-156) -- and the workbench's question 9 took it to the author,
+// who chose MOVE-ONLY BY CONSTRUCTION on 2026-09-25.
+//
+// ANSWER, measured at `c970483` and `c3bdae2` (cycle 0.1.3c, TM-193): NO. `Vec`'s
+// last field is `hidden string[0]:move_only`, so the type owns and the copy
+// below is `NITPICK-TYPE-046`, exactly once: "`Vec<int64>` owns storage that is
+// released at scope exit, so it is move-only". THE REFUSAL IS THE ASSERTION
+// (B-7). ITS CONTROL is this file against the library before the marker: it
+// compiles, links, and the pop through `w` reads the allocator's free poison,
+// exit 70 on both legs (`meta/roadmap/0.1/0.1.3c.md` §1.4). `probe16g` is the
+// same hole by assignment, `probe16h` by a struct that holds a `Vec`, and
+// `../unit/vec_moves.npk` is the positive twin -- the moves and loans that
+// still compile.
+mod:probe16f_vec_copy_refused;
+
+use "../../src/core/vec.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    Vec<int64>:v = raw vec_init::<int64>(4i64);
+    drop vec_push(@v, 7i64);
+    Vec<int64>:w = v;
+    drop vec_free(@v);
+    int64:x = raw vec_pop(@w);
+    if (x != 7i64) { exit 70i32; }
+    drop vec_free(@w);
+    exit 0i32;
+};
+
+// A SUPERSET of what `NITPICK-REACH-002` asks, deliberately (`SAFETY.md` S-6b,
+// constraint 3: a superset compiles). If a later compiler reordered its phases
+// so that the reach analysis ran before the check this file asserts, a
+// failsafe naming exactly the demanded arms could add a stray `REACH-002` to
+// the refusal; this one cannot.
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
+        (LimitViolated)     { exit 109i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

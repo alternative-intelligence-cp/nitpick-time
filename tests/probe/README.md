@@ -111,11 +111,24 @@ entries from cycle 0.0.2.
 | `probe17_fixed_owning_reads.npk` | may `fixed` storage hold a `string` — as an element, a row's field, a scalar — and be read without moving it? | `SAFETY.md` S-19b — the positive twin |
 | `probe17b_fixed_row_copy_refused.npk` | *(must not compile)* a row whose element owns, copied out by value — the accessor's read | S-19b — `NITPICK-TYPE-046` |
 | `probe17c_fixed_string_copy_refused.npk` | *(must not compile)* an element of a `fixed string[2]`, copied out | S-19b — `NITPICK-TYPE-046` |
+| `probe16f_vec_copy_refused.npk` | *(must not compile)* a `Vec` copied into a second binding | S-18g — `NITPICK-TYPE-046` |
+| `probe16g_vec_assign_refused.npk` | *(must not compile)* one `Vec` assigned over another | S-18g — `NITPICK-TYPE-046` |
+| `probe16h_vec_holder_copy_refused.npk` | *(must not compile)* a struct holding a `Vec`, copied | S-18g — `NITPICK-TYPE-046` |
+| `probe16i_bytes_body_write_refused.npk` | *(must not compile)* a write through `Bytes.body`'s pointer | S-17b — `NITPICK-TYPE-080` |
+| `probe18_zero_length_owner.npk` | does a `string[0]` field cost nothing, move, drop, and leave an `int64[0]` twin copyable? | S-18g — the language fact under `Vec`'s marker |
+| `probe18b_zero_length_owner_copy_refused.npk` | *(must not compile)* a struct whose one owning field is `string[0]`, copied | S-18g — `NITPICK-TYPE-046` |
+| `probe19_pod_owner_refused.npk` | *(must not compile)* `Pod` implemented for `string` as the trait declares it | S-18h — `NITPICK-TYPE-047` |
 
 *(Cycle 0.1.3b: the three `probe17` rows are new. **Probes 12 to 16 — cycles
 0.0.4 to 0.1.0c — are not in this table**, and the heading above says "What is
 here": found at 0.1.3b's planning, and owed to cycle 0.1's close. Each of those
 files says in its own header what it asks.)*
+
+*(Cycle 0.1.3c: the seven rows after `probe17c` are new — four more of the
+`probe16` family, which assert the library's own access and move rules, and
+three language probes — written with the port that makes `Vec` move-only and
+bounds `vec_at` by `Pod` (TM-193 … TM-195). The rest of 12 to 16e is still the
+close's.)*
 
 Probes 09 and 10 were planned in `0.0.0.md` §4 and **held, not merely
 unwritten**: they are the borrow-edge probes, and the author ruled O-N9

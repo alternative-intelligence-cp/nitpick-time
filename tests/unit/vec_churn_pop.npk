@@ -1,0 +1,73 @@
+// expect-exit: 0
+// heap: count >= 2000000
+// heap: peak_live <= 75000
+// cap: 65536 KiB, exit 0
+//
+// `vec_pop` AT AN OWNING `T` HANDS THE ELEMENT OVER -- TM-150's churn pair, the
+// REMEDY HALF, committed at cycle 0.1.3c (TM-196).
+//
+// ASKS: two million cycles of `vec_push` then `vec_pop` on one `Vec<string>`,
+// each popped string bound and dropped at the bottom of its iteration -- does
+// anything accumulate?
+//
+// MATTERS BECAUSE `vec_pop` is the one element-removing verb in
+// `src/core/vec.npk` that is NOT among the four that orphan an owning element
+// (`SAFETY.md` S-18d): its `move` hands the element to the caller, whose binding
+// drops it. TM-150 measured that at cycle 0.1.0b in a scratch directory -- 120
+// bytes at the peak against `vec_clear`'s 48 000 096 -- and quoted the pair in
+// `vec.npk`, S-18d and the workbench's `PLAYBOOK.md` with no program behind
+// it: a number whose program is not committed is a claim, not evidence (the
+// playbook §6). This is the program, and its twin is `vec_churn_clear.npk`,
+// which differs in the one operation that ends each cycle.
+//
+// THE THREE MARKERS ARE EACH A STATEMENT ITS TWIN FAILS (`TESTING.md` V-17).
+// `count >= 2000000`: the loop made its two million bodies, so a copy whose
+// loop was emptied -- which retains nothing because it allocates nothing -- is
+// red. `peak_live <= 75000`: none of them was retained, where the twin retains
+// every one. And exit 0 under a 64 MiB cap, where the twin takes 92. Derived
+// from the source before it was measured: the block is `vec_init(4)` of
+// 24-byte `string` headers, 96 bytes, allocated once and never grown, since
+// `count` never passes 1; each cycle allocates one 24-byte body --
+// `"Europe/Kyiv_"` and `"0123456789ab"`, twelve bytes each -- and drops it
+// before the next, so the peak is 96 + 24 = 120 and the count 1 + 2 000 000.
+// Measured at compiler `c970483` and at `c3bdae2`, both legs: `allocated=48000096
+// peak_live=120 count=2000001`. The ceiling is TM-185's rule: the geometric
+// mean of 120 and the twin's 48 000 096, 75 894, rounded down to two
+// significant figures. By hand: `NPK_HEAP_STATS=1 <binary>`.
+//
+// EXIT CODES, clear of every arm code (TM-152): 10 a popped string is not the
+// one pushed; 11 the `Vec` is not empty after the last pop.
+mod:vec_churn_pop;
+
+use "../../src/core/vec.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    Vec<string>:v = raw vec_init::<string>(4i64);
+    int64:i = 0i64;
+    while (i < 2000000i64) decreases 2000000i64 - i {
+        drop vec_push(@v, string_concat("Europe/Kyiv_", "0123456789ab"));
+        string:s = raw vec_pop(@v);
+        if (string_byte_length(s) != 24i64) { exit 10i32; }
+        i = i + 1i64;
+    }
+    if (v.count != 0i64) { exit 11i32; }
+    drop vec_free(@v);
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
+        (LimitViolated)     { exit 109i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

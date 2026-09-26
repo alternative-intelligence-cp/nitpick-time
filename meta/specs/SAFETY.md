@@ -19,7 +19,7 @@ costs a library that does calendar arithmetic.
 | Plain integer `+ - *` **traps** on overflow | D-210 | Every arithmetic path states its range and checks it **before** the trap fires. §4. |
 | `/` and `%` by zero trap; signed `MIN / -1` traps | D-007, D-142 | The calendar algorithms divide constantly; every divisor is a nonzero literal or a proven value. §4. |
 | Indexing **a type that carries a length** is bounds-checked and traps | D-070 | a slice `T[]`, a fixed array `T[N]` and a `simd<T, N>` lane trap; **a bare pointer does not** — and `Vec<T>.items` and `Bytes`' `buffer` body are both reached as one. §4, S-17b. |
-| Owning values are **move-only** | TYPE-046 | No binding-to-binding copies of a `string`. **No `fixed` table holds an owning value** — the language lets one, then refuses the copy that reads a row out and does not stop the move that faults (S-19b). §5. |
+| Owning values are **move-only** | TYPE-046 | No binding-to-binding copies of a `string` — nor, since cycle 0.1.3c, of a `Vec` or of anything holding one (S-18g). **No `fixed` table holds an owning value** — the language lets one, then refuses the copy that reads a row out and, since compiler `c970483`, the move too (S-19b; through `c3bdae2` the move compiled and faulted, O-N20). §5. |
 | Borrows are second class | D-004 | A view of the zone table cannot be returned or stored. §5. |
 | A successful `exit 0` with live `wild` allocations **traps** | D-151 | Every `wild` byte is paired on every path. §5. |
 | There are **no closures** | D-018 | A layout is data the formatter interprets, not a callback. FORMAT_MODEL.md. |
@@ -517,6 +517,14 @@ added by decision when a consumer exists.
   consumer's `b.body.ptr[i] = x` still compiles and runs, unchecked, measured
   at `c3bdae2` — `check_raw_index`'s `.ptr[` half covers `src/` and nothing
   covers a consumer. That gap is the workbench's question 9, with the author.)*
+  *(Amended at cycle 0.1.3c, TM-195: **for `Bytes` too the pair is the
+  LANGUAGE's rule now.** The author answered question 9 on 2026-09-25, and
+  `body` is `hidden`: outside `src/core/bytes.npk` every access to it is
+  `NITPICK-TYPE-080`, the write through its pointer included
+  (`tests/probe/probe16i_bytes_body_write_refused.npk`, which compiles against
+  the library before and reads the consumer's byte), and a consumer reads the
+  capacity through `bytes_capacity`. `check_raw_index`'s `.ptr[` half is now a
+  belt behind the compiler, as its `.items[` half has been since 0.1.0c.)*
 - **Signedness is half the check.** `count` is `int64`; an index derived from a
   narrower signed field can be negative, `i < count` accepts it, and the read
   goes backwards off the block. Every accessor checks `0 <= i` as well as
@@ -543,6 +551,9 @@ over the block and indexes that:
 T[]:s = #wild_slice<T>(v.items, v.count);   // over `count` for a LIVE element
 pass s[i];
 ```
+
+*(Since cycle 0.1.3c `vec_at` ends `pass raw s[i].pod_copy();` — it takes
+`T: Pod`, S-18h — and the index its slice guards is the same `s[i]`.)*
 
 **THE EXCEPTION IS `push`, AND IT IS PART OF THE RULE RATHER THAN A DEPARTURE
 FROM IT (F2, TM-143).** This code block read *"over `count`, never over `cap`"*
@@ -613,7 +624,8 @@ the bare-pointer read `probe13d` makes on its own look-alike `Vec` is
 `src/core/vec.npk` the rule is still this document's discipline, since the
 declaring module sees its own hidden field. For `Bytes` nothing changed at the
 accessors, and a consumer can still index `body.ptr` directly (S-17b's
-amendment above). And `count`, `cap` and `len` now carry the prelude's
+amendment above — until cycle 0.1.3c, which hid `body`). And `count`, `cap`
+and `len` now carry the prelude's
 `ListLen`, checked after every write: in a plain build that is one more check
 correct code never trips, and in the verified build it makes every read of the
 lengths a fact the slice producers' `bounds` rows can use (S-4b's `limit` row
@@ -801,6 +813,18 @@ SEES.**
 > at `T = string` at `c3bdae2` (two million push-then-pop cycles, `peak_live`
 > 120 bytes). The text below is the rule as it stood from cycle 0.0.5.
 
+> **Amended at cycle 0.1.3c (TM-194, TM-196).** `vec_at<T>` no longer removes
+> the element it reads: it takes `T: Pod` (S-18h), and at an owning `T` the
+> call is refused, `NITPICK-TYPE-017` (`generic_owning_copy/case5`, which
+> exited 11 on the removal until then). So the destructive read is gone from
+> the list above and the restriction rests on the four drops alone, which no
+> type here states — `struct:Vec<T: Pod>` would, and is declined for now
+> (TM-194). **TM-150's churn pair is a program with bounds**:
+> `tests/unit/vec_churn_pop.npk` holds two million push-then-pop cycles at
+> `T = string` to `peak_live <= 75000` (it measures 120) and
+> `vec_churn_clear.npk`, `vec_clear` in the pop's place, to `peak_live >=
+> 48000000` (it measures 48 000 096), each also under the 64 MiB cap (V-17).
+
 *(Placed after S-18c since cycle 0.0.6. It was
 above it for one subcycle, which is why the two paragraphs read as one
 argument and their disagreement about O-N17 was invisible — F6, and the
@@ -901,6 +925,57 @@ whatever `bytes_take` does, because the borrow tracker refuses the call's
 answer as a borrow of `sink` (`NITPICK-BORROW-001`), while a take that
 consumes the sink by `move` compiles and is correct on both legs; measured,
 and carried to `meta/roadmap/0.4/README.md`.
+
+**Rule S-18g (TM-193, cycle 0.1.3c) — `Vec<T>` is move-only by construction,
+and so is everything that holds one.** Its last field is
+`hidden string[0]:move_only`: a fixed array of no strings, zero bytes, whose
+ELEMENT owns — so the compiler marks every `Vec<T>` owning (its D-183), and a
+copy of an owner is `NITPICK-TYPE-046`. A copy of a `Vec`, one `Vec` assigned
+over another, and a copy of a struct holding one are each refused where they
+are written (`tests/probe/probe16f_vec_copy_refused.npk`, `probe16g`,
+`probe16h`); against the library before, each compiled and read the
+allocator's free poison through its second handle. The author's answer to the
+workbench's question 9, 2026-09-25, and `nitpick-regex`'s design (its RX-161).
+A transfer is `move(...)`, after which the source is refused
+(`NITPICK-MOVE-001`); a `move Vec<T>:v` parameter takes ownership; and an
+ordinary parameter is a LOAN, which for an owner is read-only at compiler
+`c970483` — every write through it, `@v` included, is `NITPICK-TYPE-085` (the
+compiler's DEF-102). So every function that changes a `Vec` takes `Vec<T>->`,
+and `vec_at`, the one that only reads, takes a loan (S-18h).
+`tests/unit/vec_moves.npk` runs every shape the property still allows. **It
+costs nothing measured**: `#size_of<Vec<int64>>()` is 24 as before; no
+module's arm bill moves; and the drop the compiler now generates for a `Vec`
+walks the empty array and frees nothing, so the block is still `wild`,
+`vec_free` is still its release, and a `Vec` never freed still traps
+`WildLeak` at `exit 0` — S-18's guarantee is unchanged. `probe18` and
+`probe18b` pin the language fact under the marker with no library code, and
+redden first if a compiler changes it. **Not closed by it**: the four element
+drops of S-18d, which no type here states.
+
+**Rule S-18h (TM-194, cycle 0.1.3c) — the one verb that hands an element back
+by value asks for a `T` that owns nothing, and the language decides which
+types those are.** `vec_at<T: Pod>` reads through `Pod`'s `pod_copy`, a
+`never fails` method whose `self` is LENT. For an owning type the body the
+trait admits, `pass self`, is `NITPICK-TYPE-047` — a lent owner cannot be
+passed on — so no owning type implements it as declared
+(`tests/probe/probe19_pod_owner_refused.npk`), and `vec_at` at an owning `T`
+is `NITPICK-TYPE-017` at the call (`generic_owning_copy/case5`, which until
+this rule measured the read REMOVING the element). A type that owns nothing
+implements `Pod` in one line where it is declared: the nine scalar impls —
+the integers to 64 bits and `bool` — are in `src/core/vec.npk`, and the
+umbrella re-exports the trait, so a consumer's struct of integers or a payload
+enum does too (`tests/unit/vec_at_pod.npk`). The guard is S-17c's slice,
+unchanged. **The rule's one hole is the compiler's**: an impl that declares
+its `self` `move` where the trait lends it is accepted at compiler `c970483`
+— the compiler's DEF-116, fixed at no pin of ours — and through `vec_at` it
+hands back a second owner of the element: a double free, 95, measured. No
+impl in this library does it, and none may; `TYPE-047`'s own message
+suggests that `move`, and it is the one suggestion here not to take. **And the
+trait is interim** (TM-198): the compiler's D-327, ratified on 2026-09-26 and in
+no pin of ours, makes `Copy` a prelude marker trait over every copyable scalar,
+derivable for a struct of copyables; at the re-pin that carries it, `Pod` is
+replaced by `Copy` — its block in `src/core/vec.npk`, one bound, one call, one
+umbrella line and three test impls — and this rule is restated for it.
 
 **Rule S-19.** The generated zone tables are `fixed` module state — read-only
 memory, no initialisation at startup, nothing to leak, and nothing to race.

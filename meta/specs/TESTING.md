@@ -17,7 +17,7 @@ than sampled. Where that is possible it is the gate, and §3 says where.
 
 | Stage | Answers |
 |---|---|
-| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **41 files of 116 that no other stage roots** <!-- [[sweep: npk_total=116]] --> |
+| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **41 files of 127 that no other stage roots** <!-- [[sweep: npk_total=127]] --> |
 | `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
 | `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
 | `check` | every documented refusal actually refuses, with exactly its code |
@@ -593,7 +593,10 @@ at cycle 0.0.4 and never run by the harness.
   with opposite outcomes under it**; a clean run alone is a statement the floor
   program also makes.
 
-Six files carry a bound <!-- [[sweep: heap_bounded=6]] --> and four of them a
-cap <!-- [[sweep: cap_belted=4]] --> — `SAFETY.md` S-18b and S-18c name the
-twin pairs, and the two `Bytes` tests say why theirs in their own headers.
-Both counts are measured denominators (TM-142).
+Eight files carry a bound <!-- [[sweep: heap_bounded=8]] --> and six of them
+a cap <!-- [[sweep: cap_belted=6]] --> — `SAFETY.md` S-18b, S-18c and S-18d
+name the three twin pairs, and the two `Bytes` tests say why theirs in their
+own headers. Both counts are measured denominators (TM-142). *(Six and four
+until cycle 0.1.3c committed TM-150's churn pair, `tests/unit/vec_churn_pop.npk`
+and `vec_churn_clear.npk` — a churn by this rule's own definition, with
+opposite outcomes under the cap, 0 and 92.)*

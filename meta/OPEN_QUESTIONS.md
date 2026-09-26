@@ -46,7 +46,7 @@ wrong. **TM-104** records that `date`'s `%` grammar is parsed in the *utility*
 and mapped onto this library's typed layout — the compatibility layer lives in
 the application, and the library stays principled.
 
-### Q-6 — what replaces `VERIFICATION.md` P-1, now that every construct it names is live?
+### ~~Q-6 — what replaces `VERIFICATION.md` P-1, now that every construct it names is live?~~ — **SETTLED 2026-09-26 (TM-197): A′, the author's answer of 2026-09-25, is `VERIFICATION.md` rule P-1b**
 
 **Raised 2026-09-25 by the stream-2 planner, at the re-pin to compiler
 `c3bdae2`.** P-1 writes an obligation as a comment *"in the exact syntax it
@@ -146,6 +146,14 @@ this question through with that decision's number.)* **What does not:** 0.1.0b a
 0.1.0c; 0.1.0b adds a dated note under P-1 saying its premise is false and this
 question is its replacement. **The same P-1 is in all six work repositories'
 `VERIFICATION.md`**, so one answer can serve all six, recorded in each.
+
+*(Settled at cycle 0.1.3c, TM-197: A′ is `VERIFICATION.md` rule P-1b, and P-1
+carries a SUPERSEDED marker, kept as written. Nothing in `src/` changes under
+it — the obligations were comments already (TM-164) — but the sentences that
+said "until Q-6 is answered" now cite P-1b. Measured at the answer, for P-1b's
+last clause: a live `requires i >= 0 && i < v.count` on `vec_at` adds
+`RequiresViolated` to a consumer's bill and makes an index past the end stop at
+116 where the slice guard stops it at 94.)*
 
 ### O-N1 — `npkg` cannot build a library, and `[dependencies]` resolves to nothing
 Measured at the compiler's 1.5.0 and recorded in `specs/BUILD.md` §1.
@@ -797,8 +805,8 @@ table, `tests/probe/README.md`'s table and several decisions cite by name, and
 P-5 says a probe is never deleted for the same reason those citations exist.
 
 **Settled at 0.0.2**, which builds the runner. **Nothing waits on it**: no
-probe changes either way, and the entry in the manifest is true about the 27
-<!-- [[sweep: probe_exit=27]] --> today. *(That word was `nineteen` until cycle
+probe changes either way, and the entry in the manifest is true about the 28
+<!-- [[sweep: probe_exit=28]] --> today. *(That word was `nineteen` until cycle
 0.0.6 — a settled question's prose is history and is normally frozen, but this
 sentence is in the PRESENT tense about the tree as it is now, so it is a claim
 and not a record. TM-142.)*

@@ -1,0 +1,125 @@
+// expect-exit: 0
+//
+// `vec_at<T: Pod>` FOR A CONSUMER'S OWN TYPES, THROUGH THE UMBRELLA -- the
+// positive twin of `probe19_pod_owner_refused.npk` (cycle 0.1.3c, TM-194;
+// `SAFETY.md` S-18h).
+//
+// A bound that nothing can satisfy would pass that probe too, so this file
+// implements `Pod` the way a consumer would -- in one line beside each type's
+// declaration, importing `src/lib.npk` and nothing else, so the trait's
+// re-export is under test as well -- and reads every element TWICE: a read
+// that moved the element out would fail the second (`generic_owning_copy/case5`
+// measured exactly that until this cycle). Each wrong answer exits with its
+// own code, none an arm code (TM-152):
+//
+//   10, 11  a struct of two integers, read twice at one index;
+//   12      the reads left the count alone;
+//   13, 14  a payload enum -- `FORMAT_MODEL.md`'s parts in miniature, the
+//           element type cycle 0.4's `Layout` will hold -- read twice, the
+//           payload intact;
+//   20 ... 28  each of the nine scalar impls `src/core/vec.npk` declares,
+//           read once, so a mistyped impl is found here and not by the first
+//           consumer that instantiates it.
+mod:vec_at_pod;
+
+use "../../src/lib.npk".*;
+
+struct:Pt = { int64:x; int64:y; };
+impl:Pt:Pod = { func:pod_copy = Pt(Pt:self) never fails { pass self; }; };
+
+enum:Part = {
+    Literal(uint16);
+    Year4;
+    Month2;
+    Day2;
+};
+impl:Part:Pod = { func:pod_copy = Part(Part:self) never fails { pass self; }; };
+
+func:width = int64(Part:p) never fails {
+    int64:w = 0i64;
+    pick (p) {
+        (Part.Literal(ix)) { w = 1000i64 + (ix => int64); },
+        (Part.Year4)       { w = 4i64; },
+        (Part.Month2)      { w = 2i64; },
+        (Part.Day2)        { w = 2i64; }
+    }
+    pass w;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    Vec<Pt>:pts = raw vec_init::<Pt>(2i64);
+    drop vec_push(@pts, Pt{ x: 3i64, y: 4i64 });
+    Pt:a = raw vec_at(pts, 0i64);
+    Pt:b = raw vec_at(pts, 0i64);
+    if (a.x != 3i64 || a.y != 4i64)  { exit 10i32; }
+    if (b.x != 3i64 || b.y != 4i64)  { exit 11i32; }
+    if (pts.count != 1i64)           { exit 12i32; }
+    drop vec_free(@pts);
+
+    Vec<Part>:parts = raw vec_init::<Part>(2i64);
+    drop vec_push(@parts, Part.Year4);
+    drop vec_push(@parts, Part.Literal(45u16));
+    Part:c = raw vec_at(parts, 1i64);
+    Part:d = raw vec_at(parts, 1i64);
+    if ((raw width(c)) != 1045i64)   { exit 13i32; }
+    if ((raw width(d)) != 1045i64)   { exit 14i32; }
+    drop vec_free(@parts);
+
+    Vec<int8>:i8s = raw vec_init::<int8>(1i64);
+    drop vec_push(@i8s, 0i8 - 8i8);
+    if (raw vec_at(i8s, 0i64) != 0i8 - 8i8)        { exit 20i32; }
+    drop vec_free(@i8s);
+    Vec<int16>:i16s = raw vec_init::<int16>(1i64);
+    drop vec_push(@i16s, 0i16 - 16i16);
+    if (raw vec_at(i16s, 0i64) != 0i16 - 16i16)    { exit 21i32; }
+    drop vec_free(@i16s);
+    Vec<int32>:i32s = raw vec_init::<int32>(1i64);
+    drop vec_push(@i32s, 0i32 - 32i32);
+    if (raw vec_at(i32s, 0i64) != 0i32 - 32i32)    { exit 22i32; }
+    drop vec_free(@i32s);
+    Vec<int64>:i64s = raw vec_init::<int64>(1i64);
+    drop vec_push(@i64s, 0i64 - 64i64);
+    if (raw vec_at(i64s, 0i64) != 0i64 - 64i64)    { exit 23i32; }
+    drop vec_free(@i64s);
+    Vec<uint8>:u8s = raw vec_init::<uint8>(1i64);
+    drop vec_push(@u8s, 208u8);
+    if (raw vec_at(u8s, 0i64) != 208u8)            { exit 24i32; }
+    drop vec_free(@u8s);
+    Vec<uint16>:u16s = raw vec_init::<uint16>(1i64);
+    drop vec_push(@u16s, 60016u16);
+    if (raw vec_at(u16s, 0i64) != 60016u16)        { exit 25i32; }
+    drop vec_free(@u16s);
+    Vec<uint32>:u32s = raw vec_init::<uint32>(1i64);
+    drop vec_push(@u32s, 4000000032u32);
+    if (raw vec_at(u32s, 0i64) != 4000000032u32)   { exit 26i32; }
+    drop vec_free(@u32s);
+    Vec<uint64>:u64s = raw vec_init::<uint64>(1i64);
+    drop vec_push(@u64s, ~0u64);
+    if (raw vec_at(u64s, 0i64) != ~0u64) { exit 27i32; }
+    drop vec_free(@u64s);
+    Vec<bool>:bs = raw vec_init::<bool>(1i64);
+    drop vec_push(@bs, true);
+    if (!(raw vec_at(bs, 0i64)))                   { exit 28i32; }
+    drop vec_free(@bs);
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (ETimeValue)        { exit 87i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
+        (LimitViolated)     { exit 109i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

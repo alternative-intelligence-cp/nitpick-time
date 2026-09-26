@@ -1,0 +1,59 @@
+// expect-error: NITPICK-TYPE-046
+//
+// PROBE 16h — A CONSUMER CANNOT COPY A STRUCT THAT HOLDS A `Vec`. The second
+// handle one level down, asserted by a refusal.
+//
+// ASKS: may a consumer copy a struct of its own whose field is a `Vec`?
+//
+// MATTERS BECAUSE this is the shape a `Vec` is actually used in: cycle 0.4's
+// `Layout` holds a `Vec` of its parts (`FORMAT_MODEL.md` §3), and a copy of
+// such a struct copies the `Vec`'s header with it -- the same second handle as
+// `probe16f`, with nothing at the copy site that says `Vec`.
+//
+// ANSWER, measured at `c970483` and `c3bdae2` (cycle 0.1.3c, TM-193): NO. A
+// struct owns when any field owns (the compiler's D-183), so `Holder` is
+// move-only by containment and the copy below is `NITPICK-TYPE-046`, exactly
+// once. THE REFUSAL IS THE ASSERTION (B-7). ITS CONTROL is this file against
+// the library before the marker: it compiles and the pop through the copy
+// reads the free poison, exit 70 on both legs. Moving such a struct is
+// `../unit/vec_moves.npk`'s.
+mod:probe16h_vec_holder_copy_refused;
+
+use "../../src/core/vec.npk".*;
+
+struct:Holder = { Vec<int64>:v; int64:tag; };
+
+func:main = int32(cstring[]:_~argv) {
+    Vec<int64>:a = raw vec_init::<int64>(4i64);
+    drop vec_push(@a, 7i64);
+    Holder:h = Holder{ v: move(a), tag: 1i64 };
+    Holder:k = h;
+    drop vec_free(@h.v);
+    int64:x = raw vec_pop(@k.v);
+    if (x != 7i64) { exit 70i32; }
+    exit 0i32;
+};
+
+// A SUPERSET of what `NITPICK-REACH-002` asks, deliberately (`SAFETY.md` S-6b,
+// constraint 3: a superset compiles). If a later compiler reordered its phases
+// so that the reach analysis ran before the check this file asserts, a
+// failsafe naming exactly the demanded arms could add a stray `REACH-002` to
+// the refusal; this one cannot.
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
+        (LimitViolated)     { exit 109i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

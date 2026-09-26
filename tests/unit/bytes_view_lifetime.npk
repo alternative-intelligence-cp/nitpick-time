@@ -66,7 +66,9 @@ func:main = int32(cstring[]:_~argv) {
     int64:i = 0i64;
     while (i < HELD) decreases HELD - i { drop bytes_push(@b, A); i = i + 1i64; }
 
-    int64:cap_before = b.body.cap;
+    // The capacity through `bytes_capacity` since cycle 0.1.3c (TM-195): `body`
+    // is `hidden`. It writes nothing, so it cannot move what it measures.
+    int64:cap_before = raw bytes_capacity(@b);
     uint8[]:v = raw bytes_view(@b);
     if (v.len != HELD)                          { exit 10i32; }
     if (v[0i64] != A)                           { exit 11i32; }
@@ -78,7 +80,7 @@ func:main = int32(cstring[]:_~argv) {
     // have returned early every time. If capacity moved here the section
     // below would be measuring the same thing as section 2 and its green
     // would mean nothing.
-    if (b.body.cap != cap_before)               { exit 12i32; }
+    if (raw bytes_capacity(@b) != cap_before)   { exit 12i32; }
     if (raw bytes_len(@b) != HELD + PUSHES)     { exit 13i32; }
 
     // The held view is still the live prefix it was taken over.
@@ -94,7 +96,7 @@ func:main = int32(cstring[]:_~argv) {
     i = 0i64;
     while (i < 2i64) decreases 2i64 - i { drop bytes_push(@c, A); i = i + 1i64; }
 
-    int64:cap_small = c.body.cap;
+    int64:cap_small = raw bytes_capacity(@c);
     uint8[]:w = raw bytes_view(@c);
     if (w.len != 2i64)                          { exit 20i32; }
     // VALID HERE, BEFORE ANY GROWTH -- so the read below is about the growth
@@ -105,7 +107,7 @@ func:main = int32(cstring[]:_~argv) {
     while (i < PUSHES) decreases PUSHES - i { drop bytes_push(@c, B); i = i + 1i64; }
 
     // Growth must actually have happened, or section 2 is section 1 again.
-    if (c.body.cap == cap_small)                { exit 22i32; }
+    if (raw bytes_capacity(@c) == cap_small)    { exit 22i32; }
 
     // THE SINK ITSELF IS INTACT. Growth copies, so a view taken NOW is
     // correct -- the defect is the stale handle, never the container.

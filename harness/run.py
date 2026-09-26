@@ -34,9 +34,10 @@ WHAT A GREEN RUN HERE IS, AND IS NOT.
   ONLY WHERE A HEADER SAYS SO: D-151's exit-0 trap counts `wild` allocations
   and a `buffer` is managed (TM-106), so exit 0 says nothing about `Bytes`
   (S-18b, S-18e). Since cycle 0.1.4b the files whose headers carry `heap:`
-  -- six [[sweep: heap_bounded=6]], the two leak/remedy twin pairs and the
-  two `Bytes` tests -- are held on both legs to the runtime's own
-  `NPK_HEAP_STATS` line, and the four twins [[sweep: cap_belted=4]] again
+  -- eight [[sweep: heap_bounded=8]], the three leak/remedy twin pairs and
+  the two `Bytes` tests (six, and two pairs, until cycle 0.1.3c committed
+  TM-150's churn pair) -- are held on both legs to the runtime's own
+  `NPK_HEAP_STATS` line, and the six twins [[sweep: cap_belted=6]] again
   under a 64 MiB address-space cap (TM-184 ... TM-186). Every other file's
   managed memory is asserted by nothing.
 
@@ -601,9 +602,9 @@ def run_parse(rep, root, bld):
     """Every `.npk` in the tree in front of the real parser, each exactly once.
 
     THE DENOMINATOR IS THE WHOLE TREE AND THAT IS WHY THE STAGE IS WORTH ITS
-    COST. Re-measured at cycle 0.1.4c: of the 116 `.npk` files here
-    [[sweep: npk_total=116]] the library build roots 5 [[sweep: lib_reach=5]],
-    the suite roots 66 [[sweep: suite_roots=66]], and 3 more are reached by
+    COST. Re-measured at cycle 0.1.3c: of the 127 `.npk` files here
+    [[sweep: npk_total=127]] the library build roots 5 [[sweep: lib_reach=5]],
+    the suite roots 77 [[sweep: suite_roots=77]], and 3 more are reached by
     `use` from a suite root [[sweep: support_total=3]] -- and since cycle
     0.1.4 so is the civil cross-oracle's corpus, which only its member
     imports -- so 41 are put in front of the compiler by NOTHING ELSE. Five
@@ -614,7 +615,11 @@ def run_parse(rep, root, bld):
     then went three cycles asserted by nothing (TM-141), for exactly this
     reason.
 
-        116 = 5 (library) + 66 (suite roots) + 3 + 1 (reached by `use`) + 41
+        127 = 5 (library) + 77 (suite roots) + 3 + 1 (reached by `use`) + 41
+
+    (It read `116 = 5 + 66 + 3 + 1 + 41` from cycle 0.1.4c until cycle 0.1.3c
+    added eleven suite roots -- seven probes and four unit tests -- and none
+    anywhere else.)
 
     EVERY NUMBER IN THAT SENTENCE IS TAGGED AND CHECKED (TM-142). It read
     `50 = 1 + 27 + 3 + 19` until cycle 0.0.6, three subcycles after the tree
@@ -717,8 +722,8 @@ def select(root, entry):
     """The files a `[[test]]` entry selects: `<path>/*.npk`, non-recursive.
 
     NOT recursive, and the omission is load-bearing (the manifest says so at
-    length): a plain glob over `tests/probe/` is exactly the 42
-    [[sweep: probe_dir=42]] probe programs and excludes `support/` -- three
+    length): a plain glob over `tests/probe/` is exactly the 49
+    [[sweep: probe_dir=49]] probe programs and excludes `support/` -- three
     library modules with no `main` -- and `defect/`, whose files are
     reproductions rather than tests of this library and are judged by
     `run_defect_corpus` instead (TM-141). The schema has no `recursive` key, so

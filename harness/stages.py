@@ -3,8 +3,8 @@
 THE HEADER IS THE AUTHORITY (B-5), AND FROM THIS CYCLE IT ALSO DECIDES WHAT KIND
 OF TEST A FILE IS (O-X7, TM-119). A `[[test]]` entry selects by DIRECTORY and
 never by file, so one `program` entry over `tests/probe/` cannot be true about
-both the 27 files carrying `expect-exit:` [[sweep: probe_exit=27]] and the 15
-carrying `expect-error:` [[sweep: probe_error=15]]. It dispatches per file
+both the 28 files carrying `expect-exit:` [[sweep: probe_exit=28]] and the 21
+carrying `expect-error:` [[sweep: probe_error=21]]. It dispatches per file
 instead:
 
     expect-error:  present  ->  a REFUSAL member. `npkc` must fail, and the SET
@@ -559,11 +559,14 @@ def parse_verdict(bld, rel, e):
 
     THE RULE IS ONE LINE AND ITS CONSEQUENCE IS NOT OBVIOUS: a file must parse
     UNLESS its own header names a parse-phase code. That is what lets the stage
-    cover the 30 files in this tree [[sweep: tests_error=30]] that must NOT
+    cover the 37 files in this tree [[sweep: tests_error=37]] that must NOT
     compile -- they are refused at PARSE-001, LEX-004, PARSE-002, TYPE-009,
-    TYPE-046, TYPE-079, TYPE-080, TYPE-084, BORROW-001, BORROW-012,
-    RESOLVE-001, REACH-002 and REACH-003, and every family after the first
-    three is a phase that only runs on something that parsed. (16, with
+    TYPE-017, TYPE-046, TYPE-047, TYPE-079, TYPE-080, TYPE-084, BORROW-001,
+    BORROW-012, RESOLVE-001, REACH-002 and REACH-003, and every family after
+    the first three is a phase that only runs on something that parsed. (30
+    until cycle 0.1.3c, whose port made six new refusals -- four copies of an
+    owner at TYPE-046, one hidden field at TYPE-080 and one owning `Pod` impl at
+    TYPE-047 -- and moved `generic_owning_copy/case5` to TYPE-017. 16, with
     EMIT-002 in place of TYPE-046, until cycle 0.1.0b: O-N18 and O-N19 landed
     at compiler `c3bdae2`, TM-154. 19 until cycle 0.1.0c, whose seals made
     `probe15` and four new probes refusals at TYPE-079 and TYPE-080, TM-156

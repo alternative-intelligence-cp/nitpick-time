@@ -189,9 +189,9 @@ add — is the document that was wrong.
 **Rule B-4c (TM-119) — inside a `program` entry, the FILE'S OWN HEADER decides
 what kind of test it is. This is a deliberate divergence from `npkg`'s `kind`.**
 A `[[test]]` selects by **directory** and `kind` is per entry, so one entry over
-`tests/probe/` cannot be true about both the 27 files carrying `expect-exit:`
-<!-- [[sweep: probe_exit=27]] -->
-and the 15 carrying `expect-error:` (O-X7; 8 until cycle 0.1.0c, 13 until 0.1.3b). The runner therefore dispatches per
+`tests/probe/` cannot be true about both the 28 files carrying `expect-exit:`
+<!-- [[sweep: probe_exit=28]] -->
+and the 21 carrying `expect-error:` (O-X7; 8 until cycle 0.1.0c, 13 until 0.1.3b, 15 until 0.1.3c). The runner therefore dispatches per
 file: `expect-error:` present makes it a **refusal** member — `npkc` must fail
 and the *set* of codes must equal the set named (B-7) — and `expect-exit:`
 present makes it a **run** member. **Both markers is a failure; neither is a
@@ -283,15 +283,15 @@ expectations name.
 `NITPICK-LEX-*` comes from the compiler's `src/frontend/diag_codes.npk` and
 `NITPICK-PARSE-*` from `parse_codes.npk`; every other family belongs to a later
 phase, so a file reported with one of those **necessarily parsed**. That is what
-lets the stage cover the 30 files here that must not compile
-<!-- [[sweep: tests_error=30]] --> — they are
-refused at `PARSE-001`, `LEX-004`, `PARSE-002`, `TYPE-009`, `TYPE-046`,
-`TYPE-079`, `TYPE-080`, `TYPE-084`, `BORROW-001`, `BORROW-012`,
-`RESOLVE-001`, `REACH-002` and `REACH-003`, and every family after the first
-three runs only on something that parsed. Re-measured at pin `c970483`, cycle
-0.1.4c: **116 files = 86 parse cleanly + 28 parse and are refused later + 2
-do not parse**
-<!-- [[sweep: npk_total=116]] -->, and the two
+lets the stage cover the 37 files here that must not compile
+<!-- [[sweep: tests_error=37]] --> — they are
+refused at `PARSE-001`, `LEX-004`, `PARSE-002`, `TYPE-009`, `TYPE-017`,
+`TYPE-046`, `TYPE-047`, `TYPE-079`, `TYPE-080`, `TYPE-084`, `BORROW-001`,
+`BORROW-012`, `RESOLVE-001`, `REACH-002` and `REACH-003`, and every family
+after the first three runs only on something that parsed. Re-measured at pin
+`c970483`, cycle 0.1.3c: **127 files = 90 parse cleanly + 35 parse and are
+refused later + 2 do not parse**
+<!-- [[sweep: npk_total=127]] -->, and the two
 are `probe02d_wide_literal_refused.npk` (LEX-004, PARSE-002) and
 `probe14_error_payload_refused.npk` (PARSE-001, TM-147). It read
 `50 = 36 + 13 + 1` for three subcycles after the tree stopped being that size,
@@ -317,7 +317,11 @@ first term to the second — refused `TYPE-084` — while `probe13d`, refused
 `TYPE-047` at the new pin until its accessor named `int64`, stayed in the
 first, and it added eight that parse, `fixed_import_scope/`'s seven cases and
 their declaring module, one of them refused `RESOLVE-001` — so
-`116 = 86 + 28 + 2` (TM-189, TM-190, TM-192).
+`116 = 86 + 28 + 2` (TM-189, TM-190, TM-192); and cycle 0.1.3c added eleven
+that parse — six refused, the four `probe16` fixtures and `probe18b` and
+`probe19`, and five that run, `probe18` and four unit tests — and moved
+`generic_owning_copy/case5` from the first term to the second, refused
+`TYPE-017` — so `127 = 90 + 35 + 2` (TM-193 … TM-196).
 
 **AND THE TWO NUMBERS IN THAT PARAGRAPH ARE DIFFERENT SETS** — worth one
 sentence, because earlier versions had two sixteens, and before that two
@@ -413,7 +417,9 @@ and the trap error identities. Every module has it bound with no import.
 `src/core/`:
 
 - **`Vec<T>`** — `{ hidden wild T->:items; sealed limit<ListLen> int64:count;
-  sealed limit<ListLen> int64:cap; }`, the compiler's `List<T>` in shape
+  sealed limit<ListLen> int64:cap; hidden string[0]:move_only; }` — the fourth
+  field since cycle 0.1.3c, zero bytes, and what makes a `Vec` move-only
+  (TM-193, `SAFETY.md` S-18g) — the compiler's `List<T>` in shape
   because that shape is right and has been exercised across twenty-two
   families, and **ours** because a library must not import a compiler's
   internals (B-10). *(The qualifiers are cycle 0.1.0c's, TM-156, and the
@@ -422,9 +428,10 @@ and the trap error identities. Every module has it bound with no import.
   written only there, and each length is checked against the prelude's
   `ListLen` after every write. Until then the shape read `{ wild T->:items;
   int64:count; int64:cap; }`.)*
-- **`Bytes`** — `{ sealed buffer:body; sealed limit<ListLen> int64:len; }`
-  since cycle 0.1.0c (TM-156; `body` sealed and not hidden, because its `cap`
-  is read across modules) — an owning byte sink over `buffer`, with `push`, `extend`,
+- **`Bytes`** — `{ hidden buffer:body; sealed limit<ListLen> int64:len; }`
+  since cycle 0.1.3c (TM-195; from 0.1.0c, TM-156, `body` was sealed and not
+  hidden, because its `cap` was read across modules — `bytes_capacity` reads
+  it now) — an owning byte sink over `buffer`, with `push`, `extend`,
   `extend_str`, `put_uint` (decimal, allocation-free) and `take` — an owned
   copy since cycle 0.1.4b, a view before it (`SAFETY.md` S-18f). Every
   formatter writes into one. It exists because `string_concat` allocates per

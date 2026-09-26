@@ -1,0 +1,53 @@
+// expect-error: NITPICK-TYPE-046
+//
+// PROBE 18b — A COPY OF A STRUCT WHOSE ONLY OWNING FIELD IS A ZERO-LENGTH ARRAY
+// IS REFUSED, like the copy of any owner. The refused twin of
+// `probe18_zero_length_owner.npk` (cycle 0.1.3c, TM-193; `SAFETY.md` S-18g).
+//
+// ASKS: is `Marked`, which holds nothing that owns but a `string[0]`, an owner
+// as the compiler's move rule sees it?
+//
+// MATTERS BECAUSE probe 18 asserts only that the shape compiles, moves and
+// drops; this is the half it cannot assert. The day this compiles cleanly,
+// `Vec` is copyable again, and `probe16f`, `probe16g` and `probe16h` redden
+// with it -- this probe names the cause before they do.
+//
+// ANSWER, measured at `c970483` and `c3bdae2`: YES. The copy below is
+// `NITPICK-TYPE-046`, exactly once. THE REFUSAL IS THE ASSERTION (B-7).
+mod:probe18b_zero_length_owner_copy_refused;
+
+struct:Marked = {
+    int64:a;
+    string[0]:move_only;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    Marked:m = Marked{ a: 4i64, move_only: [] };
+    Marked:n = m;
+    if (n.a != 4i64) { exit 10i32; }
+    exit 0i32;
+};
+
+// A SUPERSET of what `NITPICK-REACH-002` asks, deliberately (`SAFETY.md` S-6b,
+// constraint 3: a superset compiles). If a later compiler reordered its phases
+// so that the reach analysis ran before the check this file asserts, a
+// failsafe naming exactly the demanded arms could add a stray `REACH-002` to
+// the refusal; this one cannot.
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
+        (LimitViolated)     { exit 109i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

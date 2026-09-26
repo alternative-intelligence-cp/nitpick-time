@@ -27,20 +27,21 @@ func:main = int32(cstring[]:argv) {
     if (v.count != 3i64)                       { exit 12i32; }
 
     // ---- vec_at at 0, interior, and count-1 -----------------------------
-    if (raw vec_at(@v, 0i64) != 100i64)        { exit 13i32; }
-    if (raw vec_at(@v, 1i64) != 200i64)        { exit 14i32; }
-    if (raw vec_at(@v, 2i64) != 300i64)        { exit 15i32; }
+    // A LOAN, `v` and not `@v`, since cycle 0.1.3c (TM-194): `vec_at` reads.
+    if (raw vec_at(v, 0i64) != 100i64)         { exit 13i32; }
+    if (raw vec_at(v, 1i64) != 200i64)         { exit 14i32; }
+    if (raw vec_at(v, 2i64) != 300i64)         { exit 15i32; }
 
     // The index derived from `argv.len` so `opt -O2` cannot fold the guard
     // away -- the harness runs this same file through the optimised leg.
     int64:last = v.count - argv.len;                        // == 2
-    if (raw vec_at(@v, last) != 300i64)        { exit 16i32; }
+    if (raw vec_at(v, last) != 300i64)         { exit 16i32; }
 
     // ---- vec_set at 0 and count-1 ---------------------------------------
     drop vec_set(@v, 0i64, 111i64);
     drop vec_set(@v, 2i64, 333i64);
-    if (raw vec_at(@v, 0i64) != 111i64)        { exit 17i32; }
-    if (raw vec_at(@v, 2i64) != 333i64)        { exit 18i32; }
+    if (raw vec_at(v, 0i64) != 111i64)         { exit 17i32; }
+    if (raw vec_at(v, 2i64) != 333i64)         { exit 18i32; }
     if (v.count != 3i64)                       { exit 19i32; }   // set never grows
 
     // ---- vec_pop from count-1 down to 0 ---------------------------------
@@ -58,7 +59,7 @@ func:main = int32(cstring[]:argv) {
     if (v.count != 3i64)                       { exit 25i32; }
     drop vec_truncate(@v, 2i64);
     if (v.count != 2i64)                       { exit 26i32; }
-    if (raw vec_at(@v, 1i64) != 2i64)          { exit 27i32; }
+    if (raw vec_at(v, 1i64) != 2i64)           { exit 27i32; }
     drop vec_truncate(@v, -5i64);              // negative clamps to empty
     if (v.count != 0i64)                       { exit 28i32; }
 
@@ -81,9 +82,9 @@ func:main = int32(cstring[]:argv) {
     if (g.cap < 100000i64)                     { exit 31i32; }
     // Spot-check that growth preserved the contents rather than merely the
     // count -- the reallocation copy is the part that goes wrong silently.
-    if (raw vec_at(@g, 0i64) != 0i64)          { exit 32i32; }
-    if (raw vec_at(@g, 99999i64) != 99999i64)  { exit 33i32; }
-    if (raw vec_at(@g, 50000i64) != 50000i64)  { exit 34i32; }
+    if (raw vec_at(g, 0i64) != 0i64)           { exit 32i32; }
+    if (raw vec_at(g, 99999i64) != 99999i64)   { exit 33i32; }
+    if (raw vec_at(g, 50000i64) != 50000i64)   { exit 34i32; }
 
     // ---- vec_reserve is idempotent when it need not grow ------------------
     int64:cap_before = g.cap;

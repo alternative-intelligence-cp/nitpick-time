@@ -1,0 +1,58 @@
+// expect-error: NITPICK-TYPE-080
+//
+// PROBE 16i — A CONSUMER CANNOT WRITE THROUGH `Bytes.body`. What the seal did
+// not stop, asserted by a refusal.
+//
+// ASKS: may code outside `src/core/bytes.npk` write a sink's bytes through its
+// body's pointer, `b.body.ptr[0i64] = 65u8;`?
+//
+// MATTERS BECAUSE `sealed` kept the FIELD's own bytes -- the `buffer` header --
+// and the compiler's D-313 lets a write THROUGH a sealed pointer field pass:
+// measured at `c3bdae2` (cycle 0.1.0c, TM-156), a consumer's write compiled,
+// ran, and `bytes_view` then read 65 where the sink had written 97; and the
+// index is a bare pointer's (TM-108), so a write one byte past the allocation
+// ran at exit 0 with no trap. The workbench's question 9 carried it to the
+// author with the `Vec` copy.
+//
+// ANSWER, measured at `c970483` and `c3bdae2` (cycle 0.1.3c, TM-195): NO. `body`
+// is `hidden` (the compiler's D-314), so outside its module the member access
+// is `NITPICK-TYPE-080`, exactly once, and a consumer reads the capacity
+// through `bytes_capacity` (`probe16e`). THE REFUSAL IS THE ASSERTION (B-7).
+// ITS CONTROL is this file against the library before: it compiles, runs, and
+// the view reads the consumer's 65, exit 70 on both legs.
+mod:probe16i_bytes_body_write_refused;
+
+use "../../src/core/bytes.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    Bytes:b = raw bytes_init(4i64);
+    drop bytes_push(@b, 97u8);
+    b.body.ptr[0i64] = 65u8;
+    uint8[]:v = raw bytes_view(@b);
+    if (v[0i64] == 65u8) { exit 70i32; }
+    exit 0i32;
+};
+
+// A SUPERSET of what `NITPICK-REACH-002` asks, deliberately (`SAFETY.md` S-6b,
+// constraint 3: a superset compiles). If a later compiler reordered its phases
+// so that the reach analysis ran before the check this file asserts, a
+// failsafe naming exactly the demanded arms could add a stray `REACH-002` to
+// the refusal; this one cannot.
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
+        (LimitViolated)     { exit 109i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

@@ -38,11 +38,11 @@
 # `Vec<T>`, `Bytes` and thirteen named bounds -- and `src/cal/` since 0.1.0 --
 # the civil types and their validating constructors, and since 0.1.1 Hinnant's
 # `date_to_days` and `days_to_date`, and since 0.1.3 the derived fields --
-# re-exported together as 57 public names [[sweep: lib_reexports=57]],
-# so this IS evidence about behaviour, of the 101 units the runner reports at
+# re-exported together as 59 public names [[sweep: lib_reexports=59]],
+# so this IS evidence about behaviour, of the 112 units the runner reports at
 # compiler `c970483` (62 at cycle 0.0.6, 67 at 0.1.0, 70 at 0.1.0b, 75 at
 # 0.1.0c, 78 at 0.1.1, 81 at 0.1.2, 86 at 0.1.3, 90 at 0.1.3b, 91 at 0.1.4 and
-# 0.1.4b, all at `c3bdae2` from 0.1.0b on). What
+# 0.1.4b, all at `c3bdae2` from 0.1.0b on, and 101 at 0.1.4c). What
 # it is evidence of: the pinned compiler builds from a clean checkout at exactly
 # LLVM 20.1.2, every `.npk` under `src/` compiles, every unit under `tests/`
 # meets its own header at -O0 and again under `opt -O2`, the whole
@@ -127,9 +127,10 @@
 # a green run is not a MEMORY result for the managed
 # half: D-151's exit-0 trap counts `wild` allocations and a `buffer` is managed
 # (TM-106), so `exit 0` says nothing about `Bytes` (S-18b, S-18e) -- except
-# that, since cycle 0.1.4b, six files [[sweep: heap_bounded=6]] are held on
-# both legs to the runtime's own NPK_HEAP_STATS count, and four
-# [[sweep: cap_belted=4]] again under a 64 MiB cap (`TESTING.md` V-17).
+# that, since cycle 0.1.4b, the files whose headers bound it -- eight since
+# cycle 0.1.3c [[sweep: heap_bounded=8]] -- are held on both legs to the
+# runtime's own NPK_HEAP_STATS count, and six of them
+# [[sweep: cap_belted=6]] again under a 64 MiB cap (`TESTING.md` V-17).
 #
 # NOT PINNED, AND KNOWN: `actions/checkout@v4` and `actions/cache@v4` are moving
 # tags -- the only inputs in this file that are not immutable. A workflow this

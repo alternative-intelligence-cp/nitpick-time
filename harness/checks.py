@@ -662,8 +662,9 @@ def check_literal_divisors(tree, **_):
 # of a table cannot have one -- and a `fixed` table is read-only data that
 # nothing may move out of." The first sentence was false at every kept pin; a
 # `wild` pointer was never among the types the code looked for, and it does
-# not make a struct owning -- a whole-`Vec` copy compiles (question 9,
-# measured at cycle 0.1.0c); and the last clause described the compiler's
+# not make a struct owning -- a whole-`Vec` copy compiled (question 9,
+# measured at cycle 0.1.0c; refused `NITPICK-TYPE-046` since cycle 0.1.3c's
+# marker, TM-193); and the last clause described the compiler's
 # defect as though it were the language's rule.)
 #
 # An owning TYPE, for this check: `string`, `buffer`, `Bytes`, any `Vec<...>`,

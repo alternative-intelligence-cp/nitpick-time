@@ -130,6 +130,22 @@ documented exceptions and a test that counts them.
   So the wrapper wants a consuming take, a public name this cycle chooses with
   a caller in hand (TM-013), or a re-measurement at the pin it plans against.
   And every `string` it hands back is a copy (`SAFETY.md` S-18f).
+- **`Layout`'s `Vec<FmtPart>` needs `FmtPart: Pod`, and a `Layout` is
+  move-only** (cycle 0.1.3c; `SAFETY.md` S-18g, S-18h). `vec_at` takes
+  `T: Pod`, and `FmtPart` — a payload enum whose payload owns nothing —
+  implements it in one line beside its declaration: measured, a four-variant
+  payload enum does, and reads back twice through `vec_at`
+  (`tests/unit/vec_at_pod.npk`). A struct holding a `Vec` is move-only by
+  containment, so a `Layout` is moved or lent, never copied; a formatter that
+  takes one by loan reads its parts as `vec_at(l.parts, i)` — which compiles for
+  a lent struct's field and for another module's `sealed` field alike — where
+  `@l.parts` of a lent `Layout` is `NITPICK-TYPE-085` and of a sealed field
+  from outside `NITPICK-TYPE-079` (measured at cycle 0.1.3c's planning). And
+  every `Bytes` reader takes `Bytes->` — `bytes_len`, `bytes_view`,
+  `bytes_take`, `bytes_capacity` — so a function holding a LENT `Bytes` cannot
+  call them (`@` of a lent owner, `TYPE-085`); a sink a formatter writes is
+  passed by pointer anyway, and a read-only one is this cycle's to shape, with
+  a caller in hand (TM-013).
 - **`Bytes` and `Vec<T>` are indexed WITHOUT a bounds check** (TM-108, S-17b).
   Every formatter in this cycle writes into a `Bytes`, and `Layout` holds a
   `Vec<FmtPart>`; both are bare pointers to the emitter, so an out-of-range

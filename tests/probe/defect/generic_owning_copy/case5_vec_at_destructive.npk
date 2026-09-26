@@ -1,4 +1,25 @@
-// expect-exit: 11
+// expect-error: NITPICK-TYPE-017
+//
+// CASE 5, SINCE CYCLE 0.1.3c: THE CALL IS REFUSED (TM-194). `vec_at` takes
+// `T: Pod`, a trait only a type that owns nothing can implement as it is
+// declared, so at `T = string` each call below is `NITPICK-TYPE-017` --
+// "`string` does not implement `Pod`, which `vec_at`'s parameter `T`
+// requires" -- and the move this file measured cannot be written any more.
+// THE REFUSAL IS THE ASSERTION (B-7). It is the library's refusal, not the
+// pin's: the same text is refused the same way at `c3bdae2`.
+//
+// ITS CONTROLS, in `TRANSCRIPT.txt`'s last section at both pins and on both
+// legs: the file as it stood, against the library as it stood -- `exit 11`,
+// the destructive read -- and this text against a `vec_at` that takes its
+// `Vec` as a loan but has no bound, which exits 11 as well: the loan does not
+// close it, the bound does. The two calls read `v` and no longer `@v`,
+// because `vec_at` reads a loan since the same cycle; written `@v` they add
+// `NITPICK-TYPE-007` to the refusal, a pointer where a `Vec` is lent.
+//
+// EVERYTHING BELOW, TO THE `mod:` LINE, IS THE RECORD AS CYCLE 0.0.5 WROTE IT,
+// under the marker it carried then, `expect-exit: 11`. Its last paragraph's
+// "if a later pin makes `vec_at` a non-destructive read, this file goes red"
+// came true another way: the library made the destructive read unwritable.
 //
 // CASE 5 -- THE LIBRARY'S OWN `vec_at<T>`, AND THIS ONE IS NOT A COMPILER
 // DEFECT. It is the language behaving as specified, producing a result the
@@ -35,14 +56,14 @@ func:main = int32(cstring[]:_~argv) {
     Vec<string>:v = raw vec_init::<string>(2i64);
     drop vec_push(@v, string_concat("Europe/", "Kyiv"));   // 11 bytes
 
-    string:a = raw vec_at::<string>(@v, 0i64);
+    string:a = raw vec_at::<string>(v, 0i64);
     int64:na = string_byte_length(a);
     if (na != 11i64) { exit 20i32; }
 
     // `vec_at` does not touch `count`, so the container still claims one
     // element. Read the same index again.
     if (v.count != 1i64) { exit 21i32; }
-    string:b = raw vec_at::<string>(@v, 0i64);
+    string:b = raw vec_at::<string>(v, 0i64);
     int64:nb = string_byte_length(b);
 
     drop vec_free(@v);

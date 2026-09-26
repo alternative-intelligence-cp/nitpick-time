@@ -59,6 +59,8 @@
 // module now owes, and one only this file can ever trip, since nothing outside
 // can write the field. `body` is sealed and NOT hidden, because tests and the
 // umbrella's consumers read `b.body.cap`, and hiding it would refuse them.
+// *(Until cycle 0.1.3c. Since then `body` is `hidden` (TM-195), the consumers'
+// read is `bytes_capacity`, and the next paragraph says why.)*
 //
 // WHAT THE SEAL DOES NOT STOP, SAID HERE SO NOBODY READS IT AS MORE THAN IT IS.
 // `sealed` keeps the FIELD's own bytes -- the `buffer` header -- and the
@@ -74,6 +76,17 @@
 // this file's to take by itself (cycle 0.1.0c's record). A whole-struct copy
 // is NOT a second door here, as it is for `Vec<T>`: `Bytes:c = b;` is refused
 // `NITPICK-TYPE-046`, because a `buffer` field makes the struct move-only.
+//
+// *(Cycle 0.1.3c, TM-195: THE NARROWING IS TAKEN. The author answered question 9
+// on 2026-09-25 -- `Vec` move-only, and this accessor riding with it where the
+// planner judged it cheaper -- and it is: `body` is `hidden`, so outside this
+// module every access to it is `NITPICK-TYPE-080` (the compiler's D-314), the
+// write through its pointer included
+// (`../../tests/probe/probe16i_bytes_body_write_refused.npk`, which compiles
+// against the tree before and reads 65), and the capacity the tests read is
+// `bytes_capacity`. Sixteen lines in three test files moved to it. The seal
+// now keeps the bytes as well as the header, for every module but this one;
+// and a `Vec`'s whole-struct copy is refused too, since the same cycle.)*
 mod:bytes;
 
 use "./limits.npk".*;
@@ -88,7 +101,9 @@ use "./limits.npk".*;
 // `vec.npk` records. The field is `body` -- the workbench board's item 13
 // calls it `buf`, which is the sibling `nitpick-regex`'s name. `bytes_reserve`'s
 // `b.body = move(fresh);` is a write from INSIDE this module and stays legal.
-pub struct:Bytes = { sealed buffer:body; sealed limit<ListLen> int64:len; };
+// `body` IS `hidden` SINCE CYCLE 0.1.3c (TM-195), where it was `sealed`: no
+// module but this one names it at all, and `bytes_capacity` reads its `cap`.
+pub struct:Bytes = { hidden buffer:body; sealed limit<ListLen> int64:len; };
 
 // `ensures answer.len == 0 && answer.body.cap >= 1`
 pub func:bytes_init = Bytes(int64:cap) never fails {
@@ -292,6 +307,17 @@ pub func:bytes_len = int64(Bytes->:b) never fails {
     pass b.len;
 };
 
+// `ensures answer == b.body.cap`
+//
+// THE CAPACITY, READ HERE BECAUSE NOWHERE ELSE CAN (cycle 0.1.3c, TM-195).
+// `body` is `hidden`, so outside this module `b.body.cap` is `NITPICK-TYPE-080`
+// like every other access to the field; a test or a consumer that asks how much
+// room a sink has asks this. It takes the sink by pointer, as `bytes_len`
+// does, reads one field, and adds no arm to any consumer's bill (measured).
+pub func:bytes_capacity = int64(Bytes->:b) never fails {
+    pass b.body.cap;
+};
+
 // A BORROWED VIEW OF THE LIVE PREFIX -- over `len`, never over `cap`, so the
 // uninitialised tail is not visible through it.
 //
@@ -302,8 +328,8 @@ pub func:bytes_len = int64(Bytes->:b) never fails {
 //     A view is valid until the next call that can GROW this `Bytes`, and
 //     no longer. That is `bytes_push`, `bytes_extend`, `bytes_extend_str`,
 //     `bytes_put_uint`, `bytes_put_int` and `bytes_reserve` itself -- every
-//     operation that appends. `bytes_len`, `bytes_view`, `bytes_take` and
-//     `bytes_clear` do not grow and do not invalidate.
+//     operation that appends. `bytes_len`, `bytes_capacity`, `bytes_view`,
+//     `bytes_take` and `bytes_clear` do not grow and do not invalidate.
 //
 // WHY, IN ONE LINE: `bytes_reserve` grows by allocating a FRESH buffer,
 // copying, and overwriting `b.body`, which DROPS the old one (D-186, and the

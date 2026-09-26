@@ -25,6 +25,11 @@ over a stated range, which is the shape Z3 is best at.
 | 1.5.3 | contracts live | §4's `ensures` clauses land |
 | 1.5.4 | `prove` / `assert_static` | §6's inline proofs land |
 
+> **SUPERSEDED by rule P-1b below (TM-197, cycle 0.1.3c)** — its safety
+> argument, that every construct it names refuses, is false at every pin since
+> `c3bdae2`. Kept as written, with its dated status note: how the premise
+> failed is part of the record.
+
 **Rule P-1.** Until a construct is live, its obligation is stated **as a
 comment beside the code in the exact syntax it will take**, and is enforced by
 a property test. The switch is then deleting a comment marker rather than
@@ -40,6 +45,38 @@ so a premature `ensures` is a build failure, not a silent no-op.
 > nothing. Until Q-6 is answered, no comment-form obligation in `src/` becomes a
 > live clause, and **no comment-form obligation is evidence of anything** — it is
 > checked by nothing, at any pin.
+
+**Rule P-1b (TM-197, cycle 0.1.3c) — A′: an obligation is a comment unless a
+numbered decision accepts the arm its live clause costs every consumer.** The
+author's answer to `../OPEN_QUESTIONS.md` Q-6, 2026-09-25: *"the
+recommendation on q-6 seems fine to me."* A `requires`, `ensures`,
+`invariant` or `limit` is written LIVE only where a numbered decision says the
+check earns the one `failsafe` identity it adds to every consuming program —
+today that is TM-156's `ListLen` on the containers' lengths alone, which costs
+every consumer of `core` `LimitViolated`. Every other obligation stays a
+comment in the syntax it would take, `answer` and `outgoing` for `result` and
+`old` (TM-130), is **evidence of nothing**, and is stood in for by a property
+test — the sweeps of cycle 0.1, which check every day of the range, stand in
+for `cal`'s. And:
+
+- **`prove` stays a comment until the harness runs the verified build** (cycle
+  0.8), because a plain build lowers it to nothing (`../OPEN_QUESTIONS.md`
+  Q-6's table, measured at `c3bdae2`).
+- **`decreases` and `unbounded` are the language's and always live** (D-304,
+  P-9's note); `assert_static` is live wherever it helps, at no arm cost.
+- **A check that guards something may be CODE on an arm every consumer already
+  owes** — `weekday_index`'s `#unreachable()` belt (`SAFETY.md` S-15c) — which
+  is not a contract and needs no decision.
+- **Never a `requires` on an argument a caller supplies**: `SAFETY.md` S-12
+  answers caller input with a `Result`, not a trap. **Nor on an accessor whose
+  body already stops**: `vec_at`'s slice traps `OutOfBounds` (94) on an index
+  out of range, and a live `requires` there would stop it first, as
+  `RequiresViolated` (116), and add that arm to every consumer — measured at
+  compiler `c970483`, cycle 0.1.3c's planning.
+
+The switch for any row is mechanical — uncomment the clause, and record the
+decision that accepts its arm — which is what P-1 promised and still delivers.
+`nitpick-regex` records the same answer as its rule P-1b (its RX-164).
 
 ---
 

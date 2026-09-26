@@ -46,7 +46,7 @@ buffer, decided here against the benchmark rather than in advance.
 - [ ] `specs/VERIFICATION.md`'s obligation list read against the code, entry by entry
 - [ ] every obligation the code generates that the list does not name, added
 - [ ] every obligation the list names that the code does not generate, removed or scheduled
-- [ ] the contracts written as comments (P-1) checked to be syntactically what they will be, by pasting one into a scratch file and confirming the compiler's rung refuses it **by name** rather than parsing it as something else
+- [ ] ~~the contracts written as comments (P-1) checked to be syntactically what they will be, by pasting one into a scratch file and confirming the compiler's rung refuses it **by name** rather than parsing it as something else~~ **restated at cycle 0.1.3c (TM-197)**: every construct is live since compiler `c3bdae2` and none refuses, so each comment-form obligation (`specs/VERIFICATION.md` P-1b) is checked by UNCOMMENTING it in a scratch copy and building — it must compile, and the one arm it adds must be the one P-1b's decision names
 - [ ] the property tests standing in for each, present and green
 - [ ] the whole list handed forward as `meta/OBLIGATIONS.md`, ready for the compiler's verified build (P-11)
 

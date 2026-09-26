@@ -288,8 +288,9 @@ pub func:is_leap_year = bool(int64:y) never fails {
 // `requires m >= 1 && m <= 12`
 // `ensures answer >= 28 && answer <= 31`
 //
-// (`VERIFICATION.md` P-1: contracts are comments in the syntax they will take
-// at the compiler's 1.5. `answer`, never `result` -- `result` and `old` are
+// (`VERIFICATION.md` P-1b, A': an obligation is a comment in the syntax it
+// would take unless a numbered decision accepts the arm its live clause costs
+// every consumer. `answer`, never `result` -- `result` and `old` are
 // reserved `VerificationKeyword`s, TM-130/B-18, and this library's own contract
 // syntax is exactly where you meet them as things to write.)
 //
@@ -368,8 +369,8 @@ func:days_from_civil = int64(int64:y, int64:m, int64:d) never fails {
 // `ensures answer >= NTIME_DAY_MIN && answer <= NTIME_DAY_MAX`
 //  (true of every `CivilDate` that `civil_date` can build -- C-8c)
 //
-// (`VERIFICATION.md` P-1 as `meta/OPEN_QUESTIONS.md` Q-6's recommended answer,
-// A', reads it: a comment in the syntax it would take, `answer` for `result`
+// (`VERIFICATION.md` P-1b -- A', the author's answer to `meta/OPEN_QUESTIONS.md`
+// Q-6 -- reads it: a comment in the syntax it would take, `answer` for `result`
 // (TM-130) -- and evidence of NOTHING, since a plain build checks no comment.
 // The live `ensures` would arm `EnsuresViolated` in every consumer;
 // `0.1.1.md` §6 is that alternative, measured.)
@@ -589,7 +590,8 @@ pub func:weekday_number_sunday_first = int64(Weekday:w) never fails {
 // non-negative because `%` here truncates toward zero.
 //
 // `ensures answer >= 0 && answer <= 6` -- `VERIFICATION.md` §6's weekday row,
-// a comment per Q-6's A' (TM-164) -- AND THE LINE THAT CHECKS IT IS CODE. The
+// a comment per A' (`VERIFICATION.md` P-1b; TM-164) -- AND THE LINE THAT
+// CHECKS IT IS CODE, which P-1b admits at no arm cost. The
 // correction leaves `rem` in 0 ... 6 for every `int64` -- `%` by 7 lies in
 // -6 ... 6, and the correction adds 7 to exactly the negative ones -- so the
 // belt below never fires. It is there because `weekday` turns this index into

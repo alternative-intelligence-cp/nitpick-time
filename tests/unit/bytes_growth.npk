@@ -9,7 +9,8 @@
 // this is a unit test, so there is no timer to call. The instrument is the
 // thing that actually decides the complexity: THE NUMBER OF REALLOCATIONS.
 // `body.cap` changes exactly when the sink reallocates, so watching it across a
-// million single-byte pushes counts them exactly.
+// million single-byte pushes counts them exactly. (Read through
+// `bytes_capacity` since cycle 0.1.3c, when `body` became `hidden` -- TM-195.)
 //
 // THE BOUND, WRITTEN OUT SO IT CAN BE CHECKED. Doubling from capacity 1:
 //
@@ -47,16 +48,16 @@ fixed int64:REALLOC_CEILING = 21i64;
 
 func:main = int32(cstring[]:_~argv) {
     Bytes:b = raw bytes_init(1i64);
-    if (b.body.cap < 1i64)                     { exit 10i32; }
+    if (raw bytes_capacity(@b) < 1i64)         { exit 10i32; }
 
     int64:reallocs = 0i64;
-    int64:seen_cap = b.body.cap;
+    int64:seen_cap = raw bytes_capacity(@b);
     int64:i = 0i64;
     while (i < N) decreases N - i {
         drop bytes_push(@b, 65u8);
-        if (b.body.cap != seen_cap) {
+        if (raw bytes_capacity(@b) != seen_cap) {
             reallocs = reallocs + 1i64;
-            seen_cap = b.body.cap;
+            seen_cap = raw bytes_capacity(@b);
         }
         i = i + 1i64;
     }
@@ -69,7 +70,7 @@ func:main = int32(cstring[]:_~argv) {
     // reallocated would mean the first `buffer_new` had already over-allocated,
     // and the ceiling above would pass for the wrong reason.
     if (reallocs < 1i64)                       { exit 13i32; }
-    if (b.body.cap < N)                        { exit 14i32; }
+    if (raw bytes_capacity(@b) < N)            { exit 14i32; }
 
     // The contents survived every reallocation -- the copy is the part of
     // growth that fails silently.
@@ -81,18 +82,18 @@ func:main = int32(cstring[]:_~argv) {
 
     // ---- `extend` reserves ONCE for the whole run, not once per byte -------
     Bytes:c = raw bytes_init(1i64);
-    int64:before = c.body.cap;
+    int64:before = raw bytes_capacity(@c);
     drop bytes_extend(@c, v);                  // a million bytes in one call
     if (raw bytes_len(@c) != N)                { exit 19i32; }
     // One call, so at most one growth step: `cap` went up exactly once.
-    if (c.body.cap < N)                        { exit 20i32; }
+    if (raw bytes_capacity(@c) < N)            { exit 20i32; }
     if (before >= N)                           { exit 21i32; }
 
     // ---- clear keeps the allocation, which is why it exists ---------------
-    int64:kept = c.body.cap;
+    int64:kept = raw bytes_capacity(@c);
     drop bytes_clear(@c);
     if (raw bytes_len(@c) != 0i64)             { exit 22i32; }
-    if (c.body.cap != kept)                    { exit 23i32; }
+    if (raw bytes_capacity(@c) != kept)        { exit 23i32; }
 
     // ---- take copies out, and does not empty the sink ---------------------
     Bytes:d = raw bytes_init(1i64);
@@ -116,10 +117,10 @@ func:main = int32(cstring[]:_~argv) {
     Bytes:g = raw bytes_init(1i64);
     drop bytes_extend_str(@g, "2026-09-05");
     string:t = raw bytes_take(@g);
-    int64:cap_g = g.body.cap;
+    int64:cap_g = raw bytes_capacity(@g);
     drop bytes_push(@g, 65u8);
     // Growth must actually have happened, or the check after it tests nothing.
-    if (g.body.cap == cap_g)                   { exit 29i32; }
+    if (raw bytes_capacity(@g) == cap_g)       { exit 29i32; }
     if (!(raw t.eq("2026-09-05")))             { exit 30i32; }
 
     // NOTHING IS FREED HERE, AND THAT IS P-24. `Bytes` is over `buffer`, which

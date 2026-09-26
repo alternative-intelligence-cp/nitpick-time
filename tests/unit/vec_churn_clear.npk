@@ -1,0 +1,65 @@
+// expect-exit: 0
+// heap: peak_live >= 48000000
+// cap: 65536 KiB, exit 92
+//
+// NOT A TEST OF SOMETHING WORKING. This file exits 0 and that IS the finding:
+// `vec_clear` at an owning `T` orphans every element it discards, and the
+// language's own leak gate does not notice.
+//
+// `vec_clear` AT AN OWNING `T` -- TM-150's churn pair, the LEAKING HALF,
+// committed at cycle 0.1.3c (TM-196).
+//
+// ASKS: the same two million cycles as `vec_churn_pop.npk`, with `vec_clear`
+// where the pop is -- what does it cost?
+//
+// MATTERS BECAUSE `vec_clear` is one of the four operations `SAFETY.md` S-18d
+// rests the restriction on: at an owning `T` it discards elements it does not
+// drop, and `exit 0` cannot see it -- D-151 counts `wild` blocks, and a
+// `string`'s body is managed (TM-106). Every one of the two million bodies is
+// still live at exit. The day a cycle gives `vec_clear` an element drop, this
+// file goes red, and the restriction's reason has to be re-read.
+//
+// ITS TWIN IS `vec_churn_pop.npk`, which differs in the one operation that
+// ends each cycle. `peak_live >= 48000000` is the leak's arithmetic -- two
+// million 24-byte bodies, every one live at the peak -- so it is also this
+// repository's second known-leaking control for the instrument (`TESTING.md`
+// V-17), beside `probe06b`. Measured at compiler `c970483` and at `c3bdae2`,
+// both legs: `allocated=48000096 peak_live=48000096 count=2000001` -- the 96-byte
+// block and every body. Under a 64 MiB cap it takes `HeapOom`, 92, where its
+// twin exits 0. By hand: `NPK_HEAP_STATS=1 <binary>`.
+//
+// EXIT CODE, clear of every arm code (TM-152): 11 the `Vec` is not empty after
+// the last clear.
+mod:vec_churn_clear;
+
+use "../../src/core/vec.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    Vec<string>:v = raw vec_init::<string>(4i64);
+    int64:i = 0i64;
+    while (i < 2000000i64) decreases 2000000i64 - i {
+        drop vec_push(@v, string_concat("Europe/Kyiv_", "0123456789ab"));
+        drop vec_clear(@v);
+        i = i + 1i64;
+    }
+    if (v.count != 0i64) { exit 11i32; }
+    drop vec_free(@v);
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
+        (LimitViolated)     { exit 109i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

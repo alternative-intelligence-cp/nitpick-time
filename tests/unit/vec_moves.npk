@@ -1,0 +1,100 @@
+// expect-exit: 0
+//
+// WHAT A MOVE-ONLY `Vec` STILL DOES -- the positive twin of `probe16f`, `probe16g`
+// and `probe16h` (cycle 0.1.3c, TM-193 and TM-194; `SAFETY.md` S-18g).
+//
+// A refusal proves nothing on its own: those three would pass against a
+// compiler that refused every use of a `Vec`, and that compiler would break
+// every consumer. So this file runs each shape the property still allows, and
+// a wrong answer exits with its own code, none an arm code (TM-152):
+//
+//   10, 11  a LOAN, read two ways: a by-value parameter reads its `Vec` through
+//           `vec_at` without `@` -- a loan of an owner is read-only, and `@v`
+//           of one is `NITPICK-TYPE-085` -- and a pointer lends its pointee,
+//           `vec_at(<-p, 0i64)`;
+//   12      nothing moved: the loans left the count alone;
+//   13      a whole `Vec` MOVED to a new binding, `move(v)`;
+//   14      a struct built by moving a `Vec` into it, read through a loan of
+//           the STRUCT -- `vec_at(h.v, 0i64)`, a field of a lent struct;
+//   15      that struct MOVED in turn;
+//   16      a `move Vec<int64>:v` parameter TAKES ownership and frees the block,
+//           once -- the caller wrote `move(...)`;
+//   17      an element-by-element COPY into a fresh `Vec`, made before the
+//           original was moved away and freed, still reads its own elements
+//           -- the one copy that stays legal, because it copies ELEMENTS, and
+//           each is an `int64`.
+//
+// And `exit 0` asserts, through D-151, that both blocks were freed exactly once:
+// the drop the compiler generates for a `Vec` since the marker frees nothing,
+// so a block `vec_free` missed would trap `WildLeak` here.
+mod:vec_moves;
+
+use "../../src/core/vec.npk".*;
+
+struct:Holder = { Vec<int64>:v; int64:tag; };
+
+func:consume = int64(move Vec<int64>:v) never fails {
+    int64:n = v.count;
+    drop vec_free(@v);
+    pass n;
+};
+
+func:first = int64(Vec<int64>:v) never fails {
+    pass raw vec_at(v, 0i64);
+};
+
+func:first_of = int64(Holder:h) never fails {
+    pass raw vec_at(h.v, 0i64);
+};
+
+func:first_via = int64(Vec<int64>->:p) never fails {
+    pass raw vec_at(<-p, 0i64);
+};
+
+func:main = int32(cstring[]:_~argv) {
+    Vec<int64>:v = raw vec_init::<int64>(4i64);
+    drop vec_push(@v, 7i64);
+    drop vec_push(@v, 8i64);
+
+    if (raw first(v) != 7i64)        { exit 10i32; }
+    if (raw first_via(@v) != 7i64)   { exit 11i32; }
+    if (v.count != 2i64)             { exit 12i32; }
+
+    Vec<int64>:c = raw vec_init::<int64>(v.count);
+    int64:i = 0i64;
+    int64:n = v.count;
+    while (i < n) decreases n - i {
+        drop vec_push(@c, raw vec_at(v, i));
+        i = i + 1i64;
+    }
+
+    Vec<int64>:w = move(v);
+    if (w.count != 2i64)             { exit 13i32; }
+    Holder:h = Holder{ v: move(w), tag: 1i64 };
+    if (raw first_of(h) != 7i64)     { exit 14i32; }
+    Holder:k = move(h);
+    if (k.v.count != 2i64)           { exit 15i32; }
+    int64:gone = raw consume(move(k.v));
+    if (gone != 2i64)                { exit 16i32; }
+
+    if (raw vec_at(c, 1i64) != 8i64) { exit 17i32; }
+    drop vec_free(@c);
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
+        (LimitViolated)     { exit 109i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

@@ -5,6 +5,10 @@
 //
 // ASKS: after cycle 0.1.0c's seals, may a consumer still READ `Vec.count`,
 // `Vec.cap`, `Bytes.len`, `Bytes.body.cap` and `CivilDate.month`?
+// *(Since cycle 0.1.3c `Bytes.body` is `hidden`, not sealed (TM-195): a
+// consumer reads the sink's capacity through `bytes_capacity`, below, and
+// `probe16i` asserts that `body` itself cannot be named. The other four reads
+// are unchanged.)*
 //
 // MATTERS BECAUSE a refusal proves nothing on its own: the four refusal probes
 // would all pass against a compiler that refused EVERY access to a sealed
@@ -33,7 +37,7 @@ func:main = int32(cstring[]:_~argv) {
     Bytes:b = raw bytes_init(4i64);
     drop bytes_push(@b, 65u8);
     if (b.len != 1i64) { exit 12i32; }
-    if (b.body.cap != 4i64) { exit 13i32; }
+    if (raw bytes_capacity(@b) != 4i64) { exit 13i32; }
     CivilDate:d = civil_date(2026i64, 9i64, 25i64) ?! ETimeValue;
     if (d.month != 9u8) { exit 14i32; }
     drop vec_free(@v);

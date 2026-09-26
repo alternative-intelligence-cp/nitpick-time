@@ -21,7 +21,8 @@ func:main = int32(cstring[]:argv) {
     // Derived from `argv.len` so neither leg can fold the index to a constant
     // and decide the guard at compile time.
     if (argv.len < 1i64) { exit 10i32; }
-    discard(raw vec_at(@v, v.count));
+    // A LOAN since cycle 0.1.3c (TM-194); the guard is the same slice.
+    discard(raw vec_at(v, v.count));
     // NOT REACHED. If it is, the guard did not fire and the accessor returned
     // or wrote past the live prefix -- the exact failure S-17b describes.
     drop vec_free(@v);

@@ -308,3 +308,27 @@ because D-264 checks the generic body rather than the instantiation -- the
 diagnostic says so in its own words.
 
 END OF SECTION 4
+
+SECTION 5 -- cycle 0.1.3c: case5's marker moves to NITPICK-TYPE-017 (TM-194).
+Appended by `meta/roadmap/0.1/0.1.3c.md`'s transcript.py; every line above is
+unchanged. case5 in three worlds, at both pins the workbench keeps from 1.5 on:
+
+  the record    the file and src/core/vec.npk as they stood before cycle 0.1.3c --
+                `vec_at<T>(Vec<T>->:v, int64:i)` ending `pass s[i];`, calls `@v`
+  the control   the file as it stands, against `vec_at` taking its loan with NO
+                bound -- `vec_at<T>(Vec<T>:v, int64:i)` ending `pass s[i];`
+  the marker    the file and the library as they stand: `vec_at<T: Pod>`
+
+world        pin      -O0                        opt -O2
+the record   c3bdae2  run:11                     run:11
+the record   c970483  run:11                     run:11
+the control  c3bdae2  run:11                     run:11
+the control  c970483  run:11                     run:11
+the marker   c3bdae2  npkc:NITPICK-TYPE-017      npkc:NITPICK-TYPE-017
+the marker   c970483  npkc:NITPICK-TYPE-017      npkc:NITPICK-TYPE-017
+
+So the destructive read runs at both pins until the bound, and the loan alone
+does not close it: through a `#wild_slice` over the lent header, `pass s[i]` still
+moves the element out of the caller's block.
+
+END OF SECTION 5

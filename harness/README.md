@@ -125,10 +125,12 @@ against the summary line rather than left to review.
 - **Not a MEMORY result for the managed half — except for the files whose
   headers bound it.** D-151's exit-0 trap counts `wild` allocations and a
   `buffer` is managed (TM-106), so exit 0 says nothing about `Bytes`
-  (`SAFETY.md` S-18b). Since cycle 0.1.4b six files <!-- [[sweep: heap_bounded=6]] -->
-  are held to the runtime's own `NPK_HEAP_STATS` count on both legs, and four
-  <!-- [[sweep: cap_belted=4]] --> again under a 64 MiB cap (`TESTING.md` V-17);
-  every other file's managed memory is asserted by nothing.
+  (`SAFETY.md` S-18b). Since cycle 0.1.4b the files whose headers bound it are
+  held to the runtime's own `NPK_HEAP_STATS` count on both legs — eight
+  <!-- [[sweep: heap_bounded=8]] --> since cycle 0.1.3c, six until then — and
+  six of them <!-- [[sweep: cap_belted=6]] --> again under a 64 MiB cap
+  (`TESTING.md` V-17); every other file's managed memory is asserted by
+  nothing.
 - **Not that a view into a `Bytes` is used correctly.** Every gate here is a
   leak gate and a use-after-free is a WRONG ANSWER (S-18e, TM-139). Two shipped
   in cycle 0.0 and both were found by reading, not by a gate — and a third
@@ -261,6 +263,18 @@ unchanged. `101 = 35 + 66`. The unchanged tree at the new pin had run `RED --
 `probe13d` refused (`meta/roadmap/0.1/0.1.4c.md` §1). No library code
 changed, and the six sweeps' and six bounded files' numbers are the same at
 both pins — the runtime is the same object.
+
+**At cycle 0.1.3c, the same pin, 112 units**: the self-check unchanged — 8 of
+V-14's 9 cases, 23 tree-check violations with 23 clean controls, 3 arm
+specimens and the verdict mechanisms; the tree checks at `11 live`; parse over
+127 files, `90 + 35 + 2`; the defect corpus at 36 = 1 exempt + 35 asserted,
+now **19 run, 16 refusal** — `generic_owning_copy/case5` is refused
+`NITPICK-TYPE-017` where it ran to 11 (TM-194); and library + repro + suite at
+**77** (**49 probe** — `probe16f`, `probe16g`, `probe16h`, `probe16i`,
+`probe18b` and `probe19` refused, `probe18` run — **21 unit** — `vec_moves`,
+`vec_at_pod` and the churn pair `vec_churn_pop` and `vec_churn_clear` — 6 sweep,
+1 conformance). `112 = 35 + 77`. The churn pair adds about 3.4 s on each full
+run, its two capped runs included; no sweep's cost moved.
 
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the

@@ -1,0 +1,57 @@
+// expect-error: NITPICK-TYPE-047
+//
+// PROBE 19 — AN OWNING TYPE CANNOT IMPLEMENT `Pod` AS IT IS DECLARED. The claim
+// `vec_at`'s bound rests on (cycle 0.1.3c, TM-194; `SAFETY.md` S-18h).
+//
+// ASKS: may a consumer declare `string` a `Pod`, writing `pod_copy` as the
+// trait declares it -- `self` lent, `pass self`?
+//
+// MATTERS BECAUSE `vec_at<T: Pod>` hands an element back by value, and the
+// bound is worth something only if the LANGUAGE decides who may implement it.
+// If this compiled, `vec_at` at `T = string` would hand back a second owner of
+// the element -- the destructive read `defect/generic_owning_copy/case5`
+// measured, turned into a double free.
+//
+// ANSWER, measured at `c970483` and `c3bdae2`: NO. `pass self` of a lent owner
+// is `NITPICK-TYPE-047` -- "this parameter was lent, not given" -- exactly once.
+// THE REFUSAL IS THE ASSERTION (B-7). The positive twin is
+// `../unit/vec_at_pod.npk`: a type that owns nothing implements it in one line.
+//
+// WHAT THIS DOES NOT STOP, and says so: `TYPE-047`'s message suggests declaring
+// the parameter `move`, and at `c970483` an impl that does is ACCEPTED, though
+// the trait lends it -- the compiler's DEF-116, fixed at no pin of ours. Such
+// an impl makes `vec_at` a double free (measured, `meta/roadmap/0.1/0.1.3c.md`
+// §1.6). This library writes none; `nitpick-regex` pins the shape.
+mod:probe19_pod_owner_refused;
+
+use "../../src/core/vec.npk".*;
+
+impl:string:Pod = { func:pod_copy = string(string:self) never fails { pass self; }; };
+
+func:main = int32(cstring[]:_~argv) {
+    exit 0i32;
+};
+
+// A SUPERSET of what `NITPICK-REACH-002` asks, deliberately (`SAFETY.md` S-6b,
+// constraint 3: a superset compiles). If a later compiler reordered its phases
+// so that the reach analysis ran before the check this file asserts, a
+// failsafe naming exactly the demanded arms could add a stray `REACH-002` to
+// the refusal; this one cannot.
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
+        (LimitViolated)     { exit 109i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

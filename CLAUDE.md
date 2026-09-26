@@ -7,7 +7,34 @@ Guidance for Claude Code sessions working in this repository.
 `ntime` — a date, time and time-zone library for **Nitpick**, the
 safety-critical systems language at `../../nitpick`.
 
-**Status, after cycle 0.1.4c: the adoption to compiler `c970483`** — the end
+**Status, after cycle 0.1.3c: `Vec` is move-only by construction** — the
+author's answer to the workbench's question 9, and `nitpick-regex`'s design,
+ported. `Vec<T>`'s last field is `hidden string[0]:move_only` — zero bytes,
+and its element owns — so a copy of a `Vec`, one assigned over another, or a
+copy of anything that holds one is `NITPICK-TYPE-046` where it is written
+(TM-193, `SAFETY.md` S-18g); against the library before, each compiled and read
+freed memory through its second handle. **`vec_at` takes `T: Pod` and reads
+through a loan** (TM-194, S-18h): `Pod`'s `pod_copy` lends its `self`, so an
+owning type cannot implement it as declared (`NITPICK-TYPE-047`), and
+`vec_at` at an owning `T` — which used to REMOVE the element — is refused at
+the call, `NITPICK-TYPE-017`, which `generic_owning_copy/case5` asserts now.
+The loan is the marker's consequence: at `c970483` the address of a lent owner
+is `NITPICK-TYPE-085`, so a pointer reader could not be handed a `Vec` its
+caller holds on loan. **`Bytes.body` is `hidden`** (TM-195): a consumer's write
+through its pointer is `NITPICK-TYPE-080`, and the capacity is
+`bytes_capacity`. **TM-150's churn pair is committed** with `heap:` bounds
+(TM-196) — two million push-then-pop cycles at `T = string` peak at 120 bytes,
+the same with `vec_clear` at all 48 000 096 — and **A′ is `VERIFICATION.md`
+rule P-1b** (TM-197), which strikes Q-6. **`Pod` is interim** (TM-198): the
+compiler's D-327, ratified during this cycle and in no pin of ours yet, makes
+`Copy` a prelude marker trait, and the re-pin that carries it replaces `Pod`
+with it — a confined edit, the trait's one block, one bound, one call, one
+umbrella line, three test impls. The umbrella re-exports 59 names —
+`Pod` and `bytes_capacity` joined — and eight files' managed memory is held to
+the runtime's count <!-- [[sweep: heap_bounded=8]] -->. No arm bill moved. A
+full invocation is **112 units green** at pin `c970483`.
+
+**After cycle 0.1.4c: the adoption to compiler `c970483`** — the end
 of the compiler's 1.6.0 chain, carrying its DEF-95 to DEF-106 and DEF-108. No
 library code changed. **Two defects this repository raised have landed, and
 each reproduction is now a regression test with its old verdicts as the
@@ -37,7 +64,7 @@ the harness asserts MANAGED memory. D-151's exit-0 trap sees only `wild` blocks
 runtime's own `NPK_HEAP_STATS` report — bytes requested, the high-water mark
 of bytes live, allocations — to a file's bounds on both legs, and a `// cap:`
 marker runs a program again under a 64 MiB address-space cap (`TESTING.md`
-V-17). Six files carry bounds <!-- [[sweep: heap_bounded=6]] -->: each leaking
+V-17). Six files carry bounds: each leaking
 twin's high-water mark is at least its leak's arithmetic, so the instrument
 meets a known leak on every run; each remedy's is under a ceiling and its
 allocation count over a floor, so an emptied remedy is red; and the two `Bytes`
@@ -242,11 +269,13 @@ cycle 0.0 paid most for.**
   the right spelling. **The restriction now stands on one reason: four
   operations — `vec_set`, `vec_clear`, `vec_truncate`, `vec_free` — owe an
   element drop at an owning `T` and perform none**, a leak `exit 0` cannot
-  see. And
-  **`vec_at<T>` at an owning `T` REMOVES the element** — `pass` of a place
-  moves implicitly — which is the language behaving as specified and is why
-  element lifetime at an owning `T` goes **at the instantiation**, where
-  `SAFETY.md` S-18b and S-18d put it. **Since 0.1.0c `items` is `hidden` and
+  see. And **`vec_at` at an owning `T` is REFUSED since cycle 0.1.3c** — it
+  takes `T: Pod` (S-18h), `NITPICK-TYPE-017` at the call — where it used to
+  REMOVE the element, `pass` of a place moving implicitly; element lifetime at
+  an owning `T` still goes **at the instantiation**, where `SAFETY.md` S-18b
+  and S-18d put it. **And a `Vec` is move-only** (S-18g): a copy is refused,
+  a transfer is `move(...)`, and `vec_at` reads a loan, `vec_at(v, i)` — not
+  `@v`. **Since 0.1.0c `items` is `hidden` and
   `count`/`cap` are `sealed limit<ListLen>`** (TM-156): nothing outside
   `vec.npk` can index the pointer or write a length, and a write inside it
   that breaks `ListLen` traps `LimitViolated`.
@@ -256,9 +285,9 @@ cycle 0.0 paid most for.**
   library now contains **no raw bare-pointer index at all**. The slice is over
   `cap` in the three APPENDING sites and that is part of the rule, not an
   exception to it (S-17c, amended at 0.0.6). **Since 0.1.0c it is the
-  language's rule for `Vec` and still ours for `Bytes`:** a consumer's
-  `v.items[i]` is `NITPICK-TYPE-080`, while `b.body.ptr[i] = x` still compiles
-  through the seal (D-313) — question 9.
+  language's rule for `Vec`, and since 0.1.3c for `Bytes` too:** a consumer's
+  `v.items[i]` and `b.body.ptr[i] = x` are both `NITPICK-TYPE-080` — the
+  second compiled through the seal (D-313) until `body` was hidden (question 9).
 - **A `bytes_view` view is invalidated by GROWTH** (TM-139, S-18e). It is valid
   until the next call that can grow the sink and no longer; reading it after
   one returns **170**, the allocator's poison. `bytes_view`'s header claimed
@@ -271,8 +300,9 @@ cycle 0.0 paid most for.**
   view of the body as an owned `string` until cycle 0.1.4b, found by the heap
   instrument's COUNT — 25 allocations where the source makes 26 (S-18f). It
   copies now.
-  **Since 0.1.0c `body` and `len` are `sealed`, `len` under `ListLen`**
-  (TM-156): a consumer reads `b.len` and `b.body.cap` and writes neither.
+  **`len` is `sealed` under `ListLen` since 0.1.0c, and `body` is `hidden`
+  since 0.1.3c** (TM-156, TM-195): a consumer reads `b.len` and
+  `bytes_capacity(@b)`, and writes neither.
 
 **What 0.0.3 added, and the first item is the one that matters.**
 `harness/selfcheck.py` runs **first** in every full invocation (`TESTING.md`

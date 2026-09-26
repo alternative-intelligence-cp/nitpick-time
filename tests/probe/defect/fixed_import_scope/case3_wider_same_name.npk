@@ -1,0 +1,35 @@
+// expect-exit: 0
+//
+// CASE 3 -- THE SAME, WITH THIS MODULE'S `Row` 8 BYTES WIDER. Through compiler
+// `c3bdae2` the IR indexed `@"npk.rows.ROWS"`, a `[2 x %"npk.rows.Row"]` of
+// 32 bytes, through `[2 x %"npk.case3_wider_same_name.Row"]` -- a 24-byte
+// stride over 16-byte rows, so row 1 lay partly past the table's end -- and
+// the program exited 10 on both legs. At compiler `c970483` (DEF-105) it
+// indexes by `rows.Row` and reads 3; `TRANSCRIPT.txt` names the type the IR
+// indexes by, at every pin. The control is its `c3bdae2` verdict (TM-192).
+mod:case3_wider_same_name;
+
+use "./rows.npk".ROWS;
+
+struct:Row = { int64:x; int64:y; int64:z; };
+
+func:main = int32(cstring[]:_~argv) {
+    int64:i = 1i64;
+    if (ROWS[i].x != 3i64) { exit 10i32; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

@@ -283,14 +283,15 @@ expectations name.
 `NITPICK-LEX-*` comes from the compiler's `src/frontend/diag_codes.npk` and
 `NITPICK-PARSE-*` from `parse_codes.npk`; every other family belongs to a later
 phase, so a file reported with one of those **necessarily parsed**. That is what
-lets the stage cover the 26 files here that must not compile
-<!-- [[sweep: tests_error=26]] --> — they are
+lets the stage cover the 30 files here that must not compile
+<!-- [[sweep: tests_error=30]] --> — they are
 refused at `PARSE-001`, `LEX-004`, `PARSE-002`, `TYPE-009`, `TYPE-046`,
-`TYPE-079`, `TYPE-080`, `BORROW-001`, `BORROW-012`, `REACH-002` and
-`REACH-003`, and every family after the first three runs only on something
-that parsed. Re-measured at pin `c3bdae2`, cycle 0.1.4: **108 files = 82 parse
-cleanly + 24 parse and are refused later + 2 do not parse**
-<!-- [[sweep: npk_total=108]] -->, and the two
+`TYPE-079`, `TYPE-080`, `TYPE-084`, `BORROW-001`, `BORROW-012`,
+`RESOLVE-001`, `REACH-002` and `REACH-003`, and every family after the first
+three runs only on something that parsed. Re-measured at pin `c970483`, cycle
+0.1.4c: **116 files = 86 parse cleanly + 28 parse and are refused later + 2
+do not parse**
+<!-- [[sweep: npk_total=116]] -->, and the two
 are `probe02d_wide_literal_refused.npk` (LEX-004, PARSE-002) and
 `probe14_error_payload_refused.npk` (PARSE-001, TM-147). It read
 `50 = 36 + 13 + 1` for three subcycles after the tree stopped being that size,
@@ -311,7 +312,12 @@ cycle 0.1.3b added seven — three probes, one that runs and two refused
 `TYPE-046`, and four reproductions that compile — so `106 = 80 + 24 + 2`
 (TM-177); and cycle 0.1.4 added two that parse cleanly — the civil
 cross-oracle's member and the corpus it imports — so `108 = 82 + 24 + 2`
-(TM-181).
+(TM-181); and cycle 0.1.4c's re-pin moved `fixed_move_out/`'s three from the
+first term to the second — refused `TYPE-084` — while `probe13d`, refused
+`TYPE-047` at the new pin until its accessor named `int64`, stayed in the
+first, and it added eight that parse, `fixed_import_scope/`'s seven cases and
+their declaring module, one of them refused `RESOLVE-001` — so
+`116 = 86 + 28 + 2` (TM-189, TM-190, TM-192).
 
 **AND THE TWO NUMBERS IN THAT PARAGRAPH ARE DIFFERENT SETS** — worth one
 sentence, because earlier versions had two sixteens, and before that two
@@ -325,7 +331,9 @@ exempt — so 16 and 15 overlapped in fourteen. At `c3bdae2` that file compiles,
 and the second set is exactly the first minus its two files that do not parse
 at all: **19 = 17 + 2**, and **24 = 22 + 2** at cycle 0.1.0c, whose five new
 refusals are in both sets — and **26 = 24 + 2** at cycle 0.1.3b, whose two
-are in both as well. **Ask what was counted, not who miscounted.**
+are in both as well — and **30 = 28 + 2** at cycle 0.1.4c, whose four new
+refusals, three `TYPE-084` and one `RESOLVE-001`, are in both too. **Ask
+what was counted, not who miscounted.**
 
 **Rule B-8 — the harness is itself tested.** A self-check feeds it wrong
 expectations and requires it to report every one as a failure. A suite that

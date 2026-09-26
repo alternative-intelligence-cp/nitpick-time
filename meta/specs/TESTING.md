@@ -17,7 +17,7 @@ than sampled. Where that is possible it is the gate, and §3 says where.
 
 | Stage | Answers |
 |---|---|
-| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **33 files of 108 that no other stage roots** <!-- [[sweep: npk_total=108]] --> |
+| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **41 files of 116 that no other stage roots** <!-- [[sweep: npk_total=116]] --> |
 | `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
 | `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
 | `check` | every documented refusal actually refuses, with exactly its code |
@@ -166,7 +166,11 @@ nobody evaluated. **The arithmetic is printed on every run and asserted:
 exempt files took `expect-` markers of their own (TM-154) — and **28 = 3
 exempt + 25 asserted** since cycle 0.1.3b, whose `fixed_move_out/` (O-N20)
 brought three reproductions exempt at their recorded verdicts and one asserted
-control (TM-177).
+control (TM-177) — and **36 = 1 exempt + 35 asserted** at compiler
+`c970483`, since cycle 0.1.4c, when O-N20's three took `expect-error:`
+markers of their own (TM-189) and O-N23's reproduction joined as
+`fixed_import_scope/`, seven asserted cases and one exempt declaring module
+(TM-192).
 
 **Rule V-1i (TM-146) — "every `.npk` in the tree" means THIS repository, and
 what the walk prunes is PRINTED.** A directory holding a `.git` entry is a

@@ -46,3 +46,24 @@ defect/fixed_move_out/case4_clone_control.npk        950bb1d  run:0             
 defect/fixed_move_out/case4_clone_control.npk        aaffb87  run:0                      run:0
 defect/fixed_move_out/case4_clone_control.npk        3d15ac9  run:0                      run:0
 defect/fixed_move_out/case4_clone_control.npk        c3bdae2  run:0                      run:0
+
+# ---- cycle 0.1.4c: the landing -- appended by `0.1.4c.md`'s transcript.py; every line above is
+# cycle 0.1.3b's and unchanged. The same seven files -- the ADOPTED texts, whose new
+# headers are comments -- at c3bdae2, the pin that raised O-N20 (the control), and at
+# c970483, the first pin carrying its fix, the compiler's DEF-99 (NITPICK-TYPE-084).
+
+file                                                 pin      -O0                        opt -O2
+probe17_fixed_owning_reads.npk                       c3bdae2  run:0                      run:0
+probe17_fixed_owning_reads.npk                       c970483  run:0                      run:0
+probe17b_fixed_row_copy_refused.npk                  c3bdae2  npkc:NITPICK-TYPE-046      npkc:NITPICK-TYPE-046
+probe17b_fixed_row_copy_refused.npk                  c970483  npkc:NITPICK-TYPE-046      npkc:NITPICK-TYPE-046
+probe17c_fixed_string_copy_refused.npk               c3bdae2  npkc:NITPICK-TYPE-046      npkc:NITPICK-TYPE-046
+probe17c_fixed_string_copy_refused.npk               c970483  npkc:NITPICK-TYPE-046      npkc:NITPICK-TYPE-046
+defect/fixed_move_out/case1_element_move.npk         c3bdae2  run:107                    run:95
+defect/fixed_move_out/case1_element_move.npk         c970483  npkc:NITPICK-TYPE-084      npkc:NITPICK-TYPE-084
+defect/fixed_move_out/case2_element_pass.npk         c3bdae2  run:107                    run:95
+defect/fixed_move_out/case2_element_pass.npk         c970483  npkc:NITPICK-TYPE-084      npkc:NITPICK-TYPE-084
+defect/fixed_move_out/case3_scalar_move.npk          c3bdae2  run:95                     run:95
+defect/fixed_move_out/case3_scalar_move.npk          c970483  npkc:NITPICK-TYPE-084      npkc:NITPICK-TYPE-084
+defect/fixed_move_out/case4_clone_control.npk        c3bdae2  run:0                      run:0
+defect/fixed_move_out/case4_clone_control.npk        c970483  run:0                      run:0

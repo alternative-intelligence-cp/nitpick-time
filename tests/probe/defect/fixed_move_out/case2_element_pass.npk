@@ -1,5 +1,14 @@
-// NO `expect-` MARKER, AND DELIBERATELY: named in `harness/run.py`'s
-// `EXPECT_EXEMPT` at `run:107`, re-derived on every full run (TM-137).
+// expect-error: NITPICK-TYPE-084
+//
+// O-N20'S REGRESSION TEST, SINCE CYCLE 0.1.4c. THE REFUSAL LANDED: at
+// compiler `c970483` the plain `pass NAMES[i]` below -- an implicit move -- is
+// refused `NITPICK-TYPE-084` where it is written, the compiler's DEF-99.
+// Until 0.1.4c this file carried no marker and was named in
+// `harness/run.py`'s `EXPECT_EXEMPT` at `run:107`, as case 1 was, and
+// `check_exemptions_live` failed the entry at the re-pin, as designed. THE
+// CONTROL is this text at the kept `c3bdae2` pin -- `run:107` at -O0 and
+// `run:95` under `opt -O2` -- appended to `TRANSCRIPT.txt` (TM-189).
+// Everything below is the record as 0.1.3b wrote it.
 //
 // CASE 2 — THE SAME MOVE, WRITTEN AS A PLAIN `pass`. `pass NAMES[i]` from a
 // function returning `string` moves the element out implicitly -- `pass` of

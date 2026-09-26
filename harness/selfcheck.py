@@ -851,8 +851,9 @@ PLANTED = [
     # AN OWNING ELEMENT, NOT A FIELD (cycle 0.1.3b). Until then the check read
     # only struct fields, so a table whose ELEMENT is a `string` was invisible
     # to it -- the table `tests/probe/probe17c_fixed_string_copy_refused.npk`
-    # declares, which the language lets exist, refuses to copy from, and does
-    # not stop a move out of.
+    # declares, which the language lets exist, refuses to copy from, and --
+    # until compiler `c970483`, which refuses it too (TYPE-084) -- did not
+    # stop a move out of.
     (checks_mod.check_no_owning_fields,
      ("src/zone/zone.npk",
       "mod:zone;\npub fixed string[2]:NAMES = [\"a\", \"b\"];\n"),

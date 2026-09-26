@@ -823,7 +823,25 @@ then:* it waits for something to check. Today no module but the placeholder
 else, and a scan with nothing to find would be commissioned only against
 plants.
 
-### O-X10 — how `ZONE_MODEL.md` Z-4's version string is held, while a move out of `fixed` storage compiles and faults
+### ~~O-X10 — how `ZONE_MODEL.md` Z-4's version string is held, while a move out of `fixed` storage compiles and faults~~ — **SETTLED 2026-09-26 (TM-191): the hold lifts at compiler `c970483`, and Z-6 reads the binding by `.clone()`**
+
+> **Settled on its own recommendation's terms, measured rather than
+> assumed.** (a) held Z-4 and Z-6 until the compiler refused a move out of
+> `fixed` storage, and at compiler `c970483` it does: a `move` of a `fixed
+> string`, and a plain `pass` of one, are refused where each is written,
+> `NITPICK-TYPE-084` — in the declaring module
+> (`tests/probe/defect/fixed_move_out/case3_scalar_move.npk`, asserted since
+> cycle 0.1.4c) and from a module that IMPORTS a `pub fixed string`, Z-4's
+> shape exactly, measured at `meta/roadmap/0.1/0.1.4c.md`'s planning — while a
+> lend and a `.clone()` of it run on both legs. So what this entry predicted
+> below is true: **Z-4 stands as written, and Z-6's body is `.clone()`**, the
+> spelling (b) named, now the only one the compiler admits and so no longer a
+> house rule; (b)'s other half, Z-4 made private, guards nothing, since a
+> consumer's move of the public binding is refused too; and (c) is not needed.
+> **Cycle 0.5 writes both.** A `string`'s `.clone()` may fail — `HeapOom`, in
+> every consumer's floor already — and how `ntime_tzdb_version()`'s signature
+> carries that is 0.5's to write with the function. The record below is left
+> standing.
 
 **Raised at cycle 0.1.3b's planning, 2026-09-25.** Z-4 puts the tzdb release
 name in `pub fixed string:TZDB_VERSION`, and Z-6 makes `ntime_tzdb_version()`
@@ -1026,7 +1044,20 @@ the check lands.
 
 ---
 
-### O-N20 — a `move` out of `fixed` storage holding an owning value compiles, and the program faults
+### ~~O-N20 — a `move` out of `fixed` storage holding an owning value compiles, and the program faults~~ — **FIXED at pin `c970483` by the compiler's DEF-99, verified here 2026-09-26 (TM-189)**
+
+> **Verified, not assumed.** At compiler `c970483` a `move` out of `fixed`
+> storage, and the implicit move of a plain `pass`, are refused where each is
+> written, `NITPICK-TYPE-084`. `fixed_move_out/`'s case 1, 2 and 3 went from
+> `run:107`, `run:107` and `run:95` to refused; `check_exemptions_live` named
+> all three moves, as the note below said it would; each now carries its
+> `expect-error:` marker, its `EXPECT_EXEMPT` entry is deleted, and
+> `case4_clone_control.npk` still exits 0. The controls — the same texts at
+> the kept `c3bdae2` pin — reproduced the recorded verdicts exactly and are
+> appended to the directory's `TRANSCRIPT.txt`. **And the shape this entry held
+> O-X10 for** — a `pub fixed string` moved or passed out by a module that
+> imports it — is refused the same way, while a lend and a `.clone()` run: O-X10
+> is settled (TM-191). The record below is left standing.
 
 **Raised** from this repository at cycle 0.1.3b's planning, 2026-09-25, at pin
 `c3bdae2`, by path; **numbered O-N20** in the workbench registry
@@ -1066,7 +1097,23 @@ above. Nothing else: no `fixed` value in `src/` owns, and S-19b with
 
 ---
 
-### O-N23 — a `fixed` binding's declared type resolves in the importing module's scope
+### ~~O-N23 — a `fixed` binding's declared type resolves in the importing module's scope~~ — **FIXED at pin `c970483` by the compiler's DEF-105, verified here 2026-09-26 (TM-192)**
+
+> **Verified, not assumed, and committed only now.** At compiler `c970483` a
+> `fixed` binding's declared type resolves in its declaring module. The
+> reproduction's seven programs (`meta/roadmap/0.1/0.1.4.md` §3), re-run at
+> both pins at `meta/roadmap/0.1/0.1.4c.md`'s planning: the table imported
+> alone compiles and reads correctly where `c3bdae2` refused it
+> `NITPICK-TYPE-001`; beside a same-named struct, swapped or wider, and as a
+> `fixed` scalar, it reads correctly where `c3bdae2` exited 10; the control and
+> the function case run 0 at both; and the by-name import beside a same-named
+> struct is still `NITPICK-RESOLVE-001`. **The reproduction is committed as
+> its regression test**, `tests/probe/defect/fixed_import_scope/` — its
+> declaring module and seven cases, each asserted at its fixed verdict, with a
+> `TRANSCRIPT.txt` at every pin the workbench keeps.
+> `tests/unit/sweep/every_oracle_date.npk` keeps importing its row type by
+> name, a belt now (TM-181's marker says so); cycle 0.5's "Watch for" says
+> what the pin does. The record below is left standing.
 
 **Raised** from this repository at cycle 0.1.4's planning, 2026-09-25, at pin
 `c3bdae2`, by path; **numbered O-N23** in the workbench registry

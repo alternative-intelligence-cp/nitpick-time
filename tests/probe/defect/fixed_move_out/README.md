@@ -1,4 +1,36 @@
-# `fixed_move_out` — a move out of `fixed` storage compiles, and faults
+# `fixed_move_out` — a move out of `fixed` storage compiled and faulted (O-N20); at compiler `c970483` it is refused
+
+## Landed — cycle 0.1.4c, compiler `c970483`
+
+**The refusal this directory was written to ask for is in the compiler.** Its
+DEF-99, the compiler's 1.6.0 step 3f, refuses a `move` out of `fixed`
+storage, and the implicit move of a plain `pass`, where each is written:
+`NITPICK-TYPE-084` — the refusal *"a `fixed` binding is immutable, and moving
+out of it writes it"* asked for, in this README's own words below. **Every
+file here is now asserted by an `expect-` marker** and none is in
+`harness/run.py`'s `EXPECT_EXEMPT`; the verdicts at the pin that raised it
+are each file's control (TM-189):
+
+| File | at `c3bdae2` — the control, -O0 / `opt -O2` | at `c970483` — the marker |
+|---|---|---|
+| `case1_element_move.npk` | **run 107 / run 95** — the fault | **refused `NITPICK-TYPE-084`** |
+| `case2_element_pass.npk` | **run 107 / run 95** | **refused `NITPICK-TYPE-084`** |
+| `case3_scalar_move.npk` | **run 95 / run 95** | **refused `NITPICK-TYPE-084`** |
+| `case4_clone_control.npk` | run 0 / run 0 — the control | run 0 / run 0 — unchanged: `.clone()` is a read the language admits |
+
+The `c3bdae2` column was re-run at cycle 0.1.4c against the kept toolchain, on
+the adopted texts — their new headers are comments — and equals the rows
+cycle 0.1.3b committed; `TRANSCRIPT.txt`'s last section has both pins, both
+legs. **And the shape this directory did not have** — `ZONE_MODEL.md` Z-4's,
+a `pub fixed string` moved or passed out by a module that IMPORTS it — was
+measured at 0.1.4c's planning and is refused the same way at `c970483`, while
+a lend and a `.clone()` run on both legs (`meta/roadmap/0.1/0.1.4c.md` §1.4).
+So cycle 0.5's version string is held no longer (TM-191).
+
+**Everything below this section is the record as cycle 0.1.3b wrote it, in
+the tense that was true then.**
+
+## The record, as raised
 
 **Raised at cycle 0.1.3b, 2026-09-25: the workbench registry's O-N20, and the
 compiler's DEF-99.** The planner raised it by path, as `PLAYBOOK.md` asks of a

@@ -16,7 +16,9 @@
 // check's rule now stands on what IS true, which this probe and its two
 // twins pin: the language lets a table hold an owner, refuses to COPY one out
 // (`probe17b`, `probe17c`), and -- the defect in
-// `defect/fixed_move_out/`, O-N20 -- does not stop a MOVE out.
+// `defect/fixed_move_out/`, O-N20 -- did not stop a MOVE out until compiler
+// `c970483`, which refuses it too, `NITPICK-TYPE-084` (cycle 0.1.4c, TM-189).
+// Every read below lends or clones, so none of them moves, at any pin.
 //
 // ANSWER, measured at `c3bdae2`: YES to all of it, on both legs. Each read is
 // done twice, because a read that moved the value would leave the second one

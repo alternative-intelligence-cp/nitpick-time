@@ -1,0 +1,23 @@
+// NO `expect-` MARKER, AND DELIBERATELY: named in `harness/run.py`'s
+// `EXPECT_EXEMPT` at `none` (TM-137). This is not a program -- no `main`, no
+// `failsafe` -- but the module the seven cases beside it import.
+//
+// O-N23'S DECLARING MODULE: a struct, a table of it, a scalar of it and a
+// function returning it, as `meta/roadmap/0.1/0.1.4.md` §3's `importscope.py`
+// wrote them. Nothing here is wrong. Every case asks for one of these and
+// reads `x`, which is 3 in row 1 and in `ONE`; `README.md` beside this file
+// says what each case shows.
+mod:rows;
+
+pub struct:Row = { int64:x; int64:y; };
+
+pub fixed Row[2]:ROWS = [
+    Row{ x: 1i64, y: -2i64 },
+    Row{ x: 3i64, y: -4i64 }
+];
+
+pub fixed Row:ONE = Row{ x: 3i64, y: -4i64 };
+
+pub func:mk = Row(int64:v) never fails {
+    pass Row{ x: v, y: 0i64 - v };
+};

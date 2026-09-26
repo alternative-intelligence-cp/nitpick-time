@@ -11,7 +11,9 @@
 //
 // Its twin `probe13d_vec_bare_pointer_unchecked.npk` does the identical read
 // through the bare pointer and exits 0 with a wrong value. Read the two
-// together: they differ in one line and in what the language does about it.
+// together: they differ in the accessor -- the slice line, and since cycle
+// 0.1.4c the element type `probe13d`'s names (its header says why) -- and in
+// what the language does about it.
 mod:probe13b_vec_index_past_end;
 
 struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };

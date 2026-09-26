@@ -1,5 +1,18 @@
-// NO `expect-` MARKER, AND DELIBERATELY: named in `harness/run.py`'s
-// `EXPECT_EXEMPT` at `run:107`, re-derived on every full run (TM-137).
+// expect-error: NITPICK-TYPE-084
+//
+// O-N20'S REGRESSION TEST, SINCE CYCLE 0.1.4c. THE REFUSAL LANDED: at
+// compiler `c970483` the `move` out of `NAMES` below is refused
+// `NITPICK-TYPE-084` where it is written -- the compiler's DEF-99, its 1.6.0
+// step 3f. Until 0.1.4c this file carried NO marker: it compiled and faulted,
+// and the only marker true of it would have made the fault a committed
+// expectation of this suite. It was named in `harness/run.py`'s
+// `EXPECT_EXEMPT` at the verdict `run:107` instead, and
+// `check_exemptions_live` failed that entry at the re-pin -- "it now stops at
+// `npkc`" -- which is the landing arriving as designed. THE CONTROL is this
+// text at the kept `c3bdae2` pin: `run:107` at -O0 and `run:95` under
+// `opt -O2`, re-derived at cycle 0.1.4c and appended to `TRANSCRIPT.txt`
+// (TM-189). Everything below is the record as 0.1.3b wrote it, in the tense
+// it was true in; `README.md` beside this file has the landing.
 //
 // CASE 1 — AN EXPLICIT `move` OUT OF A `fixed` TABLE COMPILES, AND FAULTS.
 // `move(NAMES[1])` is accepted by `npkc` at every kept pin; the emitted IR

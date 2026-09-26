@@ -10,7 +10,7 @@
 # ============================================================================
 # THE TWO CONDITIONS THIS FILE EXISTS TO WRITE DOWN
 # ============================================================================
-# A green run here may be read as "ntime builds against compiler c3bdae2" only
+# A green run here may be read as "ntime builds against compiler c970483" only
 # because BOTH of the following are stated AND enforced below. Either one
 # missing and the claim is weaker than it sounds.
 #
@@ -39,9 +39,10 @@
 # the civil types and their validating constructors, and since 0.1.1 Hinnant's
 # `date_to_days` and `days_to_date`, and since 0.1.3 the derived fields --
 # re-exported together as 57 public names [[sweep: lib_reexports=57]],
-# so this IS evidence about behaviour, of the 91 units the runner reports at
-# compiler `c3bdae2` (62 at cycle 0.0.6, 67 at 0.1.0, 70 at 0.1.0b, 75 at
-# 0.1.0c, 78 at 0.1.1, 81 at 0.1.2, 86 at 0.1.3, 90 at 0.1.3b). What
+# so this IS evidence about behaviour, of the 101 units the runner reports at
+# compiler `c970483` (62 at cycle 0.0.6, 67 at 0.1.0, 70 at 0.1.0b, 75 at
+# 0.1.0c, 78 at 0.1.1, 81 at 0.1.2, 86 at 0.1.3, 90 at 0.1.3b, 91 at 0.1.4 and
+# 0.1.4b, all at `c3bdae2` from 0.1.0b on). What
 # it is evidence of: the pinned compiler builds from a clean checkout at exactly
 # LLVM 20.1.2, every `.npk` under `src/` compiles, every unit under `tests/`
 # meets its own header at -O0 and again under `opt -O2`, the whole
@@ -92,7 +93,12 @@
 # corpus generated from `datetime` (`tests/fixtures/civil/`, `TESTING.md` V-6),
 # each assertion seen to fail on a mutant (`meta/roadmap/0.1/0.1.4.md` §7).
 # The negative half of the range has the round trips above and nothing
-# external: Python stops at year 1.
+# external: Python stops at year 1. AND SINCE CYCLE 0.1.4c, AT COMPILER
+# `c970483`: the day the 0.1.3b sentence above waited for has come -- a move
+# out of `fixed` storage is refused, `NITPICK-TYPE-084`, and each of
+# `fixed_move_out/`'s three cases asserts that refusal by its marker; and an
+# imported `fixed` binding's type resolves in its declaring module, asserted
+# by the seven cases of `tests/probe/defect/fixed_import_scope/` (O-N23).
 #
 # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
 # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
@@ -143,7 +149,7 @@ permissions:
   contents: read
 
 env:
-  # ../BOARD.md's pinned toolchain, by FULL sha. `c3bdae2` is the short form
+  # ../BOARD.md's pinned toolchain, by FULL sha. `c970483` is the short form
   # used in the roadmap and in the transcripts.
   #
   # THIS PIN WAS `0dfddac` UNTIL CYCLE 0.0.6 AND THE COMMENT ABOVE WAS FALSE
@@ -158,14 +164,21 @@ env:
   # the compiler's 1.5 close, and it is deliberately RED on its own: the tree
   # it pins is not yet adopted. It is pushed only together with the adoption,
   # so CI runs once, on the adopted tree (`meta/roadmap/0.1/0.1.0b.md` §3).
-  NITPICK_COMMIT: c3bdae270d63c93ab6e89825fddeec9425e2c6fd
-  NITPICK_COMMIT_SHORT: c3bdae2
+  #
+  # AND IT WAS `c3bdae2` UNTIL CYCLE 0.1.4c, which moves it to `c970483`, the
+  # end of the compiler's 1.6.0 chain -- IN THE ADOPTION'S OWN COMMIT this
+  # time, not before it: the adopted tree is RED at `c3bdae2`, where
+  # `fixed_move_out/`'s moves still compile, and the unadopted tree is RED at
+  # `c970483`, so the pin and the tree it judges move in one commit and CI
+  # never pairs either with the other's (`meta/roadmap/0.1/0.1.4c.md` §3).
+  NITPICK_COMMIT: c9704830ea9c738f523bf6646a355f52679b3aee
+  NITPICK_COMMIT_SHORT: c970483
   # nitpick.toml [toolchain] llvm. Condition (1) above.
   LLVM_VERSION: 20.1.2
   # The digests of the artefacts the workbench pins, from
-  # ../.internal/toolchain/c3bdae2/SHA256SUMS. Reported against CI's own, never
+  # ../.internal/toolchain/c970483/SHA256SUMS. Reported against CI's own, never
   # asserted -- see the step that uses them for why.
-  NPKC_SHA256_WORKBENCH: 5fd636b9ab557c19a0738e6f316f3347cc4ed29dd9a77f72199d6380c0c36323
+  NPKC_SHA256_WORKBENCH: e4d95007018f313e5dabab5c69610b72dc0781eeb0f7b7414a6179b6e287c70e
   NPKRT_SHA256_WORKBENCH: 162b897539285a773a6a1a0329750e148a6c9590b45dda2d017704743b591824
 
 jobs:

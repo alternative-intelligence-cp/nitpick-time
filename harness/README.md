@@ -248,6 +248,20 @@ pairs and the two `Bytes` tests carry `heap:` bounds on the runtime's own
 `NPK_HEAP_STATS` line, and the twins a `cap:` belt under 64 MiB, each unit's
 verdict line printing what it measured (`TESTING.md` V-17).
 
+**At cycle 0.1.4c, compiler `c970483`, 101 units**: the self-check unchanged
+— 8 of V-14's 9 cases, 23 tree-check violations with 23 clean controls, 3 arm
+specimens and the verdict mechanisms; the tree checks at `11 live`; parse
+over 116 files, `86 + 28 + 2`; the defect corpus at **36 = 1 exempt + 35
+asserted** (20 run, 15 refusal) — O-N20's three reproductions asserted as
+`NITPICK-TYPE-084` refusals now that the compiler refuses the move, and O-N23's
+seven cases joined as `fixed_import_scope/`, beside their exempt declaring
+module; `exemption verdicts: 5 of 5`; and library + repro + suite at 66,
+unchanged. `101 = 35 + 66`. The unchanged tree at the new pin had run `RED --
+90 unit(s) of 91`: the three exemptions expiring, as designed, and
+`probe13d` refused (`meta/roadmap/0.1/0.1.4c.md` §1). No library code
+changed, and the six sweeps' and six bounded files' numbers are the same at
+both pins — the runtime is the same object.
+
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the
 run makes about 200 of them. One that does *not* compile costs ~0.03 s.

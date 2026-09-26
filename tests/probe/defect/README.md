@@ -13,7 +13,8 @@ records what the behaviour used to be.
 | **O-N9** — a `uint8[]` view escapes its owning frame | [`view_escape/`](view_escape/README.md) | no — a conformance rule, subject to Q-5 |
 | **O-N10** — `derive(Eq)` on a payload enum will not compile; `derive(Ord)` is silently wrong | [`derive_payload_enum/`](derive_payload_enum/README.md) | no — one type exposed, no rule needs it |
 | **O-N11** (accepted — the compiler's DEF-5) — a program with `main` and no `failsafe` compiles at exit 0 | [`missing_failsafe/`](missing_failsafe/README.md) | no — but it constrains cycle 0.0.3's harness |
-| **O-N20** (the compiler's DEF-99; its fix, the refusal `NITPICK-TYPE-084` at the compiler's 1.6.0 step 3f, is at no pin of ours yet) — a `move` out of `fixed` storage compiles, and faults | `fixed_move_out/` | no — nothing here moves out of `fixed` storage, and `SAFETY.md` S-19b keeps owners out of tables; cycle 0.5's version string waits on it |
+| ~~**O-N20** — a `move` out of `fixed` storage compiles, and faults~~ — **FIXED at pin `c970483` by the compiler's DEF-99, which refuses the move as `NITPICK-TYPE-084` (TM-189)** | `fixed_move_out/` | no — and cycle 0.5's version string no longer waits on it (TM-191) |
+| ~~**O-N23** — an imported `fixed` binding's type resolves in the importer's scope~~ — **FIXED at pin `c970483` by the compiler's DEF-105 (TM-192)** | `fixed_import_scope/` | no — its reproduction was a script in `meta/roadmap/0.1/0.1.4.md` §3 until its fix landed, and is committed here since |
 
 > **Read this table as cycle 0.0.0's, which is when it was written** (dated
 > note, cycle 0.1.0c). Its "Blocking?" column is the state at pin `950bb1d`,
@@ -34,6 +35,15 @@ records what the behaviour used to be.
 > one. Its reproductions are exempt at their recorded verdicts rather than
 > asserted by a marker (TM-137), and [`fixed_move_out/`](fixed_move_out/README.md)
 > carries its status.
+
+> **Both of the last two rows are FIXED at compiler `c970483`** (dated note,
+> cycle 0.1.4c). O-N20's reproductions are asserted by their markers now, none
+> of them exempt, and O-N23's — raised at cycle 0.1.4 and committed only once
+> its fix had landed — joins as `fixed_import_scope/`. So the first note's
+> *"every defect in it has since been fixed"* is true of every row again, and
+> every reproduction that is a file is asserted by its marker on every run but
+> one declaring module, `fixed_import_scope/rows.npk`, exempt at `none`
+> (TM-137). Each directory's own README carries its landing.
 
 ---
 

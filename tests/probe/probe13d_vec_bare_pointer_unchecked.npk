@@ -26,7 +26,18 @@
 //   probe13b (through the guard)      exit 94, OutOfBounds
 //   probe13d (through the pointer)    exit 0, and the caller gets -9999
 //
-// Same index, same block, same run. The difference is one line in `vec_at`.
+// Same index, same block, same run. The difference is the slice line in
+// `vec_at` -- and, since cycle 0.1.4c, the element type the accessor names:
+//
+// AT COMPILER `c970483` THE ACCESSOR IS WRITTEN AT `int64` (TM-190). It was
+// generic, `vec_at_unchecked` over any `T`, and the compiler's DEF-104
+// refuses a generic `pass` of a `T` place read through a pointer, at every
+// `T` -- `NITPICK-TYPE-047`, "`T` is owned by what this pointer reaches" --
+// because at an owning `T` it would hand the caller a copy of an element the
+// container still owns. This probe's claim is about the POINTER, not the
+// generic: at `int64` the read is the same load it always was, and it still
+// returns the sentinel from past the end without trapping, on both legs,
+// measured at `c3bdae2` and at `c970483`.
 mod:probe13d_vec_bare_pointer_unchecked;
 
 struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };
@@ -44,10 +55,11 @@ func:vec_push<T> = NIL(Vec<T>->:v, move T:x) never fails {
     pass NIL;
 };
 
-// THE UNGUARDED ACCESSOR -- `probe13b`'s with the slice line removed. This is
+// THE UNGUARDED ACCESSOR -- `probe13b`'s with the slice line removed, and
+// written at `int64` since cycle 0.1.4c (TM-190; the header says why). This is
 // the shape `check_raw_index` exists to keep out of every file but
 // `src/core/vec.npk`, and the shape TM-129 refuses even there.
-func:vec_at_unchecked<T> = T(Vec<T>->:v, int64:i) never fails {
+func:vec_at_unchecked = int64(Vec<int64>->:v, int64:i) never fails {
     pass v.items[i];
 };
 

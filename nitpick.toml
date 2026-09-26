@@ -112,7 +112,7 @@ path  = "tests/probe"
 #   `parse`   HAS NO ENTRY BY DESIGN, not by omission (TM-123). It is a
 #             WHOLE-TREE stage: `BUILD.md` §3's Directory column for it reads
 #             "every `.npk` in the tree", and that is where its value is — of
-#             the 108 files here [[sweep: npk_total=108]], 33 are put in front of
+#             the 116 files here [[sweep: npk_total=116]], 41 are put in front of
 #             the compiler by nothing
 #             else. An entry would narrow it to one directory and silently
 #             un-cover the rest, so `stage = "parse"` is REFUSED BY NAME.

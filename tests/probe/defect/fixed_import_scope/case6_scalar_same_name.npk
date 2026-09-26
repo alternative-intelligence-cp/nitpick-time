@@ -1,0 +1,31 @@
+// expect-exit: 0
+//
+// CASE 6 -- A `fixed` SCALAR OF THE TYPE, BESIDE A STRUCT OF THE SAME NAME.
+// Through compiler `c3bdae2` it took this module's layout too and read `y` as
+// `x` -- exit 10 on both legs -- so O-N23 was the binding's annotation, not
+// the array's. At compiler `c970483` (DEF-105) it reads 3. The control is its
+// `c3bdae2` verdict, in `TRANSCRIPT.txt` (TM-192).
+mod:case6_scalar_same_name;
+
+use "./rows.npk".ONE;
+
+struct:Row = { int64:y; int64:x; };
+
+func:main = int32(cstring[]:_~argv) {
+    if (ONE.x != 3i64) { exit 10i32; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

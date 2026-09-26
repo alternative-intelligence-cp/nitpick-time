@@ -1,0 +1,36 @@
+// expect-error: NITPICK-RESOLVE-001
+//
+// CASE 5 -- THE TYPE IMPORTED BY NAME, AND A STRUCT OF THE SAME NAME DECLARED
+// HERE: refused `NITPICK-RESOLVE-001` at every pin the workbench keeps. Two
+// declarations of one name in one scope is a collision the resolver has
+// always refused, and it is why TM-181's by-name import made case 2's silent
+// form impossible for the file that uses it, through `c3bdae2`. At
+// `c970483` case 2 reads correctly too, so this refusal no longer guards
+// against O-N23 -- it is the rule it always was (TM-192).
+mod:case5_type_imported_same_name;
+
+use "./rows.npk".Row;
+use "./rows.npk".ROWS;
+
+struct:Row = { int64:y; int64:x; };
+
+func:main = int32(cstring[]:_~argv) {
+    int64:i = 1i64;
+    if (ROWS[i].x != 3i64) { exit 10i32; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

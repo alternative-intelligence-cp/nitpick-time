@@ -74,6 +74,15 @@ defect, and Z-4's `pub` binding hands every consumer the same `move`. How the
 version string is held is `../OPEN_QUESTIONS.md` O-X10, and cycle 0.5 writes
 neither shape while the defect is open (TM-178).)*
 
+*(Cycle 0.1.4c, TM-191: the hold lifts. At compiler `c970483` a `move` of a
+`fixed string`, and a plain `pass` of one, are refused where each is written
+— `NITPICK-TYPE-084`, the compiler's DEF-99 — in the declaring module and in
+one that imports a `pub fixed string`, and a lend and a `.clone()` of it run
+on both legs, measured. So Z-4 stands as written, and Z-6's function reads
+the binding by `.clone()`, the one spelling the compiler admits; a
+`string`'s clone may fail, `HeapOom`, which cycle 0.5 carries when it writes
+the function. O-X10 is settled.)*
+
 ---
 
 ## 3. The table, and its measured size

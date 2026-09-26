@@ -4678,6 +4678,13 @@ planning run line for line, and is recorded with its command in `0.1.3b.md`'s
 execution record.
 
 ### TM-177 — `check_no_owning_fields` keeps its rule on a reason that holds: no `fixed` table holds an owning value, as its element or as a field of its element at any depth, because a copy out is refused and a move out compiles and faults; `SAFETY.md` gains S-19b, and the check reads an element's own type, a field's type rather than its name, and nested structs
+> **SUPERSEDED IN PART by TM-189 (2026-09-26).** Its last reason, not its
+> rule: a move out of `fixed` storage no longer "compiles and faults" — at
+> compiler `c970483` it is refused where it is written, `NITPICK-TYPE-084`
+> (the compiler's DEF-99; O-N20, landed). A copy out is still refused,
+> `NITPICK-TYPE-046`, so a table whose rows own can still be read neither by
+> value nor by move, and the rule and the check stand. The text below is left
+> exactly as written.
 
 **2026-09-25, cycle 0.1.3b (PD-28). Amends `SAFETY.md` §1's `TYPE-046` row,
 adds S-19b, and restates `TESTING.md` §2's row and `CLAUDE.md`'s line**, each
@@ -4723,6 +4730,11 @@ keeping the substring match — it reports a field named `string_off` as an
 owner, measured on the plant's control.
 
 ### TM-178 — `ZONE_MODEL.md` Z-4's `pub fixed string:TZDB_VERSION` and Z-6's `ntime_tzdb_version()` are held until the compiler refuses a move out of `fixed` storage; `OPEN_QUESTIONS.md` O-X10 records it, and cycle 0.5 settles it
+> **SUPERSEDED IN PART by TM-191 (2026-09-26).** Its hold ended on its own
+> terms — at compiler `c970483` the compiler refuses a move out of `fixed`
+> storage and a plain `pass` of it, across an import too — and O-X10 is
+> settled then, not at cycle 0.5's planning: Z-4 stands as written, and Z-6
+> reads the binding by `.clone()`. The text below is left exactly as written.
 
 **2026-09-25, cycle 0.1.3b (PD-29). Adds a dated note to `ZONE_MODEL.md` Z-6
 and opens O-X10.** Z-6's obvious body, `pass TZDB_VERSION`, is the
@@ -4812,6 +4824,12 @@ the printed rows already give; printing every day always — 3.65 million lines
 per leg into the harness's captured output.
 
 ### TM-181 — the corpus is a generated Nitpick module of `fixed` data, `tests/fixtures/civil/civil_oracle.npk`, imported by a `sweep` member and named in `harness/run.py`'s `EXPECT_EXEMPT` at the verdict `none`; its row type is imported by name beside its table; `BUILD.md` §3's and `tests/README.md`'s `fixture` rows are corrected
+> **SUPERSEDED IN PART by TM-192 (2026-09-26).** Its reason for importing the
+> row type by name, not the import: at compiler `c970483` a `fixed` binding's
+> type resolves in its declaring module (the compiler's DEF-105; O-N23,
+> landed), so the table imported alone reads correctly and a same-named
+> struct in the importer no longer changes its layout. The import stays, a
+> belt. The text below is left exactly as written.
 
 **2026-09-25, cycle 0.1.4 (PD-32).** A module is the compiled-in form TM-007
 chose for the tzdb, and `probe04` has compiled a larger table than this on
@@ -5037,3 +5055,157 @@ MAJOR too, and F-10 needs the handover it names; a separate subcycle — the
 defect is this cycle's instrument's finding, the fix is two lines, and
 `bytes_growth`'s bound would otherwise be derived on a take that allocates
 nothing and re-derived a subcycle later.
+
+---
+
+# Cycle 0.1.4c — the adoption to compiler `c970483`, ratified 2026-09-26
+
+Four decisions, drafted at planning (`meta/roadmap/0.1/0.1.4c.md` §2, PD-40 …
+PD-43, in that order) and recorded here by the worker in the commit that makes
+the change each describes. Every measurement is at compilers `c3bdae2` and
+`c970483`, taken at planning and re-derived at execution by the plan's
+`facts.py` and `transcript.py` — `0.1.4c.md` §1 and §7, line for line. PD-42
+and PD-43 were put to the author at planning and accepted by default.
+
+### TM-189 — O-N20 has landed at compiler `c970483`: `fixed_move_out/`'s three reproductions are asserted refusals, `NITPICK-TYPE-084`, their `c3bdae2` verdicts the control; `SAFETY.md` S-19b is amended, and its rule stands on both refusals
+
+**2026-09-26, cycle 0.1.4c (PD-40). Replaces TM-177's last reason in part — its
+heading carries the marker — and amends `SAFETY.md` S-19b with a dated note,
+`harness/checks.py`'s comment and messages, and `CLAUDE.md`'s line.** At
+compiler `c970483`, the compiler's DEF-99 — its 1.6.0 step 3f — refuses a
+`move` out of `fixed` storage, and the implicit move of a plain `pass`, where
+each is written: `case1_element_move.npk`, `case2_element_pass.npk` and
+`case3_scalar_move.npk` are refused `NITPICK-TYPE-084` at their one move each,
+and `check_exemptions_live` reported their verdicts moved from `run:107`,
+`run:107` and `run:95` to `npkc`, naming each — the landing arriving as their
+`EXPECT_EXEMPT` entries were written to report it (TM-137). **Measured at
+planning, at both pins, before anything changed** (`0.1.4c.md` §1): of the
+tree's 108 `.npk`, those three and `probe13d` are the only files whose verdict
+differs; `case4_clone_control.npk` runs 0 at both pins, and `probe17`,
+`probe17b` and `probe17c` do not move. So each of the three carries
+`// expect-error: NITPICK-TYPE-084` as its first line, its `EXPECT_EXEMPT`
+entry is deleted, and O-N20 is struck. **The controls**: the same texts at the
+kept `c3bdae2` pin give `run:107`/`run:95`, `run:107`/`run:95` and
+`run:95`/`run:95` on the two legs — the rows cycle 0.1.3b committed, line for
+line — appended, not substituted, to the directory's `TRANSCRIPT.txt` beside
+the `c970483` rows. The pair is what makes each a test of the fix and not of
+the file (TM-154's rule). **S-19b's rule stands**: a copy out is still
+`NITPICK-TYPE-046` and a move out is now `NITPICK-TYPE-084`, so a table whose
+rows own can be read neither by value — the read S-17's accessor pair does —
+nor by move; what changed is that the second half is the compiler's refusal
+rather than a fault.
+
+*Declined:* `expect-error-at` beside each code — each case holds exactly one
+move out of `fixed` storage, so a `TYPE-084` can come from nowhere else, and
+B-7's set equality refuses any other code already; O-N19's files took the code
+alone (TM-154), and a position is re-measured on every header edit (B-5d);
+keeping the three exempt at their new verdict, `npkc` — an exemption exists for
+a file no marker can describe, and a marker now can (TM-154's reason);
+retiring `check_no_owning_fields` now that the move is refused — a copy out is
+still refused, so a table whose rows own is still one S-17's accessor cannot
+read, and the check is what keeps the zone tables' rows offsets; regenerating
+`TRANSCRIPT.txt` over every kept pin — its six-pin table is cycle 0.1.3b's
+evidence at its pins, and an appended section with the control beside the fix
+is the landing's record, as `generic_owning_copy/`'s was.
+
+### TM-190 — `probe13d`'s unguarded accessor names `int64`, because the compiler's DEF-104 refuses a generic pass-out of a `T` place through a pointer; the probe's claim is the pointer's, and it stands
+
+**2026-09-26, cycle 0.1.4c (PD-41). Amends `SAFETY.md` S-17's `probe13d`
+paragraph with a dated note, and `probe13b`'s sentence about the twins.** At
+compiler `c970483` `tests/probe/probe13d_vec_bare_pointer_unchecked.npk` is
+refused `NITPICK-TYPE-047` at `vec_at_unchecked<T>`'s `pass v.items[i]` —
+*"`T` is owned by what this pointer reaches, and `pass` would hand the caller
+a copy that eventually drops it"* — the compiler's DEF-104, which reaches a
+`T` place read out of a pointed-to container as well as a lent `T` parameter,
+and asks D-264's predicate of a generic body once, for every `T`: refused
+with an instantiation and without one, measured. It was the unchanged tree's
+one failure the compiler's notices did not name, and a sweep for lent `T`
+parameters could not have found it. **The probe's claim is about the pointer
+and not the generic** — `TY_POINTER` indexing emits no bounds guard (TM-108,
+S-17b) — so the accessor is written at the one type the probe instantiates:
+`func:vec_at_unchecked = int64(Vec<int64>->:v, int64:i)`. Measured at both
+pins, both legs: it compiles, reads the planted sentinel from past the end
+without trapping, and exits 0; its body is the old instantiation's
+instructions, the struct type's name aside. **`src/` is not reached**:
+`vec.npk`'s accessors read through a `#wild_slice` they lay over the block,
+and `vec_pop` already spells `move`; `vec.npk`, every generic in it, compiles
+at `c970483`.
+
+*Declined:* `pass move(v.items[i])`, generic — it compiles at both pins and
+exits 0 at `int64`, measured, but it makes the probe's accessor a move-out,
+which at an owning `T` writes a vacancy into the slot it read, and a control
+for an unguarded READ should read; `// expect-error: NITPICK-TYPE-047` — true
+of the file, and the end of TM-108's committed evidence, since nothing else
+here runs an out-of-range bare-pointer read; a `Pod`-style bound —
+`nitpick-regex`'s answer for its library's `vec_get`, and 0.1.3c's to port,
+not a probe's.
+
+### TM-191 — the hold on `ZONE_MODEL.md` Z-4 and Z-6 lifts at compiler `c970483`: a move or a plain `pass` of a `fixed string` is refused there, across an import too, and a lend or `.clone()` reads it; Z-4 stands as written, Z-6 reads it by `.clone()`, and O-X10 is settled
+
+**2026-09-26, cycle 0.1.4c (PD-42). Replaces TM-178 in part — its heading
+carries the marker — adds a dated note to `ZONE_MODEL.md` Z-6, and settles
+O-X10 and 0.5's held checklist item.** TM-178 held Z-4's `pub fixed
+string:TZDB_VERSION` and Z-6's `ntime_tzdb_version()` until the compiler
+refused a move out of `fixed` storage, and O-X10's recommended answer was that
+hold. At compiler `c970483` it refuses it (TM-189), and **the shape Z-4
+actually has was measured at planning, because no reproduction here had it**:
+a module that IMPORTS a `pub fixed string` and moves it out is refused
+`NITPICK-TYPE-084` at the move; one whose function passes it out plainly —
+Z-6's obvious body — is refused at the `pass`; and one that lends it to a
+by-value parameter, or reads it by `.clone()` twice, runs 0 on both legs. At
+`c3bdae2` the move had exited 95 on both legs. **So Z-4 stands as written,
+and Z-6's function reads the binding by `.clone()`** — the one spelling the
+compiler admits, and so no longer the house rule TM-178 declined. A `string`'s
+`.clone()` may fail — `?! HeapOom` in the measured form, and `HeapOom` is in
+every consumer's floor already — and how `ntime_tzdb_version()`'s signature
+carries that is cycle 0.5's to write, with the function. **O-X10 is struck
+with this decision's number**, and 0.5's checklist item no longer waits.
+
+*Declined:* leaving O-X10 open for cycle 0.5's planning, as TM-178 said — the
+question is answered by the compiler's behaviour at the pin, measured, and a
+question left open once answered reads as undecided; (b) in full, Z-4 made
+private — a consumer's move of the public binding is refused anyway, so
+privacy guards nothing and takes away the name Z-4 promises; (c), the version
+held as bytes and built on request — TM-178's reason for declining it still
+holds, a representation chosen because of a defect, and the defect is gone.
+
+### TM-192 — O-N23 has landed at compiler `c970483`: its reproduction is committed as `tests/probe/defect/fixed_import_scope/`, seven cases asserted at their fixed verdicts with the earlier pins' as the control; TM-181's by-name import stays, a belt
+
+**2026-09-26, cycle 0.1.4c (PD-43). Replaces TM-181's reason in part — its
+heading carries the marker — takes the reproduction's commit from cycle
+0.1.5's list, and adds a dated note to 0.5's "Watch for".** At compiler
+`c970483`, the compiler's DEF-105 — its 1.6.0 step 3h — resolves a `fixed`
+binding's declared type in its declaring module, as its D-137 says of every
+annotation of a declaration. **Measured at planning with `0.1.4.md` §3's own
+seven programs**: the loud form — the table imported without its type,
+refused `NITPICK-TYPE-001` at the declaring module's line through `c3bdae2` —
+compiles and reads 3; the silent forms — a same-named struct in the importer,
+swapped or 8 bytes wider, and a `fixed` scalar beside one — read 3 where they
+read the wrong field and exited 10; the control and the function case run 0 as
+before; and the by-name import beside a same-named struct is still
+`NITPICK-RESOLVE-001`, two declarations of one name. **Committed here, not at
+the close**: the pin that carries the fix is this subcycle's, the kept pins
+that had the defect are the control, and a landing's reproduction becomes its
+regression test in the subcycle that adopts it (TM-154). So the directory
+holds `rows.npk`, the declaring module, in `harness/run.py`'s `EXPECT_EXEMPT`
+at `none`; seven cases, six `// expect-exit: 0` and case 5
+`// expect-error: NITPICK-RESOLVE-001`, each with its `c3bdae2` verdict in
+its header and a `failsafe` naming exactly what `NITPICK-REACH-002` asks — the
+script's named two more; and `TRANSCRIPT.txt`, generated from these files at
+every pin the workbench keeps: the seven old verdicts at the six from
+`950bb1d` to `c3bdae2` — so the defect was not a regression — and the fixed
+ones at `c970483`. **TM-181's import of `OracleYear` by name stays**: it costs
+nothing, and removing it would edit a gate member to change nothing it
+asserts; what it guarded against is gone, so it is a belt. O-N23 is struck.
+
+*Declined:* leaving the commit to 0.1.5, where `0.1.4.md` §15 placed it — a
+close that adds eight files to the defect corpus moves the totals it exists to
+record, and 0.1.3c and the next re-pin would run without the regression test;
+committing only the defect's four cases — the reproduction as raised is seven
+programs, and cases 4, 5 and 7 are the controls that made it one (the
+importer's scope and not the table, a collision and not a shadow, signatures
+at home); `importscope.py`'s `failsafe` verbatim — two arms `NITPICK-REACH-002`
+does not ask for, and this tree's roots name what it asks and nothing more
+(0.1.0b's rule); dropping the by-name import from `every_oracle_date.npk` — a
+gate member edited for nothing it checks, and 0.5's tables will import their
+row types by name anyway.

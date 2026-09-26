@@ -32,7 +32,7 @@ came in as estimated, this cycle is the estimate made real.
 ## Checklist
 
 ### 0.5.0 — the TZif reader
-- [ ] Q-1 answered: the release pinned, recorded in `src/zone/version.npk` as `pub fixed string:TZDB_VERSION`, and named in every generated file's header — **⚠ HELD since cycle 0.1.3b (TM-178)**: at pin `c3bdae2` a `move` or a plain `pass` of a `fixed string` compiles and faults (O-N20, the compiler's DEF-99), and Z-6's `ntime_tzdb_version()` written the obvious way is exactly that, so read `../../OPEN_QUESTIONS.md` O-X10 before planning this item
+- [ ] Q-1 answered: the release pinned, recorded in `src/zone/version.npk` as `pub fixed string:TZDB_VERSION`, and named in every generated file's header — ~~**⚠ HELD since cycle 0.1.3b (TM-178)**: at pin `c3bdae2` a `move` or a plain `pass` of a `fixed string` compiles and faults (O-N20, the compiler's DEF-99), and Z-6's `ntime_tzdb_version()` written the obvious way is exactly that, so read `../../OPEN_QUESTIONS.md` O-X10 before planning this item~~ — **the hold LIFTED at cycle 0.1.4c (TM-191)**: at compiler `c970483` the move and the `pass` are refused where written, `NITPICK-TYPE-084`, in the declaring module and across an import, so Z-4 is written as specified and Z-6's `ntime_tzdb_version()` reads the binding by `.clone()`; a `string`'s clone may fail (`HeapOom`), and the function's signature carries that — O-X10 is settled, and its entry says what was measured
 - [ ] the v2+ block read (64-bit transitions), not the v1 block
 - [ ] canonical zones only: symlinks resolved as links (Z-10), the `posix/` and `right/` trees excluded — `right/` is the leap-second variant and TM-006 does not model leap seconds
 - [ ] the generator **hard-fails** on a zone it cannot read, naming it, rather than emitting a row it cannot honour
@@ -84,4 +84,11 @@ committed data in one pass, and the real emitted size is a recorded number.
   struct's layout. With the type imported by name, such a declaration is
   refused `NITPICK-RESOLVE-001`. A compiler defect, O-N23, raised at cycle
   0.1.4's planning (`meta/roadmap/0.1/0.1.4.md` §3); read the pin's behaviour
-  again before this cycle's lookup module is written.
+  again before this cycle's lookup module is written. **Read at cycle 0.1.4c,
+  and FIXED at compiler `c970483`** (the compiler's DEF-105, TM-192): a table's
+  row type resolves in its declaring module, so a table imported without its
+  type compiles and reads correctly, and a same-named struct in the importer
+  no longer changes its layout — `tests/probe/defect/fixed_import_scope/`
+  asserts both on every run. Import each row type by name anyway, beside its
+  table: it costs nothing, it keeps the imports saying what the module reads,
+  and it is TM-181's convention.

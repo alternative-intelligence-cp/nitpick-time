@@ -648,9 +648,10 @@ def check_literal_divisors(tree, **_):
 # that does not move it works: a scalar field, a lend (a by-value argument),
 # `.clone()`. What the language refuses is a COPY of an owning row or element,
 # `NITPICK-TYPE-046`, which is the read `SAFETY.md` S-17's accessor pair does;
-# and what it does NOT stop is a MOVE out of `fixed` storage, which compiles and
-# then faults -- a compiler defect, reproduced in `fixed_move_out/` (O-N20, the
-# compiler's DEF-99, whose refusal is at no pin of ours yet). So a table
+# and what it did NOT stop, through compiler `c3bdae2`, is a MOVE out of `fixed`
+# storage, which compiled and then faulted -- a compiler defect, reproduced in
+# `fixed_move_out/` (O-N20, the compiler's DEF-99). At compiler `c970483` the
+# move is refused as well, `NITPICK-TYPE-084` (cycle 0.1.4c, TM-189). So a table
 # whose rows own can be read neither by value nor by move, and this library's
 # tables hold none (S-19b): the zone tables hold OFFSETS into a name pool for
 # exactly this reason (`ZONE_MODEL.md` Z-7).
@@ -795,18 +796,20 @@ def check_no_owning_fields(tree, **_):
             if _owning_type(elem):
                 problems.append(
                     "%s:%d stores `%s` in a table: an owning element. A copy "
-                    "of it out of the table is refused (TYPE-046), and a move "
-                    "out of `fixed` storage compiles and faults (the compiler "
-                    "defect in tests/probe/defect/fixed_move_out/), so the "
-                    "table can be read by neither (SAFETY.md S-19b)."
+                    "of it out of the table is refused (TYPE-046), and so is "
+                    "a move out of `fixed` storage since compiler c970483 "
+                    "(TYPE-084; before it the move compiled and faulted, "
+                    "tests/probe/defect/fixed_move_out/), so the table can "
+                    "be read by neither (SAFETY.md S-19b)."
                     % (rel, lineno, elem))
                 continue
             for frel, flineno, ftext, via in _owners(structs, elem):
                 problems.append(
                     "%s:%d stores `%s` in a table, and `%s` has an owning "
                     "field at %s:%d -- `%s`%s. A row copied out of the table "
-                    "is refused (TYPE-046) and a move out of `fixed` storage "
-                    "faults, so an owning row can be read by neither; the "
+                    "is refused (TYPE-046) and so is a move out of `fixed` "
+                    "storage since compiler c970483 (TYPE-084), so an owning "
+                    "row can be read by neither; the "
                     "zone tables hold OFFSETS into a name pool for exactly "
                     "this reason (ZONE_MODEL.md Z-7, SAFETY.md S-19b)."
                     % (rel, lineno, elem, elem, frel, flineno, ftext,

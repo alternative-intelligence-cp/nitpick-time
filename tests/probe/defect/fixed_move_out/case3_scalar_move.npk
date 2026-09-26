@@ -1,5 +1,15 @@
-// NO `expect-` MARKER, AND DELIBERATELY: named in `harness/run.py`'s
-// `EXPECT_EXEMPT` at `run:95`, re-derived on every full run (TM-137).
+// expect-error: NITPICK-TYPE-084
+//
+// O-N20'S REGRESSION TEST, SINCE CYCLE 0.1.4c. THE REFUSAL LANDED: at
+// compiler `c970483` the `move(V)` below is refused `NITPICK-TYPE-084` where
+// it is written, the compiler's DEF-99 -- and so is the same move made by a
+// module that IMPORTS a `pub fixed string`, which is `ZONE_MODEL.md` Z-4's
+// shape exactly, measured at 0.1.4c's planning (TM-191). Until 0.1.4c this
+// file was named in `harness/run.py`'s `EXPECT_EXEMPT` at `run:95`, and
+// `check_exemptions_live` failed the entry at the re-pin, as designed. THE
+// CONTROL is this text at the kept `c3bdae2` pin -- `run:95` on both legs --
+// appended to `TRANSCRIPT.txt` (TM-189). Everything below is the record as
+// 0.1.3b wrote it.
 //
 // CASE 3 — A `move` OUT OF A `fixed` SCALAR. `fixed string:V` is
 // `ZONE_MODEL.md` Z-4's shape exactly -- `TZDB_VERSION` -- and Z-6's

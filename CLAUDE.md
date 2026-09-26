@@ -7,7 +7,30 @@ Guidance for Claude Code sessions working in this repository.
 `ntime` — a date, time and time-zone library for **Nitpick**, the
 safety-critical systems language at `../../nitpick`.
 
-**Status, after cycle 0.1.4b: the managed-memory gate.** For the first time
+**Status, after cycle 0.1.4c: the adoption to compiler `c970483`** — the end
+of the compiler's 1.6.0 chain, carrying its DEF-95 to DEF-106 and DEF-108. No
+library code changed. **Two defects this repository raised have landed, and
+each reproduction is now a regression test with its old verdicts as the
+control**: a move out of `fixed` storage is refused `NITPICK-TYPE-084` (O-N20,
+the compiler's DEF-99), so `tests/probe/defect/fixed_move_out/`'s three cases
+carry that marker and none is exempt (TM-189); and an imported `fixed`
+binding's type resolves in its declaring module (O-N23, DEF-105), so its
+reproduction is committed at last, as `tests/probe/defect/fixed_import_scope/`
+— seven cases, the loud form compiling and every silent one reading correctly
+(TM-192). **The hold on cycle 0.5's version string lifts** (TM-191): a
+consumer's `move` of an imported `pub fixed string`, and Z-6's obvious `pass`,
+are refused where written, so Z-6 reads it by `.clone()`. **Measured first**:
+at the new pin the unchanged tree was RED at 90 of 91, and a per-file sweep of
+all 108 `.npk` at both pins moved exactly four — the three exemptions, and
+`probe13d`, whose generic bare-pointer accessor the compiler's DEF-104 refuses
+as a pass-out of a `T` place through a pointer (`NITPICK-TYPE-047`); it reads
+at `int64` now and still returns its planted sentinel unguarded (TM-190).
+`src/core/vec.npk` compiles unchanged: `vec_at` reads through a local
+`#wild_slice`, and `vec_pop` already spelled `move`. No function anywhere falls
+off its end (`NITPICK-FLOW-001`, DEF-108). CI pins `c970483` in the same
+commit. A full invocation is **101 units green** at pin `c970483`.
+
+**After cycle 0.1.4b: the managed-memory gate.** For the first time
 the harness asserts MANAGED memory. D-151's exit-0 trap sees only `wild` blocks
 (TM-106), and the `ulimit -v` pair that stood in for a gate since cycle 0.0.4
 (TM-131) was measured by hand and never run. Now a `// heap:` marker holds the
@@ -339,9 +362,11 @@ Full statement in `meta/specs/SAFETY.md` §1. The ones that bite hardest here:
 - `Ord` derives in **declaration order**, so a struct's field order is
   semantic (`Timestamp` is seconds-then-nanos for exactly this reason).
 - Owning values are **move-only**, and a `fixed` table holds no owning value:
-  the language allows one, refuses the copy that reads a row out, and does not
-  stop a move out of `fixed` storage, which faults (`SAFETY.md` S-19b — a
-  compiler defect raised at cycle 0.1.3b, O-N20, the compiler's DEF-99).
+  the language allows one and refuses the copy that reads a row out — and,
+  since compiler `c970483`, the move out of `fixed` storage too,
+  `NITPICK-TYPE-084` (`SAFETY.md` S-19b; through `c3bdae2` the move compiled
+  and faulted — a compiler defect raised at cycle 0.1.3b, O-N20, the
+  compiler's DEF-99).
 - There are **no closures** and **no format-specifier language** (D-018,
   D-053).
 - `defer` does **not** run on a trap; `failsafe` is the only code guaranteed to

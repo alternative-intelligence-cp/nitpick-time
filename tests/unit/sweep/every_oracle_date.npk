@@ -37,7 +37,12 @@
 // that struct's layout. Imported by name, a same-named declaration here is
 // refused `NITPICK-RESOLVE-001` instead -- so neither can happen to this file.
 // A compiler defect, O-N23, raised at this cycle's planning with its
-// reproduction (`meta/roadmap/0.1/0.1.4.md` §3).
+// reproduction (`meta/roadmap/0.1/0.1.4.md` §3). (Cycle 0.1.4c, TM-192: FIXED
+// at compiler `c970483`, the compiler's DEF-105 -- the binding's type now
+// resolves in the corpus's own scope, so the table imported alone reads
+// correctly, and a same-named struct here would no longer change its layout;
+// `tests/probe/defect/fixed_import_scope/` asserts both. The import by name
+// stays: it costs nothing, and it is a belt now rather than the guard.)
 //
 // THE COUNT IS THE EVIDENCE (`TESTING.md` V-16, TM-122): N is the days that
 // passed, and the harness requires it to equal the domain declared above --

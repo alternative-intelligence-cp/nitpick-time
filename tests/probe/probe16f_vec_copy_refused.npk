@@ -19,7 +19,7 @@
 // released at scope exit, so it is move-only". THE REFUSAL IS THE ASSERTION
 // (B-7). ITS CONTROL is this file against the library before the marker: it
 // compiles, links, and the pop through `w` reads the allocator's free poison,
-// exit 70 on both legs (`meta/roadmap/0.1/0.1.3c.md` §1.4). `probe16g` is the
+// exit 70 on both legs (`meta/roadmap/done/0.1/0.1.3c.md` §1.4). `probe16g` is the
 // same hole by assignment, `probe16h` by a struct that holds a `Vec`, and
 // `../unit/vec_moves.npk` is the positive twin -- the moves and loans that
 // still compile.

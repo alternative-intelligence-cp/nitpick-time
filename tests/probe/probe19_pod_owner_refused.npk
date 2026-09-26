@@ -20,7 +20,7 @@
 // WHAT THIS DOES NOT STOP, and says so: `TYPE-047`'s message suggests declaring
 // the parameter `move`, and at `c970483` an impl that does is ACCEPTED, though
 // the trait lends it -- the compiler's DEF-116, fixed at no pin of ours. Such
-// an impl makes `vec_at` a double free (measured, `meta/roadmap/0.1/0.1.3c.md`
+// an impl makes `vec_at` a double free (measured, `meta/roadmap/done/0.1/0.1.3c.md`
 // §1.6). This library writes none; `nitpick-regex` pins the shape.
 mod:probe19_pod_owner_refused;
 

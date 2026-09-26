@@ -72,8 +72,8 @@ sibling libraries.
 | Cycle | Topic | Gated on |
 |---|---|---|
 | ~~**0.0**~~ | **Foundations** — the language probes, the harness, `src/core/` — **CLOSED 2026-09-06, archived at [`done/0.0/`](done/0.0/README.md)** | — |
-| **0.1** | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **IN PROGRESS: 0.1.0, the adoption to compiler `c3bdae2` ([`0.1/0.1.0b.md`](done/0.1/0.1.0b.md)), the access properties ([`0.1/0.1.0c.md`](done/0.1/0.1.0c.md)), the algorithms ([`0.1/0.1.1.md`](done/0.1/0.1.1.md)), the sweep ([`0.1/0.1.2.md`](done/0.1/0.1.2.md)), the derived fields ([`0.1/0.1.3.md`](done/0.1/0.1.3.md)), `check_no_owning_fields`' premise ([`0.1/0.1.3b.md`](done/0.1/0.1.3b.md)), the civil cross-oracle ([`0.1/0.1.4.md`](done/0.1/0.1.4.md)), the managed-memory gate ([`0.1/0.1.4b.md`](done/0.1/0.1.4b.md)), the adoption to compiler `c970483` ([`0.1/0.1.4c.md`](done/0.1/0.1.4c.md)) and `Vec` move-only by construction ([`0.1/0.1.3c.md`](done/0.1/0.1.3c.md)) done — the gate complete: the round trips, monotonicity, month lengths and, with `weekday()`, the weekday cycle (TM-165); the premise re-measured and the rule restated as `SAFETY.md` S-19b (TM-177), a move out of `fixed` storage raised as O-N20; every date of years 1 … 9999 agreeing with Python's `datetime`, exhaustively rather than sampled (TM-179); six files' managed memory held on every run to the runtime's own `NPK_HEAP_STATS` count, and the `ulimit -v` pair a belt the harness runs (TM-184 … TM-187), with `bytes_take` owning its answer (TM-188); the two compiler defects this repository raised at `c3bdae2`, O-N20 and O-N23, landed at `c970483` and asserted as regression tests with their old verdicts as the control, and the hold on cycle 0.5's version string lifted (TM-189 … TM-192); a `Vec` move-only by a zero-length owning field, `vec_at` bounded by `Pod` and reading through a loan, `Bytes.body` hidden, TM-150's churn pair committed with `heap:` bounds, and A′ recorded as `VERIFICATION.md` rule P-1b (TM-193 … TM-198); 0.1.5, the close: its first half done, READY-TO-CLOSE, the audit next ([`0.1/0.1.5.md`](done/0.1/0.1.5.md))** | 0.0 ✓ |
-| **0.2** | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop | 0.1 |
+| ~~**0.1**~~ | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **CLOSED 2026-09-26, archived at [`done/0.1/`](done/0.1/README.md)** | 0.0 ✓ |
+| **0.2** | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **NEXT**: its opening subcycle, [`0.2/0.2.0.md`](0.2/0.2.0.md), written at cycle 0.1's close | 0.1 ✓ |
 | **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double | 0.2 |
 | **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate | 0.2 |
 | **0.5** | **The zone table** — the generator, the committed tables, the size measurement | 0.1 |
@@ -134,6 +134,22 @@ each date's day number being the previous one's plus one, TM-167; and since
 cycle 0.1.3 the weekday cycle is asserted, with `weekday()`, as a count begun
 at −9999-01-01's Monday, TM-165 and TM-174. Until 0.1.3 this note read "the
 weekday cycle is asserted at 0.1.3, where `weekday()` is written".)*
+
+**CLOSED 2026-09-26 at compiler `c970483`, archived at
+[`done/0.1/`](done/0.1/README.md)** — twelve subcycles, the close's second
+half with the cycle audit's triage. What it produced: `src/cal/`, its gate on
+every full run — the round trips, monotonicity, month lengths and the weekday
+cycle over the whole range, and every date of years 1 … 9999 agreeing with
+Python's `datetime` (TM-179) — and `C-12`'s totality asserted at its edges;
+two adoptions, to compiler `c3bdae2` and `c970483`; the access properties and
+a `Vec` move-only by construction (TM-156, TM-193 … TM-198); six, then eight,
+files' managed memory held to the runtime's own count (TM-184 … TM-188); two
+compiler defects raised, O-N20 and O-N23, each landed and asserted with its old
+verdict as the control; a harness that reads source as the compiler's lexer
+does and matches tokens (TM-199, TM-200, TM-202, TM-206); and 113 units green.
+The table row read *"IN PROGRESS: …"* with each subcycle's file linked, and
+`done/0.1/README.md` keeps that list. `done/0.1/0.1.5.md`'s record holds what
+the cycle found and taught.
 
 ### 0.2 — Instants and timestamps
 `src/span/`: `Instant` with its clock tag, `Timestamp` with its normalisation

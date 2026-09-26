@@ -7,9 +7,10 @@ Guidance for Claude Code sessions working in this repository.
 `ntime` — a date, time and time-zone library for **Nitpick**, the
 safety-critical systems language at `../../nitpick`.
 
-**Status, at cycle 0.1.5's second half: cycle 0.1's audit triaged — the
-archive to `meta/roadmap/done/0.1/` and cycle 0.2's opening are the close's
-last commits.** **The close's second half triaged the cycle audit's nineteen
+**Status: cycle 0.1 CLOSED (2026-09-26), archived at `meta/roadmap/done/0.1/`
+— the civil calendar, with its exhaustive gate on every run — and cycle 0.2,
+instants and timestamps, is next**, from `meta/roadmap/0.2/0.2.0.md`, written at
+the close. **The close's second half triaged the cycle audit's nineteen
 findings**, every one fixed but for the check half of one, which a decision
 places on cycle 0.2.3, and the four the audit asked to be fixed rather than
 declined are fixed: part E's program asks the pinned compiler about thirteen
@@ -118,7 +119,7 @@ allocation count over a floor, so an emptied remedy is red; and the two `Bytes`
 tests' ceilings catch a growth that keeps its old bodies, which
 `bytes_growth` otherwise passes at exit 0. Every ceiling is the geometric mean
 of the correct program's peak and a leak mutant's (TM-185), and every bound was
-seen red on its mutant (`meta/roadmap/0.1/0.1.4b.md` §7). **The cap's control
+seen red on its mutant (`meta/roadmap/done/0.1/0.1.4b.md` §7). **The cap's control
 moved**: at compiler `c3bdae2` a program that allocates nothing needs about
 10.5 MiB before `main`, where `/bin/true` needs 2.75 MiB, so the control is
 that floor program, built by the same toolchain (TM-186). **And the count found
@@ -153,7 +154,7 @@ and beside a same-named struct it silently takes that struct's layout. The
 member imports `OracleYear` by name beside `ORACLE` (TM-181), which turns
 the silent form into a `NITPICK-RESOLVE-001` refusal, and the defect holds
 cycle 0.5's zone tables. Every check the member makes was seen to fail on a
-mutant — `meta/roadmap/0.1/0.1.4.md` §7's twenty-one rows. No library code
+mutant — `meta/roadmap/done/0.1/0.1.4.md` §7's twenty-one rows. No library code
 changed. A full invocation is **91 units green** at pin `c3bdae2`; the six
 sweeps cost 22.2 s of it.
 
@@ -200,7 +201,7 @@ vectors, derived three ways, carry C-14's boundary cases** — indexed by the
 year that ENDS, because a common year beginning on a Saturday opens in week 52
 or week 53 of the year before depending on that year (TM-175). `BUILD.md`
 B-15's module-prefix rule is restated to what the specifications do (TM-176).
-Every assertion was seen to fail on a mutant, `meta/roadmap/0.1/0.1.3.md` §7's
+Every assertion was seen to fail on a mutant, `meta/roadmap/done/0.1/0.1.3.md` §7's
 twenty-one rows. `cal` still owes **11** arms and the umbrella **13**, and the
 contracts are comments — Q-6's A′, which the author chose on 2026-09-25. A
 full invocation is **86 units green** at pin `c3bdae2`; the five sweeps cost
@@ -216,7 +217,7 @@ rule and the month table, never by `days_to_date`); and **every month's length
 is the distance between consecutive month-firsts** (`every_month_length.npk`)
 — 7 304 484, 7 304 484 and 239 988 cases, each program printing the count it
 visited (TM-122, TM-166). **Every assertion in them was seen to fail on a
-mutant** — `meta/roadmap/0.1/0.1.2.md` §5's fourteen-row matrix — and one
+mutant** — `meta/roadmap/done/0.1/0.1.2.md` §5's fourteen-row matrix — and one
 mutant, `days_to_date`'s negative-era correction one day late, breaks exactly
 24 days of the range (the first of March of every negative 400-year era) and
 is caught by the sweeps and by nothing else in the suite. C-17's riders are
@@ -266,7 +267,7 @@ green** at pin `c3bdae2`.
 its cycle 1.5). No new library behaviour; everything the new pin refused or
 made false, corrected. **Every one of the tree's 48 loops states `decreases`**
 (D-304) — 29 in the compiler's sweep tool's own proven shape and 19 by the
-committed reading `meta/roadmap/0.1/decreases_read.txt`, none `unbounded`.
+committed reading `meta/roadmap/done/0.1/decreases_read.txt`, none `unbounded`.
 **The `failsafe` floor is six** — `StackExhausted` (exit 106) and
 `MachineFault` (107) joined it — and a root that reaches a measured loop owes
 `DecreasesViolated` (108); every root names exactly what `NITPICK-REACH-002`
@@ -276,7 +277,7 @@ D-264 refused its
 element copy. **O-N18 and O-N19 have landed** and their reproductions are
 asserted regression tests, each with its `aaffb87` verdict as its control. A
 full invocation is **70 units green** at pin `c3bdae2`; the wall clock is
-deliberately not quoted (`meta/roadmap/0.1/0.1.0.md` says why). The umbrella
+deliberately not quoted (`meta/roadmap/done/0.1/0.1.0.md` says why). The umbrella
 has re-exported **48** names since cycle 0.1.0, and its arm bill — **12** — is a
 generated row of `SAFETY.md` S-4 since this cycle.
 

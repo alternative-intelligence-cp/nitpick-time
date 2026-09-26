@@ -454,7 +454,7 @@ arm. **Manufacturing an enum tag is a narrowing in this rule's sense.**
 `intN =>! Enum` is permitted and unchecked (the compiler's D-140), and a tag
 outside the enum's range is a value that is none of its variants: measured at
 cycle 0.1.3, it makes every arm of an exhaustive `pick` miss and the statement
-fall through, silently (`meta/roadmap/0.1/0.1.3.md` §2). The one site today is
+fall through, silently (`meta/roadmap/done/0.1/0.1.3.md` §2). The one site today is
 `src/cal/cal.npk`'s `weekday_index`, whose modulus correction keeps every
 index in 0 … 6; the check after it is what makes the correction's absence a
 stop rather than a `Weekday` that is no weekday (`CALENDAR.md` C-13).
@@ -633,7 +633,7 @@ not the generic — at `int64` the read is the same load — and it still return
 the sentinel from past the end without trapping, on both legs. This
 library's own accessors are not reached: each reads through a `#wild_slice`
 it lays over the block, and `vec_pop` spells `move`
-(`meta/roadmap/0.1/0.1.4c.md` §1.3).
+(`meta/roadmap/done/0.1/0.1.4c.md` §1.3).
 
 > **And the arm bill cannot tell the two spellings apart, which is why this
 > went unnoticed.** `NITPICK-REACH-003` bills a consumer of the guarded
@@ -1045,7 +1045,7 @@ O-X10 holds it.
 table's last row is refused**: a move out of `fixed` storage, or a plain
 `pass` of it, is `NITPICK-TYPE-084` where it is written — the compiler's
 DEF-99, O-N20 landed — in the declaring module and in one that imports a
-`pub fixed` binding, measured (`meta/roadmap/0.1/0.1.4c.md` §1.4). The copy is
+`pub fixed` binding, measured (`meta/roadmap/done/0.1/0.1.4c.md` §1.4). The copy is
 still `NITPICK-TYPE-046`, so a table whose rows own can still be read neither
 by value nor by move — now because the compiler refuses both — and the rule
 stands on that. Every read in the second row, a scalar field, a lend and

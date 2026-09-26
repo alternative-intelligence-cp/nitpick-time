@@ -2,7 +2,7 @@
 
 **As of 2026-09-25.** Question: which published algorithms does TM-016 adopt,
 at what revision, and what does their author state about their range and their
-epoch shift — the facts `meta/roadmap/0.1/0.1.1.md` transcribes.
+epoch shift — the facts `meta/roadmap/done/0.1/0.1.1.md` transcribes.
 
 ## Answer
 
@@ -28,7 +28,7 @@ is the one deviation, and it is in the direction of totality: a field value the
   far beyond +/- the age of the universe."*
 - the same page, `days_from_civil`'s first two lines of arithmetic:
   *"y -= m <= 2;"* and *"const Int era = (y >= 0 ? y : y-399) / 400;"* — the
-  negative-year correction `meta/roadmap/0.1/0.1.0.md` §6 said this function
+  negative-year correction `meta/roadmap/done/0.1/0.1.0.md` §6 said this function
   still owes.
 - the same page, `civil_from_days`' era line:
   *"const Int era = (z >= 0 ? z : z - 146096) / 146097;"*.

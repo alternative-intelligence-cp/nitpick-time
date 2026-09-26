@@ -4,12 +4,14 @@
 That is unusual and it is deliberate: the specifications catch design mistakes
 that would otherwise be found by writing the wrong code twice.
 
-**Where it stands:** cycle 0.1, the civil calendar, is in its close. `src/core/`
+**Where it stands:** cycle 0.1, the civil calendar, is closed (2026-09-26);
+cycle 0.2, instants and timestamps, is next. `src/core/`
 and `src/cal/` are real; the other four `src/` directories hold one placeholder
 each until the cycle `meta/roadmap/ROADMAP.md` names replaces it.
 `harness/run.py` is the runner, and it proves first, on every full run, that it
 can fail (`meta/specs/TESTING.md` V-14, V-15). *(This paragraph described cycle
-0.0.1's skeleton — "no self-check yet" — until cycle 0.1.5.)*
+0.0.1's skeleton — "no self-check yet" — until cycle 0.1.5, and said the cycle
+"is in its close" between the close's two halves.)*
 
 ## Before you write anything
 

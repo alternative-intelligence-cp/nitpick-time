@@ -6,7 +6,7 @@
 DEF-105, the compiler's 1.6.0 step 3h, resolves a `fixed` binding's declared
 type in the module that declares it — which its D-137 already said of every
 other annotation of a declaration. The reproduction was raised at cycle
-0.1.4's planning as a script, `importscope.py` in `meta/roadmap/0.1/0.1.4.md`
+0.1.4's planning as a script, `importscope.py` in `meta/roadmap/done/0.1/0.1.4.md`
 §3, and **is committed here only now, where its fix has landed** (TM-192):
 every case carries the marker its fixed verdict is, and the verdicts at the
 pins that had the defect are each case's control.
@@ -28,7 +28,7 @@ scalar of it and a function returning it — and is not a program: it is in
 exits 10 on a wrong read, so a case that compiles and reads the wrong row is
 red. Each case's `failsafe` names exactly what `NITPICK-REACH-002` asks at
 `c970483`, where the script's named two identities more. `TRANSCRIPT.txt` has all seven at every pin the workbench keeps, both
-legs, generated from these files by `meta/roadmap/0.1/0.1.4c.md`'s
+legs, generated from these files by `meta/roadmap/done/0.1/0.1.4c.md`'s
 `transcript.py`: the same seven verdicts at the six pins from `950bb1d` to
 `c3bdae2`, so the defect was not a regression, and the fixed ones at
 `c970483`, where the IR indexes `ROWS` by `rows.Row` in every case that reads
@@ -48,7 +48,7 @@ read.
 
 ## The record, as raised
 
-`meta/roadmap/0.1/0.1.4.md` §3 is the finding in full, measured at every pin
+`meta/roadmap/done/0.1/0.1.4.md` §3 is the finding in full, measured at every pin
 this repository then kept. In one paragraph: the compiler's D-137 resolves
 every annotation of a declaration in its home scope, *"never in the scope of
 whatever module happens to be asking"*, and names the danger itself — *"under

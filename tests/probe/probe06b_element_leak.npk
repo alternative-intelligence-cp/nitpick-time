@@ -33,7 +33,7 @@
 // high-water mark to the leak's arithmetic -- 2 000 000 bodies of 35 bytes,
 // every one of them live at the peak, 70 000 000 bytes -- which makes this
 // file the instrument's KNOWN-LEAKING control on every run
-// (`meta/roadmap/0.1/0.1.0.md` §8's first step). `cap:` runs it again under a
+// (`meta/roadmap/done/0.1/0.1.0.md` §8's first step). `cap:` runs it again under a
 // 64 MiB address space, where it must take HeapOom (92) while its twin exits
 // 0: TM-131's pair, which until then the harness had never run. Measured at
 // compiler `c3bdae2`, both legs: `allocated=118000000 peak_live=70000024

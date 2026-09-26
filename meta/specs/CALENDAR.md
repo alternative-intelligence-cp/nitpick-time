@@ -173,8 +173,8 @@ declaration and nothing else.
 
 **Why this is a rule and not a footnote.** C-8's original last clause is cited
 as the reason every later cycle may skip the validity question, and four live
-sites carried that reading (this rule, `meta/roadmap/0.1/README.md`,
-`meta/roadmap/0.1/0.1.0.md`, and `src/cal/cal.npk`'s own header) over 177
+sites carried that reading (this rule, `meta/roadmap/done/0.1/README.md`,
+`meta/roadmap/done/0.1/0.1.0.md`, and `src/cal/cal.npk`'s own header) over 177
 tracked files. It is the same shape this repository keeps meeting and named in
 `SAFETY.md` S-18e: **a rule whose NAME describes a property while its MECHANISM
 covers something narrower.** Stated correctly it is still a strong rule —
@@ -345,7 +345,7 @@ through `#unreachable()` instead of becoming a `Weekday` that is none of the
 seven (`SAFETY.md` S-15c, TM-171). The correction leaves every index in range,
 so the check never fires; what it does is turn the correction's absence from a
 silent wrong answer into a controlled stop — measured, with and without it
-(`meta/roadmap/0.1/0.1.3.md` §7, rows D1 and D2).
+(`meta/roadmap/done/0.1/0.1.3.md` §7, rows D1 and D2).
 
 **Rule C-14 — ISO week dates are computed, not tabulated.** `iso_week_year`,
 `iso_week_number` (1 … 53) and `iso_weekday` follow ISO 8601: week 1 is the
@@ -444,7 +444,7 @@ order." — "2. **Weekday cycle** — the weekday advances by exactly one, modul
 seven, per day, across the whole range including every century and 400-year
 boundary." — "3. **Month lengths** — the day count per month matches C-3's
 leap rule for every year in range." Each, as written, is passed by a mutant the
-new form fails, measured (`meta/roadmap/0.1/0.1.2.md` §5 and §1.3): a leap rule
+new form fails, measured (`meta/roadmap/done/0.1/0.1.2.md` §5 and §1.3): a leap rule
 missing its 400-year day keeps every step strictly increasing — the civil walk
 with a `>` chain exits 0 having visited 7 304 435 of the 7 304 484 days — and
 breaks the plus-one chain; a weekday computed as `(n + 3) % 7` with the
@@ -481,7 +481,7 @@ sample misses what falls between its rows — one taken every seventh day meets
 every February 29th of a 400-multiple year or none of them, since 400 years
 are exactly 20 871 weeks. A digest per year puts the whole of Python's range
 in 1.0 MB and one second, so the agreement is checked over its whole domain,
-as TM-026 asks wherever that is possible. `meta/roadmap/0.1/0.1.4.md` §2 and
+as TM-026 asks wherever that is possible. `meta/roadmap/done/0.1/0.1.4.md` §2 and
 §7 have the measurements.)*
 
 ---

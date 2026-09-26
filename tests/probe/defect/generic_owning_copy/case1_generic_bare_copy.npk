@@ -11,7 +11,7 @@
 // `run:0` instead, and `check_exemptions_live` failed that entry at the re-pin
 // -- "it now stops at `npkc`" -- which is the landing arriving as designed.
 // THE CONTROL is this text at the kept `aaffb87` pin: `npkc` 0, `llc` 0, `ld`
-// 0, run 0, recorded in `meta/roadmap/0.1/0.1.0b.md`'s execution record. The
+// 0, run 0, recorded in `meta/roadmap/done/0.1/0.1.0b.md`'s execution record. The
 // pair is what makes this a test of the fix and not of the file (TM-154).
 // Everything below is the record as 0.0.5 wrote it, in the tense it was true
 // in; `README.md` beside this file has the landing.

@@ -9,7 +9,7 @@
 // would have made the defect a committed expectation. `check_exemptions_live`
 // saw the verdict move to `run:0` at the re-pin, as O-N18's entry said it
 // would. THE CONTROL is the same text at the kept `aaffb87` pin -- `npkc` exit
-// 1, no `.ll`, `NITPICK-EMIT-002` -- recorded in `meta/roadmap/0.1/0.1.0b.md`'s
+// 1, no `.ll`, `NITPICK-EMIT-002` -- recorded in `meta/roadmap/done/0.1/0.1.0b.md`'s
 // execution record; that pair is what makes this a test of the fix rather than
 // of the file (TM-154). Everything below is the record as 0.0.4 wrote it, at
 // pin `0dfddac`, in the tense it was true in.

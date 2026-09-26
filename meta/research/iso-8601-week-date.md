@@ -4,7 +4,7 @@
 (*Date and time — Representations for information interchange — Part 1: Basic
 rules*), including any amendment in force, and what exactly does it define as
 the first calendar week of a year and the year a week belongs to? Asked by the
-stream-2 planner for `meta/roadmap/0.1/0.1.3.md`, which implements
+stream-2 planner for `meta/roadmap/done/0.1/0.1.3.md`, which implements
 `CALENDAR.md` C-14; filed by that planner, and cited by C-14 as
 *"per `meta/research/iso-8601-week-date.md`, as of 2026-09-25"*.
 

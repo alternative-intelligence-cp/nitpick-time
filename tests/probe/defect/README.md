@@ -14,7 +14,7 @@ records what the behaviour used to be.
 | **O-N10** — `derive(Eq)` on a payload enum will not compile; `derive(Ord)` is silently wrong | [`derive_payload_enum/`](derive_payload_enum/README.md) | no — one type exposed, no rule needs it |
 | **O-N11** (accepted — the compiler's DEF-5) — a program with `main` and no `failsafe` compiles at exit 0 | [`missing_failsafe/`](missing_failsafe/README.md) | no — but it constrains cycle 0.0.3's harness |
 | ~~**O-N20** — a `move` out of `fixed` storage compiles, and faults~~ — **FIXED at pin `c970483` by the compiler's DEF-99, which refuses the move as `NITPICK-TYPE-084` (TM-189)** | `fixed_move_out/` | no — and cycle 0.5's version string no longer waits on it (TM-191) |
-| ~~**O-N23** — an imported `fixed` binding's type resolves in the importer's scope~~ — **FIXED at pin `c970483` by the compiler's DEF-105 (TM-192)** | `fixed_import_scope/` | no — its reproduction was a script in `meta/roadmap/0.1/0.1.4.md` §3 until its fix landed, and is committed here since |
+| ~~**O-N23** — an imported `fixed` binding's type resolves in the importer's scope~~ — **FIXED at pin `c970483` by the compiler's DEF-105 (TM-192)** | `fixed_import_scope/` | no — its reproduction was a script in `meta/roadmap/done/0.1/0.1.4.md` §3 until its fix landed, and is committed here since |
 
 > **Read this table as cycle 0.0.0's, which is when it was written** (dated
 > note, cycle 0.1.0c). Its "Blocking?" column is the state at pin `950bb1d`,
@@ -312,7 +312,7 @@ with what `ntime` does in the meantime.
 > header names the file -- mod:beta;` — the compiler's D-248 enforcing the rule
 > this defect was about. O-N8 looks FIXED; striking it is a decision this
 > subcycle did not take, so it is reported to the orchestrator in
-> `../../../meta/roadmap/0.1/0.1.0b.md`'s execution record. The section below
+> `../../../meta/roadmap/done/0.1/0.1.0b.md`'s execution record. The section below
 > is the record as written.
 
 Not committed as files, because it needs two source files with *deliberately*

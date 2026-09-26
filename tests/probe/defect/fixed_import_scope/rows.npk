@@ -3,7 +3,7 @@
 // `failsafe` -- but the module the seven cases beside it import.
 //
 // O-N23'S DECLARING MODULE: a struct, a table of it, a scalar of it and a
-// function returning it, as `meta/roadmap/0.1/0.1.4.md` §3's `importscope.py`
+// function returning it, as `meta/roadmap/done/0.1/0.1.4.md` §3's `importscope.py`
 // wrote them. Nothing here is wrong. Every case asks for one of these and
 // reads `x`, which is 3 in row 1 and in `ONE`; `README.md` beside this file
 // says what each case shows.

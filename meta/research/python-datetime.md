@@ -62,4 +62,4 @@ gap is the version: the documentation read is 3.14.7's and the interpreter is
 3.12.3. It is closed by measurement rather than by reading: the generator
 asserts `MINYEAR` and `MAXYEAR` when it runs, and cycle 0.1.4's second
 derivation — a count that reads no `datetime` — agrees with the corpus on
-every one of its 3 652 059 days (`meta/roadmap/0.1/0.1.4.md` §4).
+every one of its 3 652 059 days (`meta/roadmap/done/0.1/0.1.4.md` §4).

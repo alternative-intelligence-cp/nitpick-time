@@ -47,7 +47,7 @@
 // that stopped poisoning freed memory would turn a correct release into a red
 // here; the bound reads the allocator's COUNT, which no change to the poison
 // moves. The ceiling is the geometric mean of 160 and 214 rounded down to two
-// significant figures; the mutant is `meta/roadmap/0.1/0.1.4b.md` §7's K6.
+// significant figures; the mutant is `meta/roadmap/done/0.1/0.1.4b.md` §7's K6.
 mod:bytes_view_lifetime;
 
 use "../../src/core/bytes.npk".*;

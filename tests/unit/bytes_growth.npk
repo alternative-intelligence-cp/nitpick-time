@@ -38,7 +38,7 @@
 // path's reliance on D-186 (`src/core/bytes.npk`'s header), asserted on every
 // run where cycle 0.0.4 measured it once. The ceiling is the geometric mean
 // of the two, rounded down to two significant figures; the mutant is
-// `meta/roadmap/0.1/0.1.4b.md` §7's K6.
+// `meta/roadmap/done/0.1/0.1.4b.md` §7's K6.
 mod:bytes_growth;
 
 use "../../src/core/bytes.npk".*;
@@ -109,7 +109,7 @@ func:main = int32(cstring[]:_~argv) {
     // string `take` handed back must survive both. Until 0.1.4b it was a VIEW
     // of the sink's body (`SAFETY.md` S-18f): the reuse below exited 28 on
     // both legs, and with the reuse cut the growth exited 30
-    // (`meta/roadmap/0.1/0.1.4b.md` §7, K7 and K8).
+    // (`meta/roadmap/done/0.1/0.1.4b.md` §7, K7 and K8).
     drop bytes_clear(@d);
     drop bytes_extend_str(@d, "1999-12-31");
     if (raw bytes_len(@d) != 10i64)            { exit 27i32; }

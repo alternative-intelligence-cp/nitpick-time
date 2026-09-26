@@ -352,21 +352,21 @@ every full invocation; `--quick` skips it **with a loud line**, and nothing is
 concluded from a `--quick` run. *(Measured at cycle 0.1.2, when the stage got
 its members: the three civil sweeps cost **4.5 s** together on a full
 invocation — 2.1 + 1.9 + 0.5 s, both legs, compile included, the harness's own
-per-unit figures — against a 30 s threshold `meta/roadmap/0.1/0.1.2.md` §6 set
+per-unit figures — against a 30 s threshold `meta/roadmap/done/0.1/0.1.2.md` §6 set
 in advance. That measurement is what "seconds, not minutes" now rests on.)*
 *(Measured at cycle 0.1.3, when the ordinal and ISO week members joined: the
 five sweeps cost **16.5 s** together on a full invocation — 2.7 + 1.9 + 7.9 +
 0.5 + 3.5 s for `every_civil_date`, `every_day_number`, `every_iso_week_date`,
 `every_month_length` and `every_ordinal_date`, both legs, compile included, the
 harness's own per-unit figures — against a 30 s threshold
-`meta/roadmap/0.1/0.1.3.md` §8 set in advance. The ISO week member is the long
+`meta/roadmap/done/0.1/0.1.3.md` §8 set in advance. The ISO week member is the long
 pole: about ten evaluations of Hinnant's formula per date, by design.)*
 *(Measured at cycle 0.1.4, when the civil cross-oracle joined: the six sweeps
 cost **22.2 s** together on a full invocation — 2.8 + 2.0 + 8.0 + 0.5 + 5.4 +
 3.5 s for `every_civil_date`, `every_day_number`, `every_iso_week_date`,
 `every_month_length`, `every_oracle_date` and `every_ordinal_date`, both legs,
 compile included, the harness's own per-unit figures — against a 30 s
-threshold `meta/roadmap/0.1/0.1.4.md` §8 set in advance.)*
+threshold `meta/roadmap/done/0.1/0.1.4.md` §8 set in advance.)*
 *(Measured at cycle 0.1.5's planning, compiler `c970483`, the same six: **22.5
 s** — 2.8 + 2.0 + 8.1 + 0.5 + 5.5 + 3.6 s — so the threshold holds with 7.5 s
 to spare, and neither it nor the stage changes at the close. **The next member

@@ -117,14 +117,14 @@ domain; it is strongest at 0.4–0.6 (parsing, the zone lookup), where no
 exhaustive sweep exists — and A′ lets exactly those cycles choose live
 contracts, by decision.
 
-**What waits on it:** 0.1.1's contract form — `meta/roadmap/0.1/0.1.1.md` §6 is
+**What waits on it:** 0.1.1's contract form — `meta/roadmap/done/0.1/0.1.1.md` §6 is
 written for A′ and states A's exact alternative, so either answer is executable
 without re-planning — and every later cycle's. *(0.1.1 was worked on A′, at the
 orchestrator's instruction, while this stays open: TM-164. Its arm cost was
 measured both ways there — `cal` 11 and the umbrella 13 as committed, 12 and 14
 with the one live `ensures` — and A's arm, `EnsuresViolated`, would exit 117
 in this ecosystem, not the 110 the plan proposed.)* *(0.1.2 was worked on A′
-too, and `meta/roadmap/0.1/0.1.2.md` §8 measured what A would change there —
+too, and `meta/roadmap/done/0.1/0.1.2.md` §8 measured what A would change there —
 re-measured at execution, a scratch copy of `src/` with `date_to_days`
 carrying the live `ensures`: each of the three sweeps then owes **twelve**
 identities rather than eleven, the extra one `EnsuresViolated`, and runs within
@@ -135,7 +135,7 @@ not the time; and the live check adds no evidence the civil walk does not
 already give**, because that walk asserts every day number in the range
 directly — this question's own argument for A′ in cycle 0.1, now measured. The
 question stays the author's.)* *(0.1.3 was worked on A′ as well, and
-`meta/roadmap/0.1/0.1.3.md` §11 measured A on the derived fields: live
+`meta/roadmap/done/0.1/0.1.3.md` §11 measured A on the derived fields: live
 `ensures` on the four integer-valued ones — `weekday_index` 0 … 6,
 `day_of_year` 1 … 366, `iso_week_number` 1 … 53, `iso_weekday` 1 … 7 — take a
 consumer of `cal` from eleven identities to **twelve**, the extra one
@@ -836,7 +836,7 @@ symbols and the same program calling `sys` has 8, the difference
 `npk_chain_push`, `npk_raise` and `npk_sys6` — but it can never FLAG one,
 because `npk_sys6` is the runtime's own and is in the allowlist. `check_purity`
 (S-10b) is SOURCE-level and remains the only thing here that answers the
-question; `meta/roadmap/0.1/0.1.0b.md` step 9 corrects the documents that said
+question; `meta/roadmap/done/0.1/0.1.0b.md` step 9 corrects the documents that said
 the two undefined sets were identical.
 
 *Recommendation:* build the call-edge scan — every `call` in the emitted IR of a
@@ -862,7 +862,7 @@ missed, while a call-edge scan sees CALLS.)*
 > `NITPICK-TYPE-084` — in the declaring module
 > (`tests/probe/defect/fixed_move_out/case3_scalar_move.npk`, asserted since
 > cycle 0.1.4c) and from a module that IMPORTS a `pub fixed string`, Z-4's
-> shape exactly, measured at `meta/roadmap/0.1/0.1.4c.md`'s planning — while a
+> shape exactly, measured at `meta/roadmap/done/0.1/0.1.4c.md`'s planning — while a
 > lend and a `.clone()` of it run on both legs. So what this entry predicted
 > below is true: **Z-4 stands as written, and Z-6's body is `.clone()`**, the
 > spelling (b) named, now the only one the compiler admits and so no longer a
@@ -984,7 +984,7 @@ checked rather than trusted.
 > carries `// expect-exit: 0`, its `EXPECT_EXEMPT` entry is deleted, and
 > `run_defect_corpus` asserts it on every full run. Its control, the same text
 > at the kept `aaffb87` pin, is `npkc` exit 1 with no `.ll` and
-> `NITPICK-EMIT-002` (`meta/roadmap/0.1/0.1.0b.md`'s execution record).
+> `NITPICK-EMIT-002` (`meta/roadmap/done/0.1/0.1.0b.md`'s execution record).
 >
 > The record below is what was raised at `0dfddac` and is left standing,
 > including its now-past heading status: *"FIXED UPSTREAM in the compiler's
@@ -1131,8 +1131,8 @@ above. Nothing else: no `fixed` value in `src/` owns, and S-19b with
 
 > **Verified, not assumed, and committed only now.** At compiler `c970483` a
 > `fixed` binding's declared type resolves in its declaring module. The
-> reproduction's seven programs (`meta/roadmap/0.1/0.1.4.md` §3), re-run at
-> both pins at `meta/roadmap/0.1/0.1.4c.md`'s planning: the table imported
+> reproduction's seven programs (`meta/roadmap/done/0.1/0.1.4.md` §3), re-run at
+> both pins at `meta/roadmap/done/0.1/0.1.4c.md`'s planning: the table imported
 > alone compiles and reads correctly where `c3bdae2` refused it
 > `NITPICK-TYPE-001`; beside a same-named struct, swapped or wider, and as a
 > `fixed` scalar, it reads correctly where `c3bdae2` exited 10; the control and
@@ -1171,7 +1171,7 @@ array. **Controls:** imported with its type by name, the table reads correctly
 `NITPICK-RESOLVE-001`; a function returning the type is unaffected, since
 D-137 covers signatures.
 
-**Reproduction:** `meta/roadmap/0.1/0.1.4.md` §3's `importscope.py` — one
+**Reproduction:** `meta/roadmap/done/0.1/0.1.4.md` §3's `importscope.py` — one
 declaring module and seven importers, built at every kept pin on both legs: the
 same seven verdicts at all six, `0dfddac` to `c3bdae2`, so it is not a
 regression; re-run at `c3bdae2` at cycle 0.1.4's execution, line for line. Its

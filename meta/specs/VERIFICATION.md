@@ -302,7 +302,7 @@ closed-form, the searches are logarithmic, and the parsers are linear scans.
 > and traps `DecreasesViolated` when it fails to shrink. Every one of this
 > tree's **48** loops carries `decreases` — six in `src/core/bytes.npk`, the rest
 > in `tests/` — 29 written by the compiler's sweep tool in its own proven shape
-> and 19 by the committed reading `../roadmap/0.1/decreases_read.txt`, and
+> and 19 by the committed reading `../roadmap/done/0.1/decreases_read.txt`, and
 > **none is `unbounded`** (TM-151). So the property this rule claimed is
 > executed rather than stated. The table above is still the plan for the loops
 > later cycles write; each will carry its variant as the clause.

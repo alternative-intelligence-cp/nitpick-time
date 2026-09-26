@@ -193,7 +193,7 @@ tree-check violations with 18 clean controls, 3 arm specimens and the verdict
 mechanisms; parse over 83 files; the defect corpus at 24 units, all asserted;
 and library + repro + suite at 46 (34 probe, 11 unit, 1 conformance). The wall
 clock moves from run to run by more than any one change adds, which is why
-`meta/roadmap/0.1/0.1.0.md` stopped quoting it; the unit count is the number to
+`meta/roadmap/done/0.1/0.1.0.md` stopped quoting it; the unit count is the number to
 compare.
 
 **At cycle 0.1.0c, the same pin, 75 units**: the self-check's 7 planted cases,
@@ -221,7 +221,7 @@ the stage's first members, TM-166 — 1 conformance). `81 = 24 + 57`. **The
 `sweep` stage is the one step whose cost is stated**, because B-9's "seconds,
 not minutes" rests on it: its three units took **4.5 s** together — 2.1 +
 1.9 + 0.5 s, both legs, compile included, the run's own per-unit figures —
-against a 30 s threshold `meta/roadmap/0.1/0.1.2.md` §6 set in advance.
+against a 30 s threshold `meta/roadmap/done/0.1/0.1.2.md` §6 set in advance.
 
 **At cycle 0.1.3, the same pin, 86 units**: the self-check unchanged — its 7
 planted cases, 21 tree-check violations with 21 clean controls, 3 arm
@@ -232,7 +232,7 @@ and `iso_week_to_date_refused` — **5 sweep** — `every_ordinal_date` and
 `every_iso_week_date` joined the three, TM-174 — 1 conformance).
 `86 = 24 + 62`. The `sweep` stage's five units took **16.5 s** together —
 2.7 + 1.9 + 7.9 + 0.5 + 3.5 s, both legs, compile included, the run's own
-per-unit figures — against a 30 s threshold `meta/roadmap/0.1/0.1.3.md` §8 set
+per-unit figures — against a 30 s threshold `meta/roadmap/done/0.1/0.1.3.md` §8 set
 in advance; the ISO week member is the long pole.
 
 **At cycle 0.1.3b, the same pin, 90 units**: the self-check's 7 planted cases,
@@ -258,7 +258,7 @@ at 66 (42 probe, 17 unit, **6 sweep** — `every_oracle_date` joined, the
 cross-oracle against Python's `datetime`, TM-179 — 1 conformance).
 `91 = 25 + 66`. No library code changed, and the six sweeps took 2.8 + 2.0 +
 8.0 + 0.5 + 5.4 + 3.5 = 22.2 s, against the 30 s threshold
-`meta/roadmap/0.1/0.1.4.md` §8 set in advance.
+`meta/roadmap/done/0.1/0.1.4.md` §8 set in advance.
 
 **At cycle 0.1.4b, no unit added**: the unit count is the subcycle's before
 it, because nothing joined the suite — what changed is what six units assert
@@ -280,7 +280,7 @@ seven cases joined as `fixed_import_scope/`, beside their exempt declaring
 module; `exemption verdicts: 5 of 5`; and library + repro + suite at 66,
 unchanged. `101 = 35 + 66`. The unchanged tree at the new pin had run `RED --
 90 unit(s) of 91`: the three exemptions expiring, as designed, and
-`probe13d` refused (`meta/roadmap/0.1/0.1.4c.md` §1). No library code
+`probe13d` refused (`meta/roadmap/done/0.1/0.1.4c.md` §1). No library code
 changed, and the six sweeps' and six bounded files' numbers are the same at
 both pins — the runtime is the same object.
 

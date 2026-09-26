@@ -52,7 +52,7 @@ came in as estimated, this cycle is the estimate made real.
 - [ ] **deterministic output**: no dictionary iteration order, no `set` iteration, no timestamps in the header — the `repro` check (B-4) is what catches a violation and this is the largest file in the tree
 - [ ] `#size_of` of each row asserted, so §3's arithmetic stays checkable
 - [ ] **the real emitted size measured and recorded** in `meta/research/tzdb-size.md`, beside 0.0.5's spike number and §3's estimate
-- [ ] **every loop the generator emits carries its `decreases` clause, and every `failsafe` it emits names the arms the pin's `NITPICK-REACH-002` demands** (the compiler's D-304; added at cycle 0.1.0b) — the compiler's loop sweep reads `.npk` files and never a Python string, so a template is swept by hand or not at all; `meta/scratch/tzdb_spike/emit.py`'s was, at 0.1.0b (`../0.1/0.1.0b.md` step 5)
+- [ ] **every loop the generator emits carries its `decreases` clause, and every `failsafe` it emits names the arms the pin's `NITPICK-REACH-002` demands** (the compiler's D-304; added at cycle 0.1.0b) — the compiler's loop sweep reads `.npk` files and never a Python string, so a template is swept by hand or not at all; `meta/scratch/tzdb_spike/emit.py`'s was, at 0.1.0b (`../done/0.1/0.1.0b.md` step 5)
 
 ### 0.5.3 — the checks
 - [ ] `check_tables_regenerate` — the committed tables byte-identical to a fresh generator run, and **seen to fail** against a one-character hand edit — **and the civil cross-oracle's corpus with them** (`tests/fixtures/civil/civil_oracle.npk`, cycle 0.1.4; `TESTING.md` V-6): its regeneration took about 11 s at 0.1.4's planning, a cost to weigh here beside the zone generator's own
@@ -83,7 +83,7 @@ committed data in one pass, and the real emitted size is a recorded number.
   module that declares a struct of the same name it silently takes that
   struct's layout. With the type imported by name, such a declaration is
   refused `NITPICK-RESOLVE-001`. A compiler defect, O-N23, raised at cycle
-  0.1.4's planning (`meta/roadmap/0.1/0.1.4.md` §3); read the pin's behaviour
+  0.1.4's planning (`meta/roadmap/done/0.1/0.1.4.md` §3); read the pin's behaviour
   again before this cycle's lookup module is written. **Read at cycle 0.1.4c,
   and FIXED at compiler `c970483`** (the compiler's DEF-105, TM-192): a table's
   row type resolves in its declaring module, so a table imported without its

@@ -9,7 +9,7 @@
 // named in `harness/run.py`'s `EXPECT_EXEMPT` at `run:170` instead (TM-137),
 // and that entry failed at the re-pin as designed. THE CONTROL is the
 // pre-adoption text at the kept `aaffb87` pin -- run 170, the allocator's
-// poison -- recorded in `meta/roadmap/0.1/0.1.0b.md`'s execution record (the
+// poison -- recorded in `meta/roadmap/done/0.1/0.1.0b.md`'s execution record (the
 // adopted text cannot be the control: its loop now carries a `decreases`
 // clause, which `aaffb87` does not parse). Everything below is the record as
 // 0.0.5 wrote it.

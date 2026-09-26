@@ -345,7 +345,7 @@ pub func:vec_push<T> = NIL(Vec<T>->:v, move T:x) never fails {
 // `NITPICK-TYPE-014`) is at no pin of ours. Through `vec_at` such an impl hands
 // back a second owner of the element: `impl:string:Pod` written with
 // `move string:self`, read twice, frees one body twice, exit 95 on both legs
-// (measured, `meta/roadmap/0.1/0.1.3c.md` §1.6). `TYPE-047`'s own message
+// (measured, `meta/roadmap/done/0.1/0.1.3c.md` §1.6). `TYPE-047`'s own message
 // suggests exactly that `move` -- DO NOT TAKE IT HERE. No impl in this library
 // does, and `nitpick-regex`'s `probe18_impl_adds_move.npk` pins the shape for
 // the ecosystem.
@@ -389,7 +389,7 @@ impl:bool:Pod = { func:pod_copy = bool(bool:self) never fails { pass self; }; };
 // `NITPICK-TYPE-079`). As a loan it reads all of them, and a local, as
 // `vec_at(v, i)`, and through a pointer as `vec_at(<-p, i)`; and it can write
 // none of them, which the compiler checks (`TYPE-085`). Measured,
-// `meta/roadmap/0.1/0.1.3c.md` §1.5.
+// `meta/roadmap/done/0.1/0.1.3c.md` §1.5.
 //
 // THE GUARD IS UNCHANGED (TM-129, `SAFETY.md` S-17c): the index still goes
 // through a slice laid over `count`, so an index out of range traps

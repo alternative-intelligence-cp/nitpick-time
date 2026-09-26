@@ -8,7 +8,7 @@
 // same rules, and these forty-one were computed by things that are neither.
 //
 // THE TABLE WAS DERIVED THREE WAYS BEFORE THIS FILE WAS WRITTEN, and all three
-// agree on all forty-one (`meta/roadmap/0.1/0.1.3.md` §3): Python 3.12.3's
+// agree on all forty-one (`meta/roadmap/done/0.1/0.1.3.md` §3): Python 3.12.3's
 // `datetime` -- `weekday()`, `timetuple().tm_yday` and `isocalendar()` -- after
 // a shift of whole 400-year cycles that is NEVER zero, which moves no weekday
 // and no week number because 146 097 days is 20 871 weeks; Zeller's

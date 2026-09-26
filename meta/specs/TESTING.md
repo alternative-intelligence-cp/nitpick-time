@@ -207,7 +207,7 @@ two lists nobody diffed for three weeks. **Roadmap files are not tagged,
 deliberately**: a cycle's folder is archived to `meta/roadmap/done/` at its
 close, and a tag there would pin history to the present. The cycle README's
 statements of the domains were diffed once, at execution, by
-`meta/roadmap/0.1/0.1.2.md` §2's three-way recomputation.)*
+`meta/roadmap/done/0.1/0.1.2.md` §2's three-way recomputation.)*
 
 ---
 
@@ -241,7 +241,7 @@ eight shapes made this harness disagree with the compiler, and six passed a
 violation silently** — a lone CR in a `//` comment, a `//` inside a `/* */`, a
 `'"'`, a `//` in a template's text and an escaped `use` path each hid a
 division, a clock call, a fourth `error:` or an import of `host` from the check
-built to find it (`meta/roadmap/0.1/0.1.5.md` section 1.3). What it mirrors, and
+built to find it (`meta/roadmap/done/0.1/0.1.5.md` section 1.3). What it mirrors, and
 the compiler commit it was read at, is its own header's; **the self-check's
 part E asks both sides on every run** — the reader, one text of every form, and
 the pinned compiler, one program of every form a run can observe — so a re-pin
@@ -323,7 +323,7 @@ weekday cycle is asserted at 0.1.3, where `weekday()` is written (TM-165).)*
 *(Amended at cycle 0.1.3. The third row read "weekday advances by one mod
 seven" — the form TM-167 declined at 0.1.2, which passes a weekday missing its
 `%` correction and one a day late everywhere (measured,
-`meta/roadmap/0.1/0.1.3.md` §7) — and was left in that form when `CALENDAR.md`
+`meta/roadmap/done/0.1/0.1.3.md` §7) — and was left in that form when `CALENDAR.md`
 C-17 was restated. The last row read "ISO week/ordinal round trip | the same
 sweep | — | 0.1": a round trip that builds its input from the value under test
 passes two functions that are wrong together, so each representation is now
@@ -370,7 +370,7 @@ and it passes a reverse that accepts too much, because a real value never asks
 for one that does not exist. Measured at cycle 0.1.3: the ISO week round trip
 written that way exits 0 with the full count with week 1 taken as the week
 that holds 5 January, and with week 53 accepted in every year; the ordinal one
-with day 366 accepted in every year (`meta/roadmap/0.1/0.1.3.md` §7). So a
+with day 366 accepted in every year (`meta/roadmap/done/0.1/0.1.3.md` §7). So a
 sweep carries the representation's own rule as a walk — a count of the year's
 days, ISO 8601's rule read from each Monday's month and day — compares the
 forward functions with the walk, hands the REVERSE the walk's value, and asks
@@ -658,7 +658,7 @@ at cycle 0.0.4 and never run by the harness.
   the geometric mean of the correct program's measured peak and a leak
   mutant's, rounded down to two significant figures, so a drift in the
   accounting and a partial leak are given the same ratio of room.
-  `meta/roadmap/0.1/0.1.4b.md` §6 holds each file's numbers and §7 each mutant.
+  `meta/roadmap/done/0.1/0.1.4b.md` §6 holds each file's numbers and §7 each mutant.
 - **`peak_live` is a high-water mark.** It sees a leak only if the leaked bytes
   accumulate before the peak, so a program that leaks once, at its end,
   reports what one that frees there reports. A bound belongs on a CHURN — the

@@ -30,6 +30,7 @@ twice.
 
 import os
 import re
+import resource
 import subprocess
 
 import elf
@@ -74,6 +75,33 @@ def run_split(argv, cwd=None, env=None, timeout=None):
     p = subprocess.run(argv, cwd=cwd, env=env, stdout=subprocess.PIPE,
                        stderr=subprocess.PIPE, timeout=timeout)
     return p.returncode, p.stdout, p.stderr
+
+
+def run_capped(argv, env, kib):
+    """Run argv under an ADDRESS-SPACE CAP of `kib` KiB -- `ulimit -v kib`,
+    set in the child between `fork` and `exec` -- with its output discarded.
+    Cycle 0.1.4b, TM-186: the belt beside `NPK_HEAP_STATS`, and the one
+    instrument here that does not read the runtime's own accounting.
+
+    Returns `(status, phrase)`: the exit status -- negative for a signal, as
+    `subprocess` reports it -- or None when the child could not be started at
+    all, and the same fact in words a failure line can quote. Measured at
+    compiler `c3bdae2`: under a 1 KiB cap every binary here, `/bin/true`
+    included, is killed by signal 11 before its first instruction, which is a
+    status and not an exception.
+    """
+    limit = kib * 1024
+
+    def cap():
+        resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
+    try:
+        p = subprocess.run(argv, env=env, stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL, preexec_fn=cap)
+    except (OSError, subprocess.SubprocessError) as err:
+        return None, "could not be started (%s)" % err
+    if p.returncode < 0:
+        return p.returncode, "was killed by signal %d" % -p.returncode
+    return p.returncode, "exited %d" % p.returncode
 
 
 # `use "<path>".<what>;` and `pub use "<path>".<what>;` -- BUILD.md B-16: every

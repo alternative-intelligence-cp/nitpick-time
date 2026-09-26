@@ -139,7 +139,9 @@ environment from a **declared base plus that file's markers and nothing else**.
 Inheriting would make every `environ()`-reading test's verdict a property of
 whoever ran it. **The base is deliberately non-empty**: under an empty
 environment `probe09_environ_split` exits 10, a substantive code, so an empty
-base would recreate V-1d's defect at the runner instead of the file.
+base would recreate V-1d's defect at the runner instead of the file. *(Since
+cycle 0.1.4b one marker adds a variable its file does not spell: `heap:` sets
+`NPK_HEAP_STATS`, and no `env:` marker may — V-17.)*
 
 **Rule V-1f (TM-121) — an expectation that does nothing is worse than none.**
 The marker block is contiguous from line 1 and a marker-shaped line below it
@@ -420,14 +422,21 @@ expectations and requires it to report every one as a failure:
    run;
 8. **a program whose `failsafe` has been deleted** — this repository's own
    addition, because `npkc` exit 0 is not well-formedness (B-4b, TM-112) and
-   V-14's seven do not cover it.
+   V-14's seven do not cover it;
+9. **a program whose managed memory disagrees with its header** — this
+   repository's own too, since cycle 0.1.4b (TM-187): a `heap:` ceiling one
+   byte under the measurement, a floor one allocation over it, a run whose
+   report never reaches stderr, a `cap:` exit the program does not take, and a
+   cap the floor program cannot start under — beside a control held exactly at
+   both bounds of every field and at a cap it starts under (V-17).
 
 **SEVEN OF THE EIGHT ARE PLANTED, AND THE RUNNER SAYS SEVEN.** Case 6 is
 `PEND` until cycle 0.5, so *"this runner has been shown able to fail eight
 ways"* — printed on every run, and repeated in `run.py`'s header, `CLAUDE.md`,
 `harness/README.md` and the CI workflow — was an overstatement for three
 cycles (C3). `0.0/README.md`'s Gate said **seven** and was the only place that
-had it right. The number is now derived from `selfcheck.PLANTED_CASES` rather
+had it right. *(Eight of nine since cycle 0.1.4b: case 9 is planted, and case
+6 is still `PEND`.)* The number is now derived from `selfcheck.PLANTED_CASES` rather
 than typed, in every one of those places that still states it.
 
 **Rule V-14b — every case carries a CONTROL, in the same run.** Each case's
@@ -525,3 +534,62 @@ denominator too (TM-174). **Since cycle 0.1.4 it holds six**:
 prove it ran, and not a gate because it trusts Python (TM-026). What it checks
 each year beside the digest, and why it hands no reverse constructor anything,
 is TM-182.
+
+---
+
+## 10. Managed memory
+
+**Rule V-17 (TM-184, TM-185, TM-186) — a test whose managed memory is a claim
+bounds it in its header, and the harness holds the runtime's own count to the
+bound on both legs.** D-151's exit-0 trap counts `wild` allocations and cannot
+see a managed body (TM-106), so until cycle 0.1.4b nothing in the suite
+asserted managed memory at all: TM-131's `ulimit -v` pair was measured by hand
+at cycle 0.0.4 and never run by the harness.
+
+- **`// heap: FIELD OP N`** — FIELD one of `allocated`, `peak_live`, `count`,
+  OP `<=` or `>=`, one bound per line — holds the line the runtime prints on fd
+  2 as a process exits, by any route, when `NPK_HEAP_STATS` is in its
+  environment: `heap: allocated=N peak_live=N count=N`, the bytes requested,
+  the high-water mark of bytes live, and the number of allocations, `wild` and
+  managed alike, at the sizes asked for (the compiler's `runtime/npkrt.ll`).
+  The harness sets the variable for a file that carries a `heap:` marker and
+  for no other, requires **exactly one** such line on every run of both legs
+  — none is no measurement, and a second is not the runtime's — and prints the
+  measured fields in the unit's verdict line. An `env:` marker may not set the
+  variable: any value, `0` included, switches the report on.
+- **The numbers are the program's own**, so they are exact and a bound can be
+  derived from the source before it is measured: a program that allocates
+  nothing reports three zeros, and neither `argv[0]` nor the environment moves
+  them (measured at compiler `c3bdae2`). A number that disagrees with its
+  derivation is a finding before it is a bound — `SAFETY.md` S-18f is one.
+- **A remedy's ceiling travels with a work floor.** `peak_live <= N` alone is
+  passed by a copy whose loop was emptied — what allocates nothing retains
+  nothing, TM-131's objection to a gate an empty program passes — so each
+  remedy also bounds `count` from below by the allocations its loop must make.
+  **A leaking twin bounds `peak_live` from below** by its leak's arithmetic,
+  which makes it the instrument's known-leaking control on every run.
+- **A ceiling sits between the correct program and its leak, by one rule**:
+  the geometric mean of the correct program's measured peak and a leak
+  mutant's, rounded down to two significant figures, so a drift in the
+  accounting and a partial leak are given the same ratio of room.
+  `meta/roadmap/0.1/0.1.4b.md` §6 holds each file's numbers and §7 each mutant.
+- **`peak_live` is a high-water mark.** It sees a leak only if the leaked bytes
+  accumulate before the peak, so a program that leaks once, at its end,
+  reports what one that frees there reports. A bound belongs on a CHURN — the
+  operation under test repeated until a per-repetition leak dominates the
+  peak — and nowhere else.
+- **`// cap: N KiB, exit C`** runs the program again under an address-space cap
+  of N KiB, `ulimit -v N`, where it must exit C: the one instrument here that
+  does not read the runtime's own accounting. **Its control is the FLOOR
+  PROGRAM** — a `main` that exits 0 and allocates nothing, linked against the
+  same runtime — run under each cap first, and a cap it cannot start under fails
+  every unit at that cap. TM-131's control was `/bin/true`, which at compiler
+  `c3bdae2` no longer controls: the floor program takes HeapOom below about
+  10.5 MiB, where `/bin/true` runs from 2.75 MiB. **A cap goes only on a pair
+  with opposite outcomes under it**; a clean run alone is a statement the floor
+  program also makes.
+
+Six files carry a bound <!-- [[sweep: heap_bounded=6]] --> and four of them a
+cap <!-- [[sweep: cap_belted=4]] --> — `SAFETY.md` S-18b and S-18c name the
+twin pairs, and the two `Bytes` tests say why theirs in their own headers.
+Both counts are measured denominators (TM-142).

@@ -101,7 +101,10 @@ against a 348 KiB estimate that was wrong in four independent ways (TM-135).
 
 **Two things it got wrong and found itself**, both use-after-frees on the
 public surface — `vec_pop<T>` (TM-136) and `bytes_view` (TM-139) — and both
-found by READING, under a green suite and an independent verification. The
+found by READING, under a green suite and an independent verification. *(A
+third shipped with them and was not found in the cycle: `bytes_take`'s answer
+was a view typed as an owned `string`, found at cycle 0.1.4b by the heap
+instrument's count, `SAFETY.md` S-18f.)* The
 cycle's most durable output is why: **every gate this repository owns is a leak
 gate, and a use-after-free is a wrong answer.** `done/0.0/0.0.6.md` §3 is the
 findings list; `SAFETY.md` S-18e is the rule.

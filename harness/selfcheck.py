@@ -9,7 +9,8 @@ there, and three checks is not a runner.
 
   V-14: feed the harness wrong expectations and require it to report every one
         as a failure. Seven cases, and this repository's cycle README adds an
-        eighth of its own.
+        eighth of its own -- and cycle 0.1.4b a ninth, a program whose managed
+        memory disagrees with its header (TM-187).
   V-15: it runs FIRST in every full invocation, and its failure is fatal. A
         harness that has not proven it can fail has not proven anything, so a
         green suite underneath a red self-check is a state this ordering makes
@@ -552,6 +553,81 @@ def case_8_failsafe_deleted(root, man, base, npkc):
     return c
 
 
+# CASE 9's SPECIMEN (cycle 0.1.4b, TM-187). HELD keeps one 4096-byte managed
+# buffer live to its exit, so the runtime reports `allocated=4096
+# peak_live=4096 count=1` -- measured at `c3bdae2` on both legs, and the
+# arithmetic of the one line that allocates. With CLOSE_STDERR it closes fd 2
+# before it exits, so the report has nowhere to go and the harness must call
+# that no measurement, never a pass.
+HELD = """mod:%(mod)s;
+
+error:EW;
+
+func:main = int32(cstring[]:_~argv) {
+    buffer:held = buffer_new(4096i64);
+    if (held.len != 4096i64) { exit 3i32; }
+%(tail)s    exit 0i32;
+};
+""" + FAILSAFE_EW
+
+CLOSE_STDERR = """    int64:r = sys(3i64, 2i64) ?! EW;
+    if (r != 0i64) { exit 4i32; }
+"""
+
+
+def case_9_memory_disagrees(root, man, base):
+    c = Case(9, "a program whose managed memory disagrees with its header")
+
+    def held(mod, markers, tail=""):
+        return ("// expect-exit: 0\n"
+                + "".join("// %s\n" % m for m in markers)
+                + HELD % {"mod": mod, "tail": tail})
+    where = make_tree(
+        os.path.join(base, "case9"), man,
+        [
+            # THE CONTROL: every field held at BOTH of its bounds, and the
+            # belt at a cap the runtime starts under -- so each comparison is
+            # shown inclusive, and the reds below are about the plants.
+            ("tests/unit/heap_held.npk", held("heap_held", [
+                "heap: allocated <= 4096", "heap: allocated >= 4096",
+                "heap: peak_live <= 4096", "heap: peak_live >= 4096",
+                "heap: count <= 1", "heap: count >= 1",
+                "cap: 65536 KiB, exit 0"])),
+            # A CEILING ONE BYTE UNDER THE MEASUREMENT.
+            ("tests/unit/heap_over.npk", held("heap_over", [
+                "heap: peak_live <= 4095"])),
+            # A FLOOR ONE ALLOCATION OVER IT -- the other operator, another field.
+            ("tests/unit/heap_under.npk", held("heap_under", [
+                "heap: count >= 2"])),
+            # NO LINE AT ALL: fd 2 closed before the exit that would print it.
+            ("tests/unit/heap_silent.npk", held("heap_silent", [
+                "heap: peak_live <= 8192"], CLOSE_STDERR)),
+            # THE BELT'S EXIT WRONG: clean under the cap, and the header says
+            # it takes HeapOom there.
+            ("tests/unit/cap_exit.npk", held("cap_exit", [
+                "cap: 65536 KiB, exit 92"])),
+            # A CAP NOTHING STARTS UNDER -- 1 KiB, on any machine -- so the
+            # floor program fails first and the unit must say so (TM-131).
+            ("tests/unit/cap_machine.npk", held("cap_machine", [
+                "cap: 1 KiB, exit 0"])),
+        ],
+        [("unit", "program", "tests/unit")])
+    st, out, v = invoke(where)
+    c.red(st, out)
+    for stem in ("heap_over", "heap_under", "heap_silent", "cap_exit",
+                 "cap_machine"):
+        c.fails(v, "tests/unit/%s.npk" % stem)
+    c.passes(v, "tests/unit/heap_held.npk")
+    c.says(out, "peak_live is 4096; the header bounds it <= 4095")
+    c.says(out, "count is 1; the header bounds it >= 2")
+    c.says(out, "line on stderr and found 0")
+    c.says(out, "exited 0; the header expects exit 92")
+    c.says(out, "the cap measures the RUNTIME")
+    c.says(out, "heap allocated=4096 peak_live=4096 count=1 on both legs, "
+                "exit 0 under 65536 KiB on both legs")
+    return c
+
+
 # ---------------------------------------------------------------------------
 # PART B -- the tree checks, each shown red on a planted violation
 # ---------------------------------------------------------------------------
@@ -806,7 +882,9 @@ PLANTED = [
 # THE COUNTS THIS FILE PRINTS, DERIVED RATHER THAN TYPED (TM-142).
 #
 #   V14_CASES     what `TESTING.md` V-14 names -- seven, plus this repository's
-#                 own eighth (a program whose `failsafe` has been deleted).
+#                 own eighth (a program whose `failsafe` has been deleted) and,
+#                 since cycle 0.1.4b, its ninth (a program whose managed memory
+#                 disagrees with its header, TM-187).
 #   PLANTED_CASES what is actually planted: case 6 is PEND until cycle 0.5.
 #   TREE_PLANTS   `PLANTED`'s rows, plus THREE that no row can express:
 #                 `check_layering`'s node half (the fault is a file that is NOT
@@ -815,8 +893,8 @@ PLANTED = [
 #                 `check_specs_current` (which reports and never fails, so it
 #                 is driven separately). Every one has a control beside it,
 #                 which is why the two numbers printed are equal.
-V14_CASES = 8
-PLANTED_CASES = 7
+V14_CASES = 9
+PLANTED_CASES = 8
 TREE_PLANTS = len(PLANTED) + 3
 
 
@@ -1300,6 +1378,7 @@ def run(rep, root, steps):
         c = fn(root, man, base)
         ok = _report_case(rep, c) and ok
     ok = _report_case(rep, case_8_failsafe_deleted(root, man, base, npkc)) and ok
+    ok = _report_case(rep, case_9_memory_disagrees(root, man, base)) and ok
 
     problems = part_b(rep, base) + part_b_specs_current(rep, base)
     if problems:

@@ -1,4 +1,5 @@
 // expect-exit: 0
+// heap: peak_live <= 180
 //
 // `bytes_view`'s VIEW IS INVALIDATED BY GROWTH, AND THIS FILE IS THE PAIR THAT
 // SHOWS BOTH HALVES OF THE RULE (TM-139).
@@ -36,6 +37,17 @@
 // only if the old block is still readable as itself -- which would mean
 // `bytes_reserve` had NOT released it, and that is a `Bytes` defect either
 // way.
+//
+// AND THE RELEASE ITSELF IS ASSERTED SINCE CYCLE 0.1.4b (TM-185), by the
+// `heap:` marker above: the runtime's own `NPK_HEAP_STATS` high-water mark is
+// at most 180 bytes. Measured at compiler `c3bdae2`, both legs: 160 -- the
+// first sink's 64 beside the second's last doubling, 32 and 64 live at once --
+// where a `bytes_reserve` that KEPT each old body peaks at 214, and exits 26
+// below. `!=` reads the allocator's POISON to see the release, so a runtime
+// that stopped poisoning freed memory would turn a correct release into a red
+// here; the bound reads the allocator's COUNT, which no change to the poison
+// moves. The ceiling is the geometric mean of 160 and 214 rounded down to two
+// significant figures; the mutant is `meta/roadmap/0.1/0.1.4b.md` §7's K6.
 mod:bytes_view_lifetime;
 
 use "../../src/core/bytes.npk".*;
@@ -112,7 +124,8 @@ func:main = int32(cstring[]:_~argv) {
     // `buffer` and their scope-exit drop is the reclaim; there is no
     // `bytes_free` to call. `exit 0` therefore says nothing about this file's
     // managed memory -- D-151 watches `wild` blocks (TM-106) -- and this file
-    // does not claim otherwise.
+    // claimed nothing about it until cycle 0.1.4b: its header now bounds the
+    // allocator's high-water mark (TM-185).
     exit 0i32;
 };
 

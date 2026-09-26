@@ -2328,6 +2328,13 @@ A verification keyword is never a local name here.*
   whether a file compiles.
 
 ### TM-131 — `ulimit -v` cannot measure the remedy half AT ALL, because its bound and `/bin/true`'s are the same bound; the element-drop gate is the LEAKING half's refusal and the peak-RSS pair
+> **SUPERSEDED IN PART by TM-186 (2026-09-26).** Its CONTROL, not its
+> conclusion. `/bin/true` measured the dynamic loader at `0dfddac`; at
+> compiler `c3bdae2` a Nitpick program that allocates nothing takes HeapOom
+> below about 10.5 MiB, where `/bin/true` runs from 2.75 MiB, so the control
+> for this runtime is that floor program. The pair — one shared 64 MiB cap,
+> opposite outcomes — stands, and since cycle 0.1.4b the harness runs it. The
+> text below is left exactly as written.
 **2026-09-05, cycle 0.0.4. Refines TM-128, which is confirmed in every figure
 it states, and corrects the inference TM-128 and `0.0.4.md` §6 draw from it.**
 
@@ -4876,3 +4883,157 @@ rule, and a hand-edited corpus is exactly the edit a red cross-oracle invites;
 a recorded `sha256` checked on every run — it sees an edit to the corpus and
 not a generator changed without regenerating, and it is a second statement of
 the file's identity to keep in step.
+
+---
+
+# Cycle 0.1.4b — the managed-memory gate, ratified 2026-09-26
+
+Five decisions, drafted at planning (`meta/roadmap/0.1/0.1.4b.md` §14, PD-35 …
+PD-39, in that order) and recorded here by the worker in the commit that makes
+the change each describes. Every measurement is at compiler `c3bdae2`, taken
+at planning and re-derived at execution by the plan's `baseline.py` and
+`mut.py` — the facts of `0.1.4b.md` §11 and the matrix of §7, line for line.
+
+### TM-184 — the harness reads the runtime's `NPK_HEAP_STATS` line through a per-file `// heap: FIELD OP N` marker; it sets the variable for a file that carries one and for no other, requires exactly one line on every run of both legs, and prints what it measured in the unit's verdict line; an `env:` marker may not set it
+
+**2026-09-26, cycle 0.1.4b (PD-35). Adds `TESTING.md` §10's V-17 and two markers
+to `BUILD.md` B-5.** D-151's exit-0 trap counts `wild` allocations and cannot
+see a managed body (TM-106), so until this cycle the harness asserted no
+managed memory at all: `meta/roadmap/0.1/0.1.0.md` §8 carried the gate from
+cycle 0.0 on the reading that the instrument was not in the pin, and it was —
+at `aaffb87` and at `c3bdae2`. Read from the compiler's `runtime/npkrt.ll` at
+`c3bdae2` and measured there: with `NPK_HEAP_STATS` in its environment a
+program prints one line on fd 2 as it exits, by a clean `exit` or through a
+trap's `failsafe` — `heap: allocated=N peak_live=N count=N`, the bytes
+requested, the high-water mark of bytes live and the number of allocations,
+`wild` and managed alike, at the sizes asked for — and nothing when the
+variable is absent. The numbers are the program's own: a program that
+allocates nothing prints three zeros, and a 402-character-longer `argv[0]` or
+a 20 000-byte variable moves none of them. **The variable is switched on by its
+NAME**: `NPK_HEAP_STATS=0` and an empty value both print the line.
+
+*Declined:* the compiler's `cost` stage and its TOML units — a stage and a
+unit format for six files, splitting each from the stage its other
+expectations live in and from its header, where B-5 puts every expectation;
+and its ratio between two programs states neither a leaking twin's floor nor a
+remedy's work floor (TM-185); the variable in `BASE_ENV` for every program
+— every program's stderr gains a line nobody asserts, and every program's
+environment a variable the two `environ()` probes read, a measurement taken
+and thrown away; `// env: NPK_HEAP_STATS=1` as the switch beside a bound — two
+markers that must agree, a bound without its switch failing for a reason the
+header cannot show, and `=0` switching the report ON, so the spelling reads as
+a switch it is not; the LAST `heap:` line, as the compiler's harness reads it
+— a program printing a line of that shape would be read in the runtime's
+place, and requiring exactly one costs nothing; exact equality — the file
+becomes a test of the allocator's accounting, which `bytes_view_lifetime.npk`
+already argues against for `!=` over `== 170`.
+
+### TM-185 — six files carry bounds: each leaking twin's `peak_live` at least its leak's arithmetic; each remedy's `peak_live` under a ceiling and its `count` over the allocations its loop must make; the two `Bytes` tests' `peak_live` under a ceiling; every ceiling the geometric mean of the correct program's measured peak and a leak mutant's, rounded down to two significant figures
+
+**2026-09-26, cycle 0.1.4b (PD-36).** `0.1.0.md` §8 named four: the two twin pairs
+and the two `Bytes` tests, six files. Measured at `c3bdae2`, identical on both
+legs, and each the arithmetic of its source: `probe06b` 70 000 024 bytes at its
+peak — two million 35-byte bodies and the 24-byte block — and `probe06c` 59,
+one trip's block and body; `probe12` 70 000 059 and `probe12b` 94;
+`bytes_growth` 2 048 636 and `bytes_view_lifetime` 160. The leak mutants
+measured: each twin for its remedy; a `bytes_reserve` that keeps every old
+body, 3 097 238 and 214. So the ceilings are 64 000, 81 000, 2 500 000 and 180,
+and the floors 70 000 000 on both leaking twins. **The work floor is what
+makes a remedy's ceiling a gate**: a remedy whose loop was emptied allocates
+nothing and so retains nothing — `count=0 peak_live=0`, measured — and passes
+a ceiling alone, TM-131's objection to a gate an empty program passes, met again
+at the new instrument. **The `Bytes` ceilings are the only thing in their files
+that sees a growth keeping its old bodies** where `bytes_growth` exits 0, and
+`bytes_view_lifetime` sees it only through the allocator's poison (exit 26).
+
+*Declined:* a ceiling alone on each remedy — fooled by the emptied remedy,
+measured; twice the measured peak — it does not separate the `Bytes` tests
+from their mutant, 4 097 272 above 3 097 238 and 320 above 214, measured
+fooled; the tightest separating bound, the correct peak itself — one
+allocation added anywhere, or any change to the accounting, reddens a file
+whose subject is not the allocator; one number per pair, the leaking twin's
+floor at the same geometric mean — a probe asserts its answer (P-6), and the
+answer is every one of two million bodies live, where a floor of 64 000 would
+pass a leak of two thousand; bounding only the twin pairs, as TM-131's gate did
+— `bytes_growth` would then see nothing of its mutant; leaving
+`bytes_view_lifetime` unbounded because its exit 26 already sees the mutant —
+exit 26 reads the POISON (D-183), so a runtime that stopped poisoning freed
+memory would turn a correct release into a red, and the bound reads the count;
+`allocated` as the remedies' work floor — the same verdict on every row, but
+it restates the prelude's string size where `count` states the loop's own
+arithmetic, one allocation per trip.
+
+### TM-186 — the `ulimit -v` pair is run by the harness as a belt: a `// cap: N KiB, exit C` marker on the two twin pairs, 64 MiB, 92 for the leaking halves and 0 for the remedies, on both legs; its control is the FLOOR PROGRAM built by the same toolchain, run under each cap first, superseding `/bin/true` as TM-131's control
+
+**2026-09-26, cycle 0.1.4b (PD-37). Refines TM-131, whose conclusion stands and
+whose control is replaced by measurement.** The pair has been this
+repository's managed-memory gate since cycle 0.0.4, measured by hand and never
+run by the harness. Measured at `c3bdae2`: under 64 MiB the leaking halves
+take HeapOom (92) and the remedies exit 0, on both legs. **And `/bin/true` no
+longer controls**: a program that allocates nothing takes HeapOom below about
+10.5 MiB — the runtime's own floor, grown since `0dfddac` — while `/bin/true`
+runs from 2.75 MiB; at 10 240 KiB and below, the remedies and that floor
+program take 92. So between the two, a 92 is the runtime's and not a leak, and a belt
+controlled by `/bin/true` would report a correct remedy as leaking (at 8 192
+KiB, measured). The control is therefore the floor program, `harness/stages.py`'s
+`CAP_CONTROL`, in `tests/probe/probe11d_floor_only.npk`'s shape.
+
+*Declined:* leaving the cap manual — a belt nothing runs is a rule that asks a
+reader to remember, and this one had asked since 0.0.4; retiring it — it is
+the one instrument that does not read the runtime's accounting, and the
+runtime's 10.5 MiB floor is exactly what the count cannot see; `/bin/true` as
+the control — measured to call a correct remedy a leak at 8 192 KiB;
+`probe11d_floor_only.npk` by path — the self-check's scratch trees have no
+such file, and a control that exists in one tree is not the harness's; caps on
+the `Bytes` tests — no leaking twin, so no opposite outcomes, and a clean run
+alone is a statement the floor program also makes (TM-131).
+
+### TM-187 — V-14 gains a ninth case, this repository's own: a program whose managed memory disagrees with its header, planted five ways in one inner run beside a control held at both bounds of every field
+
+**2026-09-26, cycle 0.1.4b (PD-38). Amends `TESTING.md` V-14 and the self-check's
+counts, `V14_CASES` 9 and `PLANTED_CASES` 8.** The plants: a `peak_live`
+ceiling one byte under the measurement, a `count` floor one allocation over
+it, a run whose report never reaches stderr (fd 2 closed before the exit), a
+`cap:` exit the program does not take, and a 1 KiB cap under which the floor
+program cannot start. The control holds one 4 096-byte buffer and carries
+every field's `<=` and `>=` at exactly its measured value and a 64 MiB cap, so
+each comparison is shown inclusive and the reds are the plants'.
+
+*Declined:* commissioning the markers in part D beside the verdict mechanisms
+— a marker in a test's header is V-14's subject, and case 7 is this shape for
+`sweep-count`; the ceiling alone — the floor, the missing line and the cap are
+separate code paths, each a way to be green and wrong; a real low cap for the
+machine plant, 2 048 KiB say — what starts there depends on the runtime and
+the machine, where under 1 KiB nothing starts anywhere (signal 11, measured).
+
+### TM-188 — `bytes_take` hands back an owned copy, `string_concat` of a `string_from_bytes` view and `""`, and `bytes_growth` asserts that the answer survives a reuse and a growth of its sink; `SAFETY.md` gains S-18f
+
+**2026-09-26, cycle 0.1.4b (PD-39). A library defect found at planning, by this
+cycle's instrument.** `bytes_take` was `pass string_from_bytes(b.body.ptr,
+b.len);` under a comment saying it copied, from cycle 0.0.4. `string_from_bytes`
+wraps bytes as a VIEW — capacity 0, by the compiler's own
+`BUILTIN_REFERENCE.md`, at every pin this repository has kept — so the answer
+was the sink's body typed as an owned `string`. Measured at `c3bdae2`, both
+legs: taken, then the sink cleared and refilled, the answer read the new bytes
+(exit 13); taken, then the sink grown, it read freed memory (exit 12).
+`bytes_growth` read the answer only before either. **Found by counting**:
+`NPK_HEAP_STATS` reported 25 allocations for `bytes_growth` where its source
+makes 26. The copy allocates the prefix and is `never fails`; the arm bills do
+not move — `bytes.npk` owes 12 identities and the umbrella 13, before and
+after, by `NITPICK-REACH-003`'s own list. And the copy does not make
+`FORMAT_MODEL.md` F-10's wrapper spellable: a formatter's `pass raw
+bytes_take(@sink)` is refused `NITPICK-BORROW-001` whatever the callee does,
+while a take that consumes the sink by `move` compiles and is correct on both
+legs — cycle 0.4's to choose, carried to its "Watch for".
+
+*Declined:* documenting `bytes_take` as a view — its type says owned, and
+`bytes_view` already is the view, typed as a slice the borrow tracker follows;
+`view.clone()` or `string_slice` — each returns `Result<string>`
+(`NITPICK-TYPE-007`, measured for `clone`), which a `never fails` take would
+have to discard; a consuming `bytes_into(move Bytes)` now — the shape F-10's
+wrapper will want, but a public name chosen without its caller is a MAJOR
+commitment chosen without a requirement (TM-013); removing `bytes_take` —
+MAJOR too, and F-10 needs the handover it names; a separate subcycle — the
+defect is this cycle's instrument's finding, the fix is two lines, and
+`bytes_growth`'s bound would otherwise be derived on a take that allocates
+nothing and re-derived a subcycle later.

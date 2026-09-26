@@ -1,4 +1,5 @@
 // expect-exit: 0
+// heap: peak_live <= 2500000
 //
 // `Bytes` GROWTH IS AMORTISED LINEAR, AND THIS FILE MEASURES IT RATHER THAN
 // ASSERTING IT (`0.0.4.md` §6, §5 step 3: "the million-byte append with a
@@ -25,6 +26,18 @@
 // WHY NOT ASSERT A WALL TIME. It would be a measurement of the machine. The
 // harness already reports per-file seconds, so a pathological regression shows
 // there too; this file asserts the invariant that CAUSES the time.
+//
+// AND, SINCE CYCLE 0.1.4b, THE MEMORY THAT CAUSES THE SPACE (TM-185). The
+// `heap:` marker above holds the runtime's own `NPK_HEAP_STATS` high-water
+// mark to 2 500 000 bytes. Measured at compiler `c3bdae2`, both legs:
+// 2 048 636 -- the first sink's 1 048 576 beside the second's 1 000 000, and
+// the last two sinks' growths and copies -- where a `bytes_reserve` that KEPT
+// each old body instead of dropping it peaks at 3 097 238 and still exits 0
+// here, because nothing in this file reads a freed body. That is the growth
+// path's reliance on D-186 (`src/core/bytes.npk`'s header), asserted on every
+// run where cycle 0.0.4 measured it once. The ceiling is the geometric mean
+// of the two, rounded down to two significant figures; the mutant is
+// `meta/roadmap/0.1/0.1.4b.md` §7's K6.
 mod:bytes_growth;
 
 use "../../src/core/bytes.npk".*;
@@ -89,12 +102,33 @@ func:main = int32(cstring[]:_~argv) {
     if (!(raw s.eq("2026-09-05")))             { exit 25i32; }
     if (raw bytes_len(@d) != 10i64)            { exit 26i32; }
 
+    // ---- and what it hands back is ITS OWN (cycle 0.1.4b, TM-188) ----------
+    // The two things a caller does next with a sink: REUSE it -- clear and
+    // refill, which `bytes_take`'s own header recommends -- and GROW it. The
+    // string `take` handed back must survive both. Until 0.1.4b it was a VIEW
+    // of the sink's body (`SAFETY.md` S-18f): the reuse below exited 28 on
+    // both legs, and with the reuse cut the growth exited 30
+    // (`meta/roadmap/0.1/0.1.4b.md` §7, K7 and K8).
+    drop bytes_clear(@d);
+    drop bytes_extend_str(@d, "1999-12-31");
+    if (raw bytes_len(@d) != 10i64)            { exit 27i32; }
+    if (!(raw s.eq("2026-09-05")))             { exit 28i32; }
+    Bytes:g = raw bytes_init(1i64);
+    drop bytes_extend_str(@g, "2026-09-05");
+    string:t = raw bytes_take(@g);
+    int64:cap_g = g.body.cap;
+    drop bytes_push(@g, 65u8);
+    // Growth must actually have happened, or the check after it tests nothing.
+    if (g.body.cap == cap_g)                   { exit 29i32; }
+    if (!(raw t.eq("2026-09-05")))             { exit 30i32; }
+
     // NOTHING IS FREED HERE, AND THAT IS P-24. `Bytes` is over `buffer`, which
     // is MANAGED: the scope-exit drop is the reclaim and there is no
     // `bytes_free` to call (TM-133). If this file leaked, `exit 0` would still
     // not catch it -- D-151 watches `wild` allocations and a `buffer` is not
     // one -- which is exactly why the growth path's drop was MEASURED at 256
-    // MiB of churn rather than trusted.
+    // MiB of churn rather than trusted. Since cycle 0.1.4b the `heap:` marker
+    // in this file's header is what catches it, on every run (TM-185).
     exit 0i32;
 };
 

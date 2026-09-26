@@ -7,7 +7,31 @@ Guidance for Claude Code sessions working in this repository.
 `ntime` — a date, time and time-zone library for **Nitpick**, the
 safety-critical systems language at `../../nitpick`.
 
-**Status, after cycle 0.1.4: the civil cross-oracle.** Every date of years
+**Status, after cycle 0.1.4b: the managed-memory gate.** For the first time
+the harness asserts MANAGED memory. D-151's exit-0 trap sees only `wild` blocks
+(TM-106), and the `ulimit -v` pair that stood in for a gate since cycle 0.0.4
+(TM-131) was measured by hand and never run. Now a `// heap:` marker holds the
+runtime's own `NPK_HEAP_STATS` report — bytes requested, the high-water mark
+of bytes live, allocations — to a file's bounds on both legs, and a `// cap:`
+marker runs a program again under a 64 MiB address-space cap (`TESTING.md`
+V-17). Six files carry bounds <!-- [[sweep: heap_bounded=6]] -->: each leaking
+twin's high-water mark is at least its leak's arithmetic, so the instrument
+meets a known leak on every run; each remedy's is under a ceiling and its
+allocation count over a floor, so an emptied remedy is red; and the two `Bytes`
+tests' ceilings catch a growth that keeps its old bodies, which
+`bytes_growth` otherwise passes at exit 0. Every ceiling is the geometric mean
+of the correct program's peak and a leak mutant's (TM-185), and every bound was
+seen red on its mutant (`meta/roadmap/0.1/0.1.4b.md` §7). **The cap's control
+moved**: at compiler `c3bdae2` a program that allocates nothing needs about
+10.5 MiB before `main`, where `/bin/true` needs 2.75 MiB, so the control is
+that floor program, built by the same toolchain (TM-186). **And the count found
+a defect**: `bytes_take` handed back a VIEW of the sink typed as an owned
+`string` — reused or grown, the sink rewrote or freed the caller's text —
+from cycle 0.0.4 until now. It copies now, and `bytes_growth` asserts both
+(TM-188, `SAFETY.md` S-18f). The self-check plants **8** of V-14's **9**
+faults; no test file was added, so the unit count is 0.1.4's.
+
+**After cycle 0.1.4: the civil cross-oracle.** Every date of years
 1 … 9999 — 3 652 059 of them, the whole of Python's range — agrees with
 Python's `datetime` in its year, month, day, day number, weekday, ISO week
 date and day of the year (`CALENDAR.md` C-18, `TESTING.md` V-6, TM-179). The
@@ -220,12 +244,17 @@ cycle 0.0 paid most for.**
   is a LEAK gate, and a use-after-free is found by a WRONG ANSWER.** Cycle 0.0
   shipped two of them — this and `vec_pop<T>` — and both were found by reading,
   under a green suite. `tests/unit/bytes_view_lifetime.npk` is the pair.
+  **It shipped a third, and no reading found it**: `bytes_take` handed back a
+  view of the body as an owned `string` until cycle 0.1.4b, found by the heap
+  instrument's COUNT — 25 allocations where the source makes 26 (S-18f). It
+  copies now.
   **Since 0.1.0c `body` and `len` are `sealed`, `len` under `ListLen`**
   (TM-156): a consumer reads `b.len` and `b.body.cap` and writes neither.
 
 **What 0.0.3 added, and the first item is the one that matters.**
 `harness/selfcheck.py` runs **first** in every full invocation (`TESTING.md`
-V-15) and plants **seven** of V-14's eight faults — case 6 is `PEND` until 0.5
+V-15) and plants **eight** of V-14's nine faults (seven of eight until cycle
+0.1.4b's case 9, TM-187) — case 6 is `PEND` until 0.5
 and prints as pending — plus at least one violation per tree check, three
 arm-bill specimens, and (since 0.0.6) the verdict mechanisms of TM-137 and
 TM-141 and the whole-tree walk's nested-repository pruning (TM-146). Each
@@ -330,7 +359,9 @@ changed a document:
   written by you, in code.
 - **`exit 0` says nothing about managed memory** (TM-106). D-151 watches `wild`
   allocations only. A `Vec<string>` whose block is freed and whose elements are
-  not retained 125 MiB over two million elements **and exited 0**.
+  not retained 125 MiB over two million elements **and exited 0**. What says
+  something, since cycle 0.1.4b, is the runtime's own `NPK_HEAP_STATS` line,
+  held to a `heap:` marker's bounds — and only for a file that carries one.
 - **An import's arm bill is its `fail` SITES plus its ARITHMETIC**, charged per
   module, not per call (TM-107). Importing a module that declares no error at
   all still cost four arms. Avoiding a failing *function* buys nothing; module

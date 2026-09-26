@@ -1,4 +1,6 @@
 // expect-exit: 0
+// heap: peak_live >= 70000000
+// cap: 65536 KiB, exit 92
 // NOT A PROBE IN THE ORDINARY SENSE. This file exits 0 and that IS the
 // finding: it leaks 2 000 000 string bodies and the language's own leak gate
 // does not notice.
@@ -26,9 +28,17 @@
 // `free_names` before `vec_free`. Read them side by side; the diff is the
 // finding.
 //
-// RUN IT AS: /usr/bin/time -f "%e s  %M KiB" <binary>
-// AND AS:    ( ulimit -v 65536 ; <binary> ) ; echo $?
-// because a peak-RSS number is arguable and an exit code is not.
+// THE HARNESS ASSERTS THE LEAK SINCE CYCLE 0.1.4b (TM-184 ... TM-186), by the
+// two markers above. `heap:` holds the runtime's own `NPK_HEAP_STATS`
+// high-water mark to the leak's arithmetic -- 2 000 000 bodies of 35 bytes,
+// every one of them live at the peak, 70 000 000 bytes -- which makes this
+// file the instrument's KNOWN-LEAKING control on every run
+// (`meta/roadmap/0.1/0.1.0.md` §8's first step). `cap:` runs it again under a
+// 64 MiB address space, where it must take HeapOom (92) while its twin exits
+// 0: TM-131's pair, which until then the harness had never run. Measured at
+// compiler `c3bdae2`, both legs: `allocated=118000000 peak_live=70000024
+// count=4000000`, and 92 under the cap. By hand: `NPK_HEAP_STATS=1 <binary>`,
+// and `( ulimit -v 65536 ; <binary> ) ; echo $?`.
 mod:probe06b_element_leak;
 
 // `BUILD.md` B-12's shape, as probe 06 has it.

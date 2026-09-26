@@ -226,11 +226,11 @@ environment) and a control that fails.
 
 ### 0.1.4b — the managed-memory gate — [`0.1.4b.md`](0.1.4b.md) §13 is the full list
 - [ ] the instrument established from the runtime's source and output, and every fact re-derived at the dispatched pin before anything changes, the anchor unchanged (`0.1.4b.md` §2, §11)
-- [ ] a `// heap:` marker and the constructed environment: the runtime's `NPK_HEAP_STATS` line held to a file's bounds on both legs, exactly one line per run, the evidence in the verdict line (PD-35)
-- [ ] **six files bounded** — the two twin pairs and the two `Bytes` tests that `0.1.0.md` §8 names, which this row called four pairs until planning — each leaking twin at or above its leak, each remedy under its ceiling and over its work floor, each `Bytes` test under its ceiling; every ceiling placed by PD-36's rule, and every bound seen red on its mutant (`0.1.4b.md` §7)
-- [ ] the `ulimit -v` pair run by the harness as a belt, with the floor program as its control, where TM-131's was `/bin/true` (PD-37)
-- [ ] V-14's ninth case: a program whose managed memory disagrees with its header — five plants beside one control (PD-38)
-- [ ] **found at planning:** `bytes_take` hands back an owned copy, and `bytes_growth` asserts that it survives a reuse and a growth of its sink (PD-39, `SAFETY.md` S-18f)
+- [ ] a `// heap:` marker and the constructed environment: the runtime's `NPK_HEAP_STATS` line held to a file's bounds on both legs, exactly one line per run, the evidence in the verdict line (TM-184)
+- [ ] **six files bounded** — the two twin pairs and the two `Bytes` tests that `0.1.0.md` §8 names, which this row called four pairs until planning — each leaking twin at or above its leak, each remedy under its ceiling and over its work floor, each `Bytes` test under its ceiling; every ceiling placed by TM-185's rule, and every bound seen red on its mutant (`0.1.4b.md` §7)
+- [ ] the `ulimit -v` pair run by the harness as a belt, with the floor program as its control, where TM-131's was `/bin/true` (TM-186)
+- [ ] V-14's ninth case: a program whose managed memory disagrees with its header — five plants beside one control (TM-187)
+- [ ] **found at planning:** `bytes_take` hands back an owned copy, and `bytes_growth` asserts that it survives a reuse and a growth of its sink (TM-188, `SAFETY.md` S-18f)
 - [ ] `0.1.0.md` §8 discharged — the gate cycle 0.0 carried unticked
 
 ## Gate

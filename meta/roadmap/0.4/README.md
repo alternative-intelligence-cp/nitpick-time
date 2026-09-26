@@ -119,6 +119,17 @@ documented exceptions and a test that counts them.
   `string_bytes(string_concat(a, b))` — is the shape that fires it, and it was
   doubly wrong before D-246 landed, because the intermediate also leaked;
   binding it fixes both and is still the right habit.
+- **`FORMAT_MODEL.md` F-10's `string`-returning wrapper cannot be spelled the
+  obvious way** — measured at compiler `c3bdae2`, cycle 0.1.4b's planning. A
+  function that fills a LOCAL `Bytes` and ends `pass raw bytes_take(@sink);` is
+  refused `NITPICK-BORROW-001` (D-004 rule 2): the borrow tracker takes the
+  call's answer for a borrow of `sink`, whatever the callee does — refused
+  with `bytes_take` a copy, and with the answer bound to a local first. **A
+  take that CONSUMES the sink** — `string(move Bytes:b)`, copying out before
+  `b` dies — compiles, and the wrapper built on it is correct on both legs.
+  So the wrapper wants a consuming take, a public name this cycle chooses with
+  a caller in hand (TM-013), or a re-measurement at the pin it plans against.
+  And every `string` it hands back is a copy (`SAFETY.md` S-18f).
 - **`Bytes` and `Vec<T>` are indexed WITHOUT a bounds check** (TM-108, S-17b).
   Every formatter in this cycle writes into a `Bytes`, and `Layout` holds a
   `Vec<FmtPart>`; both are bare pointers to the emitter, so an out-of-range

@@ -1,4 +1,7 @@
 // expect-exit: 0
+// heap: count >= 2000000
+// heap: peak_live <= 64000
+// cap: 65536 KiB, exit 0
 //
 // PROBE 06c — TM-106's REMEDY HALF, made reproducible.
 //
@@ -19,9 +22,18 @@
 // ITS TWIN IS `probe06b_element_leak.npk`, which differs in ONE LINE: it does
 // not call `free_names`. Read them side by side; the diff is the finding.
 //
-// RUN IT AS: /usr/bin/time -f "%e s  %M KiB" <binary>
-// AND AS:    ( ulimit -v 65536 ; <binary> ) ; echo $?
-// because a peak-RSS number is arguable and an exit code is not.
+// THE HARNESS ASSERTS THE REMEDY SINCE CYCLE 0.1.4b (TM-184 ... TM-186), by
+// the three markers above, and each is a statement its twin fails.
+// `count >= 2000000`: the loop made its two million bodies, so a copy of this
+// file whose loop had been emptied -- which retains nothing because it
+// allocates nothing -- is red and not green, TM-131's objection to a gate an
+// empty program passes. `peak_live <= 64000`: it retained none of them, where
+// `probe06b` retains all 70 000 000 bytes. And exit 0 under a 64 MiB cap,
+// where `probe06b` takes 92. The ceiling is the geometric mean of this file's
+// 59 and the twin's 70 000 024, rounded down to two significant figures
+// (TM-185). Measured at compiler `c3bdae2`, both legs: `allocated=118000000
+// peak_live=59 count=4000000` -- 59 is one trip's 24-byte block and 35-byte
+// body, live together. By hand: `NPK_HEAP_STATS=1 <binary>`.
 mod:probe06c_element_drop;
 
 // `BUILD.md` B-12's shape, as probe 06 has it.

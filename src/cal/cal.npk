@@ -62,7 +62,9 @@
 // **A use-after-free is a WRONG ANSWER, so it is found by a test that READS
 // and by nothing else** -- and cycle 0.0 shipped two of them on this library's
 // own public surface, `vec_pop<T>` (S-18d) and `bytes_view` (S-18e), both under
-// a green suite, a review and an independent verification.
+// a green suite, a review and an independent verification. (And a third,
+// `bytes_take`'s answer, found at cycle 0.1.4b by the heap instrument's COUNT
+// rather than by a test that reads -- S-18f.)
 //
 // This module is pure value arithmetic over `int64` and declares no owning
 // type, so the class is much narrower here. The rule that keeps it narrow is

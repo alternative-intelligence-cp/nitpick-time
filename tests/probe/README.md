@@ -22,9 +22,14 @@ entries from cycle 0.0.2.
   a probe that allocates nothing `wild` cannot trip it on any exit path, and a
   **managed** body is outside it entirely: probe 06's `Vec<string>` orphaned two
   million element bodies, retained 125 MiB and **exited 0** (TM-106). A probe
-  over an owning container therefore asserts its memory too — a `ulimit -v` cap
-  today, a `peak_live` bound from the compiler's `NPK_HEAP_STATS` after the
-  1.5.1b re-pin. **Assert the cap, not a peak-RSS number:**
+  over an owning container therefore asserts its memory too — **since cycle
+  0.1.4b by a `heap:` marker on the runtime's own `NPK_HEAP_STATS` count and a
+  `cap:` marker under a 64 MiB address space** (`../../meta/specs/TESTING.md`
+  V-17), where this said *"a `ulimit -v` cap today, a `peak_live` bound from
+  the compiler's `NPK_HEAP_STATS` after the 1.5.1b re-pin"* and neither was
+  run by the harness. `probe06b`/`probe06c` and `probe12`/`probe12b` carry
+  both. **What follows was the rule until then — assert the cap, not a
+  peak-RSS number:**
   `/usr/bin/time -f %M` reports `0 KiB` for these static binaries, including
   for `probe11d_floor_only.npk`, so it cannot tell a clean run from a small
   one. `probe06b`/`probe06c` are the committed pair.

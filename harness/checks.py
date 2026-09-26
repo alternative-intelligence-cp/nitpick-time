@@ -1305,6 +1305,20 @@ def denominators(tree, extra=None):
         d[label + "_exit"] = n_exit
         d[label + "_error"] = n_error
         d[label + "_nomarker"] = n_none
+    # THE FILES WHOSE MANAGED MEMORY IS ASSERTED -- cycle 0.1.4b, TM-184 and
+    # TM-186. Every statement of how many there are is TAGGED, so the day a
+    # subcycle bounds another file the sentences are held to it, as every
+    # other count here is (TM-142).
+    heap_n = cap_n = 0
+    for rel in tests:
+        try:
+            e = stages.read(tree, rel)
+        except stages.MarkerError:
+            continue                  # `check_expect_headers` names the file
+        heap_n += 1 if e.heap else 0
+        cap_n += 1 if e.cap else 0
+    d["heap_bounded"] = heap_n
+    d["cap_belted"] = cap_n
     # THE DOMAIN EACH `sweep` MEMBER DECLARES, as `domain_<stem>` -- cycle
     # 0.1.2, `TESTING.md` V-1h. A member's `// sweep-count:` is the test's
     # statement of a number the specifications state too (7 304 484 days in

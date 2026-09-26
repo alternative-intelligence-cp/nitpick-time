@@ -96,7 +96,9 @@
 #
 # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
 # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
-# V-15): SEVEN of V-14's eight faults planted in scratch trees -- case 6 is
+# V-15): EIGHT of V-14's nine faults planted in scratch trees (seven of eight
+# until cycle 0.1.4b's case 9, a program whose managed memory disagrees with
+# its header) -- case 6 is
 # `PEND` until cycle 0.5 and prints as pending rather than passing -- each
 # requiring a RED run that names it AND a green control beside it; then one
 # planted violation per tree check -- more than one where a check has two
@@ -118,7 +120,10 @@
 # here converts a date to a day" -- false since 0.1.1, which added them.) And
 # a green run is not a MEMORY result for the managed
 # half: D-151's exit-0 trap counts `wild` allocations and a `buffer` is managed
-# (TM-106), so `exit 0` says nothing about `Bytes` (S-18b, S-18e).
+# (TM-106), so `exit 0` says nothing about `Bytes` (S-18b, S-18e) -- except
+# that, since cycle 0.1.4b, six files [[sweep: heap_bounded=6]] are held on
+# both legs to the runtime's own NPK_HEAP_STATS count, and four
+# [[sweep: cap_belted=4]] again under a 64 MiB cap (`TESTING.md` V-17).
 #
 # NOT PINNED, AND KNOWN: `actions/checkout@v4` and `actions/cache@v4` are moving
 # tags -- the only inputs in this file that are not immutable. A workflow this

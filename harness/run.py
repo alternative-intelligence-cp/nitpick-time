@@ -4,9 +4,10 @@
 WHAT A GREEN RUN HERE IS, AND IS NOT.
 
   IT IS: the self-check green FIRST (V-15), so the runner has been shown able
-  to fail SEVEN ways before it is believed about anything -- V-14 names eight
-  and case 6 is `PEND` until cycle 0.5, which is a number this file claimed
-  wrong for three cycles (TM-142); the manifest read
+  to fail EIGHT ways before it is believed about anything -- V-14 names nine,
+  the ninth since cycle 0.1.4b (TM-187), and case 6 is `PEND` until cycle 0.5;
+  this sentence claimed a wrong number for three cycles (TM-142); the manifest
+  read
   and schema-checked; the three tools held to the pin's exact patch release;
   every `.npk` in the tree put in front of the real parser; the tree diffed
   against the documents that describe it by nine checks, each of which has
@@ -29,10 +30,15 @@ WHAT A GREEN RUN HERE IS, AND IS NOT.
   nothing here converts a time to a zone, a timestamp to a date, or text to
   either. (Until cycle 0.1.2 this said "the other five ... so nothing here
   dates anything" -- false since 0.1.0 gave `cal/` a body, and since 0.1.1
-  converted a date to a day.) AND IT IS NOT A MEMORY RESULT
-  FOR THE MANAGED HALF: D-151's exit-0 trap counts `wild` allocations and a
-  `buffer` is managed (TM-106), so a green run says nothing about `Bytes`
-  (S-18b, S-18e).
+  converted a date to a day.) AND IT IS A MEMORY RESULT FOR THE MANAGED HALF
+  ONLY WHERE A HEADER SAYS SO: D-151's exit-0 trap counts `wild` allocations
+  and a `buffer` is managed (TM-106), so exit 0 says nothing about `Bytes`
+  (S-18b, S-18e). Since cycle 0.1.4b the files whose headers carry `heap:`
+  -- six [[sweep: heap_bounded=6]], the two leak/remedy twin pairs and the
+  two `Bytes` tests -- are held on both legs to the runtime's own
+  `NPK_HEAP_STATS` line, and the four twins [[sweep: cap_belted=4]] again
+  under a 64 MiB address-space cap (TM-184 ... TM-186). Every other file's
+  managed memory is asserted by nothing.
 
   IT IS NOT a `--quick` or `--only` run. Both say so twice, at the top and at
   the bottom, and both refuse to print the word GREEN on its own.
@@ -524,8 +530,9 @@ def _defect_corpus(rep, root, bld, subdir, exempt_list):
         else:
             runs += 1
             t0 = time.time()
-            rep.unit(rel, stages.program(bld, rel, e),
-                     "exit %d, both legs, %.1f s" % (e.exit, time.time() - t0))
+            problems = stages.program(bld, rel, e)
+            rep.unit(rel, problems, "exit %d, both legs, %.1f s%s"
+                     % (e.exit, time.time() - t0, stages.memory_note(e)))
     rep.say("      defect corpus: %d file(s) = %d exempt (verdict re-derived "
             "above) + %d asserted (%d run, %d refusal, %d unowned)"
             % (len(files), len(exempt_here), len(judged), runs, refusals,
@@ -804,6 +811,7 @@ def run_entry(rep, root, bld, entry, only, quick):
             note += ", stress %d" % e.stress
         if e.env:
             note += ", env %s" % " ".join(sorted(e.env))
+        note += stages.memory_note(e)
         rep.unit(rel, problems, note)
 
     rep.say("      %s: %d of %d file(s) -- %d run, %d refusal%s"
@@ -849,7 +857,9 @@ def main(argv):
     # SEVEN, NOT EIGHT, AND THE NUMBER IS DERIVED (TM-142). V-14 names eight
     # cases and case 6 is `PEND` until cycle 0.5, so seven faults are planted.
     # This line said "eight" for three cycles and `0.0/README.md`'s Gate --
-    # which says seven -- was the only place that had it right.
+    # which says seven -- was the only place that had it right. (Eight of
+    # nine since cycle 0.1.4b added case 9, TM-187 -- still derived, still
+    # printed from `selfcheck`'s two constants.)
     import selfcheck as selfcheck_mod        # local: `selfcheck` imports this
     rep.say("this runner has been shown able to fail %d ways (V-14), of the "
             "%d V-14 names."

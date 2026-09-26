@@ -348,11 +348,38 @@ pub func:bytes_view = uint8[](Bytes->:b) never fails {
 // reuse the sink calls `bytes_clear`. Emptying here would make the name a lie
 // in the other direction -- `take` reads as "give me what you have", not "and
 // forget it".
+//
+// IT DID NOT COPY UNTIL CYCLE 0.1.4b, AND THIS FUNCTION'S COMMENT SAID IT DID
+// (TM-188, `SAFETY.md` S-18f). The body was `pass string_from_bytes(b.body.ptr,
+// b.len);` under the words "It copies". `string_from_bytes` WRAPS existing
+// bytes as a VIEW -- capacity 0, the compiler's own `BUILTIN_REFERENCE.md`
+// row, and so at every pin this repository has kept -- so the answer was the
+// sink's body under a type that calls it owned. Measured at `c3bdae2`, both
+// legs: taken, then the sink CLEARED AND REFILLED as the paragraph above
+// recommends, the answer read the NEW bytes; taken, then the sink GROWN by one
+// push, it read freed memory -- S-18e's use-after-free. `bytes_growth` read
+// the answer only before either, so both passed; it was found by COUNTING --
+// `NPK_HEAP_STATS` reported 25 allocations for that test where its source
+// makes 26.
+//
+// THE COPY IS `string_concat` of the view and "". Its answer is owned -- the
+// builtin's `Views` column says it aliases no argument, so an answer that did
+// would be a wrong row in the compiler's own table -- it is `never fails`, and
+// it allocates exactly the prefix. `view.clone()` and `string_slice` copy too
+// and return `Result<string>`, which a `never fails` take would have to
+// discard (measured: `NITPICK-TYPE-007`).
+//
+// WHAT THE COPY DOES NOT BUY: a formatter that fills a LOCAL `Bytes` still
+// cannot `pass` this function's answer out of its frame. The borrow tracker
+// takes it for a borrow of the sink whatever the callee does, and refuses it
+// (`NITPICK-BORROW-001`, D-004 rule 2) -- measured at `c3bdae2` with the copy
+// in place. That is `FORMAT_MODEL.md` F-10's thin wrapper, and cycle 0.4's to
+// shape (`meta/roadmap/0.4/README.md`, "Watch for").
 pub func:bytes_take = string(Bytes->:b) never fails {
-    // `string_from_bytes(ptr, len)` -- POINTER AND LENGTH, not a slice. It
-    // copies, which is what makes the answer owned and independent of this
-    // sink's next growth.
-    pass string_from_bytes(b.body.ptr, b.len);
+    // THE VIEW, bound so the copy below reads a named local rather than a
+    // temporary. It owns nothing, so nothing drops at the end of this body.
+    string:view = string_from_bytes(b.body.ptr, b.len);
+    pass string_concat(view, "");
 };
 
 // `ensures b.len == 0`

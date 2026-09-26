@@ -19,11 +19,11 @@ $ NPKC=… NPKRT=… python3 harness/run.py [--only SUBSTRING] [--quick]
 | `toolchain.py` | asks `llc`, `opt` and `ld.lld` their versions and holds each to `[toolchain] llvm` **exactly**. It asks the three tools it invokes, and not `llvm-config`, which ships in a `-dev` package the build never needs |
 | `elf.py` | the ELF64 symbol table, read with `struct`. The undefined-symbol scan and the runtime allowlist. **Read its header before citing the scan as a guarantee** |
 | `build.py` | the pipeline — `npkc` → `opt` → `llc` → scan → `ld.lld` — every argv built from the manifest's flag lists (B-1) |
-| `stages.py` | the marker grammar, and the `program`, refusal, `parse`, `golden` and `sweep` stages |
+| `stages.py` | the marker grammar, and the `program`, refusal, `parse`, `golden` and `sweep` stages — and, since cycle 0.1.4b, the `heap:` and `cap:` markers: the runtime's own `NPK_HEAP_STATS` line held to a file's bounds, and the address-space belt with the floor program as its control (`TESTING.md` V-17) |
 | `checks.py` | the **tree checks** — `TESTING.md` §2's family, each one diffing the library against a document that describes it |
 | `arms.py` | `check_failsafe_arms`: the S-6 arm generator, and `NITPICK-REACH-003` as its oracle |
 | `repro.py` | B-4: two builds of one tree must be the same bytes. Also a command in its own right, with `--between` for `check_tables_regenerate` |
-| `selfcheck.py` | **the only thing here that demonstrates the checks can fail.** V-14's eight cases, the tree checks on planted violations, and the arm generator against the compiler |
+| `selfcheck.py` | **the only thing here that demonstrates the checks can fail.** V-14's nine cases, the tree checks on planted violations, and the arm generator against the compiler |
 | `run.py` | the driver: stage order, per-unit verdict lines, the summary and its counts |
 
 ## The stage order, and each line is a reason
@@ -47,9 +47,11 @@ $ NPKC=… NPKRT=… python3 harness/run.py [--only SUBSTRING] [--quick]
 `.internal/scratch/selfcheck/` with `--root`, and requires a **red** run that
 names it. Three parts:
 
-- **V-14's eight cases** — a wrong `expect-exit`, a missing code, an unexpected
+- **V-14's nine cases** — a wrong `expect-exit`, a missing code, an unexpected
   code (D-237), a golden differing by one byte, a file that does not parse, a
-  sweep that ran short, and a program whose `failsafe` has been deleted. Case 6
+  sweep that ran short, a program whose `failsafe` has been deleted, and —
+  since cycle 0.1.4b — a program whose managed memory disagrees with its
+  header, five ways beside one control (TM-187). Case 6
   (a generator differing by one line) is **pending until 0.5** and prints as
   pending rather than passing.
 - **Twenty-three planted violations across the tree checks** — each check
@@ -120,12 +122,18 @@ against the summary line rather than left to review.
   `cal/` a body, and since 0.1.1 converted a date to a day; the CI header
   carried the same sentence, found at 0.1.2's planning, and this one and
   `run.py`'s by the sweep for it.)*
-- **Not a MEMORY result for the managed half.** D-151's exit-0 trap counts
-  `wild` allocations and a `buffer` is managed (TM-106), so a green run says
-  nothing about `Bytes` (`SAFETY.md` S-18b).
+- **Not a MEMORY result for the managed half — except for the files whose
+  headers bound it.** D-151's exit-0 trap counts `wild` allocations and a
+  `buffer` is managed (TM-106), so exit 0 says nothing about `Bytes`
+  (`SAFETY.md` S-18b). Since cycle 0.1.4b six files <!-- [[sweep: heap_bounded=6]] -->
+  are held to the runtime's own `NPK_HEAP_STATS` count on both legs, and four
+  <!-- [[sweep: cap_belted=4]] --> again under a 64 MiB cap (`TESTING.md` V-17);
+  every other file's managed memory is asserted by nothing.
 - **Not that a view into a `Bytes` is used correctly.** Every gate here is a
   leak gate and a use-after-free is a WRONG ANSWER (S-18e, TM-139). Two shipped
-  in cycle 0.0 and both were found by reading, not by a gate.
+  in cycle 0.0 and both were found by reading, not by a gate — and a third
+  shipped with them, `bytes_take`'s answer, found at cycle 0.1.4b by the heap
+  instrument's COUNT (S-18f).
 - **Not that the tree checks have anything to check.** Fourteen are live and
   several report `0` over a small denominator, which is the right answer and is
   why the denominator is always printed (V-1b). Four print as `PEND` with the
@@ -229,6 +237,16 @@ cross-oracle against Python's `datetime`, TM-179 — 1 conformance).
 `91 = 25 + 66`. No library code changed, and the six sweeps took 2.8 + 2.0 +
 8.0 + 0.5 + 5.4 + 3.5 = 22.2 s, against the 30 s threshold
 `meta/roadmap/0.1/0.1.4.md` §8 set in advance.
+
+**At cycle 0.1.4b, no unit added**: the unit count is the subcycle's before
+it, because nothing joined the suite — what changed is what six units assert
+and what the self-check plants. The self-check plants **8** of V-14's **9**
+cases: case 9, a program whose managed memory disagrees with its header,
+joined (TM-187). The tree checks still run `11 live`, and `check_denominators`
+measures two more denominators, `heap_bounded` and `cap_belted`. The two twin
+pairs and the two `Bytes` tests carry `heap:` bounds on the runtime's own
+`NPK_HEAP_STATS` line, and the twins a `cap:` belt under 64 MiB, each unit's
+verdict line printing what it measured (`TESTING.md` V-17).
 
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the

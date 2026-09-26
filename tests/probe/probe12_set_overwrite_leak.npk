@@ -1,4 +1,6 @@
 // expect-exit: 0
+// heap: peak_live >= 70000000
+// cap: 65536 KiB, exit 92
 //
 // NOT A PROBE IN THE ORDINARY SENSE. This file exits 0 and that IS the
 // finding, exactly as `probe06b_element_leak.npk` does -- and it is a SECOND,
@@ -32,12 +34,37 @@
 // 3072 row as the answer: the remedy half completes 2 000 000 iterations
 // inside a 3 MiB address space and the leaking half does not.
 //
+// RE-MEASURED AT COMPILER `c3bdae2` (cycle 0.1.4b), AND THE 3 MiB ROW NO
+// LONGER HOLDS -- the runtime grew. The same caps, with the control TM-131
+// asked for and the one this runtime needs:
+//
+//   ulimit -v      131072   65536   32768   16384   11264   10240    3072    2048
+//   /bin/true           0       0       0       0       0       0       0     127
+//   floor program       0       0       0       0       0      92      92      92
+//   probe12            92      92      92      92      92      92      92      92
+//   probe12b            0       0       0       0       0      92      92      92
+//
+// The floor program allocates NOTHING -- `peak_live=0` -- and still takes
+// HeapOom below about 10.5 MiB, where `/bin/true` runs from 2.75 MiB: between
+// the two, 92 is the runtime's floor and not a leak. So the remedy half and
+// the floor program flip together, as it and `/bin/true` did at `0dfddac`,
+// and a low cap measures neither. One shared 64 MiB cap still separates the
+// pair, six times the runtime's floor, and the harness runs exactly that on
+// every invocation with the floor program as its control (the `cap:` marker
+// above; TM-186).
+//
 // THE TWIN IS `probe12b_set_overwrite_drop.npk`, which differs in the ONE
 // STATEMENT that moves the old element into a scoped local before writing.
 // Read them side by side; the diff is the finding.
 //
-// RUN IT AS: /usr/bin/time -f "%e s  %M KiB" <binary>
-// AND AS:    ( ulimit -v 65536 ; <binary> ) ; echo $?
+// THE HARNESS ASSERTS THE LEAK SINCE CYCLE 0.1.4b (TM-184 ... TM-186), by the
+// two markers above: the runtime's own `NPK_HEAP_STATS` high-water mark at
+// least the leak's arithmetic -- 2 000 000 orphaned bodies of 35 bytes,
+// 70 000 000 bytes, all live at the peak -- and HeapOom (92) under a 64 MiB
+// cap. Measured at compiler `c3bdae2`, both legs: `allocated=70000059
+// peak_live=70000059 count=2000002` -- every byte it ever asked for is still
+// live at its peak. By hand: `NPK_HEAP_STATS=1 <binary>`, and
+// `( ulimit -v 65536 ; <binary> ) ; echo $?`.
 //
 // WHY IT IS NOT A COMPILER DEFECT, WHICH TOOK TWO CONTROLS TO ESTABLISH. The
 // compiler's D-186 is titled "overwriting an owning field or managed element

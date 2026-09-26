@@ -689,6 +689,18 @@ numbers. **Take any address-space bound with a `/bin/true` control at the same
 cap**, because below about 2 MiB every exit code on this machine is the
 loader's.
 
+**SINCE CYCLE 0.1.4b THE HARNESS ASSERTS THE PAIR ON EVERY RUN, AND THE
+CONTROL HAS MOVED** (TM-184 … TM-186, `TESTING.md` V-17). `probe06b` carries
+`heap: peak_live >= 70000000` — two million 35-byte bodies, every one live at
+the peak — and `probe06c` `heap: count >= 2000000` and `heap: peak_live <=
+64000`, so the leak, its remedy and a remedy emptied of its work are three
+different verdicts; both run again under one shared 64 MiB cap, 92 against 0.
+Measured at compiler `c3bdae2`, both legs: `probe06b` `peak_live=70000024`,
+`probe06c` `peak_live=59`. **The `/bin/true` control above no longer controls
+for this runtime**: at `c3bdae2` a program that allocates nothing takes
+HeapOom below about 10.5 MiB, where `/bin/true` runs from 2.75 MiB, so the
+harness's control is that floor program, built by the same toolchain.
+
 Each element is moved into a scope that ends:
 
 ```nitpick
@@ -716,7 +728,13 @@ and `probe12b_set_overwrite_drop.npk`, which differ in one statement and **both
 exit 0**: 2 000 000 overwrites of one occupied `Vec<string>` slot retain
 **125 184 KiB** and take `HeapOom` under a 64 MiB cap, while the form that moves
 the outgoing element into a dying scope first finishes in **1 596 KiB** and is
-clean down to a 3 MiB cap.
+clean down to a 3 MiB cap. *(At pin `0dfddac`. At compiler `c3bdae2` it and a
+program that allocates nothing take HeapOom below about 10.5 MiB, the
+runtime's own floor; `probe12`'s header has the re-measured table. Since cycle
+0.1.4b the harness asserts this pair as it does S-18b's: `peak_live >=
+70000000` for the overwrite, `count >= 2000000` and `peak_live <= 81000` for
+the remedy, and 92 against 0 under the 64 MiB cap — measured at `c3bdae2`,
+`peak_live=70000059` against `94`.)*
 
 **This is the `wild` qualifier behaving as specified, not a compiler defect**,
 and two controls establish it against the contrary reading of the compiler's
@@ -814,7 +832,9 @@ that comment wrote a use-after-free that compiles, links, runs and reads poison.
 
 **THE STRUCTURAL POINT, WHICH IS WHY THIS IS A RULE AND NOT A COMMENT FIX.**
 It is the second use-after-free cycle 0.0 shipped on this library's own surface
-— `vec_pop<T>` at 0.0.4 was the first (S-18d) — and both were invisible for the
+— `vec_pop<T>` at 0.0.4 was the first (S-18d) — *(and there was a third,
+found at cycle 0.1.4b by a COUNT rather than by reading: `bytes_take`, S-18f)*
+— and both were invisible for the
 same reason: **every gate this repository owns is a leak gate.** D-151's exit-0
 trap counts `wild` allocations and cannot see a managed body (TM-106);
 `check_raw_index` is about indexing; the undefined-symbol scan is blind to it;
@@ -839,6 +859,37 @@ into a `Bytes` will actually be held:
   since cycle 0.1.0b (TM-150), which invalidates the old pointer just as surely
   — but **no function in `vec.npk` returns a slice**, so there is no view for a
   caller to hold. `vec_at<T>` returns by value.
+
+**Rule S-18f (TM-188) — no function hands back a `string` made by
+`string_from_bytes`, because the type cannot tell a view from a copy.**
+`string_from_bytes` wraps existing bytes as a VIEW — capacity 0, by the
+compiler's own `BUILTIN_REFERENCE.md` row, at every pin this repository has
+kept — and its answer is typed `string`, which a caller reads as owned.
+`bytes_take` handed out exactly that from cycle 0.0.4 to 0.1.4b, under a
+comment saying it copied. Measured at compiler `c3bdae2`, both legs: taken,
+and then the sink cleared and refilled as that comment recommended, the answer
+read the NEW bytes; taken, and then the sink grown, it read freed memory —
+S-18e's use-after-free. **Nothing caught it**: `tests/unit/bytes_growth.npk`
+read the answer only before either.
+
+**It was found by COUNTING.** The runtime's `NPK_HEAP_STATS` reported 25
+allocations for `bytes_growth` where its source makes 26 — a copy is an
+allocation, and a view is not. So it is the third use-after-free cycle 0.0
+shipped on this library's surface, beside `vec_pop<T>` (S-18d) and
+`bytes_view` (S-18e), and the only one that reading had not found: a number an
+instrument prints is derived from the source before a bound is put on it, and
+one that disagrees is a finding (`TESTING.md` V-17).
+
+`bytes_take` copies now — `string_concat` of the view and `""`, owned by that
+builtin's own `Views` column — and `bytes_growth` asserts that its answer
+survives both a reuse of the sink and a growth of it. **The obligation this
+puts on `src/fmt/` at cycle 0.4**: a function whose answer is a `string`
+returns a copy. And `FORMAT_MODEL.md` F-10's thin wrapper — fill a local
+`Bytes`, hand back its text — cannot `pass bytes_take(@sink)` at `c3bdae2`
+whatever `bytes_take` does, because the borrow tracker refuses the call's
+answer as a borrow of `sink` (`NITPICK-BORROW-001`), while a take that
+consumes the sink by `move` compiles and is correct on both legs; measured,
+and carried to `meta/roadmap/0.4/README.md`.
 
 **Rule S-19.** The generated zone tables are `fixed` module state — read-only
 memory, no initialisation at startup, nothing to leak, and nothing to race.

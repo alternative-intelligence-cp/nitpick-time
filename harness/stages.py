@@ -31,10 +31,10 @@ it is named and fails.
 import os
 import re
 
-from build import BuildError, run, run_split
+from build import BuildError, run, run_capped, run_split
 
 KEYS = ("expect-exit", "expect-error", "expect-error-at", "expect-golden",
-        "stress", "argv", "env", "sweep-count")
+        "stress", "argv", "env", "sweep-count", "heap", "cap")
 
 # Exactly `//`, one space, a known key, a colon. Nothing looser: `//      expect-
 # error: ...` (six spaces, prose in `view_escape/case3`) must NOT match, and does
@@ -62,6 +62,10 @@ class Expect:
         self.argv = []
         self.env = {}               # name -> value
         self.sweep_count = None     # int, the sweep stage's evidence (TM-122)
+        self.heap = []              # (field, op, n): the NPK_HEAP_STATS bounds (TM-184)
+        self.cap = None             # (KiB, exit): the address-space belt (TM-186)
+        self.measured = {}          # leg label -> {field: n}, as the run printed it
+        self.capped = {}            # leg label -> the exit under the cap
 
     @property
     def is_refusal(self):
@@ -141,10 +145,48 @@ def read(root, rel):
             if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
                 raise MarkerError("%s:%d: `env` name %r is not an environment "
                                   "variable name" % (rel, lineno, name))
+            if name == HEAP_VAR:
+                # TM-184. The harness owns this one: it sets it for a file that
+                # carries `heap:` and for no other. And the runtime switches
+                # the report on for the NAME -- `NPK_HEAP_STATS=0` prints the
+                # line too, measured at `c3bdae2` -- so an `env:` spelling of it
+                # would read as a switch it is not.
+                raise MarkerError(
+                    "%s:%d: `env` may not set %s. The harness sets it for a "
+                    "file that carries a `heap:` marker and for no other, and "
+                    "any value -- `0` included -- switches the report on "
+                    "(TM-184)." % (rel, lineno, HEAP_VAR))
             if name in e.env:
                 raise MarkerError("%s:%d: `env` sets %s twice" % (rel, lineno,
                                                                   name))
             e.env[name] = val
+        elif key == "heap":
+            # TM-184. `// heap: FIELD OP N`, one bound per line, repeatable: a
+            # bound on the runtime's own `NPK_HEAP_STATS` line, which the
+            # harness then asks for (`env_for`) and holds on both legs.
+            m = re.fullmatch(r"(allocated|peak_live|count) (<=|>=) (0|[1-9]\d*)",
+                             value)
+            if not m:
+                raise MarkerError(
+                    "%s:%d: `heap` takes `FIELD OP N` -- FIELD one of %s, OP "
+                    "`<=` or `>=`, N a non-negative integer -- not %r"
+                    % (rel, lineno, ", ".join(HEAP_FIELDS), value))
+            bound = (m.group(1), m.group(2), int(m.group(3)))
+            if any(b[:2] == bound[:2] for b in e.heap):
+                raise MarkerError("%s:%d: a second `%s %s`; a bound has one "
+                                  "number" % (rel, lineno, bound[0], bound[1]))
+            e.heap.append(bound)
+        elif key == "cap":
+            # TM-186. `// cap: N KiB, exit C` -- run again under an address-
+            # space cap of N KiB (`ulimit -v N`), where the exit must be C.
+            m = re.fullmatch(r"([1-9]\d*) KiB, exit (\d+)", value)
+            if not m:
+                raise MarkerError("%s:%d: `cap` takes `N KiB, exit C`, not %r"
+                                  % (rel, lineno, value))
+            if e.cap is not None:
+                raise MarkerError("%s:%d: a second `cap`; a file is run under "
+                                  "one" % (rel, lineno))
+            e.cap = (int(m.group(1)), int(m.group(2)))
 
     # TM-121: a marker-shaped line below the block took effect on nobody.
     for lineno, line in enumerate(lines[end:], end + 1):
@@ -170,6 +212,9 @@ def read(root, rel):
             % rel)
     if e.error_at and not e.is_refusal:
         raise MarkerError("%s: `expect-error-at` without `expect-error`" % rel)
+    if (e.heap or e.cap) and not e.is_run:
+        raise MarkerError("%s: `heap` and `cap` describe a RUN, and a file "
+                          "without `expect-exit` is never run (TM-184)" % rel)
     return e
 
 
@@ -194,11 +239,153 @@ def read(root, rel):
 # declared here rather than inherited keeps it identical on every machine.
 BASE_ENV = {"NTIME_HARNESS": "1"}
 
+# THE RUNTIME'S OWN ALLOCATION COUNTERS, ASKED FOR PER FILE (cycle 0.1.4b,
+# TM-184). `NPK_HEAP_STATS` in a program's environment makes the runtime print
+# ONE line on fd 2 as the process exits -- by any route, a clean `exit` or a
+# trap's `failsafe` -- and nothing when it is absent:
+#
+#     heap: allocated=N peak_live=N count=N
+#
+# the bytes REQUESTED in total, the high-water mark of bytes live, and the
+# number of allocations, `wild` and managed alike, at the sizes asked for (the
+# compiler's `runtime/npkrt.ll`: `npk_hs_note_alloc`, `npk_hs_report`). They
+# are a function of the program's own allocation sequence and of nothing
+# else: a program that allocates nothing prints three zeros, and a
+# 476-character `argv[0]` or a 20 KB environment moves no number -- measured
+# at `c3bdae2`. So the variable is set for a file whose header BOUNDS the line
+# and for no other: a line nobody asserts is a measurement thrown away.
+HEAP_VAR = "NPK_HEAP_STATS"
+HEAP_FIELDS = ("allocated", "peak_live", "count")
+_HEAP_LINE = re.compile(rb"^heap: allocated=(\d+) peak_live=(\d+) count=(\d+)$",
+                        re.MULTILINE)
+
 
 def env_for(e):
     env = dict(BASE_ENV)
     env.update(e.env)
+    if e.heap:
+        env[HEAP_VAR] = "1"
     return env
+
+
+def _heap_problem(e, label, err):
+    """Hold one run's `heap:` line to the header's bounds. TM-184, TM-185.
+
+    EXACTLY ONE LINE. None means the report never reached us -- a runtime
+    without the instrument, or a program that closed fd 2 -- and there is
+    then nothing measured, which is a failure and not a pass. Two means the
+    program printed one of its own. Returns `(problem_or_None, numbers)`.
+    """
+    found = _HEAP_LINE.findall(err)
+    if len(found) != 1:
+        return ("%s: expected exactly one `heap: allocated=N peak_live=N "
+                "count=N` line on stderr and found %d. The header bounds the "
+                "runtime's %s report, so a run that printed none measured "
+                "nothing, and a second line is not the runtime's (TM-184)."
+                % (label, len(found), HEAP_VAR)), None
+    got = dict(zip(HEAP_FIELDS, (int(x) for x in found[0])))
+    bad = ["%s is %d; the header bounds it %s %d" % (f, got[f], op, n)
+           for f, op, n in e.heap
+           if (op == "<=" and got[f] > n) or (op == ">=" and got[f] < n)]
+    if bad:
+        return "%s: %s (TM-185)" % (label, "; ".join(bad)), got
+    return None, got
+
+
+# THE ADDRESS-SPACE BELT (TM-186), and its CONTROL, which is TM-131's rule with
+# its instance corrected by measurement. TM-131 took a `ulimit -v` bound only
+# beside `/bin/true` at the same cap, because below about 2.7 MiB every exit
+# on the workbench is the dynamic loader's. At compiler `c3bdae2` that control
+# no longer covers THIS runtime: a program that computes nothing and allocates
+# nothing -- `peak_live=0` -- takes HeapOom (92) under every cap up to about
+# 10.5 MiB, while `/bin/true` runs clean from 2.75 MiB, so between the two a
+# 92 is the runtime's floor and not the program's leak. The control is
+# therefore the FLOOR PROGRAM, linked against the same runtime: CAP_CONTROL
+# below, the shape of `tests/probe/probe11d_floor_only.npk`, written into
+# `build/` so that every tree the harness runs in has one -- the self-check's
+# scratch trees included. It is built once and run once per cap, at -O0.
+CAP_CONTROL = """mod:cap_control;
+
+func:main = int32(cstring[]:_~argv) {
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (StackExhausted) { exit 106i32; },
+        (MachineFault)   { exit 107i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};
+"""
+_CAP_CONTROL = {}      # KiB -> None when the floor program ran clean, else why not
+
+
+def _cap_control(bld, kib):
+    if kib not in _CAP_CONTROL:
+        why = None
+        src = os.path.join(bld.out_dir, "cap_control.npk")
+        with open(src, "w", encoding="utf-8") as fh:
+            fh.write(CAP_CONTROL)
+        try:
+            exe = bld.build_program(src, "cap_control", False)
+        except BuildError as err:
+            why = "the floor program did not build (%s)" % err.step
+        else:
+            st, detail = run_capped([exe], dict(BASE_ENV), kib)
+            if st != 0:
+                why = "the floor program %s under the same cap" % detail
+        _CAP_CONTROL[kib] = why
+    return _CAP_CONTROL[kib]
+
+
+def _capped_problem(bld, exe, e, label):
+    kib, want = e.cap
+    why = _cap_control(bld, kib)
+    if why:
+        return ("%s: at %d KiB the cap measures the RUNTIME, not this file: "
+                "%s. A bound the floor program also fails is not a statement "
+                "about the program under it (TM-131, TM-186)."
+                % (label, kib, why))
+    st, detail = run_capped([exe] + e.argv, env_for(e), kib)
+    e.capped[label] = st
+    if st != want:
+        return ("%s under a %d KiB address-space cap %s; the header expects "
+                "exit %d (TM-186)" % (label, kib, detail, want))
+    return None
+
+
+def memory_note(e):
+    """The unit line's evidence: what the run MEASURED, not the bound alone.
+
+    `-O0` first; "on both legs" when the optimised leg printed the same, and
+    each leg written out when it did not. `run.py` appends it to every run
+    member's verdict line, so the numbers a document quotes are the run's.
+    """
+    parts = []
+    if e.measured:
+        fields = [f for f in HEAP_FIELDS if any(b[0] == f for b in e.heap)]
+
+        def show(label):
+            return " ".join("%s=%d" % (f, e.measured[label][f]) for f in fields)
+        legs = sorted(e.measured)
+        if len(legs) == 2 and e.measured[legs[0]] == e.measured[legs[1]]:
+            parts.append("heap %s on both legs" % show(legs[0]))
+        else:
+            parts.append("; ".join("heap %s at %s" % (show(l), l)
+                                   for l in legs))
+    if e.capped:
+        codes = sorted(set(e.capped.values()), key=str)
+        parts.append("exit %s under %d KiB%s"
+                     % ("/".join(str(c) for c in codes), e.cap[0],
+                        " on both legs" if len(e.capped) == 2
+                        and len(codes) == 1 else ""))
+    return "".join(", " + p for p in parts)
 
 
 # ---------------------------------------------------------------------------
@@ -263,6 +450,12 @@ def _run_once(exe, e, label):
         if text.strip():
             detail.extend("      " + l for l in text.rstrip().splitlines())
         return "\n".join(detail), out
+    if e.heap:
+        bad, got = _heap_problem(e, label, err)
+        if got is not None:
+            e.measured.setdefault(label.split(" run ")[0], got)
+        if bad:
+            return bad, out
     return None, out
 
 
@@ -298,6 +491,12 @@ def _legs(bld, rel, e, require_failsafe=True):
             if bad:
                 problems.append(bad)
                 break
+        # TM-186: the belt runs on every leg, after the run it belts -- a second
+        # instrument that shares nothing with the first but the binary.
+        if e.cap:
+            bad = _capped_problem(bld, exe, e, label)
+            if bad:
+                problems.append(bad)
     return problems, captured
 
 

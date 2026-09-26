@@ -1,4 +1,7 @@
 // expect-exit: 0
+// heap: count >= 2000000
+// heap: peak_live <= 81000
+// cap: 65536 KiB, exit 0
 //
 // PROBE 12b -- the REMEDY half of probe 12, made reproducible.
 //
@@ -20,8 +23,23 @@
 // the remedy half is clean down to a 3 MiB address space, below which nothing
 // on this machine execs at all.
 //
-// RUN IT AS: /usr/bin/time -f "%e s  %M KiB" <binary>
-// AND AS:    ( ulimit -v 65536 ; <binary> ) ; echo $?
+// NOT AT COMPILER `c3bdae2` (cycle 0.1.4b): the runtime now takes about
+// 10.5 MiB before `main` runs, so this half -- and a program that allocates
+// nothing at all -- takes HeapOom below that. `probe12`'s header has the
+// re-measured table. The 64 MiB pair is unchanged: 92 against 0.
+//
+// THE HARNESS ASSERTS THE REMEDY SINCE CYCLE 0.1.4b (TM-184 ... TM-186), by the
+// three markers above, each a statement its twin fails. `count >= 2000000`:
+// the loop made its two million bodies, so a copy whose loop was emptied --
+// which retains nothing because it allocates nothing -- is red and not green,
+// TM-131's objection to a gate an empty program passes. `peak_live <= 81000`:
+// it retained none of them, where `probe12` retains 70 000 059 bytes. And
+// exit 0 under a 64 MiB cap, where `probe12` takes 92. The ceiling is the
+// geometric mean of this file's 94 and the twin's 70 000 059, rounded down to
+// two significant figures (TM-185). Measured at compiler `c3bdae2`, both legs:
+// `allocated=70000059 peak_live=94 count=2000002` -- 94 is the block's 24
+// bytes and two 35-byte bodies, the slot's and the incoming one, live
+// together inside one call. By hand: `NPK_HEAP_STATS=1 <binary>`.
 //
 // THE DIFF AGAINST ITS TWIN IS ONE STATEMENT, in `vec_set` below: the old
 // element is moved into `T:old`, a local whose scope is the function body, and

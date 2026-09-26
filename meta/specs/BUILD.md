@@ -209,7 +209,12 @@ to be added by the cycle that can honour it rather than sit dormant:
 (`--obligations` under the pinned z3, the compiler's D-218) and `cost` (the
 allocator's own `NPK_HEAP_STATS` numbers held to a stated bound — the
 instrument cycle 0.0.4's managed-memory gate is waiting for, and the reason
-that gate is a `ulimit -v` cap today).
+that gate is a `ulimit -v` cap today). *(Cycle 0.1.4b: the instrument arrived
+in the runtime, and the gate is a MARKER on the file rather than the `cost`
+stage — `heap:` and `cap:` in B-5, `TESTING.md` V-17 — because a stage and a
+unit format for six files would split each file from its own stage and
+header. The `ulimit -v` cap stays, as a belt, and is run on every invocation
+for the first time. `cost` stays absent.)*
 
 **Rule B-5 — expectations live in the test file**, marker for marker as the
 compiler's:
@@ -223,7 +228,15 @@ compiler's:
 // argv: …
 // expect-golden: name       the golden file this test asserts against
 // sweep-count: 7304484      the domain a `sweep` must visit (TM-122)
+// heap: peak_live <= 64000  a bound on NPK_HEAP_STATS's line; repeatable (V-17)
+// cap: 65536 KiB, exit 92   run again under `ulimit -v 65536`; its exit there (V-17)
 ```
+
+*(The last two since cycle 0.1.4b: `heap:` bounds a field of the runtime's
+`heap: allocated=N peak_live=N count=N` line, `allocated`, `peak_live` or
+`count`, with `<=` or `>=`, and sets `NPK_HEAP_STATS` for its file and no
+other; `cap:` reruns the program under an address-space cap, beside the floor
+program as its control. `TESTING.md` V-17 is the rule.)*
 
 *(The example read `7304485` until cycle 0.1.1 — the civil range's size with
 its first day one day early, TM-161.)*
@@ -404,7 +417,8 @@ and the trap error identities. Every module has it bound with no import.
 - **`Bytes`** — `{ sealed buffer:body; sealed limit<ListLen> int64:len; }`
   since cycle 0.1.0c (TM-156; `body` sealed and not hidden, because its `cap`
   is read across modules) — an owning byte sink over `buffer`, with `push`, `extend`,
-  `extend_str`, `put_uint` (decimal, allocation-free) and `take`. Every
+  `extend_str`, `put_uint` (decimal, allocation-free) and `take` — an owned
+  copy since cycle 0.1.4b, a view before it (`SAFETY.md` S-18f). Every
   formatter writes into one. It exists because `string_concat` allocates per
   call and formatting a million rows should allocate once — the compiler
   measured exactly that shape as quadratic in `npkg`'s first full run,

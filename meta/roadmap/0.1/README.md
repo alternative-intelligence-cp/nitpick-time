@@ -54,6 +54,19 @@ strongest gate.
 > library defect — `bytes_take` hands back a view typed as an owned `string` —
 > which it fixes (`0.1.4b.md` §4); and that TM-131's `/bin/true` control no
 > longer controls for this runtime (§3).
+>
+> **`0.1.4c.md` was written by a sixth planner on 2026-09-26, after 0.1.4b's
+> close, when the workbench re-pinned to compiler `c970483`**, the end of its
+> 1.6.0 chain — and rehearsed in the REAL checkout at both `c3bdae2` and
+> `c970483` from its own fenced blocks, every step compared with its block by
+> the plan's `same.py`, the tree put back to the plan's commit after each pass;
+> its last section says which command ran where. **The unchanged tree was
+> measured first**: RED at 90 of 91 at the new pin, and a per-file sweep of all
+> 108 `.npk` at both pins moved exactly four files — `fixed_move_out/`'s three,
+> whose defect has landed (O-N20, the compiler's DEF-99), and `probe13d`,
+> whose generic accessor the compiler's DEF-104 now refuses; nothing in `src/`.
+> **The order is the orchestrator's, 2026-09-26: 0.1.4c, then 0.1.3c, then
+> 0.1.5.**
 
 ## Why here
 
@@ -112,10 +125,11 @@ C-8's guarantee. That is worth knowing before writing it.
 | 0.1.2 | **The sweep** — the exhaustive round trip both ways, monotonicity and month lengths, each assertion shown to fail; the weekday rider moves to 0.1.3 with `weekday()` (TM-165) — **[`0.1.2.md`](0.1.2.md), DONE 2026-09-25** | the round trips and two of the gate's three riders (TM-166, TM-167); `GREEN -- 81 unit(s)`, and CI green — run `36176251416` |
 | 0.1.3 | **Derived fields** — weekday, day-of-year, ISO week date, ordinal date — and **the weekday cycle on 0.1.2's walk** (TM-165) — **[`0.1.3.md`](0.1.3.md), DONE 2026-09-25** | computed, never stored; **the cycle's gate complete** (TM-169 … TM-176); `GREEN -- 86 unit(s)`, and CI green — run `36198540622` |
 | 0.1.3b | **`check_no_owning_fields`' premise, re-measured** — owed since the workbench found `PLAYBOOK.md` §2's TYPE-046 row false: the premise was false at every kept pin, the check had three blind spots, and a move out of `fixed` storage compiles and faults, a compiler defect raised as O-N20, the compiler's DEF-99 — **[`0.1.3b.md`](0.1.3b.md), DONE 2026-09-25** | S-19b (TM-177), and cycle 0.5's version string held behind the defect (TM-178); the check widened and commissioned; `GREEN -- 90 unit(s)`, and CI green — run `36201639726` |
-| 0.1.3c | **`Vec` move-only by construction** — question 9, answered 2026-09-25 — porting `nitpick-regex`'s 0.0.4d, which has landed and been verified (2026-09-25) — **NOT PLANNED YET; plan it before it is dispatched, against the pin carrying the compiler's 1.6.0 step 3h, where a lent owning parameter admits no write path (DEF-102). It runs AFTER 0.1.4b** (the orchestrator, 2026-09-25); 0.1.4 ran first while that 0.0.4d was still pending | no whole-`Vec` copy and no by-value `Vec` compiles |
+| 0.1.3c | **`Vec` move-only by construction** — question 9, answered 2026-09-25 — porting `nitpick-regex`'s 0.0.4d, which has landed and been verified (2026-09-25) — **NOT PLANNED YET; plan it before it is dispatched, against compiler `c970483`, which 0.1.4c adopts — where a lent owning parameter admits no write path (DEF-102) and a generic pass-out of a `T` place through a pointer is refused (DEF-104). It runs AFTER 0.1.4c** (the orchestrator, 2026-09-26), and it ports `nitpick-regex`'s 0.0.4e as well as its 0.0.4d — `vec_get<T: Pod>` through a `Pod` trait and a `move` in `vec_pop`, beside the marker field — with P-1's A′ replacement (`0.1.4c.md` §11); 0.1.4 ran first while that 0.0.4d was still pending | no whole-`Vec` copy and no by-value `Vec` compiles |
 | 0.1.4 | **The cross-oracle** — Python's `datetime` against every date of years 1 … 9999, by a generated corpus of one digest per year; and a compiler defect found at planning — **[`0.1.4.md`](0.1.4.md), DONE 2026-09-25** | agreement over years 1 … 9999 — every date, not a sample (TM-179 … TM-183); `GREEN -- 91 unit(s)`, and CI green — run `36210527554` |
 | 0.1.4b | **The managed-memory gate** — `NPK_HEAP_STATS`'s `peak_live`, carried from cycle 0.0 by `0.1.0.md` §8 — **[`0.1.4b.md`](0.1.4b.md), DONE 2026-09-26; it ran before 0.1.3c** | the four named — two twin pairs and two `Bytes` tests, six files — held to the runtime's own count, each remedy with a work floor; the `ulimit -v` cap a belt the harness runs, beside the floor program; and `bytes_take` owning its answer (`0.1.4b.md` §4; TM-184 … TM-188); `GREEN -- 91 unit(s)`, and CI green — run `36217173756` |
-| 0.1.5 | **Close** — and what earlier subcycles found and did not own: the public `README.md`'s *"Status: planning. No code yet."*; `nitpick.toml`'s `check` item still saying *"cycle 0.0.4"*; `src/core/core.npk`'s *"the other five placeholders point AT it"* (four do); `check_error_budget`'s *"expected: no module raises anything before cycle 0.1"*; and `tests/probe/README.md`'s table, which never listed probes 12 to 16; **and from 0.1.4's planning**: the `fixed`-import defect's reproduction (`0.1.4.md` §3) committed to `tests/probe/defect/` once the registry has numbered it, the public `README.md`'s and `CLAUDE.md`'s `tools/` line, which names only the tzdb tables, and the `sweep` stage's headroom against its 30 s threshold (`0.1.4.md` §15) — 22.2 s at 0.1.4's execution; **and from 0.1.4's execution**: `.gitignore`'s *"NOT ignored, deliberately"* line for `tests/fixtures/`, which names the corpora planned — the tzdb's test material, the format vectors, the fuzzer's finds — and not the one committed | `done/0.1/`, `0.2.0.md` written |
+| 0.1.4c | **The adoption to compiler `c970483`** — the end of the compiler's 1.6.0 chain: O-N20 and O-N23 landed, each reproduction asserted with its old verdicts as the control; `probe13d` at `int64`, since DEF-104 refuses its generic accessor; the hold on 0.5's version string lifted; CI at the new pin in the same commit — **[`0.1.4c.md`](0.1.4c.md), PLANNED 2026-09-26; it runs before 0.1.3c** | every file meeting its header at `c970483` — `GREEN -- 101 unit(s)` — and RED at `c3bdae2` exactly where the landings are asserted; CI green on the same pin (PD-40 … PD-43) |
+| 0.1.5 | **Close** — and what earlier subcycles found and did not own: the public `README.md`'s *"Status: planning. No code yet."*; `nitpick.toml`'s `check` item still saying *"cycle 0.0.4"*; `src/core/core.npk`'s *"the other five placeholders point AT it"* (four do); `check_error_budget`'s *"expected: no module raises anything before cycle 0.1"*; and `tests/probe/README.md`'s table, which never listed probes 12 to 16; **and from 0.1.4's planning**: ~~the `fixed`-import defect's reproduction (`0.1.4.md` §3) committed to `tests/probe/defect/` once the registry has numbered it~~ — **moved to 0.1.4c, where its fix landed (PD-43)**; the public `README.md`'s and `CLAUDE.md`'s `tools/` line, which names only the tzdb tables, and the `sweep` stage's headroom against its 30 s threshold (`0.1.4.md` §15) — 22.2 s at 0.1.4's execution; **and from 0.1.4's execution**: `.gitignore`'s *"NOT ignored, deliberately"* line for `tests/fixtures/`, which names the corpora planned — the tzdb's test material, the format vectors, the fuzzer's finds — and not the one committed | `done/0.1/`, `0.2.0.md` written |
 
 **Why 0.1.4b exists — a premise found false at planning, 2026-09-25.**
 `0.1.0.md` §8 carried the `peak_live` gate on the reading that `NPK_HEAP_STATS`
@@ -214,7 +228,7 @@ environment) and a control that fails.
 - [x] **found at execution, not planned:** the defect corpus's present-tense arithmetic in `TESTING.md` V-1g and `run_defect_corpus`' docstring, now `28 = 3 exempt + 25 asserted`; the defect table's note that every defect in it is fixed, false beside the O-N20 row; and a plain `pass` of a `fixed string` scalar — the shape of Z-6's obvious body, in no committed case — measured at all six kept pins, `run:95` on both legs
 
 ### 0.1.3c — `Vec` move-only by construction — NOT PLANNED YET
-- [ ] planned against the pin carrying the compiler's 1.6.0 step 3h, after 0.1.4b — `nitpick-regex`'s 0.0.4d has landed and been verified (2026-09-25) — porting its design (question 9)
+- [ ] planned against compiler `c970483`, after 0.1.4c adopts it — `nitpick-regex`'s 0.0.4d has landed and been verified (2026-09-25), and its 0.0.4e adoption to the same pin carries the rest of the design (`vec_get<T: Pod>`, the `move` in `vec_pop`) — porting it (question 9); and `vec_at<T>`'s `#wild_slice` read, which DEF-104's gate does not reach and which moves an owning element out (`0.1.4c.md` §1.3, §11)
 - [ ] **from 0.1.4b's planning:** TM-150's `vec_pop` churn pair — two million push-then-pop cycles, `peak_live` 120 against `vec_clear`'s 48 000 096 — committed as a program with `heap:` bounds; it was measured in a scratch directory at 0.1.0b and no program stands behind the number (`0.1.4b.md` §15)
 
 ### 0.1.4 — the cross-oracle — [`0.1.4.md`](0.1.4.md) §13 is the full list — **DONE 2026-09-25**
@@ -232,6 +246,15 @@ environment) and a control that fails.
 - [x] V-14's ninth case: a program whose managed memory disagrees with its header — five plants beside one control (TM-187)
 - [x] **found at planning:** `bytes_take` hands back an owned copy, and `bytes_growth` asserts that it survives a reuse and a growth of its sink (TM-188, `SAFETY.md` S-18f) — the old take restored, `bytes_growth` exits 28 at the reuse, and with the reuse cut 30 at the growth (K7, K8)
 - [x] `0.1.0.md` §8 discharged — the gate cycle 0.0 carried unticked. Its three steps: the instrument commissioned against a known-leaking and a known-clean control — `probe06b`'s floor and `probe06c`'s ceiling, on every run; a bound on each of the pairs — the six files; and the `ulimit -v` cap kept as a belt — run by the harness, its control the floor program where §8 named `/bin/true` (TM-186)
+
+### 0.1.4c — the adoption to compiler `c970483` — [`0.1.4c.md`](0.1.4c.md) §9 is the full list
+- [ ] the unchanged tree measured at both pins before anything changed: RED at 90 of 91 at `c970483`, GREEN 91 at `c3bdae2`, and a per-file sweep of all 108 `.npk` moving exactly four (`0.1.4c.md` §1)
+- [ ] O-N20 landed (the compiler's DEF-99): `fixed_move_out/`'s three asserted as `NITPICK-TYPE-084` refusals, their `EXPECT_EXEMPT` entries gone, their `c3bdae2` verdicts the control, appended to `TRANSCRIPT.txt` (PD-40)
+- [ ] `probe13d`'s accessor names `int64` — DEF-104 refuses its generic pass-out through a pointer — and it still reads the sentinel unguarded (PD-41)
+- [ ] the hold on `ZONE_MODEL.md` Z-4 and Z-6 lifted, Z-4's shape measured across an import; O-X10 settled (PD-42)
+- [ ] O-N23 landed (DEF-105): its reproduction committed as `tests/probe/defect/fixed_import_scope/`, seven cases asserted at their fixed verdicts with a transcript at every kept pin (PD-43)
+- [ ] the carried checks — DEF-95, DEF-96, DEF-97, DEF-98, DEF-102, DEF-103, DEF-106 — and DEF-108's `FLOW-001` measured, each new refusal planted once as the sweep's control (`0.1.4c.md` §1.6)
+- [ ] CI at `c970483` in the adoption's own commit; `GREEN -- 101 unit(s)` locally and in CI, and RED at `c3bdae2` exactly where the landings are asserted
 
 ## Gate
 

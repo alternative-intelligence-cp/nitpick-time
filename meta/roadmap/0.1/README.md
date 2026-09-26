@@ -42,6 +42,18 @@ strongest gate.
 > compiler defect at planning** — a `fixed` binding's declared type resolves in
 > the importing module's scope — recorded with its reproduction in `0.1.4.md`
 > §3 and raised by path.
+>
+> **`0.1.4b.md` was written by a fifth planner the same day, after 0.1.4's
+> close**, and rehearsed in the REAL checkout at `c3bdae2` from its own fenced
+> blocks — every group applied by the plan's `apply.py`, the tree put back to
+> `648590f` exactly after each pass; its last section says which command ran
+> where. **It runs BEFORE 0.1.3c, by the orchestrator's order of 2026-09-25**:
+> 0.1.3c ports `Vec` move-only, whose loan rules change at the re-pin to the
+> commit carrying the compiler's 1.6.0 step 3h, so it is planned against that
+> pin. **It found two things at planning, from the runtime's own output**: a
+> library defect — `bytes_take` hands back a view typed as an owned `string` —
+> which it fixes (`0.1.4b.md` §4); and that TM-131's `/bin/true` control no
+> longer controls for this runtime (§3).
 
 ## Why here
 
@@ -100,9 +112,9 @@ C-8's guarantee. That is worth knowing before writing it.
 | 0.1.2 | **The sweep** — the exhaustive round trip both ways, monotonicity and month lengths, each assertion shown to fail; the weekday rider moves to 0.1.3 with `weekday()` (TM-165) — **[`0.1.2.md`](0.1.2.md), DONE 2026-09-25** | the round trips and two of the gate's three riders (TM-166, TM-167); `GREEN -- 81 unit(s)`, and CI green — run `36176251416` |
 | 0.1.3 | **Derived fields** — weekday, day-of-year, ISO week date, ordinal date — and **the weekday cycle on 0.1.2's walk** (TM-165) — **[`0.1.3.md`](0.1.3.md), DONE 2026-09-25** | computed, never stored; **the cycle's gate complete** (TM-169 … TM-176); `GREEN -- 86 unit(s)`, and CI green — run `36198540622` |
 | 0.1.3b | **`check_no_owning_fields`' premise, re-measured** — owed since the workbench found `PLAYBOOK.md` §2's TYPE-046 row false: the premise was false at every kept pin, the check had three blind spots, and a move out of `fixed` storage compiles and faults, a compiler defect raised as O-N20, the compiler's DEF-99 — **[`0.1.3b.md`](0.1.3b.md), DONE 2026-09-25** | S-19b (TM-177), and cycle 0.5's version string held behind the defect (TM-178); the check widened and commissioned; `GREEN -- 90 unit(s)`, and CI green — run `36201639726` |
-| 0.1.3c | **`Vec` move-only by construction** — question 9, answered 2026-09-25 — porting `nitpick-regex`'s 0.0.4d once that has landed and been verified — **NOT PLANNED YET; plan it before it is dispatched. Gated on that 0.0.4d, so 0.1.4 runs first** (the orchestrator, 2026-09-25) | no whole-`Vec` copy and no by-value `Vec` compiles |
+| 0.1.3c | **`Vec` move-only by construction** — question 9, answered 2026-09-25 — porting `nitpick-regex`'s 0.0.4d, which has landed and been verified (2026-09-25) — **NOT PLANNED YET; plan it before it is dispatched, against the pin carrying the compiler's 1.6.0 step 3h, where a lent owning parameter admits no write path (DEF-102). It runs AFTER 0.1.4b** (the orchestrator, 2026-09-25); 0.1.4 ran first while that 0.0.4d was still pending | no whole-`Vec` copy and no by-value `Vec` compiles |
 | 0.1.4 | **The cross-oracle** — Python's `datetime` against every date of years 1 … 9999, by a generated corpus of one digest per year; and a compiler defect found at planning — **[`0.1.4.md`](0.1.4.md), DONE 2026-09-25** | agreement over years 1 … 9999 — every date, not a sample (TM-179 … TM-183); `GREEN -- 91 unit(s)`, and CI green — run `36210527554` |
-| 0.1.4b | **The managed-memory gate** — `NPK_HEAP_STATS`'s `peak_live`, carried from cycle 0.0 by `0.1.0.md` §8 — **NOT PLANNED YET; plan it before it is dispatched** | the four leak/no-leak pairs bounded by `peak_live`, and the `ulimit -v` cap a belt |
+| 0.1.4b | **The managed-memory gate** — `NPK_HEAP_STATS`'s `peak_live`, carried from cycle 0.0 by `0.1.0.md` §8 — **[`0.1.4b.md`](0.1.4b.md), PLANNED 2026-09-25; it runs before 0.1.3c** | the four named — two twin pairs and two `Bytes` tests, six files — held to the runtime's own count, each remedy with a work floor; the `ulimit -v` cap a belt the harness runs, beside the floor program; and `bytes_take` owning its answer (`0.1.4b.md` §4) |
 | 0.1.5 | **Close** — and what earlier subcycles found and did not own: the public `README.md`'s *"Status: planning. No code yet."*; `nitpick.toml`'s `check` item still saying *"cycle 0.0.4"*; `src/core/core.npk`'s *"the other five placeholders point AT it"* (four do); `check_error_budget`'s *"expected: no module raises anything before cycle 0.1"*; and `tests/probe/README.md`'s table, which never listed probes 12 to 16; **and from 0.1.4's planning**: the `fixed`-import defect's reproduction (`0.1.4.md` §3) committed to `tests/probe/defect/` once the registry has numbered it, the public `README.md`'s and `CLAUDE.md`'s `tools/` line, which names only the tzdb tables, and the `sweep` stage's headroom against its 30 s threshold (`0.1.4.md` §15) — 22.2 s at 0.1.4's execution; **and from 0.1.4's execution**: `.gitignore`'s *"NOT ignored, deliberately"* line for `tests/fixtures/`, which names the corpora planned — the tzdb's test material, the format vectors, the fuzzer's finds — and not the one committed | `done/0.1/`, `0.2.0.md` written |
 
 **Why 0.1.4b exists — a premise found false at planning, 2026-09-25.**
@@ -202,7 +214,8 @@ environment) and a control that fails.
 - [x] **found at execution, not planned:** the defect corpus's present-tense arithmetic in `TESTING.md` V-1g and `run_defect_corpus`' docstring, now `28 = 3 exempt + 25 asserted`; the defect table's note that every defect in it is fixed, false beside the O-N20 row; and a plain `pass` of a `fixed string` scalar — the shape of Z-6's obvious body, in no committed case — measured at all six kept pins, `run:95` on both legs
 
 ### 0.1.3c — `Vec` move-only by construction — NOT PLANNED YET
-- [ ] planned once `nitpick-regex`'s 0.0.4d has landed and been verified, porting its design (question 9)
+- [ ] planned against the pin carrying the compiler's 1.6.0 step 3h, after 0.1.4b — `nitpick-regex`'s 0.0.4d has landed and been verified (2026-09-25) — porting its design (question 9)
+- [ ] **from 0.1.4b's planning:** TM-150's `vec_pop` churn pair — two million push-then-pop cycles, `peak_live` 120 against `vec_clear`'s 48 000 096 — committed as a program with `heap:` bounds; it was measured in a scratch directory at 0.1.0b and no program stands behind the number (`0.1.4b.md` §15)
 
 ### 0.1.4 — the cross-oracle — [`0.1.4.md`](0.1.4.md) §13 is the full list — **DONE 2026-09-25**
 - [x] ~~`tools/gen_civil_oracle.py` emitting `(y, m, d, day_number, weekday, iso_week, day_of_year)` rows from Python's `datetime`, committed under `tests/fixtures/civil/`~~ **`tools/gen_civil_oracle.py` writing, from Python's `datetime`, one row per year 1 … 9999 — the day number of its 1 January, its length, and a digest of nine fields of every one of its days — as `tests/fixtures/civil/civil_oracle.npk`** (TM-179, TM-180): measured at planning, a few hundred thousand explicit rows is 33.7 MB of source and 44 s of `npkc`, and a sample misses what falls between its rows — at execution 1 001 690 bytes, its `sha256` the plan's at Python 3.12.3
@@ -210,6 +223,15 @@ environment) and a control that fails.
 - [x] **the limitation stated in the fixture's header**: Python covers years 1 … 9999 only, so the negative half has the self-consistency of 0.1.2 and nothing else (C-18) — and in the member's, C-18's and V-6's; measured, `days_to_date`'s era one day late passes the member with the full count
 - [x] **added at planning:** the corpus derived a second way — a count that reads no `datetime` — and diffed against the corpus and every vector the tree states for years ≥ 1 (`0.1.4.md` §4); regenerated after the documents and `cmp`-identical (TM-183) — at execution 9 999 rows and 12 + 28 vectors, 0 disagreements, the control red on year 2000 alone; `cmp exit 0`
 - [x] **found at execution, not planned:** `harness/run.py`'s `_verdict` comment that the `none` bucket *"is the support modules"*, false once the corpus joined it — rewritten; `.gitignore`'s *"NOT ignored, deliberately"* line for `tests/fixtures/`, which names the corpora planned and not the one committed — carried to 0.1.5; and the registry's id for the defect, with the compiler's, carried by §11 into this repository's own entry and the three sites §11 names
+
+### 0.1.4b — the managed-memory gate — [`0.1.4b.md`](0.1.4b.md) §13 is the full list
+- [ ] the instrument established from the runtime's source and output, and every fact re-derived at the dispatched pin before anything changes, the anchor unchanged (`0.1.4b.md` §2, §11)
+- [ ] a `// heap:` marker and the constructed environment: the runtime's `NPK_HEAP_STATS` line held to a file's bounds on both legs, exactly one line per run, the evidence in the verdict line (PD-35)
+- [ ] **six files bounded** — the two twin pairs and the two `Bytes` tests that `0.1.0.md` §8 names, which this row called four pairs until planning — each leaking twin at or above its leak, each remedy under its ceiling and over its work floor, each `Bytes` test under its ceiling; every ceiling placed by PD-36's rule, and every bound seen red on its mutant (`0.1.4b.md` §7)
+- [ ] the `ulimit -v` pair run by the harness as a belt, with the floor program as its control, where TM-131's was `/bin/true` (PD-37)
+- [ ] V-14's ninth case: a program whose managed memory disagrees with its header — five plants beside one control (PD-38)
+- [ ] **found at planning:** `bytes_take` hands back an owned copy, and `bytes_growth` asserts that it survives a reuse and a growth of its sink (PD-39, `SAFETY.md` S-18f)
+- [ ] `0.1.0.md` §8 discharged — the gate cycle 0.0 carried unticked
 
 ## Gate
 

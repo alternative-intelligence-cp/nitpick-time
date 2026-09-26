@@ -1066,6 +1066,53 @@ above. Nothing else: no `fixed` value in `src/` owns, and S-19b with
 
 ---
 
+### O-N23 — a `fixed` binding's declared type resolves in the importing module's scope
+
+**Raised** from this repository at cycle 0.1.4's planning, 2026-09-25, at pin
+`c3bdae2`, by path; **numbered O-N23** in the workbench registry
+(`../../meta/OPEN_QUESTIONS.md`), reproduced there by the orchestrator on both
+legs before it was sent; **confirmed by the compiler the same day as its
+DEF-105.** Its fix resolves the binding's type in its declaring module's scope
+and is the compiler's 1.6.0 step 3h (notice 60) — **not landed when this was
+written, and at no pin of ours**: `c3bdae2` has the defect, and every verdict
+below stands.
+
+**What it is.** The compiler's D-137 says a declaration's annotations resolve
+in its HOME scope, never in the scope of whatever module is asking; a `fixed`
+binding's declared type does not. Imported without its type, a table is
+refused `NITPICK-TYPE-001` — *"there is no type named `Row`"* — at the
+DECLARING module's own line, which compiles alone. Imported beside a struct of
+the same name declared in the importer, it silently takes the importer's
+layout: with that struct's fields swapped it reads the wrong field (exit 10,
+both legs), and with it 8 bytes wider the IR indexes `@"npk.rows.ROWS"`, a
+`[2 x %"npk.rows.Row"]` of 32 bytes, through `getelementptr [2 x
+%"npk.case3_wider_same_name.Row"]` — a 24-byte stride over 16-byte rows, so
+row 1 lies partly past the table's end (exit 10, both legs). A `fixed` scalar
+of the type does the same, so it is the binding's annotation and not the
+array. **Controls:** imported with its type by name, the table reads correctly
+(exit 0), and a same-named struct in the importer is then refused
+`NITPICK-RESOLVE-001`; a function returning the type is unaffected, since
+D-137 covers signatures.
+
+**Reproduction:** `meta/roadmap/0.1/0.1.4.md` §3's `importscope.py` — one
+declaring module and seven importers, built at every kept pin on both legs: the
+same seven verdicts at all six, `0dfddac` to `c3bdae2`, so it is not a
+regression; re-run at `c3bdae2` at cycle 0.1.4's execution, line for line. Its
+commit to `tests/probe/defect/` is owed to cycle 0.1's close, 0.1.5.
+
+**What it holds here**, as the registry records it: **nothing today.** Every
+user-typed `fixed` table this tree declares is declared and read in one
+module, which the defect does not reach, and
+`tests/unit/sweep/every_oracle_date.npk`, the first cross-module import of one,
+imports `OracleYear` by name beside `ORACLE` (TM-181), which turns the silent
+form into a `RESOLVE-001` refusal. **It holds cycle 0.5's zone tables** —
+generated `fixed` tables of `ZoneTransition`, `ZoneType` and `ZoneEntry` that
+the lookup module will import — until a pin carries the fix: importing each
+row type by name is a belt, not the guarantee, and
+`meta/roadmap/0.5/README.md`'s "Watch for" points here.
+
+---
+
 ## Ids reserved in the WORKBENCH registry, recorded here so they are not taken twice
 
 **This section defines nothing. It exists because cycle 0.0.4 filed a question

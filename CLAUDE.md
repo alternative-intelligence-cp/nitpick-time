@@ -7,7 +7,36 @@ Guidance for Claude Code sessions working in this repository.
 `ntime` — a date, time and time-zone library for **Nitpick**, the
 safety-critical systems language at `../../nitpick`.
 
-**Status, after cycle 0.1.3b: the owning-field check's premise,
+**Status, after cycle 0.1.4: the civil cross-oracle.** Every date of years
+1 … 9999 — 3 652 059 of them, the whole of Python's range — agrees with
+Python's `datetime` in its year, month, day, day number, weekday, ISO week
+date and day of the year (`CALENDAR.md` C-18, `TESTING.md` V-6, TM-179). The
+corpus, `tests/fixtures/civil/civil_oracle.npk`, is written by
+`tools/gen_civil_oracle.py` from `datetime` and nothing else — one row per
+year: the day number of its 1 January, its length, and a digest of nine
+fields of every one of its days (TM-180) — and a sixth `sweep` member,
+`tests/unit/sweep/every_oracle_date.npk`, folds the same from `src/cal/`'s
+answers and must equal every row (TM-182). **Exhaustive, where C-18 first
+asked for a sample**: measured, explicit rows enough to mean anything are
+33.7 MB of source and 44 s of `npkc`, and a sample taken every seventh day
+meets every February 29th of a 400-multiple year or none of them; the digest
+puts the whole range in 1.0 MB. **The negative half of the range has C-16's
+round trips and nothing external** — Python stops at year 1, and a defect
+confined to negative dates passes this member with the full count, measured.
+The corpus is generated and never edited: the subcycle that changes its
+generator regenerates it and compares it byte for byte (TM-183).
+**A compiler defect, O-N23**, found at planning: an imported `fixed`
+binding's declared type resolves in the IMPORTING module's scope, so a table
+imported without its row type is refused `NITPICK-TYPE-001` at its own line,
+and beside a same-named struct it silently takes that struct's layout. The
+member imports `OracleYear` by name beside `ORACLE` (TM-181), which turns
+the silent form into a `NITPICK-RESOLVE-001` refusal, and the defect holds
+cycle 0.5's zone tables. Every check the member makes was seen to fail on a
+mutant — `meta/roadmap/0.1/0.1.4.md` §7's twenty-one rows. No library code
+changed. A full invocation is **91 units green** at pin `c3bdae2`; the six
+sweeps cost 22.2 s of it.
+
+**After cycle 0.1.3b: the owning-field check's premise,
 re-measured.** `check_no_owning_fields` rested on *"an owning field is one the
 language will not let a table hold"*, and **measured at every pin this
 repository has kept, `0dfddac` to `c3bdae2`, that is false**: a `fixed` table

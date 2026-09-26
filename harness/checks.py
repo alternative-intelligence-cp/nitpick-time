@@ -1422,7 +1422,11 @@ PENDING = (
      "the mechanism EXISTS -- `repro.py --between` runs a generator between "
      "two builds and requires the IR unchanged, and it has been seen red "
      "against a non-deterministic one (0.0.2 §5.3). What is missing is "
-     "`tools/gen_tzdb.py` and a committed table to regenerate."),
+     "`tools/gen_tzdb.py` and its tables. The civil cross-oracle's corpus is "
+     "generated too (cycle 0.1.4) and joins this check at 0.5.3; until then "
+     "the subcycle that changes `tools/gen_civil_oracle.py` regenerates the "
+     "corpus and compares it, a regeneration costing about 11 s (TESTING.md "
+     "V-6)."),
     ("check_table_invariants", "0.5",
      "sorted, in range, indices valid -- of tables that do not exist."),
 )

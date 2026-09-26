@@ -4737,3 +4737,142 @@ compiler seat confirmed DEF-99, which the plan could not know: as the seat
 describes its fix, the move and the `pass` are refused where each is written,
 so once a pin carries it the first declined option is the compiler's rule
 rather than a house one. O-X10 says so, and cycle 0.5 reads it there.)*
+
+---
+
+# Cycle 0.1.4 — the civil cross-oracle, ratified 2026-09-25
+
+Five decisions, drafted at planning (`meta/roadmap/0.1/0.1.4.md` §14, PD-30 …
+PD-34, in that order) and recorded here by the worker in the commit that makes
+the change each describes. Every measurement is at compiler `c3bdae2` and is
+recorded with its command in `0.1.4.md`'s execution record; the ones taken at
+planning were re-run at execution and matched — the mutation matrix's three
+tables line for line, and the corpus's `sha256` byte for byte. PD-30 and PD-34
+were put to the author at planning and accepted by default.
+
+### TM-179 — the civil cross-oracle is exhaustive over Python's range: every date from 0001-01-01 to 9999-12-31, 3 652 059 of them, compared with Python's `datetime` through a digest per year; `CALENDAR.md` C-18 and `TESTING.md` V-6 are restated with their old text quoted
+
+**2026-09-25, cycle 0.1.4 (PD-30). Restates `CALENDAR.md` C-18 and `TESTING.md`
+V-6**, each with its old words quoted in a dated note. C-18 and V-6 said
+*sampled*, *"a few hundred thousand"* rows — a cost guess written at cycle 0.0
+before anything was measured. Measured at planning: 280 928 explicit rows is
+33.7 MB of generated source that `npkc` compiles once in 44.1 s at a 717 MB
+peak, and the harness compiles the corpus twice a run; the digest corpus is
+1.0 MB — 1 001 690 bytes at execution — and one second. And a sample misses
+what falls between its rows: 400 Gregorian years are exactly 20 871 weeks, so a
+sample taken every seventh day meets the 24 February 29ths of years 400 … 9600
+all or not at all — on Mondays, not at all, and it passes a leap rule that
+drops them (re-measured at execution: the member folded on Mondays alone exits
+0 with its full count, 521 723, on that mutant, where the member exits 15),
+where a random 300 000 misses them with probability about 0.13, computed. So
+the property is checked over its whole domain, as TM-026 asks wherever that is
+possible, and stays a supplement rather than the gate for TM-026's own reason:
+it trusts somebody else's library. **At execution the member agreed with Python
+on every date, on both legs, the first time it ran** — `swept 3652059` — and no
+library code changed.
+
+*Declined:* C-18's sampled rows as written — weaker and dearer, both measured;
+every day as an explicit row — about 440 MB of source and nine minutes of
+`npkc`, extrapolated from three measured sizes; the comparison done by the
+harness at run time, in Python — a new stage, `datetime` on every run and in
+CI, and 3.65 million lines of the member's output per leg through a pipe; the
+negative half checked against a proleptic extension of Python's calendar
+written here — that is a second implementation of this library's calendar, not
+an external oracle, and C-16 already checks the negative half against itself.
+
+### TM-180 — the digest folds nine fields of each day — the year, month and day; the day number; the weekday; the ISO week date's three; the day of the year — in that order, by the FNV-1a step on whole 64-bit values, from 0 at each year's first day; a year that disagrees prints the member's nine fields for each of its days, and the generator's `--year` prints Python's in the same format
+
+**2026-09-25, cycle 0.1.4 (PD-31).** The step is h ← (h XOR v) × 1099511628211
+modulo 2⁶⁴. The multiplier is odd, so each step is a bijection of h for a fixed
+v: one wrong value anywhere in a year always changes its digest. In the member
+it is `(h ^ v) *% 1099511628211i64` — two operations that cannot trap and arm
+nothing (the compiler's D-312). The printed rows turn an opaque digest into a
+`diff` that names the day and the field, and tell a wrong corpus (no line
+differs) from a wrong library — measured at execution and equal to the
+planning run (`0.1.4.md` §7's second table): against `--year`, a weekday one
+day late differs in fields 5 … 8 on all 365 days of year 1, a day of the year
+counted from zero in field 9 alone, an ISO week number counted from zero in
+field 7 alone, `date_to_days`' day-of-year rounding in fields 4 … 9 on the 62
+days of July and December, and year 2000's digest corrupted in the corpus in
+nothing.
+
+*Declined:* a sum per field — linear, so equal and opposite errors cancel, two
+days' weekdays swapped among them; a cryptographic hash — SHA-256 written in a
+test program is a second implementation to trust, against an adversary nobody
+posits; one digest for the whole range — a red run could not say which year; a
+digest per month — 119 988 rows, twelve times the corpus, for a localisation
+the printed rows already give; printing every day always — 3.65 million lines
+per leg into the harness's captured output.
+
+### TM-181 — the corpus is a generated Nitpick module of `fixed` data, `tests/fixtures/civil/civil_oracle.npk`, imported by a `sweep` member and named in `harness/run.py`'s `EXPECT_EXEMPT` at the verdict `none`; its row type is imported by name beside its table; `BUILD.md` §3's and `tests/README.md`'s `fixture` rows are corrected
+
+**2026-09-25, cycle 0.1.4 (PD-32).** A module is the compiled-in form TM-007
+chose for the tzdb, and `probe04` has compiled a larger table than this on
+every run since cycle 0.0. It owns nothing — four `int64` fields a row — and
+costs the member no arm: measured at execution, the member owes `cal`'s
+eleven, read from `NITPICK-REACH-003`'s own list. The `parse` stage roots it
+once, and its `none` is re-derived on every run like every exemption's verdict
+(TM-137) — `exemption verdicts: 7 of 7` at execution. The row type is imported
+by name because of a compiler defect found at planning
+(`meta/roadmap/0.1/0.1.4.md` §3, re-run at execution with the same seven
+verdicts): a `fixed` binding's declared type resolves in the importer's scope,
+so the table is refused `NITPICK-TYPE-001` without its type and would silently
+take a same-named struct's layout — which, with the type imported by name, is
+refused `NITPICK-RESOLVE-001` instead. `BUILD.md` §3's and `tests/README.md`'s
+rows gave `tests/fixtures/` to the `fixture` stage, the compiler's word for a
+PROGRAM built and handed to another by path, which this library does not use;
+each is corrected with a dated note.
+
+*Declined:* a text corpus read at run time — the verdict would depend on the
+working directory and a file read, and the member would carry a hand-written
+decimal parser, a second program to test; the `fixture` stage — the compiler's
+word for a program built and handed to another by path; the `golden` stage —
+the member printing 3.65 million lines against a golden file of about 146 MB;
+the tables inside the member — the test's own logic would then be generated
+text; a wildcard import — it refuses the collision too (`NITPICK-RESOLVE-008`),
+but imports names the member does not use and hides which it does; parallel
+`int64` arrays to keep a user type out of the import — a representation chosen
+because of a defect, which TM-178 declined for the same reason.
+
+### TM-182 — per year, the member checks the row's position, the year's length against `is_leap_year` and 1 January's day number against `civil_date` and `date_to_days`; per day, it folds the nine fields of the date `days_to_date` returns; it calls neither reverse constructor, and folds `date_to_days` of the date, never its own loop number
+
+**2026-09-25, cycle 0.1.4 (PD-33).** The length check is what sees a validator
+accepting too much at a century: measured at planning and again at execution,
+without it the member exits 0 with its full count on a leap rule that makes
+every century year leap (`M1`), because `days_to_date` never produces the
+February 29th that rule admits — where the member exits 15. Every exit code
+of the member is reached by a mutant — 10, 11, 12, 13, 14 and 15 — and the
+print path's 21 on `/dev/full`; 20 and 22 are belts, as in every sweep member
+since cycle 0.1.2.
+
+*Declined:* handing each day's week date and ordinal date to
+`iso_week_to_date` and `ordinal_to_date` — their agreement with Python follows
+from the forward agreement here and from V-4b's members, which hand each
+reverse the walk's values for every date, and it costs 3.4 s → 8.2 s at -O0,
+measured at planning, which would bring the stage to about 27 s of its 30;
+dropping the length check — fooled by `M1`, measured; folding the loop's own
+day number — it is Python's, so that field would compare Python with Python;
+checking the corpus's contiguity in the member — a gap or an overlap moves the
+harness's count and the fold, and the corpus is checked where it is made, by
+`0.1.4.md` §4's second derivation.
+
+### TM-183 — the corpus is regenerated and compared byte for byte by the subcycle that changes its generator; `check_tables_regenerate` stays pending until cycle 0.5.3, its reason restated, and covers the corpus when it goes live; `tools/README.md` says what "checked by regeneration" means until then
+
+**2026-09-25, cycle 0.1.4 (PD-34). Restates `TESTING.md` §2's and V-1a's rows
+for `check_tables_regenerate`, the reason `harness/checks.py` prints for it,
+and `tools/README.md`, and adds the corpus to cycle 0.5.3's item.** The
+pending reason, *"what is missing is a generator and a committed table"*,
+stops being true at this subcycle's commit, and a pending reason that is false
+is V-1a's failure. The generator takes 10.7 s, measured twice at planning with
+the outputs byte-identical, and 10.6 s at execution — a tenth of a full run —
+for a file that moves only when its generator does; regenerated at execution
+after the documents were written, its output was `cmp`-identical to the
+committed corpus.
+
+*Declined:* the check live now — 10.7 s every run, and every run and CI then
+depending on the host's Python, with V-14's case 6 to be planted against the
+first of two generators before the second exists; never — `tools/README.md`'s
+rule, and a hand-edited corpus is exactly the edit a red cross-oracle invites;
+a recorded `sha256` checked on every run — it sees an edit to the corpus and
+not a generator changed without regenerating, and it is a second statement of
+the file's identity to keep in step.

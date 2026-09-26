@@ -445,13 +445,33 @@ mutants, because `date_to_days` is total (C-12) and gives a February 29th that
 should not exist the next day's number — while the distance between
 month-firsts refuses all three.)*
 
-**Rule C-18 — a fourth check is a *sampled* cross-oracle**, and it is separate
-because it trusts something external: a Python generator emits a few hundred
-thousand `(y, m, d, days, weekday, iso_week)` rows using `datetime`, committed
-under `tests/fixtures/civil/`, and the library must agree with every one.
-Python's `datetime` only covers years 1 … 9999, so the negative half of the
-range has C-16's self-consistency and nothing else — which is stated rather
-than glossed, and is why C-16 is the gate and C-18 is a supplement.
+**Rule C-18 (TM-179, cycle 0.1.4) — a fourth check is a cross-oracle over the
+whole of Python's range**, and it is separate because it trusts something
+external. `tools/gen_civil_oracle.py` reads Python's `datetime` for every date
+it covers — 0001-01-01 to 9999-12-31, 3 652 059 dates <!-- [[sweep: domain_every_oracle_date=3652059]] --> — and commits one row
+per year as `tests/fixtures/civil/civil_oracle.npk`: the year, the day number
+of its 1 January, its length, and a digest of nine fields of every one of its
+days — the year, month and day, the day number, the weekday, the ISO week
+date's three fields and the day of the year (TM-180).
+`tests/unit/sweep/every_oracle_date.npk` computes the same from this
+library's answers and must equal every row (TM-182). Python's `datetime` only
+covers years 1 … 9999, so the negative half of the range has C-16's
+self-consistency and nothing else — which is stated rather than glossed, and
+is why C-16 is the gate and C-18 is a supplement.
+
+*(Amended at cycle 0.1.4, TM-179. The rule read: "a fourth check is a
+*sampled* cross-oracle, and it is separate because it trusts something
+external: a Python generator emits a few hundred thousand `(y, m, d, days,
+weekday, iso_week)` rows using `datetime`, committed under
+`tests/fixtures/civil/`, and the library must agree with every one."
+Measured at planning: a few hundred thousand explicit rows is 33.7 MB of
+generated source that `npkc` takes 44 s and 717 MB to compile once, and a
+sample misses what falls between its rows — one taken every seventh day meets
+every February 29th of a 400-multiple year or none of them, since 400 years
+are exactly 20 871 weeks. A digest per year puts the whole of Python's range
+in 1.0 MB and one second, so the agreement is checked over its whole domain,
+as TM-026 asks wherever that is possible. `meta/roadmap/0.1/0.1.4.md` §2 and
+§7 have the measurements.)*
 
 ---
 

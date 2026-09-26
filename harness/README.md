@@ -217,6 +217,19 @@ which runs, and `probe17b` and `probe17c`, refused `TYPE-046` — 17 unit,
 5 sweep, 1 conformance). `90 = 25 + 65`. No library code changed, and the five
 sweeps took 2.8 + 2.0 + 7.9 + 0.5 + 3.5 = 16.7 s, as at 0.1.3 within noise.
 
+**At cycle 0.1.4, the same pin, 91 units**: the self-check unchanged — its 7
+planted cases, 23 tree-check violations with 23 clean controls, 3 arm
+specimens and the verdict mechanisms; the tree checks at `11 live`; parse over
+108 files; the defect corpus at 28 = 3 exempt + 25 asserted; `exemption
+verdicts: 7 of 7` — the civil cross-oracle's corpus,
+`tests/fixtures/civil/civil_oracle.npk`, named at `none`, a data module the
+`parse` stage roots and no stage runs (TM-181); and library + repro + suite
+at 66 (42 probe, 17 unit, **6 sweep** — `every_oracle_date` joined, the
+cross-oracle against Python's `datetime`, TM-179 — 1 conformance).
+`91 = 25 + 66`. No library code changed, and the six sweeps took 2.8 + 2.0 +
+8.0 + 0.5 + 5.4 + 3.5 = 22.2 s, against the 30 s threshold
+`meta/roadmap/0.1/0.1.4.md` §8 set in advance.
+
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the
 run makes about 200 of them. One that does *not* compile costs ~0.03 s.

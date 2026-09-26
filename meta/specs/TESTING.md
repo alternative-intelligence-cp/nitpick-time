@@ -17,7 +17,7 @@ than sampled. Where that is possible it is the gate, and §3 says where.
 
 | Stage | Answers |
 |---|---|
-| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **33 files of 106 that no other stage roots** <!-- [[sweep: npk_total=106]] --> |
+| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **33 files of 108 that no other stage roots** <!-- [[sweep: npk_total=108]] --> |
 | `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
 | `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
 | `check` | every documented refusal actually refuses, with exactly its code |
@@ -37,7 +37,7 @@ them found something on its first run.
 |---|---|
 | `check_purity` | `src/` outside `src/host/` against a ban list — `sys(`, `mono_now`, `environ`, `read_file`, `open`, `write`. **`SAFETY.md` S-10, and the most important check in the suite.** It is also the **only** one that answers the question: the build's undefined-symbol scan cannot FLAG a syscall, because `npk_sys6` is the runtime's own and is in its allowlist by construction (`BUILD.md` B-2c, TM-118, TM-153, `nitpick-regex`'s RX-120) |
 | `check_host_isolation` | no module outside `src/host/` and `src/lib.npk` names a `host_` symbol |
-| `check_tables_regenerate` | the committed zone tables against a fresh generator run, byte for byte |
+| `check_tables_regenerate` | every committed generated file against a fresh run of its generator, byte for byte: the zone tables from cycle 0.5, and the civil cross-oracle's corpus (V-6), which exists from cycle 0.1.4 and joins the check when it goes live (TM-183) |
 | `check_table_invariants` | every transition slice sorted and strictly increasing; every type index in range; every name-pool offset in range; the zone-name index lexicographically sorted |
 | `check_error_budget` | the count and names of public `error:` declarations against `SAFETY.md` §2's table |
 | `check_failsafe_arms` | the generated per-module arm list against programs that import each module and compile their `failsafe` |
@@ -106,7 +106,7 @@ completes:
 |---|---|---|
 | `check_int128_sites` | 0.2 | `SPAN_MODEL.md` N-20 says three sites and §5's table marks one (O-X6). A rule invented to make a count come out right is worse than an acknowledged gap |
 | `check_no_format_string` | 0.4 | there is no function in `src/` yet, so there is no signature to read |
-| `check_tables_regenerate` | 0.5 | the mechanism exists and has been red (`repro.py --between`); what is missing is a generator and a committed table |
+| `check_tables_regenerate` | 0.5 | the mechanism exists and has been red (`repro.py --between`); what is missing is the zone generator and its tables. The civil cross-oracle's corpus is the first generated file in the tree (cycle 0.1.4), and regenerating it takes about 11 s of Python for a file that changes only when its generator does, so until 0.5.3 the subcycle that changes the generator regenerates and compares it (V-6, TM-183) |
 | `check_table_invariants` | 0.5 | sorted, in range, indices valid — of tables that do not exist |
 
 **Rule V-1b (TM-115) — every sweep states its denominator, green or red.** A
@@ -322,11 +322,24 @@ maximal nanoseconds, and every offset in ±18:00 at 15-minute granularity.
 Three, each trusting something external, each **separate from the gates**
 because a gate should not depend on somebody else's library being right.
 
-**Rule V-6 — the civil cross-oracle.** A Python generator emits a few hundred
-thousand `(y, m, d, day_number, weekday, iso_week, day_of_year)` rows from
-`datetime`, committed under `tests/fixtures/civil/`. It covers years 1 … 9999
-only, because that is Python's range; the negative half has V-2's
-self-consistency and nothing else, which is stated rather than glossed.
+**Rule V-6 (TM-179) — the civil cross-oracle, over the whole of Python's
+range.** `tools/gen_civil_oracle.py` reads Python's `datetime` for every date
+it covers and commits one row per year under `tests/fixtures/civil/`: the
+year, the day number of its 1 January, its length, and a digest of nine fields
+of each of its days (TM-180). `tests/unit/sweep/every_oracle_date.npk` computes
+the same from `src/cal/` for every one of those dates — 3 652 059 <!-- [[sweep: domain_every_oracle_date=3652059]] --> — and must
+equal every row (`CALENDAR.md` C-18). It covers years 1 … 9999 only, because
+that is Python's range; the negative half has V-2's self-consistency and
+nothing else, which is stated rather than glossed. **The corpus is generated,
+never edited**: the subcycle that changes its generator regenerates it and
+compares it byte for byte, and it joins `check_tables_regenerate` when that
+check goes live (TM-183).
+
+*(Amended at cycle 0.1.4, TM-179: this rule read "A Python generator emits a
+few hundred thousand `(y, m, d, day_number, weekday, iso_week, day_of_year)`
+rows from `datetime`, committed under `tests/fixtures/civil/`" — a sample of a
+property that can be enumerated (V-2), and 33.7 MB of source for a few hundred
+thousand explicit rows, measured.)*
 
 **Rule V-7 — the zone cross-oracle.** A Python generator emits, from the
 **same pinned tzdata release** via `zoneinfo`, `(zone, utc_second, offset,
@@ -506,4 +519,9 @@ specification's number, the header's and what the program visited are one
 number. **Since cycle 0.1.3 it holds five**: `every_ordinal_date.npk` and
 `every_iso_week_date.npk` over the same day range, each checking one of V-4's
 representations against a walk of its rule (V-4b), and each a tagged
-denominator too (TM-174).
+denominator too (TM-174). **Since cycle 0.1.4 it holds six**:
+`every_oracle_date.npk`, the civil cross-oracle (V-6), over the 3 652 059 dates of years 1 … 9999 <!-- [[sweep: domain_every_oracle_date=3652059]] -->
+— a member of this stage because it is exhaustive over its domain and must
+prove it ran, and not a gate because it trusts Python (TM-026). What it checks
+each year beside the digest, and why it hands no reverse constructor anything,
+is TM-182.

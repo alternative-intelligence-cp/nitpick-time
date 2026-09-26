@@ -166,7 +166,7 @@ The harness mirrors the compiler's stage vocabulary (`BUILD_REFERENCE.md`
 | `program` | `tests/unit/`, `tests/probe/` | emitted, scanned, assembled, linked, run at -O0 and again under `opt -O2`, the same exit both times |
 | `golden` | `tests/golden/` | as `program`, and the emitted text matches the committed golden byte for byte |
 | `sweep` | `tests/unit/sweep/` | as `program`, but **long** — the exhaustive calendar and zone sweeps, run in full on a full invocation and skipped loudly under `--quick` |
-| `fixture` | `tests/fixtures/` | built and never run; its uppercased stem becomes an `// argv:` token |
+| `fixture` | *(no entry; TM-181)* | the compiler's: a PROGRAM built and never run, its uppercased stem becoming an `// argv:` token. This library has none, and `tests/fixtures/` holds corpora instead — since cycle 0.1.4 `civil/civil_oracle.npk`, a generated module the `sweep` member `every_oracle_date.npk` imports, rooted by the `parse` stage alone and named in `EXPECT_EXEMPT` at `none`. Until then this row's directory read `tests/fixtures/` |
 
 **Rule B-4b (TM-114) — `tests/conformance/` is `compile`/`positive`, and NOT
 `accept`.** This table said `accept` until 0.0.1 and that was a defect, not a
@@ -275,9 +275,9 @@ lets the stage cover the 26 files here that must not compile
 refused at `PARSE-001`, `LEX-004`, `PARSE-002`, `TYPE-009`, `TYPE-046`,
 `TYPE-079`, `TYPE-080`, `BORROW-001`, `BORROW-012`, `REACH-002` and
 `REACH-003`, and every family after the first three runs only on something
-that parsed. Re-measured at pin `c3bdae2`, cycle 0.1.3b: **106 files = 80 parse
+that parsed. Re-measured at pin `c3bdae2`, cycle 0.1.4: **108 files = 82 parse
 cleanly + 24 parse and are refused later + 2 do not parse**
-<!-- [[sweep: npk_total=106]] -->, and the two
+<!-- [[sweep: npk_total=108]] -->, and the two
 are `probe02d_wide_literal_refused.npk` (LEX-004, PARSE-002) and
 `probe14_error_payload_refused.npk` (PARSE-001, TM-147). It read
 `50 = 36 + 13 + 1` for three subcycles after the tree stopped being that size,
@@ -296,7 +296,9 @@ three sweeps that run, all three in the first term again — `94 = 70 + 22 + 2`
 tests — all five in the first term again: `99 = 75 + 22 + 2` (TM-174); and
 cycle 0.1.3b added seven — three probes, one that runs and two refused
 `TYPE-046`, and four reproductions that compile — so `106 = 80 + 24 + 2`
-(TM-177).
+(TM-177); and cycle 0.1.4 added two that parse cleanly — the civil
+cross-oracle's member and the corpus it imports — so `108 = 82 + 24 + 2`
+(TM-181).
 
 **AND THE TWO NUMBERS IN THAT PARAGRAPH ARE DIFFERENT SETS** — worth one
 sentence, because earlier versions had two sixteens, and before that two
@@ -333,6 +335,12 @@ five sweeps cost **16.5 s** together on a full invocation — 2.7 + 1.9 + 7.9 +
 harness's own per-unit figures — against a 30 s threshold
 `meta/roadmap/0.1/0.1.3.md` §8 set in advance. The ISO week member is the long
 pole: about ten evaluations of Hinnant's formula per date, by design.)*
+*(Measured at cycle 0.1.4, when the civil cross-oracle joined: the six sweeps
+cost **22.2 s** together on a full invocation — 2.8 + 2.0 + 8.0 + 0.5 + 5.4 +
+3.5 s for `every_civil_date`, `every_day_number`, `every_iso_week_date`,
+`every_month_length`, `every_oracle_date` and `every_ordinal_date`, both legs,
+compile included, the harness's own per-unit figures — against a 30 s
+threshold `meta/roadmap/0.1/0.1.4.md` §8 set in advance.)*
 
 **Rule B-9b (TM-125) — no CI workflow may pass `--quick`**, and O-X5 is settled
 that way. The argument is not that the sweeps are cheap — they are, and that

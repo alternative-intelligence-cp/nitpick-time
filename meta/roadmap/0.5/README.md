@@ -55,7 +55,7 @@ came in as estimated, this cycle is the estimate made real.
 - [ ] **every loop the generator emits carries its `decreases` clause, and every `failsafe` it emits names the arms the pin's `NITPICK-REACH-002` demands** (the compiler's D-304; added at cycle 0.1.0b) — the compiler's loop sweep reads `.npk` files and never a Python string, so a template is swept by hand or not at all; `meta/scratch/tzdb_spike/emit.py`'s was, at 0.1.0b (`../0.1/0.1.0b.md` step 5)
 
 ### 0.5.3 — the checks
-- [ ] `check_tables_regenerate` — the committed tables byte-identical to a fresh generator run, and **seen to fail** against a one-character hand edit
+- [ ] `check_tables_regenerate` — the committed tables byte-identical to a fresh generator run, and **seen to fail** against a one-character hand edit — **and the civil cross-oracle's corpus with them** (`tests/fixtures/civil/civil_oracle.npk`, cycle 0.1.4; `TESTING.md` V-6): its regeneration took about 11 s at 0.1.4's planning, a cost to weigh here beside the zone generator's own
 - [ ] `check_table_invariants` — every transition slice sorted and **strictly** increasing; every `type_index` in its zone's range; every name-pool offset and length in range; the name index sorted
 - [ ] both run on every full invocation
 
@@ -76,3 +76,12 @@ committed data in one pass, and the real emitted size is a recorded number.
   zone is a lookup that fails for one user in one country, months later.
 - **The largest file in the tree lands here**, so read `git diff --stat` before
   committing and make sure the number matches the measurement.
+- **Import each generated table's row type by name, beside the table.** At
+  every pin this repository has kept through `c3bdae2`, a `fixed` binding's
+  declared type resolves in the IMPORTING module's scope: imported without its
+  type, a table is refused `NITPICK-TYPE-001` at its own declaration, and in a
+  module that declares a struct of the same name it silently takes that
+  struct's layout. With the type imported by name, such a declaration is
+  refused `NITPICK-RESOLVE-001`. A compiler defect, O-N23, raised at cycle
+  0.1.4's planning (`meta/roadmap/0.1/0.1.4.md` §3); read the pin's behaviour
+  again before this cycle's lookup module is written.

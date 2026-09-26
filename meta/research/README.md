@@ -12,3 +12,6 @@ TM-007 is the first.
   `date_to_days` and `days_to_date` (TM-016), as read on 2026-09-25.
 - [`iso-8601-week-date.md`](iso-8601-week-date.md) — ISO 8601-1's edition in
   force and its week-date rule (`CALENDAR.md` C-14), as read on 2026-09-25.
+- [`python-datetime.md`](python-datetime.md) — what Python's `datetime`
+  documentation states about every call the civil cross-oracle's corpus reads
+  (`CALENDAR.md` C-18), as read on 2026-09-25.

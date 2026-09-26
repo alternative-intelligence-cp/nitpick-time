@@ -29,11 +29,11 @@ twice.
 """
 
 import os
-import re
 import resource
 import subprocess
 
 import elf
+import lexical
 
 
 class BuildError(Exception):
@@ -104,20 +104,23 @@ def run_capped(argv, env, kib):
     return p.returncode, "exited %d" % p.returncode
 
 
-# `use "<path>".<what>;` and `pub use "<path>".<what>;` -- BUILD.md B-16: every
-# import is relative until dependency roots are populated (O-N1).
-_USE = re.compile(r'^\s*(?:pub\s+)?use\s+"([^"]+)"')
-
-
 def imports_of(path):
-    """The relative paths a single source file imports, in file order."""
-    out = []
-    with open(path, "r", encoding="utf-8", errors="replace") as fh:
-        for line in fh:
-            m = _USE.match(line)
-            if m:
-                out.append(m.group(1))
-    return out
+    """The relative paths a single source file imports, in file order.
+
+    `use "<path>".<what>;` and `pub use "<path>".<what>;` -- `BUILD.md` B-16:
+    every import is relative until dependency roots are populated (O-N1).
+
+    READ THE WAY THE COMPILER READS IT, SINCE CYCLE 0.1.5 (TM-199): the file by
+    `lexical.read`, as bytes, and each path as its string literal's DECODED
+    value, from a `use` that is code rather than one inside a comment, a
+    literal or a template. Until then this was one regular expression over
+    each line of a text-mode read, and it disagreed with the compiler both
+    ways: a lone CR ended a `//` comment, so a `use` after it was an import the
+    compiler never makes, and `"..\\x2fhost/host.npk"` was a directory named
+    `..\\x2fhost` where the compiler reads `../host/host.npk`
+    (`0.1.5.md` section 1.3, rows P6 and P7).
+    """
+    return [target for _, target, _ in lexical.imports(lexical.read(path))]
 
 
 def reachable_sources(root_npk):

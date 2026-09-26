@@ -27,7 +27,7 @@ library is a type distinction it declined to make.
 | 7 | [`FORMAT_MODEL.md`](FORMAT_MODEL.md) | formatting and parsing, the typed layout, and why there is no format string |
 | 8 | [`HOST.md`](HOST.md) | the one impure module: the clocks and the system-zone discovery |
 | 9 | [`TESTING.md`](TESTING.md) | the harness, the exhaustive gates, the round trips, the fuzzer |
-| 10 | [`VERIFICATION.md`](VERIFICATION.md) | the proof obligations this library carries into the compiler's cycle 1.5 |
+| 10 | [`VERIFICATION.md`](VERIFICATION.md) | the proof obligations this library carries, and which of them are live clauses rather than comments (P-1b) |
 | 11 | [`COMPAT.md`](COMPAT.md) | what is supported, the tzdb version policy, and what is deliberately absent |
 | 12 | [`GLOSSARY.md`](GLOSSARY.md) | the words, used one way each |
 

@@ -113,7 +113,12 @@
 // and `vec_init<int64>(2)` is `NITPICK-PARSE-002`.
 mod:probe06_generic_vec;
 
-// `BUILD.md` B-12's shape, verbatim.
+// `BUILD.md` B-12's shape AS IT WAS WRITTEN AT CYCLE 0.0.0 -- three fields and
+// no qualifiers. B-12's `Vec` has carried `hidden` and `sealed limit<ListLen>`
+// since cycle 0.1.0c (TM-156) and a fourth, zero-byte owning field since
+// 0.1.3c (TM-193); this probe keeps the old shape because its question is the
+// language's generic container, not the library's. (It said "verbatim" here
+// until cycle 0.1.5.)
 struct:Vec<T> = {
     wild T->:items;
     int64:count;

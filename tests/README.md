@@ -2,7 +2,7 @@
 
 | Directory | Stage | Contents |
 |---|---|---|
-| `probe/` | `program` | the cycle-0.0 language probes; **never deleted** |
+| `probe/` | `program` | the language probes — cycle 0.0's first, and each later one added by the subcycle whose question it answers; **never deleted** |
 | `conformance/` | `compile`, `kind = "positive"` | the public API compiles in a program that only imports it — and that program links, RUNS and exits with the expected code (`../meta/specs/BUILD.md` B-4b, TM-114) |
 | `unit/` | `program` | behaviour, judged by exit code |
 | `unit/sweep/` | `sweep` | the exhaustive calendar and zone sweeps |

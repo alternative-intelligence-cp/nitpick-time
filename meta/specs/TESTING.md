@@ -35,7 +35,7 @@ them found something on its first run.
 
 | Check | Diffs |
 |---|---|
-| `check_purity` | `src/` outside `src/host/` against a ban list — `sys(`, `mono_now`, `environ`, `read_file`, `open`, `write`. **`SAFETY.md` S-10, and the most important check in the suite.** It is also the **only** one that answers the question: the build's undefined-symbol scan cannot FLAG a syscall, because `npk_sys6` is the runtime's own and is in its allowlist by construction (`BUILD.md` B-2c, TM-118, TM-153, `nitpick-regex`'s RX-120) |
+| `check_purity` | `src/` outside `src/host/` against a ban list — `sys`, `mono_now`, `environ`, `read_file`, `open`, `write`, each matched as a CALL: the name, the lexer's whitespace, a newline included, and `(` (V-1l; until cycle 0.1.5 the spelling `name(`, which `mono_now ()` passed). **`SAFETY.md` S-10, and the most important check in the suite.** It is also the **only** one that answers the question: the build's undefined-symbol scan cannot FLAG a syscall, because `npk_sys6` is the runtime's own and is in its allowlist by construction (`BUILD.md` B-2c, TM-118, TM-153, `nitpick-regex`'s RX-120) |
 | `check_host_isolation` | no module outside `src/host/` and `src/lib.npk` names a `host_` symbol |
 | `check_tables_regenerate` | every committed generated file against a fresh run of its generator, byte for byte: the zone tables from cycle 0.5, and the civil cross-oracle's corpus (V-6), which exists from cycle 0.1.4 and joins the check when it goes live (TM-183) |
 | `check_table_invariants` | every transition slice sorted and strictly increasing; every type index in range; every name-pool offset in range; the zone-name index lexicographically sorted |
@@ -45,7 +45,7 @@ them found something on its first run.
 | `check_no_owning_fields` | **no `fixed` table's element owns — itself, or through a field at any depth** (`SAFETY.md` S-19b). **It could not see a SINGLE-LINE struct until cycle 0.0.6 and both of this repository's structs are one** (TM-138), so neither type's real fields had ever been examined while the check reported `0 of 0`; the self-check now plants the same violation in both spellings. **And until cycle 0.1.3b it could not see an owning ELEMENT (`fixed string[2]`) or an owner two structs down, and it matched owners by substring**, so a field named `string_off` read as one — all three found by re-measuring the premise the check was written on, which was false (TM-177), and all three planted now |
 | `check_int128_sites` | `int128` appears at exactly the three sites `SPAN_MODEL.md` §5 names, and nowhere else |
 | `check_constants_named` | no bound outside `src/core/limits.npk`; no magic 86400, 146097, 719468 or 1000000000 outside the algorithm module that owns it |
-| `check_literal_divisors` (TM-163) | **every `/`, `%`, `/=` and `%=` in `src/cal/` against `CALENDAR.md` C-11**: the divisor must be a positive decimal integer literal with its width suffix, standing alone — nothing after it that binds tighter than `/`, since `256i64 =>! uint8` is 0 — so D-007's divide-by-zero and `MIN / −1` traps are unreachable by construction. It reads code with comments AND strings blanked, because every `use` path in `cal.npk` holds a `/`; `+%`, `-%` and `*%` are the wrapping operators and not divisions. It is C-11's list of divisors, which a list in the rule's text could not be: the one C-11 carried was short by eight the day `civil_from_days` arrived. **Its limits are stated in its docstring**: block comments, character literals, raw strings and templates are not modelled — `src/cal/` has none |
+| `check_literal_divisors` (TM-163) | **every `/`, `%`, `/=` and `%=` in `src/cal/` against `CALENDAR.md` C-11**: the divisor must be a positive decimal integer literal with its width suffix, standing alone — nothing after it that binds tighter than `/`, since `256i64 =>! uint8` is 0 — so D-007's divide-by-zero and `MIN / −1` traps are unreachable by construction. It reads code with comments AND strings blanked, because every `use` path in `cal.npk` holds a `/`; `+%`, `-%` and `*%` are the wrapping operators and not divisions. It is C-11's list of divisors, which a list in the rule's text could not be: the one C-11 carried was short by eight the day `civil_from_days` arrived. *(Until cycle 0.1.5 this row said its docstring's limits — block comments, character literals, raw strings and templates "not modelled", `src/cal/` having none — and the docstring called the gap the safe direction. Measured at 0.1.5's planning, a `'"'`, a template's `//` and a lone CR in a `//` comment each HID a division, and a `//` inside a `/* */` hid a clock call and a declaration from the checks beside this one; since then it reads through V-1k's reader, and each shape is planted.)* |
 | `check_no_format_string` | no function anywhere takes a pattern `string` and interprets it — `FORMAT_MODEL.md` F-5's rule, made checkable |
 | `check_raw_index` | **no index through a bare pointer in `src/`, by FIELD or by BINDING.** `Vec<T>.items` and `Bytes`' buffer body are bare pointers, which the language does not bounds-check (TM-108, `SAFETY.md` S-17b), so the accessor pair is the only bound there is. It was two literal substrings until cycle 0.0.6 and was **evadable in one line** — bind the pointer to a local and index the local, which was built at `aaffb87`, ran, and read four elements past the live prefix while the check reported `0 sites` (TM-144). Every `wild T->:name` in a file is now watched. **The limit is stated: it is lexical and per-file**, so a bare pointer passed to another function and indexed there is still not covered; cycle 0.5 gets the widening |
 | `check_expect_headers` | **the tree partitioned three ways, with the denominator printed** (TM-115): every `.npk` is under `src/` (judged by "it compiles"), or under `tests/` with an `expect-` marker of its own or a NAMED exemption, or it is unowned — and unowned is a failure. The exemption list is diffed in both directions, so an exemption naming a file that is gone fails too. **It says a marker is WELL-FORMED and nothing about whether it is TRUE**; that is `check_exemptions_live`'s and `run_defect_corpus`'s job, and the gap between the two readings was TM-141 |
@@ -227,6 +227,40 @@ collision this tree had, `derive_payload_enum/case3_hash_and_clone` answering
 code moved. Checked whenever codes are assigned, by
 `git grep -hE '^// expect-exit: [0-9]+' -- tests | sort | uniq -c` — anchored at
 the line's start, because the same words appear in header prose.
+
+**Rule V-1k (TM-199) — the harness reads `.npk` source as the compiler's lexer
+does, through ONE module.** `harness/lexical.py` is the only way the harness
+opens a `.npk` file and the only reading of one as code: bytes, one character
+each, `\n` the only line end and CR whitespace; `//` to the line's end; a
+`/* */` unnested; a string closed by `"` and ended by a newline; raw, block and
+character literals and a template's text by the lexer's rules; and a `use`
+path as its literal's DECODED value. It is `nitpick-regex`'s reader, its code
+ported statement for statement, so the two libraries' harnesses read source
+one way. **Measured at cycle 0.1.5's planning, compiler `c970483`: before it,
+eight shapes made this harness disagree with the compiler, and six passed a
+violation silently** — a lone CR in a `//` comment, a `//` inside a `/* */`, a
+`'"'`, a `//` in a template's text and an escaped `use` path each hid a
+division, a clock call, a fourth `error:` or an import of `host` from the check
+built to find it (`meta/roadmap/0.1/0.1.5.md` section 1.3). What it mirrors, and
+the compiler commit it was read at, is its own header's; **the self-check's
+part E asks both sides on every run** — the reader, one text of every form, and
+the pinned compiler, one program of every form a run can observe — so a re-pin
+that moves the lexer is a red run and not a stale mirror. The files the harness
+reads that are NOT Nitpick source — the manifest, the specifications the checks
+diff against, the emitted IR, the verdicts file — are read as text, each named
+in `0.1.5.md` section 1.5.
+
+**Rule V-1l (TM-200) — a check matches TOKENS, not lines.** Every pattern a tree
+check matches runs over the file's WHOLE blanked text and allows the lexer's
+whitespace — a newline included — between any two tokens it names, because the
+compiler does: `mono_now ()` is a call, a `[` on the line after `v.items` is an
+index, `error` then `:ETimeOops` on the next line is a declaration, and so is a
+second `error:` after a `;` on one line — each measured at `c970483`, and each
+passed by the pattern matched against one line that stood here until cycle
+0.1.5. A finding still names the line its first token is on. The five checks
+whose patterns this rule rewrote — `check_purity`, `check_raw_index`,
+`check_error_budget`, `check_constants_named`, `check_no_owning_fields` — and
+`run._verdict` are each planted with a spelling across a line end (V-14c).
 
 ## 3. The exhaustive gates
 
@@ -474,7 +508,8 @@ been driven. Cycle 0.0.6 made the sentence true rather than softening it:
 | `selfcheck.part_b` directly | `check_layering`'s **node** half — the fault is a file that is NOT there, which no `PLANTED` row can express |
 | `selfcheck.part_b_specs_current` | `check_specs_current`, which reports and never fails, so it is shown REPORTING |
 | `selfcheck.part_c` (`CALIBRATION`) | `check_failsafe_arms`, against `NITPICK-REACH-003`'s own identity list on three modules with known bills |
-| `selfcheck.part_d` | `run._verdict` on three specimens; `check_exemptions_live` on a MOVED verdict; `run_defect_corpus` on an `expect-exit:` wrong by one; `check_expect_headers` on all three of its branches |
+| `selfcheck.part_d` | `run._verdict` on four specimens — the fourth, since cycle 0.1.5, a `main` whose `func` and `:main` stand on two lines (V-1l); `check_exemptions_live` on a MOVED verdict; `run_defect_corpus` on an `expect-exit:` wrong by one; `check_expect_headers` on all three of its branches |
+| `selfcheck.part_e` (cycle 0.1.5) | `lexical.py`, the reader every check reads through (V-1k): one text of every lexical form written to a file and read back — `nitpick-regex`'s case 18, text for text — and one program of every form a run can observe, compiled and run by the pinned compiler, which must exit 0 while the reader sees exactly the code that ran. And seventeen more `PLANTED` rows: V-1k's eight and V-1l's nine |
 
 **The four `PEND` rows are the named exception**, and they are exempt for the
 reason each states: there is nothing in the tree for them to be red about.
@@ -493,6 +528,9 @@ an identity and never raises it: **4**, the floor), `probe11_arms_lib` (raises
 one: **5**) and `probe11_calc_lib` (declares none and costs **8**, the floor
 plus its own arithmetic). Those three are TM-107's three constraints, one each,
 and the numbers are re-measured on every run rather than remembered.
+*(Six, seven and ten since compiler `c3bdae2`, whose floor is six —
+`selfcheck.CALIBRATION`'s numbers, which are what the run measures; this rule
+said four, five and eight, `0dfddac`'s, until cycle 0.1.5.)*
 
 **Rule V-14e (TM-141) — the specification's list and the harness's list are
 one list, or they are two lists that drift.** §2's table, `checks.LIVE`,
@@ -505,7 +543,13 @@ green either way. **A `check_check_registry` is cycle 0.1's**, deferred and not
 declined: it needs `TESTING.md` §2 to have a machine-readable shape, which is a
 change to this document's form rather than to its content, and this cycle's
 close was not the place to make one. Until then V-1a's arithmetic is the
-belt — it is what caught the missing row.
+belt — it is what caught the missing row. *(Cycle 0.1.5, TM-201: cycle 0.1 did
+not build it, and V-1a's arithmetic went stale inside the cycle — 0.1.0 to
+0.1.0b — which is the argument for building it. It is re-homed to the next
+subcycle that adds or retires a check, the next time the family moves: cycle
+0.2's `check_int128_sites`, when it goes live, builds `check_check_registry`
+first. Until then the four statements of the family are re-read row by row at
+every close, and agree at this one.)*
 
 **Rule V-15.** The self-check runs **first** in every full invocation, and its
 failure is **fatal** — nothing below it runs. A harness that has not proven it

@@ -7,7 +7,31 @@ Guidance for Claude Code sessions working in this repository.
 `ntime` — a date, time and time-zone library for **Nitpick**, the
 safety-critical systems language at `../../nitpick`.
 
-**Status, after cycle 0.1.3c: `Vec` is move-only by construction** — the
+**Status, after cycle 0.1.5: cycle 0.1's close — the harness reads source as
+the compiler does, and the audit that closes the cycle is next.** Measured at
+the close's planning, eight shapes of source made the harness disagree with
+the compiler's lexer at `c970483`, and six of them passed a violation silently:
+a lone CR in a `//` comment, a `//` inside a `/* */`, a `'"'` character
+literal, a `//` in a template's text and an escaped `use` path each hid a
+division, a clock call, a fourth `error:` or an import of `host` from the check
+built to find it; the other two read a comment as code. **Since TM-199 every
+`.npk` the harness opens is read by `harness/lexical.py`** — `nitpick-regex`'s
+reader, ported statement for statement — as bytes, its comments and literals
+by the compiler lexer's rules and its import paths decoded; **and since TM-200
+every check matches TOKENS across the lexer's whitespace** over a file's whole
+text, where `mono_now ()`, a `[` on the line after `v.items`, and `error` then
+`:ETimeOops` on the next line had each hidden from a pattern matched against
+one line. The self-check plants 40 tree-check violations (23 before) and, in
+its part E, asks both the reader and the pinned compiler about one text of
+every form, so a re-pin that moves the lexer is a red run. **And the close's
+corrections**: the public `README.md` no longer says there is no code, nor that
+importing `ntime` costs three arms — the calendar costs 11 and the umbrella 13
+(`SAFETY.md` S-4); `tests/probe/README.md` lists every probe; and the two
+checks cycle 0.0 deferred to this cycle, which it did not build, are re-homed
+with their reasons (TM-201). No library code changed. A full invocation is
+**112 units green** at pin `c970483`.
+
+**After cycle 0.1.3c: `Vec` is move-only by construction** — the
 author's answer to the workbench's question 9, and `nitpick-regex`'s design,
 ported. `Vec<T>`'s last field is `hidden string[0]:move_only` — zero bytes,
 and its element owns — so a copy of a `Vec`, one assigned over another, or a
@@ -486,9 +510,13 @@ $ NPKC=… NPKRT=… python3 harness/run.py [--only SUBSTRING] [--quick]
                                         [--verdicts PATH] [--root DIR]
 ```
 
-Ten modules under `harness/` — `manifest`, `toolchain`, `elf`, `build`,
-`stages`, `checks`, `arms`, `repro`, `selfcheck` — driven by `run.py` in nine
-stages. It proves it can fail; reads `nitpick.toml` and hardcodes nothing;
+Eleven modules under `harness/` — `manifest`, `toolchain`, `elf`, `lexical`,
+`build`, `stages`, `checks`, `arms`, `repro`, `selfcheck` — driven by `run.py`
+in nine stages. **Every `.npk` it reads, it reads as the compiler does** —
+through `lexical.py`, as bytes, with comments and literals by the lexer's rules
+and import paths decoded — and **every check matches tokens, never lines**
+(cycle 0.1.5; `TESTING.md` V-1k, V-1l). It proves it can fail; reads
+`nitpick.toml` and hardcodes nothing;
 holds `llc`, `opt` and `ld.lld` to the pinned patch release; sweeps every
 `.npk` in the tree and prints the denominator; diffs the tree against the
 documents describing it; roots every `.npk` at the real parser; builds the
@@ -544,7 +572,8 @@ src/       the library, Nitpick only, layered per meta/specs/BUILD.md §6
   host/      THE ONLY IMPURE MODULE — five functions, nothing else
 tests/     probe, conformance, unit, golden, rejection, fixtures
 harness/   the Python build and test runner, until npkg can
-tools/     generators — the tzdb tables; everything they emit is committed
+tools/     generators — the civil cross-oracle's corpus since cycle 0.1.4, the
+           tzdb tables at 0.5; everything they emit is committed
 examples/  runnable demonstrations, built and run by the harness
 docs/      user-facing documentation, written at cycle 1.0
 meta/      specs, decisions, open questions, the roadmap, research

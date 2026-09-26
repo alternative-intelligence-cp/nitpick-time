@@ -215,7 +215,9 @@ LAYERS = ("core", "cal", "span", "zone", "fmt", "host")
 
 def _write(path, text):
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as fh:
+    # `newline=""` (cycle 0.1.5): a planted lone CR is written as the one byte
+    # it is, on every platform, because the reader it tests reads bytes.
+    with open(path, "w", encoding="utf-8", newline="") as fh:
         fh.write(text)
 
 
@@ -877,6 +879,140 @@ PLANTED = [
       "struct:Row = {\n    int64:string_off;\n    Name:name;\n};\n"
       "pub fixed Row[2]:TABLE = [];\n"),
      "owns through"),
+    # ---- CYCLE 0.1.5: THE READER (TM-199). Each row below is a shape where
+    # this harness's reading of source disagreed with the compiler's lexer at
+    # `c970483` (`0.1.5.md` section 1.3). The BAD column is a violation the old
+    # reader did not see; the GOOD column is the same shape made harmless, so a
+    # check that fired on the shape rather than on the violation fails its
+    # control -- and in two rows the GOOD column is the point, because the old
+    # reader fired on it.
+    #
+    # A LONE CR IN A `//` COMMENT IS NOT A LINE END, so the `"` after it is
+    # comment text -- where a text-mode read made it open a string that
+    # blanked the division on the next line.
+    (checks_mod.check_literal_divisors,
+     ("src/cal/cal.npk",
+      "mod:cal;\n// note\r\"\nfunc:f = int64(int64:y, int64:m) never fails "
+      "{ pass y / m; };\n// \"\n"),
+     ("src/cal/cal.npk",
+      "mod:cal;\n// note\r\"\nfunc:f = int64(int64:y, int64:m) never fails "
+      "{ pass y / 4i64; };\n// \"\n"),
+     "is not a nonzero literal"),
+    # A `//` INSIDE A `/* */` IS BLOCK-COMMENT TEXT, and the block ends at its
+    # `*/` -- where the old scanner blanked the rest of the LINE from the `//`.
+    (checks_mod.check_purity,
+     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() never fails "
+                         "{ /* see // below */ pass mono_now(); };\n"),
+     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() never fails "
+                         "{ /* see // below */ pass 0i64; };\n"),
+     "calls `mono_now` outside `src/host/`"),
+    (checks_mod.check_error_budget,
+     ("src/cal/cal.npk", "mod:cal;\n/* a // note */ pub error:ETimeOops;\n"),
+     ("src/cal/cal.npk", "mod:cal;\n/* a // note */ pub error:ETimeValue;\n"),
+     "three is a ceiling"),
+    # A CHARACTER LITERAL `'"'` IS ONE CHARACTER -- where both old scanners
+    # opened a string at its `"` that ran to the end of the file.
+    (checks_mod.check_literal_divisors,
+     ("src/cal/cal.npk",
+      "mod:cal;\nfunc:f = int64(int64:y, int64:m) never fails "
+      "{ char8:q = '\"'; pass y / m; };\n"),
+     ("src/cal/cal.npk",
+      "mod:cal;\nfunc:f = int64(int64:y, int64:m) never fails "
+      "{ char8:q = '\"'; pass y / 4i64; };\n"),
+     "is not a nonzero literal"),
+    # A TEMPLATE'S TEXT IS TEXT, a `//` in it included.
+    (checks_mod.check_literal_divisors,
+     ("src/cal/cal.npk",
+      "mod:cal;\nfunc:f = int64(int64:y, int64:m) never fails "
+      "{ string:t = `a//b`; pass y / m; };\n"),
+     ("src/cal/cal.npk",
+      "mod:cal;\nfunc:f = int64(int64:y, int64:m) never fails "
+      "{ string:t = `a//b`; pass y / 4i64; };\n"),
+     "is not a nonzero literal"),
+    # AN IMPORT PATH IS ITS LITERAL'S DECODED VALUE: `..\x2fhost/host.npk` is
+    # `../host/host.npk` to the compiler, and was a directory named
+    # `..\x2fhost` inside `cal`'s own layer to the old walk.
+    (checks_mod.check_layering,
+     ("src/cal/cal.npk", "mod:cal;\nuse \"..\\x2fhost/host.npk\".*;\n"),
+     ("src/cal/cal.npk", "mod:cal;\nuse \"..\\x2fcore/core.npk\".*;\n"),
+     "NOTHING imports `host`"),
+    # AND THE OTHER DIRECTION: a `use` after a lone CR in a `//` comment is
+    # comment text, not an import. The GOOD column is the point of this row --
+    # the old reader made it an import of `host` and fired on the control.
+    (checks_mod.check_layering,
+     ("src/cal/cal.npk", "mod:cal;\nuse \"../host/host.npk\".*;\n"),
+     ("src/cal/cal.npk", "mod:cal;\n// note\ruse \"../host/host.npk\".*;\n"),
+     "NOTHING imports `host`"),
+    # THE UMBRELLA'S COUNT IS OF RE-EXPORTS THE COMPILER READS: a `pub use`
+    # inside a `/* */` is none, and the old count took every LINE that began
+    # with the words -- so it fired on this row's GOOD column too.
+    (checks_mod.check_denominators,
+     ("src/lib.npk",
+      "mod:lib;\n// " + _TAG % ("lib_reexports", 2) + "\n"
+      "pub use \"./cal/cal.npk\".f;\n/*\npub use \"./cal/cal.npk\".g;\n*/\n"),
+     ("src/lib.npk",
+      "mod:lib;\n// " + _TAG % ("lib_reexports", 1) + "\n"
+      "pub use \"./cal/cal.npk\".f;\n/*\npub use \"./cal/cal.npk\".g;\n*/\n"),
+     "the tree says 1"),
+    # ---- CYCLE 0.1.5: TOKENS, NOT LINES (TM-200). Each row below is a shape
+    # the compiler reads as a call, an index or a declaration at `c970483`
+    # (`0.1.5.md` section 1.4) that a pattern matched against one line did not.
+    (checks_mod.check_purity,
+     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() never fails "
+                         "{ pass mono_now (); };\n"),
+     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() never fails "
+                         "{ pass mono_nowhere (); };\n"),
+     "calls `mono_now` outside `src/host/`"),
+    (checks_mod.check_purity,
+     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() never fails "
+                         "{ pass environ\n(); };\n"),
+     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() never fails "
+                         "{ pass environs\n(); };\n"),
+     "calls `environ` outside `src/host/`"),
+    (checks_mod.check_raw_index,
+     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64(Vec:v) never fails "
+                         "{ pass v.items\n[0i64]; };\n"),
+     ("src/core/vec.npk", "mod:vec;\nfunc:f = int64(Vec:v) never fails "
+                          "{ pass v.items\n[0i64]; };\n"),
+     "That is a BARE POINTER"),
+    (checks_mod.check_raw_index,
+     ("src/core/vec.npk",
+      "mod:vec;\nfunc:f = int64(Vec:v) never fails {\n"
+      "    wild int64->\n    :p = v.items;\n    pass p\n    [4i64];\n};\n"),
+     ("src/core/vec.npk",
+      "mod:vec;\nfunc:f = int64(Vec:v) never fails {\n"
+      "    wild int64->\n    :p = v.items;\n"
+      "    int64[]:s = #wild_slice<int64>(p, v.count);\n"
+      "    pass s\n    [4i64];\n};\n"),
+     "which is bound as a BARE POINTER"),
+    (checks_mod.check_error_budget,
+     ("src/cal/cal.npk", "mod:cal;\nerror\n:ETimeOops;\n"),
+     ("src/cal/cal.npk", "mod:cal;\nerror\n:ETimeValue;\n"),
+     "three is a ceiling"),
+    (checks_mod.check_error_budget,
+     ("src/cal/cal.npk",
+      "mod:cal;\npub error:ETimeValue; pub error:ETimeOops;\n"),
+     ("src/cal/cal.npk",
+      "mod:cal;\npub error:ETimeValue; pub error:ETimeParse;\n"),
+     "three is a ceiling"),
+    (checks_mod.check_constants_named,
+     ("src/cal/cal.npk", "mod:cal;\nfixed\nint64:YEAR_MAX = 9999i64;\n"),
+     ("src/core/limits.npk", "mod:limits;\nfixed\nint64:YEAR_MAX = 9999i64;\n"),
+     "Every named bound lives in"),
+    (checks_mod.check_no_owning_fields,
+     ("src/zone/zone.npk",
+      "mod:zone;\nstruct\n:Row = { int64:id; string:name; };\n"
+      "pub fixed Row[2]:TABLE = [];\n"),
+     ("src/zone/zone.npk",
+      "mod:zone;\nstruct\n:Row = { int64:id; int64:name_off; };\n"
+      "pub fixed Row[2]:TABLE = [];\n"),
+     "owning field"),
+    (checks_mod.check_no_owning_fields,
+     ("src/zone/zone.npk",
+      "mod:zone;\npub fixed string\n[2]:NAMES = [\"a\", \"b\"];\n"),
+     ("src/zone/zone.npk",
+      "mod:zone;\npub fixed int64\n[2]:IDS = [1i64, 2i64];\n"),
+     "owning element"),
 ]
 
 
@@ -1145,7 +1281,10 @@ def part_c(rep, root, bld, base):
 
 # A file `npkc` refuses outright, one that links and runs clean, and a module
 # with no `main`. Between them they cover every branch of `run._verdict`
-# except `llc`/`ld`, which no spelling in this tree reaches at this pin.
+# except `llc`/`ld`, which no spelling in this tree reaches at this pin. And
+# since cycle 0.1.5 a fourth: a `main` whose `func` and `:main` stand on two
+# lines, which the compiler builds and the old substring test called `none`
+# (TM-200).
 VERDICT_SPECIMENS = [
     ("stops_at_npkc.npk", WIDE_LITERAL % {"mod": "stops_at_npkc"}, "npkc",
      "the frontend refuses it, so no `.ll` is written"),
@@ -1155,6 +1294,10 @@ VERDICT_SPECIMENS = [
      "fails { pass 1i64; };\n", "none",
      "a module with no `main` is not a program, so the question does not "
      "arise -- this is the bucket the three `probe11` support modules are in"),
+    ("main_split.npk", "mod:main_split;\n\nfunc\n:main = int32(cstring[]:_~argv) "
+     "{\n    exit 0i32;\n};\n" + FAILSAFE, "run:0",
+     "`func` and `:main` on two lines declare a `main` -- the compiler builds "
+     "it, and a test for the substring `func:main` said `none` (TM-200)"),
 ]
 
 
@@ -1330,6 +1473,176 @@ def part_d(rep, root, man, base, npkc, npkrt):
 
 
 # ---------------------------------------------------------------------------
+# PART E -- the reader, against the compiler's lexer (cycle 0.1.5, TM-199)
+# ---------------------------------------------------------------------------
+#
+# `lexical.py` is read by every tree check, the import walk, the arm generator,
+# the exemption verdict and the markers, so a regression in it weakens all of
+# them at once and reddens none: this part is the red it would otherwise not
+# have. Two halves, and they answer different questions.
+#
+# E1 ASKS THE READER, AGAINST WHAT THE COMPILER READS: `nitpick-regex`'s case
+# 18, TEXT FOR TEXT -- its `_LEX_TEXT` and `_LEX_IMPORTS` below are that
+# repository's at its `fb37391` -- one of each lexical form that repository
+# found to matter, each hiding a `use` and a `/` beside the ones that are real
+# code, written to a FILE and read back through `lexical.read`, because a lone
+# CR is lost in the READ, before any scanning begins. Its expectations are the
+# compiler's reading at `c970483`, measured there (`0.1.5.md` section 1.3).
+#
+# E2 ASKS THE COMPILER, AGAINST WHAT THE READER MIRRORS: every form a RUN can
+# observe, in one program the pinned `npkc` compiles and runs -- exit 0 when
+# each form reads as `lexical.py` reads it, and a code naming the form when one
+# does not -- read by the reader as well, which must see exactly the statements
+# that ran. So a re-pin that moves the lexer is a red run here rather than a
+# reader quietly mirroring a compiler that is gone.
+_LEX_TEXT = (
+    'mod:lexcase;\n'                                        # 1
+    'use "./real_a.npk".*;\n'                               # 2  an import
+    'pub use "./real_b.npk".name;\n'                        # 3  a re-export
+    '// use "./line_comment.npk".*; a / b\n'                # 4
+    '/*\n'                                                  # 5
+    'use "./block_comment.npk".*; a / b\n'                  # 6
+    '*/\n'                                                  # 7
+    'string:s = "use \\"./in_string.npk\\" a / b";\n'       # 8
+    'string:r = r"use a / b"; use "./after_raw.npk".*;\n'   # 9  an import
+    'string:k = """\n'                                      # 10
+    'use "./block_string.npk".*; a / b\n'                   # 11
+    '""";\n'                                                # 12
+    "char8:q = '\"'; use \"./after_char.npk\".*;\n"         # 13 an import
+    'string:t = `use "./template.npk" a / b &{ n / 2 }`;\n' # 14 one `/` is code
+    'pub /* gap */ use /* gap */ "./gapped.npk".*;\n'       # 15 a re-export
+    'int64:x = y.use;\n'                                    # 16 a field, not a keyword
+    '// see\ruse "./after_cr.npk".*; a / b\n'               # 17 a lone CR is not a line end
+    '// note\r/* a / b\n'                                   # 18 ...so this `/*` is comment text
+    'use "./after_cr_comment.npk".*;\n'                     # 19 an import
+    'use "..\\x2freal_c.npk".*;\n'                          # 20 an import, `../real_c.npk`
+    'use ".\\u{2F}real_d.npk".*;\n'                         # 21 an import, `./real_d.npk`
+    'use "./back\\\\slash.npk".*;\n'                         # 22 an import, one backslash
+    'string:bs = """a""b use "./in_block.npk".*; """; use "./after_block.npk".*;\n'  # 23
+)
+_LEX_IMPORTS = [(2, "./real_a.npk", False), (3, "./real_b.npk", True),
+                (9, "./after_raw.npk", False), (13, "./after_char.npk", False),
+                (15, "./gapped.npk", True), (19, "./after_cr_comment.npk", False),
+                (20, "../real_c.npk", False), (21, "./real_d.npk", False),
+                (22, "./back\\slash.npk", False), (23, "./after_block.npk", False)]
+
+
+# THE FORMS A RUN CAN OBSERVE. Each guarded assignment after a form runs
+# exactly when the form reads as `lexical.py` reads it; line 6's does not run,
+# because the lone CR before it is not a line end.
+_FORMS_TEXT = (
+    "mod:lexical_forms;\n"                                     # 1
+    "use \".\\x2flexical_six.npk\".*;\n"                       # 2  decoded: ./lexical_six.npk
+    "func:seven = int32() never fails { pass 7i32; };\n"       # 3
+    "func:main = int32(cstring[]:_~argv) {\n"                  # 4
+    "    int32:a = 0i32;\n"                                    # 5
+    "    // a lone CR is not a line end\r    a = 10i32;\n"     # 6  all of it comment
+    "    if (a != 0i32) { exit 10i32; }\n"                     # 7
+    "    /* x // y */ a = 1i32;\n"                             # 8  code after the block
+    "    if (a != 1i32) { exit 11i32; }\n"                     # 9
+    "    /* p /* q */ a = 2i32;\n"                             # 10 the block does not nest
+    "    if (a != 2i32) { exit 12i32; }\n"                     # 11
+    "    char8:q = '\"'; a = 3i32;\n"                          # 12 one character
+    "    if (a != 3i32) { exit 13i32; }\n"                     # 13
+    "    string:t = `x//y`; a = 4i32;\n"                       # 14 a template's text
+    "    if (a != 4i32) { exit 14i32; }\n"                     # 15
+    "    int32:b = raw seven ();\n"                            # 16 a call, spaced
+    "    int32:c = raw seven\n"                                # 17
+    "    ();\n"                                                # 18 a call across a line end
+    "    if (b != c) { exit 15i32; }\n"                        # 19
+    "    if ((raw six()) != 6i32) { exit 16i32; }\n"           # 20 the decoded import
+    "    exit 0i32;\n"                                         # 21
+    "};\n") + FAILSAFE
+_FORMS_SIX = ("mod:lexical_six;\n\n"
+              "pub func:six = int32() never fails { pass 6i32; };\n")
+_FORMS_EXIT = {
+    10: "a lone CR ended a `//` comment",
+    11: "a `//` inside a `/* */` ended the line",
+    12: "a `/* */` nested",
+    13: "the character literal `'\"'` hid the code after it",
+    14: "a `//` in a template's text ended the line",
+    15: "a call's `(` could not follow whitespace",
+    16: "the escaped `use` path was not decoded",
+}
+
+
+def part_e(rep, root, man, base, npkc, npkrt):
+    """The reader against the compiler's lexer: E1 and E2 above."""
+    import lexical
+    # `run` imports this module; by the time this is called it is initialised.
+    import run as run_mod
+
+    problems = []
+    where = os.path.join(base, "lexical")
+    if os.path.isdir(where):
+        shutil.rmtree(where)
+    os.makedirs(where)
+
+    # E1 -- the reader, on one text of every form, through a FILE.
+    path = os.path.join(where, "lexcase.npk")
+    with open(path, "wb") as fh:
+        fh.write(_LEX_TEXT.encode("latin-1"))
+    text = lexical.read(path)
+    if text != _LEX_TEXT:
+        problems.append("E1: the file read back is not the bytes written -- a "
+                        "line end or a byte was translated on the way in.")
+    got = lexical.imports(text)
+    if got != _LEX_IMPORTS:
+        problems.append("E1: the imports read are %r, and the compiler reads "
+                        "%r." % (got, _LEX_IMPORTS))
+    code = lexical.blank(text)
+    if len(code) != len(_LEX_TEXT) or code.count("\n") != _LEX_TEXT.count("\n"):
+        problems.append("E1: blanking moved a byte or a line.")
+    lines = code.split("\n")
+    for ln in (4, 6, 8, 9, 11, 17, 18):
+        if "/" in lines[ln - 1]:
+            problems.append("E1: line %d: a `/` inside a comment or a literal "
+                            "survived the blanking." % ln)
+    if lines[13].count("/") != 1:
+        problems.append("E1: line 14: the template's text was read as code, "
+                        "or its interpolation was not.")
+    if "after_char" in lines[12] or "use" not in lines[12]:
+        problems.append("E1: line 13: the `'\"'` literal hid the rest of the "
+                        "line, or was not blanked.")
+    if "use" not in lines[18]:
+        problems.append("E1: line 19: the `/*` inside line 18's comment was "
+                        "read as a block comment and hid the code after it.")
+
+    # E2 -- the compiler, on every form a run can observe, and the reader on
+    # the same file.
+    _write(os.path.join(where, "lexical_forms.npk"), _FORMS_TEXT)
+    _write(os.path.join(where, "lexical_six.npk"), _FORMS_SIX)
+    text = lexical.read(os.path.join(where, "lexical_forms.npk"))
+    got = lexical.imports(text)
+    if got != [(2, "./lexical_six.npk", False)]:
+        problems.append("E2: the reader's imports are %r, and the program "
+                        "imports ./lexical_six.npk at line 2." % (got,))
+    lines = lexical.blank(text).split("\n")
+    if "10i32" in lines[5]:
+        problems.append("E2: line 6: the reader read code after a lone CR in "
+                        "a `//` comment.")
+    for ln, stmt in ((8, "a = 1i32"), (10, "a = 2i32"), (12, "a = 3i32"),
+                     (14, "a = 4i32"), (16, "seven ("), (17, "seven"),
+                     (18, "();")):
+        if stmt not in lines[ln - 1]:
+            problems.append("E2: line %d: the reader blanked `%s`, which the "
+                            "compiler runs." % (ln, stmt))
+    bld = build_mod.Build(where, man, npkc, npkrt, os.path.join(where, "build"))
+    out_dir = os.path.join(where, "build", "forms")
+    os.makedirs(out_dir, exist_ok=True)
+    verdict = run_mod._verdict(bld, where, "lexical_forms.npk", out_dir)
+    if verdict != "run:0":
+        code_ = int(verdict[4:]) if verdict.startswith("run:") else None
+        problems.append(
+            "E2: the pinned compiler's verdict on the forms program is %s, not "
+            "run:0 -- %s. THE COMPILER'S LEXER HAS MOVED FROM WHAT `lexical.py` "
+            "MIRRORS: re-read `src/frontend/lexer.npk` at the new pin and bring "
+            "the reader to it, in the adoption that moved the pin."
+            % (verdict, _FORMS_EXIT.get(code_, "it did not build and run")))
+    return problems
+
+
+# ---------------------------------------------------------------------------
 
 def run(rep, root, steps):
     """The whole self-check. Returns True when the harness has proven it fails."""
@@ -1427,6 +1740,23 @@ def run(rep, root, steps):
                    "%d specimen(s) for `_verdict`; exemption, defect corpus "
                    "and header sweep each driven RED and silent on the "
                    "control" % len(VERDICT_SPECIMENS)))
+
+    problems = part_e(rep, root, man, base, npkc, npkrt)
+    if problems:
+        ok = False
+        rep.fail("self-check: the reader", "%d disagreement(s) with the "
+                 "compiler's lexer" % len(problems))
+        for p in problems:
+            rep.note("")
+            for line in p.splitlines():
+                rep.note(line)
+    else:
+        rep.say("  ok    %-46s %s"
+                % ("the reader (lexical.py)",
+                   "E1: %d lines of every form read back, %d import(s) as the "
+                   "compiler reads them; E2: the pinned compiler runs every "
+                   "observable form to 0"
+                   % (_LEX_TEXT.count("\n"), len(_LEX_IMPORTS))))
     return ok
 
 

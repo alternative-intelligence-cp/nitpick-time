@@ -24,6 +24,14 @@
 // and the row count goes back up to the 30 000 `probe04_big_fixed_table.npk`
 // carries.
 //
+// (Dated note, cycle 0.1.5. The defect CLOSED at the compiler's 1.5.1b and
+// O-N4 was struck at cycle 0.0.6; everything above is `950bb1d`'s. At compiler
+// `c970483` this file runs in about half a second on both legs and is asserted
+// by its marker as a regression case (`run_defect_corpus`, TM-141). Its row
+// count was never raised: `probe04_big_fixed_table.npk` carries the 30 000
+// rows and runs in the suite in under two seconds, so the size claim is that
+// probe's, and this file stays the 4 000-row axis it was measured on.)
+//
 // The data is the same synthetic sequence probe 04 uses, at 4 000 rows:
 //     at_utc[i]     = -2208988800 + i * 604800 + (i % 97) * 3600
 //     type_index[i] = i % 13

@@ -4,10 +4,11 @@ Small Nitpick programs that ask the **compiler** a question. Each one pins a
 language fact that `meta/specs/` depends on, so that a change to that fact is a
 red run here rather than a wrong date in cycle 0.6.
 
-Written in cycle 0.0.0; governed by
+Probes 01 to 11 were written in cycle 0.0.0, governed by
 [`../../meta/roadmap/done/0.0/0.0.0.md`](../../meta/roadmap/done/0.0/0.0.0.md), which
-carries the verdict table. Picked up by the harness as ordinary `program`-stage
-entries from cycle 0.0.2.
+carries their verdict table; every later probe was added by the subcycle whose
+question it answers, and its row below and its own header say which. Picked up
+by the harness as ordinary `program`-stage entries from cycle 0.0.2.
 
 ## The rules
 
@@ -41,8 +42,10 @@ entries from cycle 0.0.2.
   command and not from the probes anybody compiled:**
   `git grep -l 'additionally asserts that nothing leaked' -- '*.npk'`, nine
   files out of fifty tracked. `probe04_big_fixed_table.npk` had been missed once
-  for exactly that reason — it is the one probe here that is never compiled by
-  hand (it is O-N4's 281 s / 30.9 GiB case), so it drops out of any list built
+  for exactly that reason — it was the one probe here that was never compiled
+  by hand (O-N4's 281 s / 30.9 GiB case at `950bb1d`; since the compiler's
+  1.5.1b fixed O-N4 it runs in the suite in under two seconds — a dated note of
+  cycle 0.1.5), so it drops out of any list built
   from what a session ran, while remaining a first-class probe row in the table
   below. `probe06` and `probe11` were **confirmed by reading** to be correctly
   outside the nine: both were written with the `wild` wording already. **A wider
@@ -91,7 +94,7 @@ entries from cycle 0.0.2.
 | `probe04_big_fixed_table.npk` | is a large `fixed` table read-only data with no startup cost? | TM-007, `ZONE_MODEL.md` Z-7/Z-8, `SAFETY.md` S-19 |
 | `probe04b_emission_shape.npk` | the same, at 300 rows, so the answer stays re-derivable | the same rules |
 | `probe05_payload_enum.npk` | a payload enum in a `pick` and in a `Vec` | `FORMAT_MODEL.md` F-4, `SAFETY.md` S-3 |
-| `probe05b_derive_eq_refused.npk` | *(must not compile)* `#[derive(Eq)]` on a payload enum | O-N10 |
+| `probe05b_derive_eq_refused.npk` | `#[derive(Eq)]` on a payload enum — refused at `950bb1d`, and since O-N10's fix a POSITIVE regression case: it compiles and answers correctly *(this row said "must not compile" until cycle 0.1.5)* | O-N10, TM-111 |
 | `probe06_generic_vec.npk` | a generic `Vec<T>` with `move`, at a scalar `T` and an owning one | TM-005, TM-106, `BUILD.md` B-12, `SAFETY.md` S-18b |
 | `probe06b_element_leak.npk` | 2 000 000 × {init, push, free the block only} — what an orphaned element costs | TM-106, `SAFETY.md` S-18b — the leaking half |
 | `probe06c_element_drop.npk` | the same, one line different: `free_names` first | the same — the remedy half. **Both exit 0**, which is the point |
@@ -108,6 +111,19 @@ entries from cycle 0.0.2.
 | `probe11d_floor_only.npk` | the **unconditional floor**: nothing imported, nothing computed | TM-107 — the control the other three are measured against |
 | `probe11e_unused_import_refused.npk` | *(must not compile)* is the arm owed by the import, or by the call? | TM-107, `SAFETY.md` S-4c |
 | `probe11f_declared_unraised.npk` | does a `pub error:` **declaration** cost an arm, or does the first `fail`? | TM-107, `SAFETY.md` S-6 |
+| `probe12_set_overwrite_leak.npk` | 2 000 000 overwrites of one occupied `Vec<string>` slot — is `0.0.4.md`'s list of the entries that discard an element complete? (No: an overwrite discards one.) | TM-132, `SAFETY.md` S-18b — the leaking half, held by `heap:` and `cap:` (V-17) |
+| `probe12b_set_overwrite_drop.npk` | the same overwrites with the old element moved out into a scope that ends first — the remedy's cost | the same — the remedy half, `heap:` bounded |
+| `probe13_vec_bounds_guard.npk` | an accessor that indexes a `#wild_slice` laid over the live count — does the compiler's own bounds guard come back? | TM-129, `SAFETY.md` S-17b, S-17c |
+| `probe13b_vec_index_past_end.npk` | the same accessor one PAST THE END — exits `94`, `OutOfBounds` | the same — the negative twin |
+| `probe13c_vec_index_negative.npk` | the same accessor at a NEGATIVE index — exits `94` | the same — `0 <= i`, the half a hand-written `i < count` misses |
+| `probe13d_vec_bare_pointer_unchecked.npk` | the control: the same out-of-range read through the BARE pointer returns a planted sentinel and does not trap | TM-108 — written at `int64` since cycle 0.1.4c, TM-190 |
+| `probe14_error_payload_refused.npk` | *(must not compile)* can an `error:` identity carry a payload? | TM-147, `SAFETY.md` S-3, `CALENDAR.md` C-5b — `NITPICK-PARSE-001` |
+| `probe15_civil_literal_bypass.npk` | *(must not compile)* may a consumer build an unreal `CivilDate` by struct literal? | TM-157, `CALENDAR.md` C-8c — `NITPICK-TYPE-079` since cycle 0.1.0c |
+| `probe16_vec_count_write_refused.npk` | *(must not compile)* may a consumer assign a `Vec`'s `count`? | TM-156, `SAFETY.md` S-17b — `NITPICK-TYPE-079` |
+| `probe16b_vec_items_read_refused.npk` | *(must not compile)* may a consumer index a `Vec`'s `items` directly? | TM-156 — `NITPICK-TYPE-080` |
+| `probe16c_bytes_len_write_refused.npk` | *(must not compile)* may a consumer assign a `Bytes`' `len`? | TM-156 — `NITPICK-TYPE-079` |
+| `probe16d_civil_field_write_refused.npk` | *(must not compile)* may a consumer assign month 13 to a real `CivilDate`? | TM-157, `CALENDAR.md` C-8c — `NITPICK-TYPE-079` |
+| `probe16e_sealed_reads.npk` | the positive twin: every sealed field still READS from outside, and `bytes_capacity` reads the hidden body's capacity | TM-156, TM-157, TM-195 |
 | `probe17_fixed_owning_reads.npk` | may `fixed` storage hold a `string` — as an element, a row's field, a scalar — and be read without moving it? | `SAFETY.md` S-19b — the positive twin |
 | `probe17b_fixed_row_copy_refused.npk` | *(must not compile)* a row whose element owns, copied out by value — the accessor's read | S-19b — `NITPICK-TYPE-046` |
 | `probe17c_fixed_string_copy_refused.npk` | *(must not compile)* an element of a `fixed string[2]`, copied out | S-19b — `NITPICK-TYPE-046` |
@@ -129,6 +145,10 @@ files says in its own header what it asks.)*
 three language probes — written with the port that makes `Vec` move-only and
 bounds `vec_at` by `Pod` (TM-193 … TM-195). The rest of 12 to 16e is still the
 close's.)*
+
+*(Cycle 0.1.5, the close: the thirteen rows for probes 12 to 16e are in the
+table, each taken from its own header, so "What is here" is every file in this
+directory.)*
 
 Probes 09 and 10 were planned in `0.0.0.md` §4 and **held, not merely
 unwritten**: they are the borrow-edge probes, and the author ruled O-N9
@@ -167,12 +187,19 @@ declaration *does* compile and its `cmp` ignores the payload. So 05 derives the
 five that are correct, 05b pins the refusal with its exact diagnostic, and the
 silent half — which is the dangerous one — is reproduced in
 `defect/derive_payload_enum/`. That is **O-N10**, and it is why this subcycle
-stopped for the third time.
+stopped for the third time. *(Fixed at pin `94874ce`, TM-111: both derives
+compile and read every payload field, and 05b — the name kept, a record of what
+it asked — is a positive regression case since. This paragraph is cycle
+0.0.0's.)*
 
 ### Why 04 has a `b`
 
-O-N4 makes `probe04_big_fixed_table.npk` cost **281 seconds and 30.9 GiB**, so
-it is not runnable in CI and not re-runnable by a reader. Its two questions
+O-N4 made `probe04_big_fixed_table.npk` cost **281 seconds and 30.9 GiB** at
+compiler `950bb1d`, so it was not runnable in CI and not re-runnable by a reader.
+*(The compiler's 1.5.1b fixed O-N4, struck here at cycle 0.0.6: at `c970483`
+the probe runs in under two seconds on both legs, a member of the suite like
+any other. What follows is why `04b` exists, and it is still the reason.)* Its
+two questions
 separate cleanly, though: whether **30 000 rows compile at all** needs 30 000
 rows, and what the declaration is **lowered to** does not — the emission form is
 chosen by the same path at any element count. So `probe04b_emission_shape.npk`
@@ -205,7 +232,10 @@ charges a consumer for its **arithmetic** as well as its error identities.
 
 - **11d** imports nothing and computes nothing. It compiles and runs with four
   arms, which pins the unconditional floor. It is the **control**: 11c's
-  `failsafe` is 11d's, character for character.
+  `failsafe` is 11d's, character for character. *(Six arms since compiler
+  `c3bdae2`, whose floor gained `StackExhausted` and `MachineFault` — TM-155;
+  the two files still share their `failsafe`, and the four arms 11c is refused
+  for are still the import's.)*
 - **11c** imports a module that divides, indexes and adds and declares **no
   error at all**, with 11d's `failsafe`. Refused, four times, for `DivByZero`,
   `DivOverflow`, `IntOverflow` and `OutOfBounds`. Those four arms are the
@@ -228,9 +258,13 @@ the only probe whose question is about importing.
 
 ## `defect/`
 
-Not probes. Reproductions of compiler defects that cycle 0.0.0 found and that
-this library must not work around — see
-[`defect/README.md`](defect/README.md). Each is deleted only when its defect is
-closed. The O-N4 reproduction there costs about **6 seconds and 580 MiB**;
-`probe04_big_fixed_table.npk` costs 281 seconds and 30.9 GiB. The
-`missing_failsafe/` reproduction costs a tenth of a second.
+Not probes. Reproductions of compiler defects this library found — cycle
+0.0.0 first, cycles 0.1.3b and 0.1.4 since — and must not work around: see
+[`defect/README.md`](defect/README.md). **When a defect is fixed its
+reproduction is not deleted: it becomes the regression test that proves the
+fix, with its old verdicts as the control** (TM-154, TM-189). *(Until cycle
+0.1.5 this said "Each is deleted only when its defect is closed", which
+TM-154 reversed at cycle 0.1.0b; and it quoted O-N4's reproduction at about 6
+seconds and 580 MiB and probe 04 at 281 seconds and 30.9 GiB — `950bb1d`'s
+numbers, before the compiler's 1.5.1b fixed it. At `c970483` each takes under
+two seconds.)*

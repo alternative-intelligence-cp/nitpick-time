@@ -6,12 +6,24 @@ the safety-critical systems language. No dependencies, no libc, no
 compiled in from a pinned IANA release, so the same program gives the same
 answer on every machine.
 
-> **Status: planning.** No code yet. The specification set is in
-> [`meta/specs/`](meta/specs/) and the plan in [`meta/roadmap/`](meta/roadmap/),
-> in the same order and by the same discipline the compiler used — specs first,
-> then a cycle map, then execution-grade subcycles, then code. The compiler
-> itself is at cycle 1.5 (verification); this library is planned now so that
-> implementation can start the day the language stops moving.
+> **Status: cycle 0.1, the civil calendar, is in its close** — its code and
+> its gate are done, and the audit that closes it is next — **and cycle 0.2,
+> instants and timestamps, follows.** What exists: `src/core/` (`Vec<T>`,
+> `Bytes` and the named limits) since cycle 0.0, and `src/cal/` — `CivilDate`,
+> `CivilTime`, `CivilDateTime`, `Weekday`, `Month`, the day-number algorithms,
+> the weekday, the day of the year and the ISO week date — whose gate is
+> exhaustive: every day of years −9999 … +9999 goes to its day number and back,
+> both ways, on every full run, and every date of years 1 … 9999 agrees with
+> Python's `datetime`. Instants, zones, formats and the clocks are still
+> placeholders, each replaced by the cycle
+> [`meta/roadmap/ROADMAP.md`](meta/roadmap/ROADMAP.md) names. The specification
+> set is in [`meta/specs/`](meta/specs/) and the plan in
+> [`meta/roadmap/`](meta/roadmap/), written the way the compiler's are — specs
+> first, then a cycle map, then execution-grade subcycles, then code — against
+> a compiler that is still moving, pinned by commit (`CLAUDE.md` names the pin).
+>
+> *(Until cycle 0.1.5 this block read "Status: planning. No code yet" — false
+> since cycle 0.0.4 — and "the compiler itself is at cycle 1.5".)*
 
 ---
 
@@ -57,19 +69,33 @@ a program has to import on purpose.
 
 **Overflow traps rather than wrapping.** Adding a century to a timestamp that
 cannot hold one is a controlled stop in this language, not a silent journey to
-the year 292 billion. The representable range is stated, checked at every
-constructor, and enforced by the type system when the compiler's `limit<Rules>`
-lands.
+the year 292 billion. The representable range is stated and checked at every
+constructor, before the trap: a date outside it is refused, not built. *(This
+said, until cycle 0.1.5, that the range would be "enforced by the type system
+when the compiler's `limit<Rules>` lands". It landed at the compiler's 1.5.2,
+and `ntime` uses it on its containers' lengths — TM-156 — while the calendar's
+range stays the constructors' to refuse, `meta/specs/CALENDAR.md` C-8.)*
 
-**Importing it costs a consumer three `failsafe` arms — and one if all you want
-is calendar arithmetic.** In this language every error identity a library
-declares is a mandatory arm in every consuming program's shutdown handler, so
-the number is an API decision, not an implementation detail. `ntime`'s is
-three.
+**Importing it costs a consumer at most three error identities — and one if all
+you want is calendar arithmetic.** In this language every error identity a
+library declares is a mandatory arm in every consuming program's shutdown
+handler, so the number is an API decision, not an implementation detail.
+`ntime`'s is three. **The whole bill is larger**, because the language also
+charges an arm for each kind of trap the imported code can reach — a division,
+an overflow, an index, a loop's measure, a length's limit — on top of a floor
+every program owes: measured at compiler `c970483`, a program importing only
+the calendar owes **11** arms, and one importing the whole library **13**. The
+table is `meta/specs/SAFETY.md` S-4, generated and checked against the
+compiler on every run. *(Until cycle 0.1.5 this paragraph said importing
+`ntime` "costs a consumer three `failsafe` arms", which counted the identities
+and not the bill.)*
 
 ---
 
 ## What it will provide
+
+The **calendar** row exists since cycle 0.1; every other row is a later cycle
+of [`meta/roadmap/ROADMAP.md`](meta/roadmap/ROADMAP.md).
 
 | Layer | Contents |
 |---|---|
@@ -96,7 +122,8 @@ src/          # THE LIBRARY — Nitpick source only
 tests/        # probe, conformance, unit, golden, rejection, fixtures
 examples/     # runnable demonstrations, built and run by the harness
 harness/      # the Python build and test runner, until `npkg` can build a library
-tools/        # generators — the tzdb tables; everything they emit is committed
+tools/        # generators — the civil cross-oracle's corpus since cycle 0.1.4, the tzdb
+              # tables from cycle 0.5; everything they emit is committed
 meta/specs/   # the design authority
 meta/roadmap/ # the plan, in numbered cycles
 docs/         # user-facing documentation, written at 1.0

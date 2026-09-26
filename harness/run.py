@@ -59,6 +59,7 @@ STAGE ORDER, and each line is a reason:
 """
 
 import os
+import re
 import sys
 import time
 
@@ -68,6 +69,7 @@ import arms as arms_mod                                          # noqa: E402
 import build as build_mod                                        # noqa: E402
 import checks as checks_mod                                      # noqa: E402
 import elf                                                       # noqa: E402
+import lexical                                                   # noqa: E402
 import manifest as manifest_mod                                  # noqa: E402
 import repro as repro_mod                                        # noqa: E402
 import stages                                                    # noqa: E402
@@ -357,20 +359,26 @@ def check_expect_headers(rep, root, exempt_list=None):
                      "to excuse it (V-1c).")
 
 
+# A `main`, however it is spaced (TM-200): `func` and `:main` on two lines
+# declare one, measured, and `func:main` as a substring would not see it.
+_MAIN = re.compile(r"(?<![A-Za-z0-9_.])func[ \t\r\n]*:[ \t\r\n]*main(?![A-Za-z0-9_])")
+
+
 def _verdict(bld, root, rel, out_dir):
     """Where does this file STOP?  `npkc`, `llc`, `ld`, `run:<code>`, or
     `none` when nothing roots it.  Every status is taken from the call that
     produced it and paired with the artefact it should have written.
     """
     src = os.path.join(root, rel)
-    with open(src, "r", encoding="utf-8", errors="replace") as fh:
-        text = fh.read()
+    # Read as the compiler reads it, and CODE only (TM-199): a `func:main` in a
+    # comment or a literal is not a `main`.
+    text = checks_mod.blank_code(lexical.read(src))
     # A module with no `main` is not a program: `npkc` has no root to compile
     # and the question does not arise.  This is the `none` bucket: the modules
     # a root imports -- the probe support modules, since cycle 0.1.4 the civil
     # cross-oracle's corpus, and since cycle 0.1.4c O-N23's declaring module,
     # `tests/probe/defect/fixed_import_scope/rows.npk` (TM-192).
-    if "func:main" not in text:
+    if not _MAIN.search(text):
         return "none"
     stem = os.path.splitext(os.path.basename(rel))[0]
     ll = os.path.join(out_dir, stem + ".exempt.ll")
@@ -470,10 +478,12 @@ def run_defect_corpus(rep, root, bld, subdir=None):
     evaluated.
 
     WHY HERE AND NOT AS A `[[test]]` ENTRY.  The manifest selects by DIRECTORY
-    with a non-recursive glob (`<path>/*.npk`), and this corpus is six
-    subdirectories deep-ish; a recursive entry over `tests/probe/` would also
+    with a non-recursive glob (`<path>/*.npk`), and this corpus is a file and
+    eight subdirectories (six when this was written, at cycle 0.0.6; seven
+    since 0.1.3b's `fixed_move_out/`, eight since 0.1.4c's
+    `fixed_import_scope/`); a recursive entry over `tests/probe/` would also
     sweep `support/`, which must never be run.  One entry per subdirectory
-    would put the coverage rule in six places that can drift apart.  This walks
+    would put the coverage rule in eight places that can drift apart.  This walks
     the directory, so a NEW subdirectory is covered the day it is created --
     which is the property that failed here.
 

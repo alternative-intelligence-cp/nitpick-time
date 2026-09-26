@@ -1,4 +1,12 @@
-# O-N10 — the derives on an enum with a payload
+# O-N10 — the derives on an enum with a payload — **FIXED at pin `94874ce`** (TM-111)
+
+> *(Dated note, cycle 0.1.5: everything below is `950bb1d`'s, where the defect
+> was found. At pin `94874ce` the compiler's D-250 fixed both derives —
+> `Literal(7).cmp(Literal(9))` answers `Less` — O-N10 was discharged the same day
+> (TM-111), and this directory's three cases are its regression tests, each
+> asserted by its marker on every full run (`run_defect_corpus`, TM-141). This
+> title said nothing of the fix until cycle 0.1.5, while every case file here
+> recorded it.)*
 
 **`#[derive(Eq)]` emits derived code that does not compile, and
 `#[derive(Ord)]` on the same declaration compiles and ignores the payload.**

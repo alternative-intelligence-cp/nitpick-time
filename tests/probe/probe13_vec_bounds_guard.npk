@@ -41,7 +41,8 @@
 // NOT ASKED HERE: whether the guard is free at run time. It is one predictable
 // compare per access and 1.5's `requires i >= 0 && i < v.count` is what elides
 // it (`VERIFICATION.md` §3, the D-218.9 payoff). Measuring a branch this cheap
-// against a prelude that costs 0.8 s per program would measure the prelude.
+// against a prelude that cost 0.8 s a program (at `0dfddac`; about 0.3 s at
+// `c970483`) would measure the prelude.
 mod:probe13_vec_bounds_guard;
 
 struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };

@@ -44,7 +44,9 @@ And the one that shapes the *architecture*:
 
 The first capped the error budget at three (TM-017) and decided the module
 decomposition — `cal` does not import `zone`, so a program doing calendar
-arithmetic owes one arm. The second made every range a checked bound rather
+arithmetic owes one IDENTITY arm (and, measured at compiler `c970483`, eleven
+arms in all, the floor and `cal`'s arithmetic included — `specs/SAFETY.md` S-4;
+this said "owes one arm" until cycle 0.1.5). The second made every range a checked bound rather
 than a hope. The third replaced `strftime` with a typed layout (TM-009,
 TM-023).
 

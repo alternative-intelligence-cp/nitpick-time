@@ -9,8 +9,8 @@
 // THE SHAPE OF THE MEASUREMENT. This program's OWN text contains no division,
 // no remainder, no index, and no plain-integer `+ - *` -- check it; every
 // operand below is a literal and every operator a comparison. Its `failsafe`
-// therefore names exactly the four arms `probe11d_floor_only.npk` proves are
-// the unconditional floor, and 11d compiles and runs at exit 0 with precisely
+// therefore names exactly the arms `probe11d_floor_only.npk` proves are the
+// floor (four at `950bb1d`, six since `c3bdae2`), and 11d runs with precisely
 // this `pick`. The ONLY difference between that file and this one is the
 // `use` line and the four calls. So every arm the compiler asks for below is
 // an arm THE IMPORT ADDED.

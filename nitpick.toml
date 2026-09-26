@@ -97,7 +97,11 @@ lld-flags     = ["-static"]
 # AND TAGGED SO IT CANNOT GO STALE AGAIN (TM-142): 32 files, 25 and 7, none
 # with both markers and none with neither. The names above are the SEVEN as of
 # 0.0.2 and the split has not moved; every probe added since carries
-# `expect-exit:`.
+# `expect-exit:`. (Cycle 0.1.5: that last sentence was true at cycle 0.0.6 and
+# not since cycle 0.1.0, when `probe14` joined as a refusal. The refusals are
+# the seven above and fourteen more -- `probe14`, `probe15`, `probe16`,
+# `probe16b` ... `probe16i`, `probe17b`, `probe17c`, `probe18b` and `probe19`
+# -- and the tagged count above is the one that is checked.)
 [[test]]
 name  = "probe"
 stage = "program"
@@ -125,7 +129,14 @@ path  = "tests/probe"
 #             library has today is a probe under `tests/probe/`, dispatched by
 #             its own header (B-4c). The stage is exercised on every run by
 #             `selfcheck.py` cases 2 and 3, and gains an entry when the library
-#             has a refusal of its own to assert — cycle 0.0.4.
+#             has a refusal of its own to assert. (It said "-- cycle 0.0.4"
+#             here until cycle 0.1.5. The library's own refusals arrived at
+#             cycles 0.1.0c and 0.1.3c -- a consumer's write to a sealed field,
+#             a read of a hidden one, a copy of a `Vec`, `Pod` for an owner --
+#             and each is a probe under `tests/probe/`, dispatched by its
+#             header as B-4c allows, so this directory is still empty. Cycle
+#             0.2.0's refusal of a conversion between `Instant` and
+#             `Timestamp` is the next, and its plan says where it lives.)
 #   `golden`  IMPLEMENTED, and `tests/golden/` is empty: nothing formats
 #             anything yet. Exercised by `selfcheck.py` case 4. Its entry
 #             arrives with `fmt` at cycle 0.4.

@@ -24,7 +24,8 @@
 //     llc ... -o p.o && readelf -SW p.o       # the symbol's section must be .rodata
 //
 // THAT HALF IS EVIDENCED NEXT DOOR, NOT HERE. Running the four commands above
-// against THIS file costs 281 s and 30.9 GiB (O-N4), so it has been done once,
+// against THIS file cost 281 s and 30.9 GiB at `950bb1d` (O-N4; since the
+// compiler's 1.5.1b fixed it, under two seconds -- cycle 0.1.5's note), so it was done once,
 // on 2026-09-03, and `meta/roadmap/done/0.0/0.0.0.md` §7 records it explicitly as a
 // ONE-TIME OBSERVATION that nobody should re-derive casually. The same four
 // commands against `probe04b_emission_shape.npk` -- the identical declaration

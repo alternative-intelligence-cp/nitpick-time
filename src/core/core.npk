@@ -1,8 +1,8 @@
 // `ntime`'s storage primitives — THE LAYER NOTE. This was `src/core/`'s
 // placeholder (0.0.1 P-7) and the directory has been filled since cycle 0.0.4;
-// the file stays because the other five placeholders point AT it for the
-// explanation below, and because a layer note that a reader meets before the
-// code is worth one file.
+// the file stays because the other placeholders -- four since cycle 0.1.0 filled
+// `cal/`, five before -- point AT it for the explanation below, and because a
+// layer note that a reader meets before the code is worth one file.
 //
 // WHY A PLACEHOLDER EXISTS AT ALL — the paragraph the siblings cite. An empty
 // directory is invisible to the harness's `parse` sweep
@@ -23,7 +23,7 @@
 //
 // WHAT IT MAY IMPORT: NOTHING (`BUILD.md` B-17). `core` is the base of the
 // layering and every other module points at it. An import here is a layering
-// violation by construction, and `check_layering` will say so from 0.0.3.
+// violation by construction, and `check_layering` has said so since 0.0.3.
 //
 // THE OBLIGATION THAT ARRIVED WITH THE CODE, and how it was discharged:
 // `Vec<T>.items` and `Bytes`' body are BARE POINTERS, which this language does

@@ -93,7 +93,8 @@ import-scoped:
 bracketed numbers, and had no umbrella row. At compiler `c3bdae2` every row
 gained `StackExhausted` and `MachineFault`, the new floor (TM-155), and the
 umbrella became a generated row because it is the import a consumer actually
-writes.)*
+writes.)* *(Re-measured at compiler `c970483` by cycles 0.1.4c and 0.1.5:
+every row is unchanged.)*
 
 **A program that only wants calendar arithmetic owes one IDENTITY arm.** That is
 the decomposition working, and it is why `cal` does not import `zone`.
@@ -184,7 +185,9 @@ That is the compiler's deliberate direction rather than a defect
 (`reach.npk`: *"Over-approximation is the safe direction"*), so what changes is
 this document, not the library. **The totals column is generated at cycle 0.1**,
 when `src/cal/` exists and the numbers can be measured instead of predicted;
-nothing is guessed into it here.
+nothing is guessed into it here. *(It was: measured at cycle 0.1.0 and a
+generated row since 0.1.0b, TM-155, checked against the compiler on every run
+by `check_failsafe_arms`.)*
 
 **Rule S-4c (TM-107) — the arm is owed by the IMPORT, not by the call.**
 `tests/probe/probe11e_unused_import_refused.npk` imports the module that raises
@@ -657,6 +660,15 @@ survive the move and one of them is now stronger: the bounds obligation is
 `ntime`'s (S-17b), **and so is the whole element-lifetime obligation** — which
 is TM-106 measured, and which a reader who reasons from "our `Vec` is the
 compiler's `List`" would now get exactly backwards.
+
+*(Cycle 0.1.5, of TM-193: two phrases above are inexact since cycle 0.1.3c's
+marker. A `Vec<T>` has a FOURTH field, `hidden string[0]:move_only`, zero bytes,
+and the layout walk marks a `Vec` OWNING for it — so "three fields" is four, and
+"gets none of that" is true of the drop and not of the mark: the drop the
+compiler generates for a `Vec` frees nothing, because its one owning field
+holds no element and `items` is a bare pointer the walk does not follow
+(`tests/probe/probe18_zero_length_owner.npk`). The conclusion stands: the
+element-lifetime obligation is `ntime`'s.)*
 
 ---
 

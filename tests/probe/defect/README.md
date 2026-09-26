@@ -47,7 +47,16 @@ records what the behaviour used to be.
 
 ---
 
-## O-N4 — quadratic in one declaration
+## O-N4 — quadratic in one declaration — FIXED by the compiler's 1.5.1b, discharged here at cycle 0.0.6
+
+> *(Dated note, cycle 0.1.5: everything from here to the O-N8 section is cycle
+> 0.0.0's, at `950bb1d`, and its present tense is that pin's. The compiler's
+> 1.5.1b fixed the defect, and it was re-measured and struck at pin `aaffb87`
+> (`../../../meta/OPEN_QUESTIONS.md` O-N4). At `c970483`
+> `big_fixed_array_cost.npk` runs in about half a second and
+> `probe04_big_fixed_table.npk` in under two, each asserted on every full run.
+> This heading said nothing of the fix until cycle 0.1.5, while the table
+> above and the O-N8 heading below did.)*
 
 **`npkc`'s compile time and memory are quadratic in the size of a single
 declaration.** Found by cycle 0.0.0's probe 04 on 2026-09-03, against the

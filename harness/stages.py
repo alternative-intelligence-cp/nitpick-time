@@ -31,6 +31,7 @@ it is named and fails.
 import os
 import re
 
+import lexical
 from build import BuildError, run, run_capped, run_split
 
 KEYS = ("expect-exit", "expect-error", "expect-error-at", "expect-golden",
@@ -80,8 +81,10 @@ def read(root, rel):
     """Read `rel`'s marker block. Raises `MarkerError` on anything ambiguous."""
     path = os.path.join(root, rel)
     e = Expect(rel)
-    with open(path, "r", encoding="utf-8", errors="replace") as fh:
-        lines = fh.read().splitlines()
+    # AS THE COMPILER READS IT (TM-199): bytes, and `\n` the only line end, where
+    # a text-mode read and `splitlines()` split at a lone CR as well. The marker
+    # block is `//` comments, so it is read raw and nothing is blanked.
+    lines = lexical.read(path).split("\n")
 
     end = 0
     for i, line in enumerate(lines):

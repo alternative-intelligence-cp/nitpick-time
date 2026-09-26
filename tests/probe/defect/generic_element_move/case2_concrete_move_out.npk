@@ -6,8 +6,10 @@
 //
 // This is the shape the compiler's own tree uses -- `src/frontend/
 // diagnostics.npk` binds `Diagnostic:cur = move(list.items[i])` over a
-// `List<Diagnostic>` inside an ordinary function -- and it is why O-N17 is
-// latent: the exercised half of the shape is the half that works.
+// `List<Diagnostic>` inside an ordinary function -- and it is why O-N17 was
+// latent: the exercised half of the shape was the half that worked. (Dated
+// note, cycle 0.1.5: O-N17 is FIXED at pin `aaffb87`, TM-136, and this file is
+// its control as cycle 0.0.4 wrote it; the header said "is" until then.)
 //
 // So the difference between this file and `case1` is ONE WORD, `<T>`, and that
 // word is the whole reproduction.

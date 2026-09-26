@@ -12,7 +12,9 @@
 // scalar `T`, which is every instantiation `ntime`'s own design has --
 // `Layout`'s `Vec<FmtPart>` (`FORMAT_MODEL.md` §3) has no owning payload, and
 // the zone tables hold offsets into a name pool for `check_no_owning_fields`'s
-// reason. That is why O-N17 blocks a planned API row rather than the library.
+// reason. That is why O-N17 blocked a planned API row rather than the library.
+// (Dated note, cycle 0.1.5: O-N17 is FIXED at pin `aaffb87`, TM-136, and this
+// file is its control as cycle 0.0.4 wrote it; it said "blocks" until then.)
 mod:case3_generic_scalar;
 
 struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };

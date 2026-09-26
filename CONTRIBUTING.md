@@ -4,12 +4,12 @@
 That is unusual and it is deliberate: the specifications catch design mistakes
 that would otherwise be found by writing the wrong code twice.
 
-**Where it stands:** cycle 0.0.1 is done, so there is a skeleton — an empty
-umbrella, one placeholder module per `src/` directory, a consumer that imports
-and runs, and CI. The first code that computes anything is `src/core/` at
-0.0.4. `harness/run.py` is a **floor** until 0.0.2 replaces it, and it has no
-self-check yet, so a green run from it is an unfalsified claim rather than a
-tested one.
+**Where it stands:** cycle 0.1, the civil calendar, is in its close. `src/core/`
+and `src/cal/` are real; the other four `src/` directories hold one placeholder
+each until the cycle `meta/roadmap/ROADMAP.md` names replaces it.
+`harness/run.py` is the runner, and it proves first, on every full run, that it
+can fail (`meta/specs/TESTING.md` V-14, V-15). *(This paragraph described cycle
+0.0.1's skeleton — "no self-check yet" — until cycle 0.1.5.)*
 
 ## Before you write anything
 
@@ -70,9 +70,13 @@ had asserted — which is why they are here rather than in a specification only.
    are not retains its elements — 125 MiB over two million of them — **and
    exits 0** (TM-106). And the bounds check attaches to the **type**: slices,
    arrays and simd lanes trap, **a bare pointer does not**, and `Vec<T>.items`
-   and `Bytes`' body are both reached as one (TM-108). So every accessor checks
-   its index **in code**, `0 <= i` as well as `i < count` — an index from a
-   narrower signed field can be negative, and `i < count` accepts it.
+   and `Bytes`' body are both reached as one (TM-108). So every accessor lays a
+   length-carrying `#wild_slice` over the live count and indexes that, which
+   puts the compiler's own bounds guard back — one unsigned compare, so
+   `0 <= i` as well as `i < count` (TM-129, `meta/specs/SAFETY.md` S-17c). An
+   index from a narrower signed field can be negative, and a hand-written
+   `i < count` accepts it. *(Until cycle 0.1.5 this said every accessor checks
+   its index "in code", the design TM-129 replaced at cycle 0.0.4.)*
 
 6. **`npkc` exiting 0 is not "this program is well-formed".** It accepted a
    root file with `main` and no `failsafe` at exit 0, emitting IR whose trap

@@ -43,6 +43,7 @@ import os
 import re
 
 import build as build_mod
+import lexical
 import stages
 
 # This repository's own root, from THIS file rather than from the working
@@ -55,7 +56,8 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # ---------------------------------------------------------------------------
 
 def strip_comments(text):
-    """Blank out `//` comments, respecting double-quoted strings.
+    """Blank every comment, and nothing else: a literal's body is KEPT.
+    `text` is what `lexical.read` returns.
 
     A CHECK OVER SOURCE MUST NOT READ PROSE, and in this tree that is not a
     hypothetical: `src/host/host.npk`'s header contains the word `mono_now()`
@@ -66,86 +68,64 @@ def strip_comments(text):
 
     Line structure is preserved (a comment becomes spaces, never disappears) so
     a finding can still cite a line number that matches the file.
+
+    THE SPANS ARE `lexical.py`'s SINCE CYCLE 0.1.5 (TM-199): `//` to byte 10
+    alone, `/* */` unnested, and no comment found inside a literal the
+    compiler reads -- a character literal and a template's text included. Until
+    then this was a scanner of its own that knew `//` and `"` and nothing else,
+    so a `//` inside a `/* */` blanked the code after the block on its line,
+    and a `'"'` opened a string that never closed (`0.1.5.md` section 1.3).
     """
-    out, i, n = [], 0, len(text)
-    in_str = False
-    while i < n:
-        c = text[i]
-        if in_str:
-            if c == "\\" and i + 1 < n:
-                out.append(c)
-                out.append(text[i + 1])
-                i += 2
-                continue
-            if c == '"':
-                in_str = False
-            out.append(c)
-            i += 1
-            continue
-        if c == '"':
-            in_str = True
-            out.append(c)
-            i += 1
-            continue
-        if c == "/" and i + 1 < n and text[i + 1] == "/":
-            j = text.find("\n", i)
-            if j < 0:
-                j = n
-            out.append(" " * (j - i))
-            i = j
-            continue
-        out.append(c)
-        i += 1
-    return "".join(out)
+    return lexical.blank(text, [s for s in lexical.spans(text)
+                                if s[0] == "comment"])
 
 
-def strip_strings(text):
-    """Blank double-quoted string bodies, preserving length and line structure.
+def blank_code(text):
+    """Blank every comment AND every literal -- a string, a raw or block
+    string, a character, and a template's text but never its interpolations,
+    which are code -- keeping every newline, so line and column numbers are the
+    file's own. `text` is what `lexical.read` returns.
 
-    OPERATOR DETECTION CANNOT READ STRINGS. `use "./cal/cal.npk".*;` contains a
-    `/` and a `*` and arms nothing; a scanner that counted them would charge
-    every module in the library for a division it does not perform. Blanking the
-    body rather than deleting it keeps every line number and column honest.
+    OPERATOR DETECTION CANNOT READ LITERALS. `use "./cal/cal.npk".*;` contains
+    a `/` and a `*` and arms nothing; a scanner that counted them would charge
+    every module in the library for a division it does not perform. Blanking
+    the body rather than deleting it keeps every line number and column honest.
 
-    (HERE SINCE CYCLE 0.1.1, moved from `arms.py`, which imports it: the S-6
-    generator and `check_literal_divisors` both read operators, and two copies
-    of "what is a string" are two answers to it. `strip_comments` above keeps
-    string bodies, and `code_lines` below is comments-only, so every check that
-    predates this move reads exactly what it read before.)
+    (Until cycle 0.1.5 this was `strip_strings(strip_comments(...))`, moved here
+    from `arms.py` at cycle 0.1.1 so that the S-6 generator and
+    `check_literal_divisors` shared one definition of "what is a string" -- a
+    definition that knew `"` and nothing else. Since TM-199 it is
+    `lexical.blank`, and the two still share it.)
     """
-    out, i, n, in_str = [], 0, len(text), False
-    while i < n:
-        c = text[i]
-        if in_str:
-            if c == "\\" and i + 1 < n:
-                out.append("  ")
-                i += 2
-                continue
-            if c == '"':
-                in_str = False
-                out.append(c)
-            else:
-                out.append(" " if c != "\n" else "\n")
-            i += 1
-            continue
-        if c == '"':
-            in_str = True
-        out.append(c)
-        i += 1
-    return "".join(out)
+    return lexical.blank(text)
+
+
+# THE LEXER'S WHITESPACE, AS A PATTERN (TM-200): space, tab, CR and LF --
+# `lexical._WS`, which is the compiler's `is_space`. Since cycle 0.1.5 every
+# check's pattern runs over a file's WHOLE blanked text and allows this between
+# any two tokens it names, because the compiler does: `mono_now ()`, a `[` on
+# the line after `v.items`, and `error` then `:ETimeOops` on the next line are
+# a call, an index and a declaration to it (`0.1.5.md` section 1.4), and a
+# pattern matched against one LINE saw none of them.
+_W = r"[ \t\r\n]"
+
+
+def _line(text, at):
+    """The 1-based line of offset `at` in `text`, `\\n` the only line end."""
+    return text.count("\n", 0, at) + 1
 
 
 def code_lines(path):
     """`[(lineno, code_only_text)]` for a source file, comments blanked.
 
-    COMMENTS ONLY -- a string's body is kept, whatever `check_civil_literal`'s
+    COMMENTS ONLY -- a literal's body is kept, whatever `check_civil_literal`'s
     docstring said while it lived (cycle 0.1.0 to 0.1.0c: "blanks comments and
-    string bodies"; it never did). A check that must not read strings either
-    calls `strip_strings` itself, as `check_literal_divisors` does.
+    string bodies"; it never did). A check that must not read literals calls
+    `blank_code` itself, as `check_literal_divisors` does. The file is read by
+    `lexical.read` and split at `\\n` alone since cycle 0.1.5 (TM-199), where a
+    text-mode read and `splitlines()` had split at a lone CR as well.
     """
-    with open(path, "r", encoding="utf-8", errors="replace") as fh:
-        text = fh.read()
-    return list(enumerate(strip_comments(text).splitlines(), 1))
+    return list(enumerate(strip_comments(lexical.read(path)).split("\n"), 1))
 
 
 def src_files(tree):
@@ -295,11 +275,12 @@ def check_layering(tree, **_):
                 "every sweep that counts files, which is why this is an "
                 "assertion and not a denominator." % layer)
 
-    # The umbrella's reach, reported rather than asserted. It is 4 today --
-    # `src/lib.npk` plus the three `src/core/` modules it re-exports -- and the
-    # five remaining placeholders are reached by no root at all, which is
-    # exactly why the `parse` stage roots every file in the tree rather than
-    # trusting the module graph.
+    # The umbrella's reach, reported rather than asserted. It is 5 since cycle
+    # 0.1.0 -- `src/lib.npk`, the three `src/core/` modules and `src/cal/cal.npk`
+    # -- and the four remaining placeholders are reached by no root at all,
+    # which is exactly why the `parse` stage roots every file in the tree rather
+    # than trusting the module graph. (It said "4 today" and "five remaining"
+    # until cycle 0.1.5, cycle 0.0.4's numbers.)
     reached = build_mod.reachable_sources(os.path.join(tree, "src", "lib.npk"))
     headline = ("%d `use` edge(s) over %d file(s) in src/; %d of %d layer(s) "
                 "present; the umbrella reaches %d file(s)"
@@ -316,7 +297,11 @@ def check_layering(tree, **_):
 # check_error_budget -- SAFETY.md §2
 # ---------------------------------------------------------------------------
 
-_ERROR_DECL = re.compile(r"^\s*(pub\s+)?error:([A-Za-z_][A-Za-z0-9_]*)")
+# A declaration, wherever it starts and however it is spaced (TM-200): `error`
+# and its `:` may stand on two lines, and a declaration may follow another on
+# one. Matched over `blank_code`, so a literal holding `error:` is not one.
+_ERROR_DECL = re.compile(r"(?<![A-Za-z0-9_.])(pub%s+)?error%s*:%s*"
+                         r"([A-Za-z_][A-Za-z0-9_]*)" % (_W, _W, _W))
 # `SAFETY.md` §2's table rows: `| `ETimeValue` | raised when ... |`
 _BUDGET_ROW = re.compile(r"^\|\s*`(E[A-Za-z][A-Za-z0-9_]*)`\s*\|")
 
@@ -360,9 +345,13 @@ def check_error_budget(tree, **_):
       line of code.
 
       REPORTS the identities the table names and the library has not declared
-      yet. Today that is all three, because no module computes anything --
-      failing on it would make the check red until cycle 0.4 and a red that
-      means "not written yet" is a red people learn to ignore.
+      yet -- two since cycle 0.1.0 declared `ETimeValue` in `cal`: `ETimeZone`
+      and `ETimeParse`, each declared by the cycle `SAFETY.md` S-4's table
+      names for its module. Failing on them would make the check red until the
+      last of those cycles, and a red that means "not written yet" is a red
+      people learn to ignore. (Until cycle 0.1.5 this said "Today that is all
+      three, because no module computes anything", and the report below said
+      "no module raises anything before cycle 0.1" on every run since then.)
     """
     named = budget_from_spec(tree)
     files = src_files(tree)
@@ -376,12 +365,10 @@ def check_error_budget(tree, **_):
              "would be reporting that a check ran when it did not."])
     declared, problems = {}, []
     for rel in files:
-        for lineno, line in code_lines(os.path.join(tree, rel)):
-            m = _ERROR_DECL.match(line)
-            if not m:
-                continue
-            name = m.group(2)
-            declared.setdefault(name, []).append("%s:%d" % (rel, lineno))
+        code = blank_code(lexical.read(os.path.join(tree, rel)))
+        for m in _ERROR_DECL.finditer(code):
+            declared.setdefault(m.group(2), []).append(
+                "%s:%d" % (rel, _line(code, m.start())))
 
     for name in sorted(declared):
         if name not in named:
@@ -403,7 +390,8 @@ def check_error_budget(tree, **_):
     if missing:
         reports.append(
             "%d of %d budgeted identities are not declared yet (%s) -- "
-            "expected: no module raises anything before cycle 0.1."
+            "expected: each arrives with the module `SAFETY.md` S-4's table "
+            "names for it."
             % (len(missing), len(named), ", ".join(missing)))
     headline = ("%d identit(y|ies) declared over %d file(s) in src/, against a "
                 "budget of %d" % (len(declared), len(files), len(named)))
@@ -438,8 +426,8 @@ CONSTANT_OWNER = {
 # about -- `limits.npk` exists so that every named bound is in one file with the
 # specification rule that set it beside it (0.0.4's checklist).
 _BOUND_DECL = re.compile(
-    r"^\s*(?:pub\s+)?fixed\s+[A-Za-z_][A-Za-z0-9_<>\[\]]*\s*:"
-    r"([A-Z][A-Z0-9_]*(?:_MAX|_MIN|_LIMIT|_BOUND))\b")
+    r"(?<![A-Za-z0-9_.])(?:pub%s+)?fixed%s+[A-Za-z_][A-Za-z0-9_<>\[\]]*%s*:%s*"
+    r"([A-Z][A-Z0-9_]*(?:_MAX|_MIN|_LIMIT|_BOUND))\b" % (_W, _W, _W, _W))
 # A NUMERIC LITERAL CARRIES ITS TYPE SUFFIX, so `\b(\d+)\b` does not match
 # `86400i64` -- the `i` is a word character and kills the trailing boundary.
 # That is not a hypothetical: the first draft of this check used `\b…\b` and
@@ -464,31 +452,32 @@ def check_constants_named(tree, **_):
     limits_rel = "src/core/limits.npk"
     for rel in files:
         mod = module_of(rel)
-        for lineno, line in code_lines(os.path.join(tree, rel)):
-            m = _BOUND_DECL.match(line)
-            if m:
-                bounds += 1
-                if rel != limits_rel:
-                    problems.append(
-                        "%s:%d declares the bound `%s`. Every named bound "
-                        "lives in `%s`, with the specification rule that set "
-                        "it written beside it -- a bound in the module that "
-                        "uses it is a bound nobody can review against the "
-                        "range it is supposed to enforce."
-                        % (rel, lineno, m.group(1), limits_rel))
-            for num in _NUMBER.findall(line):
-                if num not in CONSTANT_OWNER:
-                    continue
-                hits += 1
-                owner = CONSTANT_OWNER[num]
-                if mod not in (owner, "core"):
-                    problems.append(
-                        "%s:%d spells the magic number %s, which belongs to "
-                        "module `%s` (SAFETY.md S-16, CALENDAR.md §4). Give it "
-                        "a name in `%s` and import the name: a second literal "
-                        "copy is how two modules come to disagree about a "
-                        "constant neither of them owns."
-                        % (rel, lineno, num, owner, limits_rel))
+        text = lexical.read(os.path.join(tree, rel))
+        decls, code = blank_code(text), strip_comments(text)
+        for m in _BOUND_DECL.finditer(decls):
+            bounds += 1
+            if rel != limits_rel:
+                problems.append(
+                    "%s:%d declares the bound `%s`. Every named bound "
+                    "lives in `%s`, with the specification rule that set "
+                    "it written beside it -- a bound in the module that "
+                    "uses it is a bound nobody can review against the "
+                    "range it is supposed to enforce."
+                    % (rel, _line(decls, m.start()), m.group(1), limits_rel))
+        for m in _NUMBER.finditer(code):
+            num = m.group(1)
+            if num not in CONSTANT_OWNER:
+                continue
+            hits += 1
+            owner = CONSTANT_OWNER[num]
+            if mod not in (owner, "core"):
+                problems.append(
+                    "%s:%d spells the magic number %s, which belongs to "
+                    "module `%s` (SAFETY.md S-16, CALENDAR.md §4). Give it "
+                    "a name in `%s` and import the name: a second literal "
+                    "copy is how two modules come to disagree about a "
+                    "constant neither of them owns."
+                    % (rel, _line(code, m.start()), num, owner, limits_rel))
     headline = ("%d bound declaration(s) and %d owned-constant occurrence(s) "
                 "over %d file(s) in src/" % (bounds, hits, len(files)))
     return Result("check_constants_named", headline, problems)
@@ -560,31 +549,33 @@ def check_literal_divisors(tree, **_):
     check is the list that cannot go stale: it reads every division in the
     scope on every full run.
 
-    READS CODE, NEVER PROSE, AND NEVER A STRING. `strip_comments` and then
-    `strip_strings` -- because every `use "../core/limits.npk".X;` line in
-    `cal.npk` holds a `/`, and its header explains this rule in prose with
-    `/` and `%` in it. `code_lines` blanks comments only, whatever the
-    retired `check_civil_literal` said of it (0.1.1's record). The clean
-    control in `selfcheck.PLANTED` carries both shapes, so the exemption is
-    proven rather than assumed.
+    READS CODE, NEVER PROSE, AND NEVER A LITERAL. `blank_code` -- because
+    every `use "../core/limits.npk".X;` line in `cal.npk` holds a `/`, and its
+    header explains this rule in prose with `/` and `%` in it. `code_lines`
+    blanks comments only, whatever the retired `check_civil_literal` said of it
+    (0.1.1's record). The clean control in `selfcheck.PLANTED` carries both
+    shapes, so the exemption is proven rather than assumed.
 
     `+%`, `-%` AND `*%` ARE NOT DIVISIONS. They are the wrapping `+ - *`
     (the compiler's D-312), and their `%` is the marker, not the operator.
 
-    WHAT IT DOES NOT MODEL, stated so it is not over-read. Block comments,
-    character literals, raw and block strings and template literals: `src/cal/`
-    holds none. In a block comment, a character literal or a template's text a
-    `/` or `%` reads as a division and fails LOUD -- the safe direction. A raw
-    string ending in a backslash would be mis-blanked by `strip_strings`,
-    which reads that backslash as an escape; that is the one shape that could
-    hide code, and it would take a raw string in the calendar to reach it.
+    WHAT IT DID NOT MODEL UNTIL CYCLE 0.1.5, and this paragraph said the gap
+    was safe: *"Block comments, character literals, raw and block strings and
+    template literals: `src/cal/` holds none. In a block comment, a character
+    literal or a template's text a `/` or `%` reads as a division and fails
+    LOUD -- the safe direction."* Measured at 0.1.5's planning, two of those
+    shapes HID a division instead: a `'"'` opened a string that blanked the
+    rest of the file, and a `//` in a template's text blanked the rest of its
+    line -- as did a lone CR in a `//` comment followed by a `"`; and a `//`
+    inside a `/* */` blanked the rest of ITS line, which hid a clock call and a
+    declaration from the checks beside this one. Since TM-199 the blanking is
+    `lexical.py`'s, the compiler lexer's spans, and each shape is planted in
+    `selfcheck.PLANTED`.
     """
     files = [f for f in src_files(tree) if f.startswith(LITERAL_DIVISOR_SCOPE)]
     problems, divisions = [], 0
     for rel in files:
-        with open(os.path.join(tree, rel), "r", encoding="utf-8",
-                  errors="replace") as fh:
-            code = strip_strings(strip_comments(fh.read()))
+        code = blank_code(lexical.read(os.path.join(tree, rel)))
         for m in _DIVIDE.finditer(code):
             i = m.start()
             if code[i] == "%" and i > 0 and code[i - 1] in "+-*":
@@ -673,24 +664,28 @@ def check_literal_divisors(tree, **_):
 # `limit<R>`), so a field NAMED `string_off` owns nothing.
 _OWNING_TYPES = ("string", "buffer", "Bytes")
 _FIXED_TABLE = re.compile(
-    r"^\s*(?:pub\s+)?fixed\s+([A-Za-z_][A-Za-z0-9_]*(?:<[^>\[\]]*>)?)\s*\[\s*\d*\s*\]\s*:")
-_STRUCT_DECL = re.compile(r"^\s*(?:pub\s+)?struct:([A-Za-z_][A-Za-z0-9_]*)")
+    r"(?<![A-Za-z0-9_.])(?:pub%s+)?fixed%s+([A-Za-z_][A-Za-z0-9_]*(?:<[^>\[\]]*>)?)"
+    r"%s*\[%s*\d*%s*\]%s*:" % (_W, _W, _W, _W, _W, _W))
+_STRUCT_DECL = re.compile(r"(?<![A-Za-z0-9_.])(?:pub%s+)?struct%s*:%s*"
+                          r"([A-Za-z_][A-Za-z0-9_]*)" % (_W, _W, _W))
 
 
-def _absorb(out, cur, rel, lineno, text):
-    """Read `text` as struct-body text; return the struct still open, or None.
-
-    Fields are separated by `;` and the body ends at the first `}`, so this is
-    the same function for both spellings and there is only one place that knows
-    what a field looks like.
+def _absorb(out, cur, rel, code, start):
+    """Read `code` from `start` -- just past a declaration's `{` -- as struct
+    body text: fields separated by `;`, the body ending at the first `}`. One
+    function for every spelling, so there is one place that knows what a field
+    looks like. A field's text is its tokens joined by single spaces, and its
+    line is the line its first token is on (TM-200: a field may span lines).
     """
-    close = text.find("}")
-    body, closed = (text[:close], True) if close >= 0 else (text, False)
-    for field in body.split(";"):
-        field = field.strip()
-        if field and ":" in field:
-            out[cur].append((rel, lineno, field))
-    return None if closed else cur
+    close = code.find("}", start)
+    end = close if close >= 0 else len(code)
+    pos = start
+    for field in code[start:end].split(";"):
+        text = " ".join(field.split())
+        if text and ":" in text:
+            lead = len(field) - len(field.lstrip())
+            out[cur].append((rel, _line(code, pos + lead), text))
+        pos += len(field) + 1
 
 
 def _structs(tree, files):
@@ -714,23 +709,17 @@ def _structs(tree, files):
     """
     out = {}
     for rel in files:
-        cur = None
-        for lineno, line in code_lines(os.path.join(tree, rel)):
-            m = _STRUCT_DECL.match(line)
-            if m:
-                cur = m.group(1)
-                out.setdefault(cur, [])
-                # The remainder of the declaration line, past its opening `{`.
-                # For `struct:X = {` that is empty and the body follows; for
-                # `struct:X = { a; b; };` it is the whole body.
-                rest = line[m.end():]
-                brace = rest.find("{")
-                rest = rest[brace + 1:] if brace >= 0 else ""
-                cur = _absorb(out, cur, rel, lineno, rest)
-                continue
-            if cur is None:
-                continue
-            cur = _absorb(out, cur, rel, lineno, line)
+        # THE WHOLE TEXT, NOT A LINE AT A TIME, SINCE CYCLE 0.1.5 (TM-200): the
+        # declaration's tokens may stand on separate lines -- `struct` and
+        # `:Row = {` compile as a struct, measured -- and the body is read from
+        # its `{` to its first `}` wherever the line breaks fall, which is
+        # what the single-line spelling above needed as well.
+        code = blank_code(lexical.read(os.path.join(tree, rel)))
+        for m in _STRUCT_DECL.finditer(code):
+            out.setdefault(m.group(1), [])
+            brace = code.find("{", m.end())
+            if brace >= 0:
+                _absorb(out, m.group(1), rel, code, brace + 1)
     return out
 
 
@@ -788,10 +777,9 @@ def check_no_owning_fields(tree, **_):
     structs = _structs(tree, files)
     problems, tables = [], 0
     for rel in files:
-        for lineno, line in code_lines(os.path.join(tree, rel)):
-            m = _FIXED_TABLE.match(line)
-            if not m:
-                continue
+        code = blank_code(lexical.read(os.path.join(tree, rel)))
+        for m in _FIXED_TABLE.finditer(code):
+            lineno = _line(code, m.start())
             tables += 1
             elem = m.group(1)
             if _owning_type(elem):
@@ -832,8 +820,12 @@ RAW_INDEX_OWNERS = {
 # A binding whose TYPE is a bare pointer: `wild T->:name`, in a declaration, a
 # field or a parameter. The name it binds is then a bare pointer wherever it is
 # used, and indexing it is unguarded however it was reached.
-_WILD_BINDING = re.compile(r"\bwild\s+[A-Za-z_][A-Za-z0-9_<>]*\s*->\s*:\s*"
-                           r"([A-Za-z_][A-Za-z0-9_]*)")
+_WILD_BINDING = re.compile(r"\bwild%s+[A-Za-z_][A-Za-z0-9_<>]*%s*->%s*:%s*"
+                           r"([A-Za-z_][A-Za-z0-9_]*)" % (_W, _W, _W, _W))
+# Each owned field's INDEX, however it is spaced (TM-200): `v.items [0i64]`,
+# and a `[` on the line after, index the bare pointer exactly as `v.items[`.
+_RAW_INDEX = dict((needle, re.compile(re.escape(needle[:-1]) + _W + "*\\["))
+                  for needle in RAW_INDEX_OWNERS)
 
 
 def check_raw_index(tree, **_):
@@ -871,36 +863,37 @@ def check_raw_index(tree, **_):
     files = src_files(tree)
     problems, hits, bindings = [], 0, 0
     for rel in files:
-        lines = code_lines(os.path.join(tree, rel))
+        # The whole comment-blanked text (TM-200): a binding, its index and a
+        # field's index are each matched however the line breaks fall.
+        code = strip_comments(lexical.read(os.path.join(tree, rel)))
         bound = {}
-        for lineno, line in lines:
-            for m in _WILD_BINDING.finditer(line):
-                bound.setdefault(m.group(1), lineno)
+        for m in _WILD_BINDING.finditer(code):
+            bound.setdefault(m.group(1), _line(code, m.start()))
         bindings += len(bound)
-        for lineno, line in lines:
-            for needle, owner in RAW_INDEX_OWNERS.items():
-                if needle in line:
-                    hits += 1
-                    if rel != owner:
-                        problems.append(
-                            "%s:%d indexes `%s` raw. That is a BARE POINTER "
-                            "and the language does not bounds-check one "
-                            "(TM-108, S-17b) -- an out-of-range index is a "
-                            "wrong value, not a crash. Go through the accessor "
-                            "in `%s`, which checks `0 <= i` as well as "
-                            "`i < count`." % (rel, lineno, needle, owner))
-            for name, at in bound.items():
-                if re.search(r"\b%s\s*\[" % re.escape(name), line):
-                    hits += 1
+        for needle, owner in RAW_INDEX_OWNERS.items():
+            for m in _RAW_INDEX[needle].finditer(code):
+                hits += 1
+                if rel != owner:
                     problems.append(
-                        "%s:%d indexes `%s`, which is bound as a BARE POINTER "
-                        "at %s:%d (`wild ... ->:%s`). The language does not "
-                        "bounds-check one (TM-108, S-17b), so this index is "
-                        "UNGUARDED and an out-of-range read is a wrong value "
-                        "rather than a crash. Lay a `#wild_slice` over the "
-                        "live count and index THAT, which is S-17c and puts "
-                        "the compiler's own `emit_bounds_guard` back."
-                        % (rel, lineno, name, rel, at, name))
+                        "%s:%d indexes `%s` raw. That is a BARE POINTER "
+                        "and the language does not bounds-check one "
+                        "(TM-108, S-17b) -- an out-of-range index is a "
+                        "wrong value, not a crash. Go through the accessor "
+                        "in `%s`, which checks `0 <= i` as well as "
+                        "`i < count`."
+                        % (rel, _line(code, m.start()), needle, owner))
+        for name, at in bound.items():
+            for m in re.finditer(r"\b%s%s*\[" % (re.escape(name), _W), code):
+                hits += 1
+                problems.append(
+                    "%s:%d indexes `%s`, which is bound as a BARE POINTER "
+                    "at %s:%d (`wild ... ->:%s`). The language does not "
+                    "bounds-check one (TM-108, S-17b), so this index is "
+                    "UNGUARDED and an out-of-range read is a wrong value "
+                    "rather than a crash. Lay a `#wild_slice` over the "
+                    "live count and index THAT, which is S-17c and puts "
+                    "the compiler's own `emit_bounds_guard` back."
+                    % (rel, _line(code, m.start()), name, rel, at, name))
     headline = ("%d raw-index site(s) over %d file(s) in src/, %d owner(s) "
                 "allowed, %d bare-pointer binding(s) watched"
                 % (hits, len(files), len(RAW_INDEX_OWNERS), bindings))
@@ -917,6 +910,13 @@ def check_raw_index(tree, **_):
 # argument, which this tree needed on its first run.
 PURITY_BAN = ("sys(", "mono_now(", "environ(", "read_file(", "open(", "write(")
 HOST_DIR = "src/host/"
+# THE CALL SHAPE IS THE LEXER'S, NOT A SPELLING (TM-200): a banned name, then the
+# lexer's whitespace -- a newline included -- then `(`. `mono_now ()`, and a
+# `sys` whose `(` begins the next line, are calls to the compiler (measured at
+# `c970483`, `0.1.5.md` section 1.4) and neither contains `sys(`; so each entry
+# above is matched over the file's WHOLE comment-blanked text, never a line.
+_PURITY_CALL = re.compile(
+    "(%s)%s*\\(" % ("|".join(re.escape(b[:-1]) for b in PURITY_BAN), _W))
 
 
 def check_purity(tree, **_):
@@ -944,20 +944,19 @@ def check_purity(tree, **_):
     total = len(src_files(tree))
     problems = []
     for rel in files:
-        for lineno, line in code_lines(os.path.join(tree, rel)):
-            for banned in PURITY_BAN:
-                if banned in line:
-                    problems.append(
-                        "%s:%d calls `%s` outside `src/host/`. Every function "
-                        "in `ntime` outside `src/host/` is a pure function of "
-                        "its arguments (S-7, TM-018): same arguments, same "
-                        "value, on every machine, forever. That is what makes "
-                        "this library testable with no double and portable by "
-                        "rewriting one module -- and it is the claim the "
-                        "undefined-symbol scan CANNOT check, because "
-                        "`npk_sys6` is in its allowlist by construction "
-                        "(B-2c, TM-118, RX-120)."
-                        % (rel, lineno, banned.rstrip("(")))
+        code = strip_comments(lexical.read(os.path.join(tree, rel)))
+        for m in _PURITY_CALL.finditer(code):
+            problems.append(
+                "%s:%d calls `%s` outside `src/host/`. Every function "
+                "in `ntime` outside `src/host/` is a pure function of "
+                "its arguments (S-7, TM-018): same arguments, same "
+                "value, on every machine, forever. That is what makes "
+                "this library testable with no double and portable by "
+                "rewriting one module -- and it is the claim the "
+                "undefined-symbol scan CANNOT check, because "
+                "`npk_sys6` is in its allowlist by construction "
+                "(B-2c, TM-118, RX-120)."
+                % (rel, _line(code, m.start()), m.group(1)))
     headline = ("%d banned form(s) over %d of %d file(s) in src/ (%s exempt); "
                 "SOURCE-level -- the symbol scan cannot answer this (B-2c)"
                 % (len(problems), len(files), total, HOST_DIR))
@@ -1124,24 +1123,25 @@ def check_specs_current(tree, **_):
         if (rel, None) in exempt:
             excused.add((rel, None))
             continue
-        with open(os.path.join(tree, rel), "r", encoding="utf-8",
-                  errors="replace") as fh:
-            for lineno, line in enumerate(fh, 1):
-                for prefix, number in _CITATION.findall(line):
-                    if prefix not in declared:
-                        continue
-                    cited += 1
-                    if number in declared[prefix]:
-                        continue
-                    rule = "%s-%s" % (prefix, number)
-                    if (rel, rule) in exempt:
-                        excused.add((rel, rule))
-                        continue
-                    # A lettered suffix inherits its parent's declaration only
-                    # when the parent declares it; `S-4b` IS declared as a rule
-                    # of its own in this tree, so no inheritance is assumed.
-                    unresolved.setdefault(rule, []).append("%s:%d"
-                                                           % (rel, lineno))
+        # Every kind of file this scans is read as bytes and split at `\n`
+        # alone (TM-199), so a line number here is `git grep -n`'s.
+        lines = lexical.read(os.path.join(tree, rel)).split("\n")
+        for lineno, line in enumerate(lines, 1):
+            for prefix, number in _CITATION.findall(line):
+                if prefix not in declared:
+                    continue
+                cited += 1
+                if number in declared[prefix]:
+                    continue
+                rule = "%s-%s" % (prefix, number)
+                if (rel, rule) in exempt:
+                    excused.add((rel, rule))
+                    continue
+                # A lettered suffix inherits its parent's declaration only
+                # when the parent declares it; `S-4b` IS declared as a rule
+                # of its own in this tree, so no inheritance is assumed.
+                unresolved.setdefault(rule, []).append("%s:%d"
+                                                       % (rel, lineno))
 
     reports = []
     for rule in sorted(unresolved):
@@ -1344,9 +1344,11 @@ def denominators(tree, extra=None):
             d["domain_" + os.path.basename(rel)[:-4]] = e.sweep_count
     lib = os.path.join(tree, "src", "lib.npk")
     if os.path.isfile(lib):
-        with open(lib, "r", encoding="utf-8", errors="replace") as fh:
-            d["lib_reexports"] = sum(1 for l in fh
-                                     if l.startswith("pub use "))
+        # THE COMPILER'S COUNT (TM-199): every `pub use` that is code, however
+        # it is spaced -- where this counted every LINE that began with the
+        # words, a `pub use` inside a `/* */` included.
+        d["lib_reexports"] = sum(
+            1 for _, _, pub in lexical.imports(lexical.read(lib)) if pub)
     d.update(extra or {})
     return d
 
@@ -1382,25 +1384,25 @@ def check_denominators(tree, extra=None, **_):
             path = os.path.join(dirpath, n)
             rel = os.path.relpath(path, tree).replace(os.sep, "/")
             files_seen += 1
-            with open(path, "r", encoding="utf-8", errors="replace") as fh:
-                for lineno, line in enumerate(fh, 1):
-                    for m in _SWEEP_MARK.finditer(line):
-                        name, claimed = m.group(1), int(m.group(2))
-                        tagged += 1
-                        if name not in known:
-                            problems.append(
-                                "%s:%d tags `%s`, which this sweep does not "
-                                "measure. A tag naming nothing is excused by "
-                                "nothing. Known: %s"
-                                % (rel, lineno, name,
-                                   ", ".join(sorted(known))))
-                        elif known[name] != claimed:
-                            problems.append(
-                                "%s:%d says %s = %d; the tree says %d. The "
-                                "tree is the authority (TM-002). Either the "
-                                "sentence is stale, or the tree grew a file "
-                                "nobody meant to add."
-                                % (rel, lineno, name, claimed, known[name]))
+            # Bytes, and `\n` the only line end (TM-199): a line number here
+            # is `git grep -n`'s, for every kind of file this reads.
+            for lineno, line in enumerate(lexical.read(path).split("\n"), 1):
+                for m in _SWEEP_MARK.finditer(line):
+                    name, claimed = m.group(1), int(m.group(2))
+                    tagged += 1
+                    if name not in known:
+                        problems.append(
+                            "%s:%d tags `%s`, which this sweep does not "
+                            "measure. A tag naming nothing is excused by "
+                            "nothing. Known: %s"
+                            % (rel, lineno, name, ", ".join(sorted(known))))
+                    elif known[name] != claimed:
+                        problems.append(
+                            "%s:%d says %s = %d; the tree says %d. The "
+                            "tree is the authority (TM-002). Either the "
+                            "sentence is stale, or the tree grew a file "
+                            "nobody meant to add."
+                            % (rel, lineno, name, claimed, known[name]))
     headline = ("%d tagged number(s) over %d file(s), against %d measured "
                 "denominator(s)" % (tagged, files_seen, len(known)))
     res = Result("check_denominators", headline, problems)

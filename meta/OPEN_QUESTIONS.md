@@ -675,6 +675,13 @@ thing that goes stale silently.
 regardless of the count, so the range-check obligation TM-105 creates is
 complete today.
 
+*(Cycle 0.1.5: "0.3 by `ROADMAP.md`" is not what `ROADMAP.md` says —
+`Period`, and so `period_add`, is cycle 0.7's — and `harness/checks.py`'s
+`PENDING` and cycle 0.2's README both turn `check_int128_sites` on in cycle 0.2,
+beside `timestamp_since`. The three disagree about when this is settled. Cycle
+0.2's opening plan settles the order, and nothing turns the check on before
+this question is answered.)*
+
 ---
 
 ### O-X8 — how does a refusing constructor hand back its `ValueFault`?
@@ -830,6 +837,12 @@ then:* it waits for something to check. Today no module but the placeholder
 `host` could name a syscall, `check_purity` refuses the spelling everywhere
 else, and a scan with nothing to find would be commissioned only against
 plants.
+
+*(Cycle 0.1.5: two more spellings `check_purity` did not refuse were measured
+and closed at the close — `mono_now ()`, and a banned call after a `//` inside a
+`/* */` — TM-199 and TM-200. The recommendation stands, and the two make its case:
+a source check sees SPELLINGS and has now been widened twice for ones it
+missed, while a call-edge scan sees CALLS.)*
 
 ### ~~O-X10 — how `ZONE_MODEL.md` Z-4's version string is held, while a move out of `fixed` storage compiles and faults~~ — **SETTLED 2026-09-26 (TM-191): the hold lifts at compiler `c970483`, and Z-6 reads the binding by `.clone()`**
 

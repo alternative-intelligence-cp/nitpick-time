@@ -18,12 +18,13 @@ $ NPKC=… NPKRT=… python3 harness/run.py [--only SUBSTRING] [--quick]
 | `manifest.py` | `nitpick.toml`, parsed and **schema-checked in both directions** — an unknown key is named and refused, a required key that is missing is named too. P-12: nothing here hardcodes a path, a flag or a version |
 | `toolchain.py` | asks `llc`, `opt` and `ld.lld` their versions and holds each to `[toolchain] llvm` **exactly**. It asks the three tools it invokes, and not `llvm-config`, which ships in a `-dev` package the build never needs |
 | `elf.py` | the ELF64 symbol table, read with `struct`. The undefined-symbol scan and the runtime allowlist. **Read its header before citing the scan as a guarantee** |
+| `lexical.py` | **the harness's one reading of `.npk` source** (cycle 0.1.5, `TESTING.md` V-1k): every `.npk` file is opened here as bytes, and read as code — comments and literals blanked, `use` paths decoded — by the compiler lexer's rules. `nitpick-regex`'s reader, its code ported statement for statement |
 | `build.py` | the pipeline — `npkc` → `opt` → `llc` → scan → `ld.lld` — every argv built from the manifest's flag lists (B-1) |
 | `stages.py` | the marker grammar, and the `program`, refusal, `parse`, `golden` and `sweep` stages — and, since cycle 0.1.4b, the `heap:` and `cap:` markers: the runtime's own `NPK_HEAP_STATS` line held to a file's bounds, and the address-space belt with the floor program as its control (`TESTING.md` V-17) |
 | `checks.py` | the **tree checks** — `TESTING.md` §2's family, each one diffing the library against a document that describes it |
 | `arms.py` | `check_failsafe_arms`: the S-6 arm generator, and `NITPICK-REACH-003` as its oracle |
 | `repro.py` | B-4: two builds of one tree must be the same bytes. Also a command in its own right, with `--between` for `check_tables_regenerate` |
-| `selfcheck.py` | **the only thing here that demonstrates the checks can fail.** V-14's nine cases, the tree checks on planted violations, and the arm generator against the compiler |
+| `selfcheck.py` | **the only thing here that demonstrates the checks can fail.** V-14's nine cases, the tree checks on planted violations, the arm generator against the compiler, the verdict mechanisms, and — since cycle 0.1.5 — the reader against the compiler's lexer (part E) |
 | `run.py` | the driver: stage order, per-unit verdict lines, the summary and its counts |
 
 ## The stage order, and each line is a reason
@@ -45,7 +46,9 @@ $ NPKC=… NPKRT=… python3 harness/run.py [--only SUBSTRING] [--quick]
 
 `selfcheck.py` plants a fault, runs **this runner** against a scratch tree under
 `.internal/scratch/selfcheck/` with `--root`, and requires a **red** run that
-names it. Three parts:
+names it. Five parts *(this said "Three parts" and listed three until cycle
+0.1.5, when the fifth joined; the fourth, the verdict mechanisms, had been
+running unlisted since cycle 0.0.6)*:
 
 - **V-14's nine cases** — a wrong `expect-exit`, a missing code, an unexpected
   code (D-237), a golden differing by one byte, a file that does not parse, a
@@ -54,7 +57,8 @@ names it. Three parts:
   header, five ways beside one control (TM-187). Case 6
   (a generator differing by one line) is **pending until 0.5** and prints as
   pending rather than passing.
-- **Twenty-three planted violations across the tree checks** — each check
+- **Forty planted violations across the tree checks since cycle 0.1.5** (twenty-three
+  before; the seventeen new are V-1k's reader rows and V-1l's token rows) — each check
   shown red on a violation and silent on a clean control, in milliseconds, with
   no compilation. *(This bullet said "nine" from cycle 0.0.3, when it was true,
   to 0.1.1, "twenty" at 0.1.1 and "twenty-one" at 0.1.2; the run prints the
@@ -65,6 +69,14 @@ names it. Three parts:
   owner two structs down — TM-177.)*
 - **The S-6 arm generator** diffed against `NITPICK-REACH-003`'s own identity
   list on three modules whose bills cycle 0.0.0 measured.
+- **The verdict mechanisms** — `run._verdict` on four specimens, and
+  `check_exemptions_live`, `run_defect_corpus` and `check_expect_headers` each
+  driven red and silent on a control (`TESTING.md` V-14c; TM-141).
+- **The reader, against the compiler's lexer** — since cycle 0.1.5, part E:
+  one text of every lexical form read back from a file through `lexical.py`,
+  and one program of every form a run can observe compiled and run by the
+  pinned compiler, which must exit 0 while the reader sees exactly the code
+  that ran (`TESTING.md` V-1k).
 
 **Every case carries a CONTROL in the same run.** Without one, a red proves only
 that *something* went wrong — the tree, the manifest, the toolchain — and a
@@ -86,8 +98,10 @@ control twice and reported that nothing had been caught. It was right.
 and emits the whole module graph it reaches, prelude included, so there is no
 separate compilation and `ld.lld p.o ntime.o npkrt.o` is a duplicate-symbol
 error. Step 7 builds the library because *building it is a check*; every program
-in step 9 carries its own copy of everything. That costs about 2.5 s per program
-and it is printed rather than hidden.
+in step 9 carries its own copy of everything. That costs about 0.3 s per
+program at compiler `c970483`, both legs, and it is printed rather than hidden.
+*(This said about 2.5 s until cycle 0.1.5 — the cost before the compiler's
+1.5.2d emitted only the prelude functions a module references.)*
 
 **The undefined-symbol scan cannot FLAG a syscall** (TM-118, TM-153, RX-120).
 `npk_sys6` is the runtime's own trampoline, so it is in the allowlist by
@@ -275,6 +289,19 @@ now **19 run, 16 refusal** — `generic_owning_copy/case5` is refused
 `vec_at_pod` and the churn pair `vec_churn_pop` and `vec_churn_clear` — 6 sweep,
 1 conformance). `112 = 35 + 77`. The churn pair adds about 3.4 s on each full
 run, its two capped runs included; no sweep's cost moved.
+
+**At cycle 0.1.5, the close, the same pin, 112 units**: no test added. The
+self-check plants 8 of V-14's 9 cases, **40** tree-check violations with 40
+clean controls — the seventeen new are the reader's eight rows and the token
+rows' nine (`TESTING.md` V-1k, V-1l) — 3 arm specimens, **4** verdict
+specimens, and a fifth part, the reader against the compiler's lexer, which
+compiles and runs one program — the close adds about a second to a full
+run, measured at planning; the tree checks at
+`11 live`; parse over 127 files, `90 + 35 + 2`; the defect corpus at 36 = 1
+exempt + 35 asserted; and library + repro + suite at 77. `112 = 35 + 77`. At the
+close's planning the six sweeps took 2.8 + 2.0 + 8.1 + 0.5 + 5.5 + 3.6 = 22.5 s,
+7.5 s under the 30 s threshold, and `BUILD.md` B-9 says which member crosses it
+next.
 
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the

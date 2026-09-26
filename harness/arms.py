@@ -57,8 +57,9 @@ import os
 import re
 
 import build as build_mod
+import lexical
 from build import BuildError
-from checks import Result, strip_comments, strip_strings
+from checks import Result, blank_code
 
 
 # The unconditional floor, measured rather than read: a program with `main`, no
@@ -84,15 +85,18 @@ _FAIL_SITE = re.compile(r"\bfail\s+([A-Z][A-Za-z0-9_]*)")
 _PROPAGATE = re.compile(r"\?!|!!!")
 
 
-# `strip_strings` -- blank double-quoted string bodies -- lives in `checks.py`
-# since cycle 0.1.1 and is imported above: `check_literal_divisors` reads
-# operators too, and one definition of "what is a string" serves both.
+# `blank_code` -- every comment and every literal blanked -- lives in
+# `checks.py` and is imported above: `check_literal_divisors` reads operators
+# too, and one definition of "what is code" serves both. (From cycle 0.1.1 it
+# was `strip_strings(strip_comments(...))`, two scanners that knew `//` and
+# `"` and nothing else; since cycle 0.1.5 both halves are `lexical.py`'s,
+# TM-199.)
 
 
 def code_only(path):
-    """A file's text with comments AND string bodies blanked."""
-    with open(path, "r", encoding="utf-8", errors="replace") as fh:
-        return strip_strings(strip_comments(fh.read()))
+    """A file's text with every comment and every literal blanked, read the
+    way the compiler reads it (`lexical.read`, TM-199)."""
+    return blank_code(lexical.read(path))
 
 
 def _arith_arms(text):

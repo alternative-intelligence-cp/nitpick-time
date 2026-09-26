@@ -13,7 +13,7 @@
 // accepted as the compiler's DEF-5, and landed at its cycle 1.5.1b step 1b.
 // The defect below NO LONGER EXISTS. `npkc` refuses this file at `main`,
 // naming D-013 and LISTING the identities the absent handler would owe --
-// FOUR of them, which is `SAFETY.md` S-4b's unconditional floor, because this
+// FOUR at `950bb1d` (SIX since `c3bdae2`), S-4b's unconditional floor: this
 // file has no import, no arithmetic and no allocation:
 //
 //     NITPICK-REACH-003 ...: `main` without `failsafe` (D-013): ...

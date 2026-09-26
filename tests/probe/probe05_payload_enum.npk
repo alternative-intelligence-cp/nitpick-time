@@ -35,6 +35,11 @@
 //    are correct and pins the sixth's refusal in `probe05b_derive_eq_refused.npk`.
 //    `Clone` is verified here to KEEP the payload, because it is the derive
 //    whose silent failure would be worst and it turns out to be right.
+//    (Dated note, cycle 0.1.5: item 3 is `950bb1d`'s. O-N10 is FIXED since pin
+//    `94874ce` -- the compiler's D-250, TM-111 -- so both derives compile and
+//    read the payload, `probe05b` is a positive regression case rather than a
+//    refusal, and `defect/derive_payload_enum/`'s three cases assert the fix.
+//    This probe's own derives are unchanged.)
 mod:probe05_payload_enum;
 
 error:E9;
@@ -121,9 +126,9 @@ func:main = int32(cstring[]:_~argv) {
     // ---- Clone keeps the payload --------------------------------------
 
     // The derive whose silent failure would be worst, checked rather than
-    // assumed: O-N10 shows `Ord` and `Hash` discard the payload on this very
-    // shape, so "the derives handle payloads" is not a safe generalisation
-    // from one of them.
+    // assumed: O-N10 showed `Ord` and `Hash` discarding the payload on this
+    // very shape at `950bb1d` (fixed since `94874ce`, TM-111), so "the derives
+    // handle payloads" is not a safe generalisation from one of them.
     Part:c = l.clone() ?! E9;
     if ((raw width_of(c)) != 1007i64)                   { exit 18i32; }
 

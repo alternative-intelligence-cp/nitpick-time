@@ -366,6 +366,15 @@ cost **22.2 s** together on a full invocation — 2.8 + 2.0 + 8.0 + 0.5 + 5.4 +
 `every_month_length`, `every_oracle_date` and `every_ordinal_date`, both legs,
 compile included, the harness's own per-unit figures — against a 30 s
 threshold `meta/roadmap/0.1/0.1.4.md` §8 set in advance.)*
+*(Measured at cycle 0.1.5's planning, compiler `c970483`, the same six: **22.5
+s** — 2.8 + 2.0 + 8.1 + 0.5 + 5.5 + 3.6 s — so the threshold holds with 7.5 s
+to spare, and neither it nor the stage changes at the close. **The next member
+is the one that crosses it**: cycle 0.2.2's round trip over every second of
+512 days, about 44 million cases, whose plan measures it before it lands and
+chooses — the stage whole and this rule amended to its measured cost, the
+member's −O2 leg over a sample, or its domain split across the two legs — with
+the first the default if the stage stays under 60 s. `meta/roadmap/0.2/README.md`
+carries it.)*
 
 **Rule B-9b (TM-125) — no CI workflow may pass `--quick`**, and O-X5 is settled
 that way. The argument is not that the sweeps are cheap — they are, and that
@@ -488,7 +497,8 @@ six layers. **The prefix is the MODULE's and not the directory's**, which is
 the sentence that makes `vec_`/`bytes_` correct rather than exceptions: `core/`
 holds three modules and each carries its own. Nothing checks B-15 today; a
 `check_public_prefix` is cycle 0.1's, when `src/cal/` gives it a second
-directory to be right about.)*
+directory to be right about.)* *(That check was withdrawn with the rule's old
+text at cycle 0.1.3 — TM-176, the note above — and nothing is owed.)*
 
 **Rule B-16 — imports are relative today.** Until dependency roots are
 populated (§1), every internal import is `use "./x.npk".*;` or

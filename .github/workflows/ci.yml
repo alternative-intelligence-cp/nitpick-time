@@ -2,7 +2,8 @@
 #
 # EVERY INPUT IS PINNED, AND EVERY PIN IS ASSERTED RATHER THAN REQUESTED (0.0.1
 # P-10; D-204, which makes the toolchain a build input). The compiler is a
-# COMMIT, never a branch: `nitpick` is moving through its cycle 1.5, and a
+# COMMIT, never a branch: `nitpick` is still moving -- through its cycle 1.6
+# at this pin (this said "its cycle 1.5" until cycle 0.1.5) -- and a
 # library whose CI tracks another repository's `main` is a library whose CI goes
 # red for reasons that are not its own. Bumping either pin is a deliberate
 # commit, and the commit that bumps it is the one that runs the full suite.
@@ -99,6 +100,16 @@
 # `fixed_move_out/`'s three cases asserts that refusal by its marker; and an
 # imported `fixed` binding's type resolves in its declaring module, asserted
 # by the seven cases of `tests/probe/defect/fixed_import_scope/` (O-N23).
+# AND SINCE CYCLE 0.1.3c: a `Vec` is move-only -- a copy of one, one assigned
+# over another and a copy of a struct holding one are refused where they are
+# written -- and `vec_at` at an owning element is refused at the call rather
+# than moving the element out, each asserted by a refusal probe (TM-193,
+# TM-194). AND SINCE CYCLE 0.1.5: every `.npk` the runner reads, it reads as
+# the compiler does -- bytes, comments and literals by the lexer's rules,
+# import paths decoded (`harness/lexical.py`, `TESTING.md` V-1k) -- and every
+# tree check matches tokens across the lexer's whitespace, never a line
+# (V-1l). Before it, eight shapes of source made the runner disagree with
+# the compiler, and six of them passed a violation silently.
 #
 # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
 # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
@@ -111,7 +122,9 @@
 # spellings or a branch no plant can express -- each with a clean control
 # beside it; then the S-6 arm generator diffed
 # against the compiler's own `NITPICK-REACH-003` identity list; then the
-# verdict mechanisms of TM-137 and TM-141 driven red. It runs FIRST and its
+# verdict mechanisms of TM-137 and TM-141 driven red; then, since cycle
+# 0.1.5, the reader asked about one text of every lexical form and the
+# pinned compiler about one program of them. It runs FIRST and its
 # failure is fatal, so
 # a green run below a broken runner is not a state this workflow can report.
 # Until 0.0.3 that was the honest gap here, and it was written in this comment

@@ -1230,6 +1230,14 @@ replacement.*
 ---
 
 ### TM-113 — `List<T>` moved into the prelude and became OWNING, so `Vec<T>`'s divergence from it widened
+> **SUPERSEDED IN PART by TM-193 (2026-09-26), noted at cycle 0.1.5.** Its
+> "three fields, `wild T->` first" and its "gets none of that": since cycle
+> 0.1.3c a `Vec<T>` has a fourth field, `hidden string[0]:move_only`, zero
+> bytes, and the layout walk marks a `Vec` owning for it, while the drop the
+> compiler generates for one frees nothing. The conclusion stands — the
+> element-lifetime obligation is `ntime`'s — and `SAFETY.md`'s note under
+> "Where `List<T>` is" says so where the paragraph is read.
+
 **2026-09-05. Read out of the compiler's source at the pinned commit
 `0dfddac`**, not out of its working tree, which had already moved on to
 `daa5057`. Nothing was compiled for this decision; it is a documentation
@@ -3263,6 +3271,11 @@ repository trusts, and saying so is the difference between a gap and a lie.
 ---
 
 ### TM-144 — `check_raw_index` enumerated the KNOWN bare pointers by field name; it did not find bare pointers, and the evasion is one line
+> **SUPERSEDED IN PART by TM-201 (2026-09-26).** Its deferral of the
+> `#wild_slice` length check to "Cycle 0.1, with `src/cal/` beside it": cycle
+> 0.1 did not build it, and its second subject never arrived — `src/cal/` lays
+> no slice. Re-homed by TM-201, with the units that guard the length today.
+
 **2026-09-06, cycle 0.0.6. Widens `harness/checks.py` `check_raw_index` and
 adds a plant. From the pre-close audit, finding B1 — the answer to the brief's
 class question, "what else can the gates not see".**
@@ -3321,6 +3334,11 @@ out narrower than its name. **Cycle 0.1**, with `src/cal/` beside it.
 ---
 
 ### TM-145 — a WHOLE-FILE exemption cannot expire, so there is none; and a stale exemption FAILS the run rather than reporting
+> **SUPERSEDED IN PART by TM-201 (2026-09-26).** Its deferral of
+> `check_check_registry` to cycle 0.1 (`TESTING.md` V-14e): cycle 0.1 did not
+> build it, and it is re-homed by TM-201 to the next subcycle that moves the
+> check family.
+
 **2026-09-06, cycle 0.0.6. Amends `harness/checks.py` `CITATION_EXEMPT` and
 `check_specs_current`, and `harness/selfcheck.py`'s fixtures. From the
 pre-close audit, finding B3.**
@@ -5469,3 +5487,172 @@ prelude-owned name and the tree is red for a reason that is not the re-pin's;
 then 0.1.5, and the cycle's close would wait on three landings and a re-pin;
 **a `never fails` clone** — D-327 declines one for owning types, and the
 prelude's `Clone` is fallible (TM-194).
+
+---
+
+# Cycle 0.1.5 — the close of cycle 0.1, ratified 2026-09-26
+
+### TM-199 — the harness reads `.npk` source as the compiler's lexer does, through one module, `harness/lexical.py`: `nitpick-regex`'s reader, its code ported statement for statement
+
+**2026-09-26, cycle 0.1.5 (PD-50). Adds `harness/lexical.py`; amends
+`harness/build.py`, `arms.py`, `run.py`, `stages.py`, `checks.py` and
+`selfcheck.py`; `TESTING.md` V-1k.** Carried to the close by cycle 0.1.4c —
+its §1.7: fifteen text-mode `open(…, "r")` sites, no tracked `.npk` holding a
+carriage return, and a fix recommended as *"bytes, or `newline=""`, with a
+self-check plant"* — **and measured at its full extent at the close's
+planning, at compiler `c970483`:**
+
+- **The fifteen sites are seven readers of Nitpick source, two scanners that
+  read every kind of file for a line number, and six readers of things that are
+  not source** — the manifest, the specification the error budget is read from,
+  the declaration sources of the citation check, the emitted IR twice, and the
+  verdicts file (`meta/roadmap/0.1/0.1.5.md` §1.5).
+- **`newline=""` alone is not the fix**, measured on Python 3.12.3: it keeps a
+  carriage return in the text, and then `str.splitlines()` — which two of the
+  seven call — and iterating the file — which two more do — split at it
+  anyway. Bytes, split at `\n` alone, is the fix.
+- **And the carriage return was one shape of eight.** The compiler's lexer, read
+  at `c970483` with `git show` (`src/frontend/lexer.npk`: `is_space`,
+  `lexer_skip_trivia`, `lexer_next`), ends a `//` comment at byte 10 alone and
+  treats byte 13 as whitespace, closes a `/* */` at its first `*/` without
+  nesting, reads `'"'` as one character and a template's text as text, and
+  resolves a `use` path by its literal's DECODED value. This harness's two
+  hand-written scanners knew `//` and `"` and nothing else, and its import
+  walk read the literal's text. **Eight shapes, each planted through the
+  check it could fool, and each form read by the compiler, a program of its
+  own, the same way at `c970483` and at `c3bdae2`: six passed a violation the
+  compiler compiles** — a division hidden from `check_literal_divisors` three
+  ways, a clock call from `check_purity`, a fourth `error:` from
+  `check_error_budget`, an import of `host` from `check_layering` — **and two
+  fired where the compiler reads a comment**: a `use` after a lone carriage
+  return, read as an import of `host`, and a `pub use` inside a `/* */`,
+  counted as a re-export (the plan's §1.3).
+
+**The decision.** *One module is the only way the harness opens a `.npk` file
+and the only reading of one as code: `harness/lexical.py`, whose executable
+code is `nitpick-regex`'s `harness/lexical.py` at its `fb37391`, statement for
+statement — the two syntax trees equal with every docstring removed — and whose
+docstrings are this repository's. `build.imports_of`, `arms.code_only`,
+`run._verdict`, `stages.read`, `checks.strip_comments`, `checks.blank_code`
+(which replaces `strip_strings(strip_comments(…))`), `checks.code_lines`, the
+umbrella's re-export count and the two whole-tree scanners all read through it.
+The self-check gains eight `PLANTED` rows, each a shape where the old reading
+disagreed with the compiler, and a part E that asks both sides: the reader, on
+one text of every lexical form written to a file and read back —
+`nitpick-regex`'s case 18, text for text — and the pinned compiler, on one
+program of every form a run can observe, which must exit 0 while the reader
+sees exactly the code that ran.*
+
+**Why port and not write.** The same class met `nitpick-regex` at its cycle 0.0
+close — its fourth and fifth audits, and its RX-157 and RX-165 — and the module
+it built answers every shape measured here, was read against the compiler's
+lexer at `c3bdae2` and again at `c970483`, and has been audited since. One
+reader in two libraries is one thing to re-read when the lexer moves.
+
+*Alternatives declined:*
+- **`newline=""` at the fifteen sites**, the recommendation as worded —
+  measured insufficient above, and it leaves the other seven shapes.
+- **Bytes at the seven source sites, the scanners kept** — closes the carriage
+  return and nothing else: the `/* // */`, `'"'`, template and escaped-path
+  shapes live in the scanners and the walk, not in the read.
+- **A reader of this repository's own** — a second answer to a question the
+  sibling has answered and had audited, and a second thing to re-read at every
+  re-pin.
+- **A subcycle of its own before the close** — the close carries the item by
+  its README row; a close is where cycle 0.0.6 made its eight instrument
+  repairs; and the audit that follows reads the reader as it reads everything
+  else. **What it costs:** `lexical.py`'s 368 lines, sixteen edits in five
+  modules, eight rows and a part in the self-check, and about a second on a
+  full run of two minutes, TM-200 included — measured at planning.
+
+**What it does not claim.** The reader mirrors the lexer's trivia and literals
+and the parser's `use`, and no more; its header lists what it does not mirror,
+each confined to files the compiler refuses. And it is not the checks: a check
+that matched a spelling rather than a token stayed narrower than its name,
+which is TM-200.
+
+### TM-200 — every tree check matches TOKENS across the lexer's whitespace, over a file's whole blanked text; never a line
+
+**2026-09-26, cycle 0.1.5 (PD-51). Amends `harness/checks.py` — `check_purity`,
+`check_raw_index`, `check_error_budget`, `check_constants_named`,
+`check_no_owning_fields` — and `run._verdict`; `TESTING.md` V-1l.** Found at
+planning, by the question TM-199's measurement raised: once the reader is
+the compiler's, what does each check's PATTERN assume? Measured at `c970483`,
+each shape with a program the compiler builds, runs or refuses by what it
+reads (the plan's §1.4):
+
+| Shape | The compiler reads | The check, matched per line |
+|---|---|---|
+| `mono_now ()`; a `(` on the line after `environ` | a call | `check_purity`: silent — it matched `name(` |
+| `v.items` then `[0i64]` on the next line; `b.body.ptr [0i64]` | an index | `check_raw_index`: silent — it matched `.items[` |
+| `wild int64->` then `:p = …` on the next line, and `p` then `[4i64]` | a binding and its index | `check_raw_index`: silent |
+| `error` then `:ETimeOops;` on the next line; `error :ETimeOops;`; a second `error:` after a `;` | a declaration | `check_error_budget`: silent — it matched a line's start |
+| `fixed` then `int64:YEAR_MAX` on the next line | a bound | `check_constants_named`: silent |
+| `struct` then `:Row = {…}`; `pub fixed string` then `[2]:NAMES` | a struct; a table | `check_no_owning_fields`: silent |
+| `func` then `:main = …` | a `main` | `run._verdict`: `none` |
+
+**The decision.** *Every pattern a check matches runs over the file's WHOLE
+blanked text — TM-199's reader — and allows the lexer's whitespace,
+`[ \t\r\n]`, between any two tokens it names; a declaration is found wherever
+it starts, not only at a line's start. A finding names the line its first
+token is on. Nine `PLANTED` rows — each a spelling across a line end or a
+space, or a second declaration on one line — and a fourth specimen for
+`run._verdict`.*
+
+*Alternatives declined:*
+- **`check_purity` alone** — the most important check (V-1), and the one
+  nothing else backs; but `check_raw_index` guards the one bound a bare pointer
+  has (S-17b), and each of the other three is one pattern. One rule for every
+  check is simpler to state and to audit than five exceptions.
+- **The limit stated in each docstring, the fix deferred** — cycle 0.0.6
+  deferred gaps whose fix needed a rule invented; this one needs none, since
+  the lexer's whitespace is the rule, and each check's reading is rewritten for
+  TM-199 in the same edit.
+- **Python's `\s` between tokens** — it also matches VT, FF and 0x1C to 0x1F,
+  which the lexer refuses as unexpected characters; the class is the lexer's
+  `is_space`, as `lexical._WS` is.
+
+**What it does not claim.** A check still matches only the tokens it names: a
+banned call reached through an alias, and a bare pointer indexed under another
+name in another function, stay `check_purity`'s and `check_raw_index`'s stated
+limits (their docstrings; `../OPEN_QUESTIONS.md` O-X9 for the first).
+
+### TM-201 — the two checks cycle 0.0 deferred to cycle 0.1, which cycle 0.1 did not build, are re-homed with their reasons
+
+**2026-09-26, cycle 0.1.5 (PD-52). Amends `TESTING.md` V-14e; replaces TM-144's and
+TM-145's deferrals in part.** Found at planning by the close's promise sweep —
+every live statement that cycle 0.1 would do something (the plan's §1.8): two
+checks cycle 0.0's close deferred to this cycle, each with a reason, and
+neither built.
+
+- **`check_check_registry`** (TM-145, V-14e): `TESTING.md` §2's table,
+  `checks.LIVE`, `checks.PENDING` and the checks `run.py` drives outside step 5
+  are four statements of one family and nothing diffs them. Deferred because
+  §2's table needed a machine-readable shape. **At this close the four agree**,
+  re-read row by row, **and V-1a's arithmetic — the belt — went stale inside
+  this cycle**, 17 and 13 against 18 and 14 from cycle 0.1.0 to 0.1.0b: the
+  argument for the check got stronger, not weaker.
+- **The `#wild_slice` length check** (TM-144): nothing checks a slice's length
+  argument, and a read laid over `cap` would accept a dead slot. Deferred to
+  *"Cycle 0.1, with `src/cal/` beside it"* — a second subject — **and `src/cal/`
+  lays no slice**, so the second subject never arrived. Measured at the close's
+  planning, the length is guarded by behaviour where a caller chooses the
+  index: over `cap`, `vec_at_past_end` and `vec_set_past_end` each exit 11
+  where they assert 94, and `bytes_view` over its capacity reddens
+  `bytes_put_int`, `bytes_growth` and `bytes_view_lifetime`; `vec_pop`'s index
+  is `count − 1` and cannot reach a dead slot.
+
+**The decision.** *`check_check_registry` is built by the next subcycle that
+adds or retires a check — the next time the family moves, which is when a drift
+can happen — before it moves it; until then the four statements are re-read at
+every close. The `#wild_slice` length check waits for its second subject, the
+first accessor over a bare pointer outside `src/core/vec.npk` and `bytes.npk`,
+and is the hardening cycle's, 0.8, if none arrives before it; until then the
+units above are its guard.*
+
+*Alternatives declined:* **both built at the close** — each adds a live check
+and moves V-1a's arithmetic and the self-check's counts at the close whose
+totals the audit reads, the registry check reads §2's first column as data —
+a change to that document's form — and neither has a subject the close
+changes; **both declined** — the registry check's argument got stronger in
+this cycle, and the length check's gap is real for the next accessor.

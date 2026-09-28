@@ -206,7 +206,8 @@ A `[[test]]` selects by **directory** and `kind` is per entry, so one entry over
 <!-- [[sweep: probe_exit=28]] -->
 and the 21 carrying `expect-error:` (O-X7; 8 until cycle 0.1.0c, 13 until 0.1.3b, 15 until 0.1.3c). The runner therefore dispatches per
 file: `expect-error:` present makes it a **refusal** member — `npkc` must fail
-and the *set* of codes must equal the set named (B-7) — and `expect-exit:`
+and the *set* of codes must equal the set named (B-7), each code named once
+per site it is reported at (B-7c, since cycle 0.2.0a) — and `expect-exit:`
 present makes it a **run** member. **Both markers is a failure; neither is a
 failure and not a skip.** The compiler's own runner already has per-file
 membership rules inside a stage, so this is an extension rather than a new
@@ -234,7 +235,7 @@ compiler's:
 
 ```
 // expect-exit: 7            the exit a run must produce
-// expect-error: NITPICK-TYPE-046      repeatable; the SET must match (B-7)
+// expect-error: NITPICK-TYPE-046      one line per reported site (B-7c); the SET must match (B-7)
 // expect-error-at: 14:9
 // env: TZ=Europe/Kyiv       one variable per line, repeatable (TM-120)
 // stress: 40                run it that many times, the SAME answer every time
@@ -290,6 +291,15 @@ the fix reads like a mystery otherwise.
 **Rule B-7 — unexpected diagnostics fail a test as surely as missing ones**
 (D-237): the set of codes a rejection test reports must **equal** the set its
 expectations name.
+
+**Rule B-7c (TM-210) — and each code is named once PER SITE it is reported at.**
+A refusal's header carries one `expect-error` line for every site a code is
+reported at — the compiler's D-332, held by both of its runners since its
+landing 82 — because a set of codes cannot see a silent site: a code expected
+at two places and reported at one passes B-7, and so does one reported at four
+and named once. `harness/stages.py` counts, per code both named and reported,
+and names the sites when the count differs; self-check cases 12 and 13
+(`TESTING.md` V-14) are its reds. Notes are not sites. Since cycle 0.2.0a.
 
 **Rule B-7b (TM-123) — the `parse` stage asserts the PARSE half, and only that.**
 `npkc` has no parse-only mode, so the stage reads the diagnostic's code FAMILY:

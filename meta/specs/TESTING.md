@@ -503,7 +503,14 @@ expectations and requires it to report every one as a failure:
 11. **a tree pinned consistently to another target** — `i686-unknown-linux-gnu`
    and the layout the pinned `opt` derives for it — so case 10's check passes
    and only the header belt can see every emission state x86-64 (TM-209): the
-   compiler's `check_module_header`, ported.
+   compiler's `check_module_header`, ported;
+12. **a `check` case naming a code once where it is reported at two sites** —
+   since cycle 0.2.0a (TM-210, `BUILD.md` B-7c): under B-7's set equality it
+   passes, and the compiler's D-332 says it must not;
+13. **a `check` case naming a code at three sites where it is reported at
+   two** — a site the compiler stopped reporting, which neither a set nor
+   lines without positions can see: the compiler's own `silent_site` case,
+   ported (TM-210).
 
 **SEVEN OF THE EIGHT ARE PLANTED, AND THE RUNNER SAYS SEVEN.** Case 6 is
 `PEND` until cycle 0.5, so *"this runner has been shown able to fail eight

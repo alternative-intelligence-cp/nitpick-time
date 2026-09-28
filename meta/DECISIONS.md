@@ -5955,6 +5955,42 @@ would pass it; **the belt on linked programs only, as regex has it** — `emit`
 is this harness's one door to `npkc`, and holding it there costs one read per
 emission and covers the library and the repro builds too.
 
+### TM-210 — a refusal names each code once per site it is reported at: the runner counts, as the compiler's runners do since its D-332
+
+**2026-09-27, cycle 0.2.0a (the plan's PD-59) — the adoption of compiler
+`5fbaf4a`, its landing 82 (D-332) and advance notice F24. Amends
+`harness/stages.py` and `selfcheck.py`; `BUILD.md` (B-7c, new, and B-4c's and
+B-5's statements of the set); `TESTING.md` V-14 (cases 12, 13); `nitpick.toml`'s
+probe-entry comment; and four files' headers.**
+
+**What was found.** Rule B-7 compares SETS: the codes a refusal reports must
+equal the codes its header names. A set cannot see a silent site — a code
+expected at two places and reported at one passes it, and so does one
+reported at four and named once — and the compiler's own `not_constant.npk`
+expected a refusal for a month after D-222 had made it legal. So both of the
+compiler's runners count sites per code from `5fbaf4a`. Over this tree's 37
+files carrying `expect-error`, at both kept pins, four name a code once where
+it is reported more often — exactly F24's four: `probe15` (`TYPE-079` ×3, one
+per sealed field its literal writes), `probe11c` (`REACH-002` ×4, one per arm
+the import adds), `generic_owning_copy/case5` (`TYPE-017` ×2, its two calls)
+and `probe14` (`PARSE-001` ×2, the payload's `(` and `)`: the compiler's
+DEF-164, registered OPEN). Our runner passed all four.
+
+**The decision.** *`stages.refusal` requires, for every code both named and
+reported, as many `expect-error` lines as reported sites, and names the sites
+when they differ (`BUILD.md` B-7c). The four headers name each site;
+`probe14` pins both of its positions, so DEF-164's landing is a red run that
+names it. Self-check cases 12 and 13 are the two directions — a code named
+once where it is reported twice, and named three times where it is reported
+twice — beside a correct twin. The compiler's `counted_sites` and
+`silent_site`, by way of `nitpick-regex`'s port (its RX-178).*
+
+*Alternatives declined:* **the compiler's runners alone** — this runner is the
+one that judges this library, and it passed all four; **one line per distinct
+position** — `probe15`'s three reports share one position and are three
+facts until DEF-165 says otherwise; **counting notes too** — a note is the
+compiler's explanation, not a site, and B-7 has never counted them.
+
 ### TM-208 — the adoption of compiler `5fbaf4a`: the fifteen `cstring` copies read in place or moved, the lexer re-read, and what else the pin moved here
 
 **2026-09-27, cycle 0.2.0a (the plan's PD-57) — landings 67 … 82 over

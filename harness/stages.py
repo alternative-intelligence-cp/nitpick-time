@@ -9,7 +9,9 @@ instead:
 
     expect-error:  present  ->  a REFUSAL member. `npkc` must fail, and the SET
                                of codes it reports must EQUAL the set the header
-                               names (B-7, D-237). Never assembled, never run.
+                               names (B-7, D-237) -- each code, since cycle
+                               0.2.0a, at as many sites as lines name it (B-7c,
+                               TM-210). Never assembled, never run.
     expect-exit:   present  ->  a RUN member. Emitted, scanned, assembled,
                                linked and run at -O0, then again through
                                `opt -O2` (B-3), the same exit both times.
@@ -400,7 +402,9 @@ def _stem(rel):
 
 
 def refusal(bld, rel, e):
-    """A file that must not compile. B-7/D-237: the code SETS must be equal."""
+    """A file that must not compile. B-7/D-237: the code SETS must be equal --
+    and, since cycle 0.2.0a, each code reported at as many sites as lines name
+    it (B-7c, TM-210)."""
     src = os.path.join(bld.root, rel)
     ll = os.path.join(bld.out_dir, _stem(rel) + ".refused.ll")
     st, out = bld.emit_expecting_refusal(src, ll)
@@ -412,11 +416,14 @@ def refusal(bld, rel, e):
                    " It also wrote %s." % ll)]
 
     got_codes, got_at = set(), set()
+    got_sites = {}                  # code -> ["line:col", ...], one per report
     for line in out.splitlines():
         m = _DIAG.match(line)
         if m:
             got_codes.add(m.group(1))
             got_at.add("%s:%s" % (m.group(3), m.group(4)))
+            got_sites.setdefault(m.group(1), []).append(
+                "%s:%s" % (m.group(3), m.group(4)))
 
     problems = []
     want_codes = set(e.errors)
@@ -429,6 +436,21 @@ def refusal(bld, rel, e):
         # as surely as a missing one.
         problems.append("reported and not expected: %s (B-7: the set reported "
                         "must EQUAL the set expected)" % ", ".join(unexpected))
+    # AND THE NUMBER OF SITES, PER CODE (TM-210, `BUILD.md` B-7c): the
+    # compiler's D-332, held by both of its runners since `5fbaf4a` and ported
+    # by way of `nitpick-regex`'s (its RX-178). The rule above compares SETS,
+    # and a set cannot see a silent site: a code expected at two places and
+    # reported at one passes it, and so does one reported at four and named
+    # once. Asked of codes both named and reported; a code on one side only is
+    # the two problems above.
+    for code in sorted(want_codes & got_codes):
+        at, named = got_sites[code], e.errors.count(code)
+        if len(at) != named:
+            problems.append(
+                "%s is reported at %d site(s) -- %s -- and %d `expect-error` "
+                "line(s) name it. One line per site (the compiler's D-332, "
+                "BUILD.md B-7c): a set of codes cannot see a silent site, so "
+                "the count is asserted too." % (code, len(at), ", ".join(at), named))
     for at in e.error_at:
         if at not in got_at:
             problems.append("expected a diagnostic at %s; got %s"

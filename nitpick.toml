@@ -103,7 +103,8 @@ lld-flags     = ["-static"]
 # probe11b_arm_omitted_refused, probe11c_import_arm_cost,
 # probe11e_unused_import_refused. Each carries `// expect-error:` instead of
 # `// expect-exit:`, and under TM-119 the runner reads that and holds the file
-# to B-7's equal-sets rule instead of linking it. RE-MEASURED AT CYCLE 0.0.6
+# to B-7's equal-sets rule instead of linking it -- and, since cycle 0.2.0a,
+# to B-7c's count: one line per reported site (TM-210). RE-MEASURED AT CYCLE 0.0.6
 # AND TAGGED SO IT CANNOT GO STALE AGAIN (TM-142): 32 files, 25 and 7, none
 # with both markers and none with neither. The names above are the SEVEN as of
 # 0.0.2 and the split has not moved; every probe added since carries

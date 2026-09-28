@@ -624,6 +624,57 @@ def case_11_other_target(root, man, base):
     return c
 
 
+# TWO SITES OF ONE CODE, measured at cycle 0.2.0a's planning at `5fbaf4a` and at
+# `c970483`: `NITPICK-TYPE-007` at 4:5 and at 5:5 -- two initialisers of the
+# wrong type, each its own report. Cases 12 and 13 are the two ways a header
+# can disagree with that COUNT while agreeing with its SET (TM-210).
+TWO_SITES = """mod:%(mod)s;
+
+func:main = int32(cstring[]:_~argv) {
+    int32:a = true;
+    int32:b = true;
+    exit 0i32;
+};
+""" + FAILSAFE
+
+
+def _sites_case(c, man, base, name, bad_lines, bad_name):
+    good = "// expect-error: NITPICK-TYPE-007\n" * 2
+    where = make_tree(
+        os.path.join(base, name), man,
+        [("tests/rejection/good_sites.npk",
+          good + TWO_SITES % {"mod": "good_sites"}),
+         ("tests/rejection/%s.npk" % bad_name,
+          "// expect-error: NITPICK-TYPE-007\n" * bad_lines
+          + TWO_SITES % {"mod": bad_name})],
+        [("rejection", "check", "tests/rejection")])
+    st, out, v = invoke(where)
+    c.red(st, out)
+    c.fails(v, "tests/rejection/%s.npk" % bad_name)
+    c.passes(v, "tests/rejection/good_sites.npk")
+    return out
+
+
+def case_12_code_named_once(root, man, base):
+    c = Case(12, "a `check` case naming a code once where it is reported at two sites")
+    # Under B-7's set equality this PASSES -- the code is named and reported.
+    # `probe15`, `probe11c`, `probe14` and `generic_owning_copy/case5` each
+    # named their code once for two to four sites until cycle 0.2.0a (F24).
+    c.says(_sites_case(c, man, base, "case12", 1, "one_line"),
+           "and 1 `expect-error` line(s) name it")
+    return c
+
+
+def case_13_silent_site(root, man, base):
+    c = Case(13, "a `check` case naming a code at three sites where it is reported at two")
+    # The compiler's own `silent_site` self-check case (D-332), ported: a site
+    # the compiler stopped reporting is invisible to a set, and to lines that
+    # carry no position.
+    c.says(_sites_case(c, man, base, "case13", 3, "three_lines"),
+           "and 3 `expect-error` line(s) name it")
+    return c
+
+
 # CASE 9's SPECIMEN (cycle 0.1.4b, TM-187). HELD keeps one 4096-byte managed
 # buffer live to its exit, so the runtime reports `allocated=4096
 # peak_live=4096 count=1` -- measured at `c3bdae2` on both legs, and the
@@ -1141,7 +1192,10 @@ PLANTED = [
 #                 disagrees with its header, TM-187) and, since cycle 0.2.0a,
 #                 its tenth and eleventh (a layout pin `opt` does not derive,
 #                 and a tree pinned consistently to another target -- the
-#                 compiler's two target checks, ported, TM-209).
+#                 compiler's two target checks, ported, TM-209), and its
+#                 twelfth and thirteenth (a code named once where it is
+#                 reported at two sites, and named at three where it is
+#                 reported at two -- the compiler's D-332, TM-210).
 #   PLANTED_CASES what is actually planted: case 6 is PEND until cycle 0.5.
 #   TREE_PLANTS   `PLANTED`'s rows, plus THREE that no row can express:
 #                 `check_layering`'s node half (the fault is a file that is NOT
@@ -1150,8 +1204,8 @@ PLANTED = [
 #                 `check_specs_current` (which reports and never fails, so it
 #                 is driven separately). Every one has a control beside it,
 #                 which is why the two numbers printed are equal.
-V14_CASES = 11
-PLANTED_CASES = 10
+V14_CASES = 13
+PLANTED_CASES = 12
 TREE_PLANTS = len(PLANTED) + 3
 
 
@@ -1876,7 +1930,8 @@ def run(rep, root, steps):
         ok = _report_case(rep, c) and ok
     ok = _report_case(rep, case_8_failsafe_deleted(root, man, base, npkc)) and ok
     ok = _report_case(rep, case_9_memory_disagrees(root, man, base)) and ok
-    for fn in (case_10_layout_pin_wrong, case_11_other_target):     # TM-209
+    for fn in (case_10_layout_pin_wrong, case_11_other_target,      # TM-209
+               case_12_code_named_once, case_13_silent_site):       # TM-210
         ok = _report_case(rep, fn(root, man, base)) and ok
 
     problems = part_b(rep, base) + part_b_specs_current(rep, base)

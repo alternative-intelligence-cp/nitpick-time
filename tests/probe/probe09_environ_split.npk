@@ -88,13 +88,13 @@ func:main = int32(cstring[]:_~argv) {
     int64:k = 0i64;
     int64:checked = 0i64;
     while (k < env.len) decreases env.len - k {
-        cstring:e = env[k];
-        if (e.len <= 0i64)                              { exit 11i32; }
-        // A view of the kernel's bytes. `e.ptr` is POINTER-SHAPED, so this
-        // view aliases the pointee rather than this frame -- see probe 10.
-        string:entry = string_from_bytes(e.ptr, e.len);
+        if (env[k].len <= 0i64)                              { exit 11i32; }
+        // A view of the kernel's bytes. `env[k].ptr` is POINTER-SHAPED, so
+        // this view aliases the pointee rather than this frame -- see
+        // probe 10. Read in place: a `cstring` is move-only (TM-208).
+        string:entry = string_from_bytes(env[k].ptr, env[k].len);
         uint8[]:eb = string_bytes(entry);
-        if (eb.len != e.len)                            { exit 12i32; }
+        if (eb.len != env[k].len)                            { exit 12i32; }
         int64:eq = raw find_byte(eb, 61u8);             // '='
         if (eq < 0i64)                                  { exit 13i32; }
         if (eq == 0i64)                                 { exit 14i32; }
@@ -119,8 +119,7 @@ func:main = int32(cstring[]:_~argv) {
     int64:vhi = -1i64;
     int64:j = 0i64;
     while (j < env.len) decreases env.len - j {
-        cstring:e2 = env[j];
-        string:entry2 = string_from_bytes(e2.ptr, e2.len);
+        string:entry2 = string_from_bytes(env[j].ptr, env[j].len);
         uint8[]:b2 = string_bytes(entry2);
         if (raw starts_with(b2, wb)) {
             found = j;
@@ -146,8 +145,7 @@ func:main = int32(cstring[]:_~argv) {
     // of this file already uses.
     string:want_entry = "TZ=Europe/Kyiv";
     uint8[]:web = string_bytes(want_entry);
-    cstring:pre = env[found];
-    string:pres = string_from_bytes(pre.ptr, pre.len);
+    string:pres = string_from_bytes(env[found].ptr, env[found].len);
     uint8[]:preb = string_bytes(pres);
     if (preb.len != web.len)                            { exit 39i32; }
     int64:w = 0i64;
@@ -161,8 +159,7 @@ func:main = int32(cstring[]:_~argv) {
     // PAIR into an entry the caller still holds, not a returned slice.
     if ((vhi - vlo) != 11i64)                           { exit 31i32; }
 
-    cstring:hit = env[found];
-    string:hs = string_from_bytes(hit.ptr, hit.len);
+    string:hs = string_from_bytes(env[found].ptr, env[found].len);
     uint8[]:hb = string_bytes(hs);
     if (hb[vlo] != 69u8)                                { exit 32i32; }   // 'E'
     if (hb[vlo + 1i64] != 117u8)                        { exit 33i32; }   // 'u'
@@ -175,9 +172,8 @@ func:main = int32(cstring[]:_~argv) {
     // reclaimed or rewritten between calls, this is where it would show.
     cstring[]:env2 = environ();
     if (env2.len != env.len)                            { exit 40i32; }
-    cstring:hit2 = env2[found];
-    if (hit2.len != hit.len)                            { exit 41i32; }
-    string:hs2 = string_from_bytes(hit2.ptr, hit2.len);
+    if (env2[found].len != env[found].len)                            { exit 41i32; }
+    string:hs2 = string_from_bytes(env2[found].ptr, env2[found].len);
     uint8[]:hb2 = string_bytes(hs2);
     int64:m = 0i64;
     while (m < hb2.len) decreases hb2.len - m {
@@ -190,7 +186,7 @@ func:main = int32(cstring[]:_~argv) {
     // Two `environ()` calls hand back the same storage. This is what makes
     // the entries' bytes safe to view without copying -- and it is the fact
     // `host_system_zone` will rest on.
-    if (!(hit2.ptr == hit.ptr))                         { exit 43i32; }
+    if (!(env2[found].ptr == env[found].ptr))                         { exit 43i32; }
 
     // D-151: exit 0 asserts no `wild` allocation is live. This probe makes
     // none -- every string here is a VIEW of the kernel's bytes, and

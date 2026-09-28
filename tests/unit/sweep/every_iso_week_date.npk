@@ -129,7 +129,7 @@ func:say_swept = int32(int64:count) never fails {
     string:line = string_concat(head, "\n");
     Result<cstring>:c = to_cstring(line);
     if (c.is_error) { pass 20i32; }
-    cstring:s = c.value;
+    cstring:s = move(c.value);         // a `cstring` is move-only (TM-208)
     Result<int64>:w = sys(1i64, 1i64, s.ptr, s.len);
     if (w.is_error) { pass 21i32; }
     if (w.value != s.len) { pass 22i32; }

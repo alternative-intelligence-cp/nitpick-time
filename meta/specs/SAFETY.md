@@ -19,7 +19,7 @@ costs a library that does calendar arithmetic.
 | Plain integer `+ - *` **traps** on overflow | D-210 | Every arithmetic path states its range and checks it **before** the trap fires. §4. |
 | `/` and `%` by zero trap; signed `MIN / -1` traps | D-007, D-142 | The calendar algorithms divide constantly; every divisor is a nonzero literal or a proven value. §4. |
 | Indexing **a type that carries a length** is bounds-checked and traps | D-070 | a slice `T[]`, a fixed array `T[N]` and a `simd<T, N>` lane trap; **a bare pointer does not** — and `Vec<T>.items` and `Bytes`' `buffer` body are both reached as one. §4, S-17b. |
-| Owning values are **move-only** | TYPE-046 | No binding-to-binding copies of a `string` — nor, since cycle 0.1.3c, of a `Vec` or of anything holding one (S-18g). **No `fixed` table holds an owning value** — the language lets one, then refuses the copy that reads a row out and, since compiler `c970483`, the move too (S-19b; through `c3bdae2` the move compiled and faulted, O-N20). §5. |
+| Owning values are **move-only** | TYPE-046 | No binding-to-binding copies of a `string` — nor, since cycle 0.1.3c, of a `Vec` or of anything holding one (S-18g), nor, since cycle 0.2.0a at compiler `5fbaf4a`, of a `cstring`, which owns what `to_cstring` makes (the compiler's D-328): an `environ()` element is read in place and `to_cstring`'s answer moved out of its `Result` (TM-208). **No `fixed` table holds an owning value** — the language lets one, then refuses the copy that reads a row out and, since compiler `c970483`, the move too (S-19b; through `c3bdae2` the move compiled and faulted, O-N20). §5. |
 | Borrows are second class | D-004 | A view of the zone table cannot be returned or stored. §5. |
 | A successful `exit 0` with live `wild` allocations **traps** | D-151 | Every `wild` byte is paired on every path. §5. |
 | There are **no closures** | D-018 | A layout is data the formatter interprets, not a callback. FORMAT_MODEL.md. |
@@ -1119,6 +1119,14 @@ is predicted. The evidence column names it.
 | a view of a **`move` parameter** | **refused** `NITPICK-BORROW-001` | `probe10c` |
 | a view rooted at a plain **parameter** | **legal** | `probe10` §2, §3 |
 | a view rooted at a **pointer-shaped binding** — a `wild` block, a `cstring`'s `.ptr`, a slice | **legal** | `probe10` §1, `probe09b` |
+
+*(Re-measured at compiler `5fbaf4a`, cycle 0.2.0a — TM-208.)* A `cstring` that
+OWNS — `to_cstring`'s answer, moved into a local — is no longer a pointer-shaped
+root: a view of its `.ptr`, returned, is `NITPICK-BORROW-001` there, where at
+`c970483` it compiled (its buffer never freed). An `environ()` element owns
+nothing and is read in place, and a view of `env[j].ptr` returned from a
+function taking `env` is legal — `probe09b`, whose root is now the parameter's
+element and no longer a local copy, which a move-only `cstring` refuses.
 
 **The rule keys on the ROOT'S SHAPE, not on parameterhood** — which is the
 correction TM-110 makes to TM-109, and it took two probes to establish, because

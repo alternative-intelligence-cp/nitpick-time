@@ -5687,6 +5687,11 @@ this cycle, and the length check's gap is real for the next accessor.
 # Cycle 0.1.5's second half — the cycle audit's triage, ratified 2026-09-26
 
 ### TM-202 — part E's second half asks the pinned compiler about the forms it names, each literal's value asserted, and the adoption that moves the pin re-reads the compiler's lexer whatever part E says
+> **SUPERSEDED IN PART by TM-208 (2026-09-27).** Its "and brings `lexical.py` to
+> it in both libraries": this repository re-reads and brings its OWN reader;
+> `nitpick-regex`'s copy is that repository's, under its own re-read rule since
+> its cycle 0.1.0b, its RX-176 (the ecosystem audit's ED1). The rest stands. The text below
+> is left exactly as written.
 
 **2026-09-26, cycle 0.1.5's second half, from the cycle audit's C1 (the
 workbench's `meta/audits/nitpick-time-0.1-2026-09-26.md`). Amends
@@ -5919,3 +5924,52 @@ leaves it: whether a read's length is `count`.*
 *Alternatives declined:* **the item in cycle 0.5's checklist**, where the zone
 tables arrive — they are `fixed` arrays, `T[N]`, which trap on their own and
 lay no slice (`SAFETY.md` S-17b), so they are not the second subject.
+
+### TM-208 — the adoption of compiler `5fbaf4a`: the fifteen `cstring` copies read in place or moved, the lexer re-read, and what else the pin moved here
+
+**2026-09-27, cycle 0.2.0a (the plan's PD-57) — landings 67 … 82 over
+`c970483`, one re-pin at the author's go. Amends `tests/probe/probe09*.npk`,
+six `tests/unit/sweep/` members and `harness/lexical.py`'s header;
+`SAFETY.md` §1's move-only row and S-22's view table; `OPEN_QUESTIONS.md`
+O-N25. It supersedes
+TM-202 in part.**
+
+**What was found.** The unchanged tree's full run at `5fbaf4a` is `RED -- 105
+unit(s) of 113 passed`, and the eight failures are exactly the eight files
+holding a binding-to-binding `cstring` copy — fifteen of them, each
+`NITPICK-TYPE-046`, as the compiler's census said (its landing 78, D-328: a
+`cstring` owns what `to_cstring` makes and is move-only). Every other verdict,
+exit and heap figure is as at `c970483`. The compiler's lexer moved
+(`lexer.npk` +13/−2) in a character literal's WIDTH only, its DEF-145 — one
+above U+00FF, or written `\u{…}`, is `char32` — not in what a literal spans;
+`escapes.npk`, `LEXICAL_REFERENCE.md` and `p_parse_import` did not move, and
+no `.npk` here holds a `\u{…}` or non-ASCII character literal. `NITPICK-BORROW-015`
+(the compiler's D-325, landing 67) is in the pin: the owner of a `string_bytes`
+view written while it lives is refused at 5:5 of a control that compiles at
+`c970483` — and `tests/unit/bytes_view_lifetime.npk` compiles and runs 0,
+because `bytes_view`'s answer is a `#wild_slice` over the body's pointer, which
+the freeze does not track. And an OWNING `cstring` is no longer a
+pointer-shaped root: a view of `to_cstring`'s answer's `.ptr`, returned from
+the function that made it, is `NITPICK-BORROW-001` at `5fbaf4a` and compiled
+at `c970483`; `SAFETY.md` S-22's table carries it. The compiler's loop defects
+this cycle's README held
+`for`, `loop` and `till` for (DEF-127 … DEF-130) landed at its 75, an ancestor.
+
+**The decision.** *An `environ()` element is read IN PLACE — `env[k].ptr`,
+`env[k].len` — never copied into a local: it owns nothing (its `cap` is 0), and
+probes 09 and 09b are about a view of the kernel's bytes. `to_cstring`'s answer
+is MOVED out of its `Result` — `cstring:s = move(c.value);` — and dropped at
+scope exit, where it leaked before. `harness/lexical.py` does not move; its
+header records the re-read at `5fbaf4a`. TM-202's "brings `lexical.py` to it in
+both libraries" is this repository's reader only: W-7 gives this repository no
+write in `nitpick-regex`, which has had its own re-read rule since its cycle
+0.1.0b (its RX-176) — the ecosystem audit's ED1. O-N25 is answered here: the
+freeze landed and reaches no file of ours, and S-18e's growth rule still
+governs `bytes_view`. The hold on `for`, `loop` and `till` lifts.*
+
+*Alternatives declined:* **`.clone()` each `environ()` element** — an owned
+copy per entry, where the probes' question is the view (and at `5fbaf4a`
+`.clone()` answers a `Result`, `NITPICK-TYPE-007` unwrapped); **`move` out of
+the element** — it would leave the environment block holding a vacancy;
+**`lexical.py` changed to type a character literal's width** — the reader
+blanks literals and never types them, so no answer of its moves.

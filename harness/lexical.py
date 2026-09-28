@@ -42,6 +42,12 @@ WHAT IT MIRRORS, READ AT COMPILER `c970483` WITH `git show`, NOT FROM A
 SUMMARY: `src/frontend/lexer.npk`'s `is_space`, `lexer_skip_trivia` and
 `lexer_next`; `src/frontend/escapes.npk`'s `escape_decode` and
 `decode_string`; and `p_parse_import` in `src/frontend/parse_decl.npk`.
+AND AGAIN AT `5fbaf4a` (cycle 0.2.0a, the re-read TM-202 makes every
+adoption's; TM-208), where `lexer.npk` differs only in a character literal's
+WIDTH -- the compiler's DEF-145: one above U+00FF, or written `\\u{...}`, is
+`char32` -- and not in what a literal spans, and `escapes.npk`,
+`p_parse_import` and `LEXICAL_REFERENCE.md` not at all, so nothing below
+moved.
 
   * THE TEXT IS BYTES. `read()` maps each byte to one character (latin-1), so
     every offset is the compiler's byte offset, `\\n` (byte 10) is the only

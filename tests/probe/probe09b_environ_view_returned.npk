@@ -52,9 +52,8 @@ mod:probe09b_environ_view_returned;
 func:tz_index = int64(cstring[]:env) never fails {
     int64:j = 0i64;
     while (j < env.len) decreases env.len - j {
-        cstring:e = env[j];
-        if (e.len >= 3i64) {
-            string:entry = string_from_bytes(e.ptr, e.len);
+        if (env[j].len >= 3i64) {
+            string:entry = string_from_bytes(env[j].ptr, env[j].len);
             uint8[]:b = string_bytes(entry);
             if (b[0i64] == 84u8) {                      // 'T'
                 if (b[1i64] == 90u8) {                  // 'Z'
@@ -67,21 +66,23 @@ func:tz_index = int64(cstring[]:env) never fails {
     pass -1i64;
 };
 
-// The whole question, in one function: the view's root is `e.ptr`, a member of
-// a `cstring` -- POINTER-SHAPED. The bytes live in the kernel's mapping and
+// The whole question, in one function: the view's root is `env[j].ptr`, a
+// member of a `cstring` -- POINTER-SHAPED. (It was `e.ptr`, of a local copy
+// of the element, until cycle 0.2.0a: at compiler `5fbaf4a` a `cstring` is
+// move-only, the copy is `NITPICK-TYPE-046`, and the element is read in
+// place -- TM-208. The view's root is now the parameter's element.) The bytes live in the kernel's mapping and
 // outlive every frame in the program.
 func:tz_entry = string(cstring[]:env) never fails {
     int64:j = 0i64;
     while (j < env.len) decreases env.len - j {
-        cstring:e = env[j];
-        if (e.len >= 3i64) {
-            string:entry = string_from_bytes(e.ptr, e.len);
+        if (env[j].len >= 3i64) {
+            string:entry = string_from_bytes(env[j].ptr, env[j].len);
             uint8[]:b = string_bytes(entry);
             if (b[0i64] == 84u8) {                      // 'T'
                 if (b[1i64] == 90u8) {                  // 'Z'
                     if (b[2i64] == 61u8) {              // '='
                         // The view travels UP, out of this frame.
-                        pass string_from_bytes(e.ptr, e.len);
+                        pass string_from_bytes(env[j].ptr, env[j].len);
                     }
                 }
             }
@@ -105,8 +106,7 @@ func:main = int32(cstring[]:_~argv) {
     // (`NITPICK-BORROW-012`, TM-110).
     string:want_entry = "TZ=Europe/Kyiv";
     uint8[]:web = string_bytes(want_entry);
-    cstring:pre = env[tzi];
-    string:pres = string_from_bytes(pre.ptr, pre.len);
+    string:pres = string_from_bytes(env[tzi].ptr, env[tzi].len);
     uint8[]:preb = string_bytes(pres);
     if (preb.len != web.len)                            { exit 39i32; }
     int64:w = 0i64;

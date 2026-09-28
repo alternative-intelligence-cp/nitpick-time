@@ -1190,7 +1190,17 @@ row type by name is a belt, not the guarantee, and
 
 ---
 
-### O-N25 — a view's root can be written while the view is live, so the view reads rewritten or freed memory — **OPEN here: the compiler's D-325 settles it, in pin `c970483`, and its refusal, `NITPICK-BORROW-015`, is at no pin of ours**
+### ~~O-N25 — a view's root can be written while the view is live, so the view reads rewritten or freed memory~~ — **ANSWERED 2026-09-27 (TM-208): `NITPICK-BORROW-015` is in the pin since `5fbaf4a`, and reaches no file of ours**
+
+> **Answered at the adoption of `5fbaf4a` (cycle 0.2.0a, TM-208).** A
+> `string_bytes` view's owner written while the view lives is
+> `NITPICK-BORROW-015` there, and compiles at `c970483`.
+> `tests/unit/bytes_view_lifetime.npk` compiles and runs 0: `bytes_view`'s
+> answer is a `#wild_slice` over the body's pointer, which the freeze does not
+> track, so `SAFETY.md` S-18e's growth rule and S-22's one exemption still
+> govern it. The heading read *"OPEN here: the compiler's D-325 settles it, in
+> pin `c970483`, and its refusal, `NITPICK-BORROW-015`, is at no pin of ours"*;
+> the entry below is left as written.
 
 **Raised** from this repository's cycle 0.1.4b planning, 2026-09-25, at pin
 `c3bdae2`, where `bytes_take` was found handing back a view of its sink typed

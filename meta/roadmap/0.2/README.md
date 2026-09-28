@@ -33,13 +33,13 @@ file stands — make §5's table the authority and drop N-20's count. *(From cyc
 ## Checklist
 
 ### 0.2.0a — the adoption of `5fbaf4a` (its §5 is the acceptance list)
-- [ ] the fifteen `cstring` copies read in place or moved, the lexer re-read, O-N25 answered (PD-57)
-- [ ] `triple` and `datalayout` pinned, held to what `opt` derives, every emission held to them; cases 10, 11 (PD-58)
-- [ ] a refusal names each code once per site; F24's four files; cases 12, 13 (PD-59)
-- [ ] `Pod` retired into the prelude's `Copy`; 58 names re-exported (PD-60)
-- [ ] CI pinned to `5fbaf4a` in a commit of its own, and asserting `npkc.ll` against the pin's row (PD-61, EC6)
-- [ ] EC3's three sites and every other phrasing of the claim corrected (PD-62); ED1 (PD-57)
-- [ ] `GREEN` at `5fbaf4a` locally and in CI, read from the job log
+- [x] the fifteen `cstring` copies read in place or moved, the lexer re-read, O-N25 answered (PD-57) — TM-208, `1390b80`: both probes compile at both pins, `cstring copies left: 0`, `GREEN -- 113`
+- [x] `triple` and `datalayout` pinned, held to what `opt` derives, every emission held to them; cases 10, 11 (PD-58) — TM-209, `563c320`: the `ok    target` line, `10 of V-14's 11`, `GREEN -- 113`
+- [x] a refusal names each code once per site; F24's four files; cases 12, 13 (PD-59) — TM-210, `7cc19c6`: `0 count(s) differ` at both pins, the four old headers each `FAILS the count`, `12 of V-14's 13`, `GREEN -- 113`
+- [x] `Pod` retired into the prelude's `Copy`; 58 names re-exported (PD-60) — TM-211, `b930df3`: `Pod in src/ code: 0`, probe 19 `TYPE-087`, `case5` `TYPE-017` ×2, the control refused, IR 226 493 B, `GREEN -- 113`
+- [x] CI pinned to `5fbaf4a` in a commit of its own, and asserting `npkc.ll` against the pin's row (PD-61, EC6) — `b241e86`, then TM-212, `2c3ccb2`: run 36364840105 printed `npkc.ll == the pin's emission, 30232291 B / 5630c2b4…`
+- [x] EC3's three sites and every other phrasing of the claim corrected (PD-62); ED1 (PD-57) — TM-213, `23cb2da`, and TM-208; block 7b's sweep read line by line, no omission (`0.2.0a.md`'s execution record)
+- [x] `GREEN` at `5fbaf4a` locally and in CI, read from the job log — `GREEN -- 113` on block 7's run over `23cb2da`, and in CI run 36364840105's job log with `compiler HEAD == 5fbaf4a40a2f6b213754cd71b6c69700f8aa2c87 (clean)` and `12 of V-14's 13`
 
 ### 0.2.0 — `Instant`
 - [ ] `Instant { int64:ns; uint8:clock }` with the clock tag from H-6

@@ -1,0 +1,407 @@
+diff --git a/harness/README.md b/harness/README.md
+index 968994eb5bba1733787321e2b1ee42f3f6741d48..58372ed8df5b587cb3971f8a2937ea43a9fb4c05 100644
+--- a/harness/README.md
++++ b/harness/README.md
+@@ -15,11 +15,11 @@ $ NPKC=… NPKRT=… python3 harness/run.py [--only SUBSTRING] [--quick]
+ 
+ | File | What it is |
+ |---|---|
+-| `manifest.py` | `nitpick.toml`, parsed and **schema-checked in both directions** — an unknown key is named and refused, a required key that is missing is named too. P-12: nothing here hardcodes a path, a flag or a version |
+-| `toolchain.py` | asks `llc`, `opt` and `ld.lld` their versions and holds each to `[toolchain] llvm` **exactly**. It asks the three tools it invokes, and not `llvm-config`, which ships in a `-dev` package the build never needs |
++| `manifest.py` | `nitpick.toml`, parsed and **schema-checked in both directions** — an unknown key is named and refused, a required key that is missing is named too. P-12: nothing here hardcodes a path, a flag or a version. Since cycle 0.2.0a `[toolchain]` carries `triple` and `datalayout`, as `npkg` requires (TM-209) |
++| `toolchain.py` | asks `llc`, `opt` and `ld.lld` their versions and holds each to `[toolchain] llvm` **exactly**. It asks the three tools it invokes, and not `llvm-config`, which ships in a `-dev` package the build never needs. And since cycle 0.2.0a `check_target` holds `[toolchain] datalayout` to what the pinned `opt` derives from `triple` (`BUILD.md` B-1a, TM-209) |
+ | `elf.py` | the ELF64 symbol table, read with `struct`. The undefined-symbol scan and the runtime allowlist. **Read its header before citing the scan as a guarantee** |
+ | `lexical.py` | **the harness's one reading of `.npk` source** (cycle 0.1.5, `TESTING.md` V-1k): every `.npk` file is opened here as bytes, and read as code — comments and literals blanked, `use` paths decoded — by the compiler lexer's rules. `nitpick-regex`'s reader, its code ported statement for statement |
+-| `build.py` | the pipeline — `npkc` → `opt` → `llc` → scan → `ld.lld` — every argv built from the manifest's flag lists (B-1) |
++| `build.py` | the pipeline — `npkc` → `opt` → `llc` → scan → `ld.lld` — every argv built from the manifest's flag lists (B-1); and since cycle 0.2.0a every emission's two `target` lines held to the manifest's pins, in `Build.emit` (B-1a, TM-209) |
+ | `stages.py` | the marker grammar, and the `program`, refusal, `parse`, `golden` and `sweep` stages — and, since cycle 0.1.4b, the `heap:` and `cap:` markers: the runtime's own `NPK_HEAP_STATS` line held to a file's bounds, and the address-space belt with the floor program as its control (`TESTING.md` V-17) |
+ | `checks.py` | the **tree checks** — `TESTING.md` §2's family, each one diffing the library against a document that describes it |
+ | `arms.py` | `check_failsafe_arms`: the S-6 arm generator, and `NITPICK-REACH-003` as its oracle |
+diff --git a/harness/build.py b/harness/build.py
+index b76a704b55bde43c48e76c3af58e456ea277f04e..06baf2aac707fd46d98f64b4a98431eaee511701 100644
+--- a/harness/build.py
++++ b/harness/build.py
+@@ -29,6 +29,7 @@ twice.
+ """
+ 
+ import os
++import re
+ import resource
+ import subprocess
+ 
+@@ -146,6 +147,9 @@ def reachable_sources(root_npk):
+     return order
+ 
+ 
++_TARGET_LINE = re.compile(r"^target .*$", re.M)
++
++
+ class Build:
+     """Everything a build needs, read once: the manifest, the pin, the allowlist."""
+ 
+@@ -160,6 +164,9 @@ class Build:
+         self.llc_opt_flags = tc["llc-opt-flags"]
+         self.opt_flags = tc["opt-flags"]
+         self.lld_flags = tc["lld-flags"]
++        # THE TWO LINES EVERY EMISSION STATES (TM-209, `BUILD.md` B-1a).
++        self.header = ['target datalayout = "%s"' % tc["datalayout"],
++                       'target triple = "%s"' % tc["triple"]]
+         # Derived, never written (P-14 as corrected by TM-118): what the
+         # object we actually link provides, plus what it requires of us.
+         self.allowlist = elf.runtime_allowlist(npkrt)
+@@ -180,8 +187,31 @@ class Build:
+             raise BuildError("npkc", "exit 0 and wrote no %s. A status that "
+                                      "disagrees with an artefact is the tell."
+                              % out_ll)
++        self.module_header(out_ll)
+         return out
+ 
++    def module_header(self, ll):
++        """Every emission states the pinned layout and triple, once each, in that
++        order -- the compiler's `check_module_header` (E-8, D-322 (5)), ported at
++        cycle 0.2.0a from `nitpick-regex`'s (its RX-176): TM-209, `BUILD.md` B-1a.
++        `toolchain.check_target` holds the pin to what `opt` derives; this holds
++        each emission to the pin, so the emitter's header, the manifest and the
++        toolchain cannot drift apart in silence. Here, in `emit`, it holds EVERY
++        emission the harness makes -- each program's, the library's, and both of
++        the repro builds'. A `target` line is one that BEGINS a line: a string
++        constant sits on an `@` line and a comment on a `;` line."""
++        with open(ll, "r", encoding="utf-8", errors="replace") as fh:
++            got = _TARGET_LINE.findall(fh.read())
++        if got != self.header:
++            raise BuildError(
++                "module header",
++                "%s: the module's header is not the pinned one -- expected `%s` "
++                "and `%s` (nitpick.toml [toolchain]), got %s (E-8, D-322 (5): "
++                "every module states the layout it assumes, and the runner "
++                "holds it to the pin -- BUILD.md B-1a)"
++                % (os.path.basename(ll), self.header[0], self.header[1],
++                   ("`" + "`, `".join(got) + "`") if got else "no `target` line"))
++
+     def emit_expecting_refusal(self, src, out_ll, cwd=None):
+         """`npkc src`, for a file that MUST NOT compile. Returns `(status, output)`.
+ 
+diff --git a/harness/manifest.py b/harness/manifest.py
+index 4fc361c7e3393e4705476e9eb74b671c0538d230..122037f26eaea0276a71dbb8085ae4c2b49ce1f1 100644
+--- a/harness/manifest.py
++++ b/harness/manifest.py
+@@ -57,8 +57,12 @@ SCHEMA = {
+     "build": {
+         "entry": STR, "output": STR, "opt-level": INT,
+     },
++    # `triple` and `datalayout` since cycle 0.2.0a (TM-209): read out of the
++    # compiler's `npkg/manifest.npk` at `5fbaf4a`, where `npkg` REQUIRES both,
++    # and read here by `toolchain.check_target` and `build.Build` -- a key
++    # this schema carries is a key something reads.
+     "toolchain": {
+-        "llvm": STR,
++        "llvm": STR, "triple": STR, "datalayout": STR,
+         "llc-flags": STRLIST, "llc-opt-flags": STRLIST,
+         "opt-flags": STRLIST, "lld-flags": STRLIST,
+     },
+@@ -74,8 +78,8 @@ SCHEMA = {
+ REQUIRED = {
+     "project": ("name", "version", "target"),
+     "build": ("entry", "output", "opt-level"),
+-    "toolchain": ("llvm", "llc-flags", "llc-opt-flags", "opt-flags",
+-                  "lld-flags"),
++    "toolchain": ("llvm", "triple", "datalayout", "llc-flags",
++                  "llc-opt-flags", "opt-flags", "lld-flags"),
+     "dependencies": (),
+     "test": ("name", "stage", "path"),
+ }
+diff --git a/harness/run.py b/harness/run.py
+index a3f0120e6a60cccc064c8f62c448a52c3df103cc..bf61b67fc7ebb652f01b543c2200ec15ce92d210 100644
+--- a/harness/run.py
++++ b/harness/run.py
+@@ -951,6 +951,7 @@ def main(argv):
+     try:
+         for tool, version, banner in toolchain.check(man):
+             rep.say("  ok    %-8s %-8s %s" % (tool, version, banner))
++        rep.say("  ok    %s" % toolchain.check_target(man))     # TM-209
+     except toolchain.ToolchainError as err:
+         rep.fail("toolchain", err)
+         ok_env = False
+diff --git a/harness/selfcheck.py b/harness/selfcheck.py
+index d3dab0b47574b3a2f9c8d991837f14c33805cadd..367a36c73457979ef5315477ad345463fd1914a7 100644
+--- a/harness/selfcheck.py
++++ b/harness/selfcheck.py
+@@ -153,6 +153,8 @@ opt-level = 0
+ 
+ [toolchain]
+ llvm          = "%(llvm)s"
++triple        = "%(triple)s"
++datalayout    = "%(datalayout)s"
+ llc-flags     = %(llc)s
+ llc-opt-flags = %(llcopt)s
+ opt-flags     = %(opt)s
+@@ -237,7 +239,8 @@ def make_tree(where, man, files, entries):
+         return "[" + ", ".join('"%s"' % x for x in xs) + "]"
+ 
+     text = MANIFEST % {
+-        "llvm": tc["llvm"], "llc": arr(tc["llc-flags"]),
++        "llvm": tc["llvm"], "triple": tc["triple"],
++        "datalayout": tc["datalayout"], "llc": arr(tc["llc-flags"]),
+         "llcopt": arr(tc["llc-opt-flags"]), "opt": arr(tc["opt-flags"]),
+         "lld": arr(tc["lld-flags"]),
+     }
+@@ -555,6 +558,72 @@ def case_8_failsafe_deleted(root, man, base, npkc):
+     return c
+ 
+ 
++def _target_case(c, root, man, base, name, fault):
++    """A manifest-level fault, and its control through the identical code path:
++    the same tree with the real manifest's rows must come back green, so the
++    red came from the planted pin and not from the tree (V-14b). `fault` maps
++    the generated manifest's text to the faulted one."""
++    where = make_tree(
++        os.path.join(base, name), man,
++        [("tests/unit/fine.npk",
++          "// expect-exit: 0\n" + TRIVIAL % {"mod": "fine", "code": "0"})],
++        [("unit", "program", "tests/unit")])
++    toml = os.path.join(where, "nitpick.toml")
++    with open(toml, "r", encoding="utf-8") as fh:
++        good = fh.read()
++    bad = fault(good)
++    if bad == good:
++        c.problems.append("the fault changed nothing in the scratch manifest; "
++                          "the case planted nothing")
++        return None
++    _write(toml, bad)
++    st, out, v = invoke(where)
++    c.red(st, out)
++    _write(toml, good)
++    st2, out2, v2 = invoke(where)
++    if st2 != 0 or not any(x.startswith("PASS tests/unit/fine.npk")
++                           for x in v2):
++        c.problems.append(
++            "the control run -- the same tree with the real manifest's pins -- "
++            "exited %d or did not pass `tests/unit/fine.npk`. The red above is "
++            "then not evidence about the pin.\n%s" % (st2, _indent(out2)))
++    return out, v
++
++
++def case_10_layout_pin_wrong(root, man, base):
++    c = Case(10, "a manifest whose layout pin is not what the pinned opt derives")
++    # One field of the layout dropped (TM-209, BUILD.md B-1a): the compiler's
++    # `check_datalayout_pin`, ported -- a stated layout proves nothing about
++    # itself, because `opt` keeps a wrong one as written and `llc` accepts one
++    # in silence.
++    got = _target_case(c, root, man, base, "case10",
++                       lambda t: t.replace("-n8:16:32:64-S128", "-n8:16:32-S128"))
++    if got:
++        c.says(got[0], "but the pinned `opt` derives")
++    return c
++
++
++def case_11_other_target(root, man, base):
++    c = Case(11, "a tree pinned consistently to another target")
++    # `i686-unknown-linux-gnu` and the layout the pinned `opt` derives for it
++    # (measured at cycle 0.2.0a's planning), so case 10's check PASSES and only
++    # the header belt can see that every module this compiler emits states
++    # x86-64 (TM-209): the compiler's `check_module_header`, ported.
++    got = _target_case(
++        c, root, man, base, "case11",
++        lambda t: t.replace('"x86_64-unknown-linux-gnu"',
++                            '"i686-unknown-linux-gnu"')
++                   .replace('"e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-'
++                            'i128:128-f80:128-n8:16:32:64-S128"',
++                            '"e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-'
++                            'i128:128-f64:32:64-f80:32-n8:16:32-S128"'))
++    if got:
++        c.fails(got[1], "tests/unit/fine.npk")
++        c.says(got[0], "the module's header is not the pinned one")
++        c.says(got[0], "i686-unknown-linux-gnu")
++    return c
++
++
+ # CASE 9's SPECIMEN (cycle 0.1.4b, TM-187). HELD keeps one 4096-byte managed
+ # buffer live to its exit, so the runtime reports `allocated=4096
+ # peak_live=4096 count=1` -- measured at `c3bdae2` on both legs, and the
+@@ -1069,7 +1138,10 @@ PLANTED = [
+ #   V14_CASES     what `TESTING.md` V-14 names -- seven, plus this repository's
+ #                 own eighth (a program whose `failsafe` has been deleted) and,
+ #                 since cycle 0.1.4b, its ninth (a program whose managed memory
+-#                 disagrees with its header, TM-187).
++#                 disagrees with its header, TM-187) and, since cycle 0.2.0a,
++#                 its tenth and eleventh (a layout pin `opt` does not derive,
++#                 and a tree pinned consistently to another target -- the
++#                 compiler's two target checks, ported, TM-209).
+ #   PLANTED_CASES what is actually planted: case 6 is PEND until cycle 0.5.
+ #   TREE_PLANTS   `PLANTED`'s rows, plus THREE that no row can express:
+ #                 `check_layering`'s node half (the fault is a file that is NOT
+@@ -1078,8 +1150,8 @@ PLANTED = [
+ #                 `check_specs_current` (which reports and never fails, so it
+ #                 is driven separately). Every one has a control beside it,
+ #                 which is why the two numbers printed are equal.
+-V14_CASES = 9
+-PLANTED_CASES = 8
++V14_CASES = 11
++PLANTED_CASES = 10
+ TREE_PLANTS = len(PLANTED) + 3
+ 
+ 
+@@ -1804,6 +1876,8 @@ def run(rep, root, steps):
+         ok = _report_case(rep, c) and ok
+     ok = _report_case(rep, case_8_failsafe_deleted(root, man, base, npkc)) and ok
+     ok = _report_case(rep, case_9_memory_disagrees(root, man, base)) and ok
++    for fn in (case_10_layout_pin_wrong, case_11_other_target):     # TM-209
++        ok = _report_case(rep, fn(root, man, base)) and ok
+ 
+     problems = part_b(rep, base) + part_b_specs_current(rep, base)
+     if problems:
+diff --git a/harness/toolchain.py b/harness/toolchain.py
+index b8d638146742a925554353c8fbf2bd140adcc3b7..037bfd752b52c37ea6c3d84a20934f5d653ceebc 100644
+--- a/harness/toolchain.py
++++ b/harness/toolchain.py
+@@ -88,6 +88,43 @@ def _ask(tool):
+         "The output was:\n%s" % (tool, out.rstrip()))
+ 
+ 
++_LAYOUT = re.compile(r'^target datalayout = "([^"]*)"$', re.M)
++
++
++def check_target(manifest):
++    """The layout pin is what the pinned `opt` derives from the triple pin.
++
++    The compiler's `check_datalayout_pin` (its harness, since its landing 71:
++    E-8, D-322 (5)), ported at cycle 0.2.0a from `nitpick-regex`'s port of it
++    (its RX-176) -- TM-209, `BUILD.md` B-1a. Every module states a `target
++    datalayout`; `opt` keeps a wrong one as written and `llc` accepts one in
++    silence, so a stated layout proves nothing about itself. This holds the PIN
++    to the toolchain, and `build.Build.emit` holds every emission to the pin.
++    Returns the line the run log prints; raises on a mismatch (D-204).
++    """
++    triple = manifest["toolchain"]["triple"]
++    layout = manifest["toolchain"]["datalayout"]
++    try:
++        r = subprocess.run(["opt", "-S", "-"],
++                           input='target triple = "%s"\n' % triple,
++                           stdout=subprocess.PIPE, stderr=subprocess.PIPE,
++                           universal_newlines=True, timeout=30)
++    except (OSError, subprocess.SubprocessError) as err:
++        raise ToolchainError("`opt -S` over the triple probe failed: %s" % err)
++    m = _LAYOUT.search(r.stdout)
++    if r.returncode != 0 or not m:
++        raise ToolchainError(
++            "`opt -S` over a module stating only the pinned triple wrote no "
++            "`target datalayout` line: %r" % (r.stderr or r.stdout).strip()[:160])
++    if m.group(1) != layout:
++        raise ToolchainError(
++            "nitpick.toml [toolchain] pins the layout %r, but the pinned `opt` "
++            "derives %r from the triple %r -- the layout every module states "
++            "must be the one the toolchain lays the binary out under (E-8, "
++            "D-322 (5); BUILD.md B-1a)." % (layout, m.group(1), triple))
++    return "target %s, its layout the one the pinned opt derives" % triple
++
++
+ def check(manifest):
+     """Assert every tool matches `[toolchain] llvm` exactly.
+ 
+diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
+index f03ccc5928d7ba60b8ae6175ae9dc9895785b9fb..123e4aa79bcacbefbb79a5f31fbe88400fcc5287 100644
+--- a/meta/DECISIONS.md
++++ b/meta/DECISIONS.md
+@@ -5925,6 +5925,36 @@ leaves it: whether a read's length is `count`.*
+ tables arrive — they are `fixed` arrays, `T[N]`, which trap on their own and
+ lay no slice (`SAFETY.md` S-17b), so they are not the second subject.
+ 
++### TM-209 — the manifest pins the target, `triple` and `datalayout`, and the runner holds the pin to what `opt` derives and every emission to the pin
++
++**@@DATE@@, cycle 0.2.0a (the plan's PD-58) — the adoption of compiler
++`5fbaf4a`, its landing 71 (E-8, D-322 (5)). Amends `nitpick.toml`,
++`harness/manifest.py`, `toolchain.py`, `build.py`, `run.py` and
++`selfcheck.py`; `BUILD.md` (B-1a, new); `TESTING.md` V-14 (cases 10, 11).**
++
++**What was found.** At `5fbaf4a` every emission opens with `target datalayout`
++and `target triple`, and `npkg` refuses a manifest without `[toolchain]`'s two
++rows, by name. `harness/manifest.py` refuses a key its schema lacks — *"a
++harness that quietly ignored one would accept a manifest `npkg` will not"* — so
++the rows cannot be added without something reading them.
++
++**The decision.** *`nitpick.toml` carries F15's two rows verbatim, and both are
++read: `toolchain.check_target` requires the layout to be exactly what the pinned
++`opt -S` derives from a module stating only the triple (measured: F15's string;
++for `i686-unknown-linux-gnu` another), and `Build.emit` requires every emission's
++two `target` lines to be the pinned ones, in order — every emission the harness
++makes, the programs', the library's and both repro builds'. Self-check cases 10
++and 11 are each one's red, beside the same tree at the real pins as the control.
++The compiler's `check_datalayout_pin` and `check_module_header`, by way of
++`nitpick-regex`'s port (its RX-176).*
++
++*Alternatives declined:* **the two rows read by nothing** — the schema's own
++rule, and a pin nothing holds is the next stale document; **the header belt
++without the layout check** — a manifest pinned consistently to a wrong layout
++would pass it; **the belt on linked programs only, as regex has it** — `emit`
++is this harness's one door to `npkc`, and holding it there costs one read per
++emission and covers the library and the repro builds too.
++
+ ### TM-208 — the adoption of compiler `5fbaf4a`: the fifteen `cstring` copies read in place or moved, the lexer re-read, and what else the pin moved here
+ 
+ **@@DATE@@, cycle 0.2.0a (the plan's PD-57) — landings 67 … 82 over
+diff --git a/meta/specs/BUILD.md b/meta/specs/BUILD.md
+index 5f31e5e10659889123e4df90a68b6b06f0623179..34cf81d63e35a36c88bca96ce670815ea24e7b86 100644
+--- a/meta/specs/BUILD.md
++++ b/meta/specs/BUILD.md
+@@ -73,6 +73,19 @@ the harness prints per-unit and total wall time on every run.
+ `-O2` and would optimise a build the manifest declined, which cost the compiler
+ project a measured 25× on one module.
+ 
++**Rule B-1a (TM-209) — the manifest pins the TARGET, and the runner holds every
++emission to it.** Since the compiler's landing 71 (its E-8, D-322 (5)) every
++module opens with a `target datalayout` and a `target triple` line, and `npkg`
++refuses a manifest without `[toolchain]`'s `triple` and `datalayout`. Both rows
++are here since cycle 0.2.0a, and both are READ: `harness/toolchain.py`'s
++`check_target` requires the layout to be exactly what the pinned `opt` derives
++from the triple — `opt` keeps a wrong layout as written and `llc` accepts one in
++silence, so a stated layout proves nothing about itself — and `harness/build.py`
++requires every emission's two `target` lines to be the pinned ones, in that
++order. The compiler's own runner does both (`check_datalayout_pin`,
++`check_module_header`); `nitpick-regex` ported them first (its RX-176), and
++self-check cases 10 and 11 (`TESTING.md` V-14) are each one's red.
++
+ **Rule B-2.** The undefined-symbol scan is a **build step, not a test**. Every
+ object is scanned and the build fails on any undefined symbol outside the
+ runtime allowlist. This is what makes "no C, ever" structural rather than a
+diff --git a/meta/specs/TESTING.md b/meta/specs/TESTING.md
+index aa7cb79fc3c7ec9f80df56d723537e97c9f7cc36..09399ba4052fd172b18dc0c5482539450d2c7d26 100644
+--- a/meta/specs/TESTING.md
++++ b/meta/specs/TESTING.md
+@@ -495,7 +495,15 @@ expectations and requires it to report every one as a failure:
+    byte under the measurement, a floor one allocation over it, a run whose
+    report never reaches stderr, a `cap:` exit the program does not take, and a
+    cap the floor program cannot start under — beside a control held exactly at
+-   both bounds of every field and at a cap it starts under (V-17).
++   both bounds of every field and at a cap it starts under (V-17);
++10. **a manifest whose layout pin is not what the pinned `opt` derives** —
++   one field of the layout dropped — since cycle 0.2.0a (TM-209, `BUILD.md`
++   B-1a): the compiler's `check_datalayout_pin`, ported, with the same tree at
++   the real pins as its control;
++11. **a tree pinned consistently to another target** — `i686-unknown-linux-gnu`
++   and the layout the pinned `opt` derives for it — so case 10's check passes
++   and only the header belt can see every emission state x86-64 (TM-209): the
++   compiler's `check_module_header`, ported.
+ 
+ **SEVEN OF THE EIGHT ARE PLANTED, AND THE RUNNER SAYS SEVEN.** Case 6 is
+ `PEND` until cycle 0.5, so *"this runner has been shown able to fail eight
+diff --git a/nitpick.toml b/nitpick.toml
+index 875c5e063cf4d33ea29e712dc285842387ced68c..47958104f56592fece0d68f85b22cc0366221f7f 100644
+--- a/nitpick.toml
++++ b/nitpick.toml
+@@ -38,6 +38,16 @@ opt-level = 0
+ # stated flag nothing consumes is the next stale document.
+ [toolchain]
+ llvm          = "20.1.2"
++# THE TARGET EVERY MODULE STATES (the compiler's E-8, D-322 (5), its landing 71;
++# carried since cycle 0.2.0a, TM-209). Every emission opens with a `target
++# datalayout` and a `target triple` line, and these two rows are what the runner
++# holds them to: `datalayout` to what the pinned `opt` derives from `triple`
++# (`harness/toolchain.py`), and every emission's two lines to both
++# (`harness/build.py`). Pins, not settings -- `npkg` refuses a manifest without
++# either, by name -- and the layout is the FULL string: `llvm-as` completes a
++# partial one, which then fails the belt. `nitpick-regex`'s rows, byte for byte.
++triple        = "x86_64-unknown-linux-gnu"
++datalayout    = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+ llc-flags     = ["-O0", "-filetype=obj", "-relocation-model=static"]
+ llc-opt-flags = ["-O2", "-filetype=obj", "-relocation-model=static"]
+ opt-flags     = ["-O2", "-S"]

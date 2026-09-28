@@ -23,13 +23,23 @@ file stands — make §5's table the authority and drop N-20's count. *(From cyc
 
 | # | Topic | Ends with |
 |---|---|---|
-| 0.2.0 | **`Instant`** — the type, the clock tag, `instant_since`, and the refusals — **[`0.2.0.md`](0.2.0.md)**, written at cycle 0.1's close | a timeout cannot be written against a wall clock |
+| 0.2.0a | **The adoption of compiler `5fbaf4a`** — the fifteen `cstring` copies, the target pinned and held, the per-site count, `Pod` retired into `Copy`, CI's pin and its emission asserted, and the ecosystem audit's EC3, EC6 and ED1 — **[`0.2.0a.md`](0.2.0a.md)**, planned and rehearsed 2026-09-27; it runs FIRST | the tree `GREEN` at `5fbaf4a`, locally and in CI |
+| 0.2.0 | **`Instant`** — the type, the clock tag, `instant_since`, and the refusals — **[`0.2.0.md`](0.2.0.md)**, written at cycle 0.1's close and rehearsed at `5fbaf4a` over 0.2.0a's tree on 2026-09-27 | a timeout cannot be written against a wall clock |
 | 0.2.1 | **`Timestamp`** — the type, the normalisation invariant, the range check | one representation per instant |
 | 0.2.2 | **Conversion** — `timestamp_to_utc`, `civil_to_utc`, and the round trip | the second gate |
 | 0.2.3 | **`Duration` interop** — the added constructors, `timestamp_add`, `timestamp_since` and its ±292-year refusal | the mismatch handled honestly |
 | 0.2.4 | **Close** | `done/0.2/`, `0.3.0.md` written |
 
 ## Checklist
+
+### 0.2.0a — the adoption of `5fbaf4a` (its §5 is the acceptance list)
+- [ ] the fifteen `cstring` copies read in place or moved, the lexer re-read, O-N25 answered (PD-57)
+- [ ] `triple` and `datalayout` pinned, held to what `opt` derives, every emission held to them; cases 10, 11 (PD-58)
+- [ ] a refusal names each code once per site; F24's four files; cases 12, 13 (PD-59)
+- [ ] `Pod` retired into the prelude's `Copy`; 58 names re-exported (PD-60)
+- [ ] CI pinned to `5fbaf4a` in a commit of its own, and asserting `npkc.ll` against the pin's row (PD-61, EC6)
+- [ ] EC3's three sites and every other phrasing of the claim corrected (PD-62); ED1 (PD-57)
+- [ ] `GREEN` at `5fbaf4a` locally and in CI, read from the job log
 
 ### 0.2.0 — `Instant`
 - [ ] `Instant { int64:ns; uint8:clock }` with the clock tag from H-6
@@ -63,6 +73,15 @@ file stands — make §5's table the authority and drop N-20's count. *(From cyc
 - [ ] `check_int128_sites` goes live: `int128` at exactly the sites `SPAN_MODEL.md` §5 names
 
 ## The adoption, when the pin moves
+
+> **Planned 2026-09-27 as [`0.2.0a.md`](0.2.0a.md), at `5fbaf4a`** — the board's
+> re-pin of 2026-09-27 10:54, the author's go (its question 12: the latest, not
+> the staged `44ec7e9`). Each item below is a step there or was measured to need
+> none: 1 is its step 2; 2 and 3 its step 4; 4 and 6 its step 1 (the fifteen
+> copies — the census's twelve `to_cstring` lines moved nothing but the seven
+> `c.value` copies; the loop hold lifts; `NITPICK-BORROW-015` reaches no file of
+> ours); 5 its step 1 (the lexer moved a character literal's width only); 7 its
+> steps 5 and 6. The list below is left as written.
 
 **Cycle 0.1's close ran at compiler `c970483` and pre-empted none of this.**
 The author decided on ONE re-pin, at the end of the compiler's 1.6.1d (the

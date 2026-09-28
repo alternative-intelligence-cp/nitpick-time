@@ -1,0 +1,516 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 4f72e2a1d1cb41d394c0954f4baa0a7f0287c20d..98b45753c9d5b36b90230ece3582321707f81cfa 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -39,7 +39,7 @@
+ # `Vec<T>`, `Bytes` and thirteen named bounds -- and `src/cal/` since 0.1.0 --
+ # the civil types and their validating constructors, and since 0.1.1 Hinnant's
+ # `date_to_days` and `days_to_date`, and since 0.1.3 the derived fields --
+-# re-exported together as 59 public names [[sweep: lib_reexports=59]],
++# re-exported together as 58 public names [[sweep: lib_reexports=58]],
+ # so this IS evidence about behaviour, of the 113 units the runner reports at
+ # compiler `c970483` (62 at cycle 0.0.6, 67 at 0.1.0, 70 at 0.1.0b, 75 at
+ # 0.1.0c, 78 at 0.1.1, 81 at 0.1.2, 86 at 0.1.3, 90 at 0.1.3b, 91 at 0.1.4 and
+diff --git a/harness/stages.py b/harness/stages.py
+index 101b73ee005c1af6bb12842d628aa0d6e118f436..00072f1a324ce7188b5b316ea277efcea208b6a0 100644
+--- a/harness/stages.py
++++ b/harness/stages.py
+@@ -586,7 +586,7 @@ def parse_verdict(bld, rel, e):
+     UNLESS its own header names a parse-phase code. That is what lets the stage
+     cover the 37 files in this tree [[sweep: tests_error=37]] that must NOT
+     compile -- they are refused at PARSE-001, LEX-004, PARSE-002, TYPE-009,
+-    TYPE-017, TYPE-046, TYPE-047, TYPE-079, TYPE-080, TYPE-084, BORROW-001,
++    TYPE-017, TYPE-046, TYPE-079, TYPE-080, TYPE-084, TYPE-087, BORROW-001,
+     BORROW-012, RESOLVE-001, REACH-002 and REACH-003, and every family after
+     the first three is a phase that only runs on something that parsed. (30
+     until cycle 0.1.3c, whose port made six new refusals -- four copies of an
+@@ -597,7 +597,9 @@ def parse_verdict(bld, rel, e):
+     `probe15` and four new probes refusals at TYPE-079 and TYPE-080, TM-156
+     and TM-157. 26 until cycle 0.1.4c, whose re-pin made `fixed_move_out/`'s
+     three `TYPE-084` refusals and whose `fixed_import_scope/` brought one
+-    refused `RESOLVE-001`, TM-189 and TM-192.)
++    refused `RESOLVE-001`, TM-189 and TM-192. `TYPE-047` stood where
++    `TYPE-087` does until cycle 0.2.0a, whose `probe19` asks `Copy` of an
++    owner where it asked `Pod`, TM-211.)
+     TWO files in the tree are expected not to parse, and the check is that it
+     is exactly those two: `probe02d_wide_literal_refused.npk` (LEX-004,
+     PARSE-002) and, since cycle 0.1.0,
+diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
+index ef48df3e8b2ad07ca42f53bc3bf56c12aabfcd7a..62e8f92a7feefce4cecae5873febb7c84120511a 100644
+--- a/meta/DECISIONS.md
++++ b/meta/DECISIONS.md
+@@ -2723,7 +2723,8 @@ line at all.
+ > exactly as written.
+ >
+ > **SUPERSEDED IN PART by TM-194 as well (2026-09-26).** Its finding that
+-> `vec_at<T>` is destructive at an owning `T`: since `vec_at` takes `T: Pod`,
++> `vec_at<T>` is destructive at an owning `T`: since `vec_at` takes `T: Pod`
++> (`T: Copy` since TM-211, @@DATE@@),
+ > that read is refused at the call, `NITPICK-TYPE-017`, and `case5` asserts
+ > the refusal. The restriction stands, on the four element drops.
+ 
+@@ -5305,6 +5306,11 @@ the author on question 9.
+ 
+ ### TM-194 — `vec_at` takes `T: Pod` and reads through a loan: `Pod` is `nitpick-regex`'s trait, text for text, which an owning type cannot implement as it is declared, so `vec_at` at an owning `T` is refused `NITPICK-TYPE-017`, and `generic_owning_copy/case5` asserts that refusal
+ 
++> **SUPERSEDED IN PART by TM-211 (@@DATE@@).** Its trait: `vec_at` takes the
++> prelude's `Copy` since the adoption of `5fbaf4a` (the compiler's D-327), and
++> `Pod` and its nine impls are deleted. The loan, the refusal at an owning `T`
++> and `case5`'s assertion stand. The text below is left exactly as written.
++
+ **2026-09-26, cycle 0.1.3c (PD-45). Replaces TM-136 in part — its "`vec_at<T>`
+ is destructive" — adds `SAFETY.md` S-18h, and puts `Pod` on the umbrella.**
+ `pub trait:Pod = { func:pod_copy = Self(Self:self) never fails; };` and its
+@@ -5460,6 +5466,11 @@ no-op P-1 was written against.
+ 
+ ### TM-198 — `Pod` is ported now, at `c970483`, and the prelude's `Copy` replaces it mechanically at the re-pin that carries the compiler's D-327; nothing in this library is named `Copy`
+ 
++> **SUPERSEDED IN PART by TM-211 (@@DATE@@) — the replacement it scheduled,
++> made.** Its interim `Pod`: at the adoption of `5fbaf4a` the block is deleted
++> and `vec_at` bounded `T: Copy`, the spellings measured then. The text below
++> is left exactly as written.
++
+ **2026-09-26, cycle 0.1.3c (PD-49) — taken at planning on the orchestrator's
+ instruction of 2026-09-26, when the author ratified the copy marker the
+ compiler seat had put to him, as the compiler's D-327: a PRELUDE marker trait
+@@ -5991,6 +6002,44 @@ position** — `probe15`'s three reports share one position and are three
+ facts until DEF-165 says otherwise; **counting notes too** — a note is the
+ compiler's explanation, not a site, and B-7 has never counted them.
+ 
++### TM-211 — `Pod` retires into the prelude's `Copy`: `vec_at<T: Copy>` copies its element plainly, the trait and its nine impls are deleted, and the umbrella re-exports 58 names
++
++**@@DATE@@, cycle 0.2.0a (the plan's PD-60) — the adoption of compiler
++`5fbaf4a`, its landing 73 (D-327) and landing 69 (DEF-116). Amends
++`src/core/vec.npk`, `src/lib.npk`, `tests/unit/vec_at_pod.npk`,
++`tests/probe/probe19_pod_owner_refused.npk` and `SAFETY.md` S-18h, with the
++notes in S-17c and S-18 that state the bound. It supersedes TM-194 and TM-198
++in part, as TM-198 said the decision at this
++re-pin would.**
++
++**What was found**, measured at `5fbaf4a` with the `Pod` block deleted:
++`vec_at<T: Copy>` whose body is `pass s[i];` compiles — in a generic body a
++`T: Copy` place is copied plainly — and at `T = string` both of
++`generic_owning_copy/case5`'s calls are still `NITPICK-TYPE-017`, now *"`string`
++does not implement `Copy`"*, at their positions. A consumer's struct of
++integers and its four-variant payload enum (`Literal(uint16)`) each claim it
++with `impl:X:Copy = { };`, and `vec_at_pod` exits 0 on both legs. An owning
++type cannot: `impl:string:Copy = { };` is `NITPICK-TYPE-087` once, at the impl;
++so is the impl for a struct holding a `string`, whose `#[derive(Copy)]` is
++`NITPICK-DERIVE-006`. The hole S-18h named — an impl declaring `move` on the
++`self` its trait lent, DEF-116 — is `NITPICK-TYPE-014` since landing 69, and
++`Copy` has no method to declare one on. Nothing in this tree is named `Copy`.
++
++**The decision.** *TM-198's replacement, as it listed it: the trait and its
++nine impls deleted from `src/core/vec.npk`; `vec_at<T: Copy>` returning
++`s[i]`; the umbrella's `Pod` line gone, 59 → 58 re-exported names; the unit's
++two impls `impl:Pt:Copy = { };` and `impl:Part:Copy = { };`; and probe 19 asking
++`impl:string:Copy = { };`, refused `NITPICK-TYPE-087`. `SAFETY.md` S-18h is
++restated for `Copy`. The two test files keep their names.*
++
++*Alternatives declined:* **`Pod` kept beside `Copy`** — two markers for one
++property, and the one the compiler checks is the prelude's; **the unit's types
++`#[derive(Copy)]`** — the explicit form is the one a reader of `vec_at`'s
++comment is told to write, and a derive of an owning struct is refused at the
++declaration (`DERIVE-006`), which probe 19's `TYPE-087` already pins for the
++impl; **renaming `vec_at_pod` and `probe19_pod_owner_refused`** — every
++citation of either would move for a word.
++
+ ### TM-208 — the adoption of compiler `5fbaf4a`: the fifteen `cstring` copies read in place or moved, the lexer re-read, and what else the pin moved here
+ 
+ **@@DATE@@, cycle 0.2.0a (the plan's PD-57) — landings 67 … 82 over
+diff --git a/meta/roadmap/0.4/README.md b/meta/roadmap/0.4/README.md
+index f508c84b6129e42e98b0681b5280f45ec3dfbcce..3dc9e3db6c21ef0d5e7806a9799cbc46b04642b0 100644
+--- a/meta/roadmap/0.4/README.md
++++ b/meta/roadmap/0.4/README.md
+@@ -130,10 +130,11 @@ documented exceptions and a test that counts them.
+   So the wrapper wants a consuming take, a public name this cycle chooses with
+   a caller in hand (TM-013), or a re-measurement at the pin it plans against.
+   And every `string` it hands back is a copy (`SAFETY.md` S-18f).
+-- **`Layout`'s `Vec<FmtPart>` needs `FmtPart: Pod`, and a `Layout` is
+-  move-only** (cycle 0.1.3c; `SAFETY.md` S-18g, S-18h). `vec_at` takes
+-  `T: Pod`, and `FmtPart` — a payload enum whose payload owns nothing —
+-  implements it in one line beside its declaration: measured, a four-variant
++- **`Layout`'s `Vec<FmtPart>` needs `FmtPart: Copy`, and a `Layout` is
++  move-only** (cycle 0.1.3c; `SAFETY.md` S-18g, S-18h — `Pod` until cycle
++  0.2.0a, TM-211). `vec_at` takes `T: Copy`, and `FmtPart` — a payload enum
++  whose payload owns nothing — claims it in one line beside its declaration,
++  `impl:FmtPart:Copy = { };`: measured, a four-variant
+   payload enum does, and reads back twice through `vec_at`
+   (`tests/unit/vec_at_pod.npk`). A struct holding a `Vec` is move-only by
+   containment, so a `Layout` is moved or lent, never copied; a formatter that
+diff --git a/meta/specs/SAFETY.md b/meta/specs/SAFETY.md
+index 84d6865aaba0509b32a8533a353f0866ae5eb06b..663d6322306e7cf485a98468a472987fd2462486 100644
+--- a/meta/specs/SAFETY.md
++++ b/meta/specs/SAFETY.md
+@@ -581,7 +581,9 @@ pass s[i];
+ ```
+ 
+ *(Since cycle 0.1.3c `vec_at` ends `pass raw s[i].pod_copy();` — it takes
+-`T: Pod`, S-18h — and the index its slice guards is the same `s[i]`.)*
++`T: Pod`, S-18h — and the index its slice guards is the same `s[i]`. And
++since cycle 0.2.0a it ends `pass s[i];` again, at the prelude's `T: Copy` —
++TM-211.)*
+ 
+ **THE EXCEPTION IS `push`, AND IT IS PART OF THE RULE RATHER THAN A DEPARTURE
+ FROM IT (F2, TM-143).** This code block read *"over `count`, never over `cap`"*
+@@ -856,7 +858,7 @@ SEES.**
+ > exited 11 on the removal until then). So the destructive read is gone from
+ > the list above and the restriction rests on the four drops alone, which no
+ > type here states — `struct:Vec<T: Pod>` would, and is declined for now
+-> (TM-194). **TM-150's churn pair is a program with bounds**:
++> (TM-194; the bound is the prelude's `T: Copy` since cycle 0.2.0a, TM-211). **TM-150's churn pair is a program with bounds**:
+ > `tests/unit/vec_churn_pop.npk` holds two million push-then-pop cycles at
+ > `T = string` to `peak_live <= 75000` (it measures 120) and
+ > `vec_churn_clear.npk`, `vec_clear` in the pop's place, to `peak_live >=
+@@ -991,10 +993,22 @@ walks the empty array and frees nothing, so the block is still `wild`,
+ redden first if a compiler changes it. **Not closed by it**: the four element
+ drops of S-18d, which no type here states.
+ 
+-**Rule S-18h (TM-194, cycle 0.1.3c) — the one verb that hands an element back
++**Rule S-18h (TM-194, cycle 0.1.3c; restated for `Copy` by TM-211, cycle
++0.2.0a) — the one verb that hands an element back
+ by value asks for a `T` that owns nothing, and the language decides which
+-types those are.** `vec_at<T: Pod>` reads through `Pod`'s `pod_copy`, a
+-`never fails` method whose `self` is LENT. For an owning type the body the
++types those are.** *Since cycle 0.2.0a (TM-211):* `vec_at<T: Copy>` hands back
++a copy of the element under the prelude's marker `Copy` (the compiler's D-327),
++which a type that owns anything cannot claim — `impl:string:Copy = { };` is
++`NITPICK-TYPE-087` (`tests/probe/probe19_pod_owner_refused.npk`), and a derive
++for a struct holding an owner is `NITPICK-DERIVE-006` — so `vec_at` at an owning
++`T` is `NITPICK-TYPE-017` at the call (`generic_owning_copy/case5`). A consumer's
++type that owns nothing claims it in one line, `impl:X:Copy = { };`
++(`tests/unit/vec_at_pod.npk`); the scalars' impls are the prelude's, and this
++library re-exports nothing for it. The guard is S-17c's slice, unchanged, and
++the hole below is closed: an impl's `move` on a lent parameter is
++`NITPICK-TYPE-014` since the compiler's DEF-116, and `Copy` has no method.
++*What the rule read until then, kept as its record:* `vec_at<T: Pod>` reads
++through `Pod`'s `pod_copy`, a `never fails` method whose `self` is LENT. For an owning type the body the
+ trait admits, `pass self`, is `NITPICK-TYPE-047` — a lent owner cannot be
+ passed on — so no owning type implements it as declared
+ (`tests/probe/probe19_pod_owner_refused.npk`), and `vec_at` at an owning `T`
+diff --git a/src/core/vec.npk b/src/core/vec.npk
+index b43f39b4e1086dd017db526df500cbb826b0141b..ff39fef3d1540798508f5a050870fa086d3391b0 100644
+--- a/src/core/vec.npk
++++ b/src/core/vec.npk
+@@ -75,11 +75,12 @@
+ // USED TO SAY FOR IT. `Vec<T>` IS MOVE-ONLY -- a copy of one is
+ // `NITPICK-TYPE-046`, and the section above the struct says how -- and THE ONE
+ // VERB THAT HANDS AN ELEMENT BACK BY VALUE ASKS FOR A `T` THAT OWNS NOTHING:
+-// `vec_at<T: Pod>` at an owning `T` is `NITPICK-TYPE-017` at the call, where
++// `vec_at<T: Copy>` at an owning `T` is `NITPICK-TYPE-017` at the call, where
+ // it used to move the element out (its own comment says how). The four drops
+ // above are unchanged, and nothing in the language refuses them: a bound on
+-// the TYPE, `struct:Vec<T: Pod>`, would, and it is not taken (TM-194 says
+-// why). And the pair TM-150 measured in a scratch directory is committed:
++// the TYPE, `struct:Vec<T: Copy>`, would, and it is not taken (TM-194 says
++// why; the bound was this library's own `Pod` until cycle 0.2.0a, TM-211).
++// And the pair TM-150 measured in a scratch directory is committed:
+ // `../../tests/unit/vec_churn_pop.npk` and `vec_churn_clear.npk` hold 120 and
+ // 48 000 096 to the runtime's own count on every run.
+ //
+@@ -110,7 +111,7 @@
+ // indexes THAT, and the check becomes the compiler's own:
+ //
+ //     T[]:s = #wild_slice<T>(v.items, v.count);
+-//     pass raw s[i].pod_copy();       // `vec_at`; until cycle 0.1.3c, `pass s[i];`
++//     pass s[i];                      // `vec_at`, at `T: Copy` (TM-211)
+ //
+ // ONE UNSIGNED COMPARE COVERS BOTH ENDS. `emit_bounds_guard` emits `icmp ult`
+ // -- unsigned -- and `index_as_i64` sign-extends first, so a negative index
+@@ -314,73 +315,40 @@ pub func:vec_push<T> = NIL(Vec<T>->:v, move T:x) never fails {
+     pass NIL;
+ };
+ 
+-// ---- `Pod`: what `vec_at` may hand back by value (TM-194; `SAFETY.md` S-18h) --
+-//
+-// ONE METHOD, AND THE LANGUAGE DECIDES WHO MAY IMPLEMENT IT. `pod_copy` takes
+-// its `self` LENT and returns a `Self`, never failing. For a type that owns
+-// nothing, `pass self` is its copy. For an owning type the same body is
+-// `NITPICK-TYPE-047` -- a lent owner cannot be passed on (the compiler's
+-// D-065) -- so an impl the compiler admits for one would have to build an
+-// independent value, and a `never fails` body cannot allocate one. Measured at
+-// compiler `c970483`: `impl:string:Pod`, an impl for a struct holding a
+-// `string`, and `impl:Vec<int64>:Pod`, each written `pass self`, are each
+-// `TYPE-047` (`../../tests/probe/probe19_pod_owner_refused.npk` asserts the
+-// first). So `T: Pod` on `vec_at` states TM-132's restriction TO THE COMPILER
+-// for the one verb that hands an element back, at every consumer's call.
+-//
+-// THE TRAIT AND ITS NINE IMPLS ARE `nitpick-regex`'s, TEXT FOR TEXT, THE
+-// PARAMETER MODES INCLUDED (its RX-168); this library imports nothing
+-// (TM-027), so the trait is declared here rather than shared. The integers to
+-// 64 bits and `bool`: every scalar a specification here stores in a `Vec`. A
+-// type of a consumer's that owns nothing implements it in one line where the
+-// type is declared -- a struct of integers, or a payload enum such as
+-// `FORMAT_MODEL.md`'s parts -- and the umbrella re-exports the name so a
+-// consumer can (`../../tests/unit/vec_at_pod.npk`). A wider scalar is one line
+-// here.
+-//
+-// THE HOLE, SAID WHERE A READER MEETS IT: at compiler `c970483` an impl may
+-// declare its `self` `move` where the trait lends it, and the compiler accepts
+-// it -- the compiler's DEF-116, raised by `nitpick-regex`'s planning, whose
+-// fix (a parameter's `move` made part of the signature, refused
+-// `NITPICK-TYPE-014`) is at no pin of ours. Through `vec_at` such an impl hands
+-// back a second owner of the element: `impl:string:Pod` written with
+-// `move string:self`, read twice, frees one body twice, exit 95 on both legs
+-// (measured, `meta/roadmap/done/0.1/0.1.3c.md` §1.6). `TYPE-047`'s own message
+-// suggests exactly that `move` -- DO NOT TAKE IT HERE. No impl in this library
+-// does, and `nitpick-regex`'s `probe18_impl_adds_move.npk` pins the shape for
+-// the ecosystem.
+-//
+-// THE PRELUDE'S `Copy` WILL REPLACE THIS TRAIT (TM-198). On 2026-09-26 the
+-// author ratified the copy marker the compiler seat put to him, as its D-327:
+-// a prelude marker trait `Copy`, with impls for every copyable scalar and a
+-// derivable form for a struct of copyables, landing at the compiler's 1.6.1c,
+-// after this pin; `Copy` becomes a prelude-owned name, so nothing here is
+-// called that. At the re-pin that carries it the replacement is MECHANICAL AND
+-// CONFINED: this block -- the trait and its nine impls -- deleted;
+-// `vec_at<T: Pod>` bounded `T: Copy`, and its one `pod_copy()` call the copy
+-// D-327 spells; the umbrella's `Pod` line gone; and the three impls in
+-// `tests/` -- `vec_at_pod`'s two and `probe19`'s -- in `Copy`'s form. `Pod` is
+-// used nowhere else, on purpose.
+-pub trait:Pod = {
+-    func:pod_copy = Self(Self:self) never fails;
+-};
+-impl:int8:Pod = { func:pod_copy = int8(int8:self) never fails { pass self; }; };
+-impl:int16:Pod = { func:pod_copy = int16(int16:self) never fails { pass self; }; };
+-impl:int32:Pod = { func:pod_copy = int32(int32:self) never fails { pass self; }; };
+-impl:int64:Pod = { func:pod_copy = int64(int64:self) never fails { pass self; }; };
+-impl:uint8:Pod = { func:pod_copy = uint8(uint8:self) never fails { pass self; }; };
+-impl:uint16:Pod = { func:pod_copy = uint16(uint16:self) never fails { pass self; }; };
+-impl:uint32:Pod = { func:pod_copy = uint32(uint32:self) never fails { pass self; }; };
+-impl:uint64:Pod = { func:pod_copy = uint64(uint64:self) never fails { pass self; }; };
+-impl:bool:Pod = { func:pod_copy = bool(bool:self) never fails { pass self; }; };
++// ---- `Copy`: what `vec_at` may hand back by value (TM-211; `SAFETY.md` S-18h) -
++//
++// THE PRELUDE'S MARKER, AND THE LANGUAGE DECIDES WHO MAY CLAIM IT. `Copy` is
++// the compiler's D-327 (its landing 73): a marker trait with no method, impls
++// generated for every copyable scalar, and a derivable form for a struct of
++// copyables. A type that owns anything cannot implement it --
++// `impl:string:Copy = { };` is `NITPICK-TYPE-087`, *"`string` owns what it
++// holds, so a copy of it would be a second owner"*, and so is an impl for a
++// struct holding a `string`, whose derive is `NITPICK-DERIVE-006`
++// (`../../tests/probe/probe19_pod_owner_refused.npk` asserts the first) -- so
++// `T: Copy` on `vec_at` states TM-132's restriction TO THE COMPILER for the one
++// verb that hands an element back, at every consumer's call. A consumer's type
++// that owns nothing claims it in one line where it is declared --
++// `impl:Pt:Copy = { };` for a struct of integers or a payload enum such as
++// `FORMAT_MODEL.md`'s parts (`../../tests/unit/vec_at_pod.npk`) -- and needs
++// nothing from this library to do it.
++//
++// UNTIL CYCLE 0.2.0a THIS BLOCK DECLARED `Pod` -- `nitpick-regex`'s trait, text
++// for text, `pod_copy` lending its `self` -- and its nine scalar impls (TM-194),
++// interim by TM-198 until the pin carrying D-327; the adoption of `5fbaf4a`
++// deleted it. AND THE HOLE IT HAD IS CLOSED TWICE: an impl declaring its `self`
++// `move` where the trait lent it was accepted at `c970483` and made `vec_at` a
++// double free (the compiler's DEF-116, raised by `nitpick-regex`'s planning);
++// it is `NITPICK-TYPE-014` since the compiler's landing 69, and `Copy` has no
++// method whose parameter could be declared so.
+ 
+ // `requires i >= 0 && i < v.count`
+ //
+ // A READ, AND SINCE CYCLE 0.1.3c (TM-194) THE LANGUAGE HOLDS IT TO BEING ONE.
+-// It hands back a COPY of the element, through `Pod`'s `pod_copy`, which only a
+-// type that owns nothing can implement as declared (above), so at
+-// `T = string` the call is `NITPICK-TYPE-017`: *"`string` does not implement
+-// `Pod`, which `vec_at`'s parameter `T` requires"*. And it takes its `Vec` as
++// It hands back a COPY of the element, at `T: Copy`, which only a type that
++// owns nothing can claim (above), so at `T = string` the call is
++// `NITPICK-TYPE-017`: *"`string` does not implement `Copy`, which `vec_at`'s
++// parameter `T` requires"* (`Pod`, through its `pod_copy`, until cycle 0.2.0a:
++// TM-211). And it takes its `Vec` as
+ // a LOAN, the language's read-only parameter, where it took `Vec<T>->`: a
+ // `Vec` owns since the same cycle (the header's last section), and `@` of a
+ // lent owner is `NITPICK-TYPE-085`, so a pointer reader could not be handed a
+@@ -408,9 +376,9 @@ impl:bool:Pod = { func:pod_copy = bool(bool:self) never fails { pass self; }; };
+ // copy is refused by TYPE-046", which was false in both halves.) A cycle that
+ // needs an owning element lifts TM-132's restriction by a decision, and the
+ // compiler's own `List<T>` is the shape it would take: no by-value get at all.
+-pub func:vec_at<T: Pod> = T(Vec<T>:v, int64:i) never fails {
++pub func:vec_at<T: Copy> = T(Vec<T>:v, int64:i) never fails {
+     T[]:s = #wild_slice<T>(v.items, v.count);
+-    pass raw s[i].pod_copy();
++    pass s[i];
+ };
+ 
+ // `requires i >= 0 && i < v.count`
+diff --git a/src/lib.npk b/src/lib.npk
+index d8e1aae846706691ae2a4eb59d6337188de1d150..c7873888c03111d3c8a8136cd87ad4094b1d9a08 100644
+--- a/src/lib.npk
++++ b/src/lib.npk
+@@ -19,8 +19,9 @@
+ // deliberate. Adding a line here is the moment a name becomes public and, by
+ // TM-013, a thing a MAJOR version is needed to take away.
+ //
+-// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 59
+-// names now [[sweep: lib_reexports=59]], below -- 57 until cycle 0.1.3c added
++// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 58
++// names now [[sweep: lib_reexports=58]], below -- 59 until cycle 0.2.0a retired
++// `Pod` into the prelude's `Copy` (TM-211), 57 until cycle 0.1.3c added
+ // `Pod` and `bytes_capacity`, 50 until cycle 0.1.3 added
+ // the seven derived fields, 48 until cycle 0.1.1 added `date_to_days` and
+ // `days_to_date`, counted by `grep -c` and
+@@ -84,12 +85,12 @@ mod:lib;
+ //
+ // SINCE CYCLE 0.1.3c (TM-193, TM-194) A `Vec` IS MOVE-ONLY -- a copy of one is
+ // `NITPICK-TYPE-046`, and a transfer is `move(...)` -- and `vec_at` reads
+-// through a LOAN, bounded by `T: Pod`, so the element it hands back is a copy
+-// of a `T` that owns nothing and at an owning `T` the call is refused
+-// (`NITPICK-TYPE-017`). `Pod` is public so a consumer's own type that owns
+-// nothing can implement it, in one line beside its declaration.
++// through a LOAN, bounded by `T: Copy` -- the prelude's marker, `Pod` until
++// cycle 0.2.0a (TM-211) -- so the element it hands back is a copy of a `T`
++// that owns nothing and at an owning `T` the call is refused
++// (`NITPICK-TYPE-017`). A consumer's own type that owns nothing claims `Copy`
++// in one line beside its declaration; nothing here re-exports it.
+ pub use "./core/vec.npk".Vec;
+-pub use "./core/vec.npk".Pod;
+ pub use "./core/vec.npk".vec_init;
+ pub use "./core/vec.npk".vec_reserve;
+ pub use "./core/vec.npk".vec_push;
+diff --git a/tests/probe/README.md b/tests/probe/README.md
+index 0c7d1925ff84b57a433af6606ee9d5fdff24e7ba..cca59d448fd8238a6abad3dec15dd30627738dfc 100644
+--- a/tests/probe/README.md
++++ b/tests/probe/README.md
+@@ -147,7 +147,7 @@ by the harness as ordinary `program`-stage entries from cycle 0.0.2.
+ | `probe16i_bytes_body_write_refused.npk` | *(must not compile)* a write through `Bytes.body`'s pointer | S-17b — `NITPICK-TYPE-080` |
+ | `probe18_zero_length_owner.npk` | does a `string[0]` field cost nothing, move, drop, and leave an `int64[0]` twin copyable? | S-18g — the language fact under `Vec`'s marker |
+ | `probe18b_zero_length_owner_copy_refused.npk` | *(must not compile)* a struct whose one owning field is `string[0]`, copied | S-18g — `NITPICK-TYPE-046` |
+-| `probe19_pod_owner_refused.npk` | *(must not compile)* `Pod` implemented for `string` as the trait declares it | S-18h — `NITPICK-TYPE-047` |
++| `probe19_pod_owner_refused.npk` | *(must not compile)* `Copy` claimed for `string` — until cycle 0.2.0a, `Pod` implemented as its trait declared it, `TYPE-047` (TM-211) | S-18h — `NITPICK-TYPE-087` |
+ 
+ *(Cycle 0.1.3b: the three `probe17` rows are new. **Probes 12 to 16 — cycles
+ 0.0.4 to 0.1.0c — are not in this table**, and the heading above says "What is
+diff --git a/tests/probe/defect/generic_owning_copy/README.md b/tests/probe/defect/generic_owning_copy/README.md
+index 87bcbef8f4d37b3df589a868b254f0818f3562a2..2bea43ce73f6feb3b37f50d4bcf37d8e5fc8f059 100644
+--- a/tests/probe/defect/generic_owning_copy/README.md
++++ b/tests/probe/defect/generic_owning_copy/README.md
+@@ -30,9 +30,11 @@ cycle 0.0.5 wrote it, in the tense that was true then.**
+ 
+ **`case5_vec_at_destructive.npk` is the one file here that is the library's
+ own, and it asserts a refusal now** (TM-194): `NITPICK-TYPE-017`, "`string`
+-does not implement `Pod`, which `vec_at`'s parameter `T` requires", at each of
+-its two calls. `vec_at` takes `T: Pod`, a trait only a type that owns nothing
+-can implement as it is declared, so the move out of the slot that this file
++does not implement `Copy`, which `vec_at`'s parameter `T` requires", at each of
++its two calls — one `expect-error` line per call since cycle 0.2.0a (TM-210).
++`vec_at` takes `T: Copy`, the prelude's marker, which only a type that owns
++nothing can claim (`Pod`, this library's own trait, until cycle 0.2.0a:
++TM-211), so the move out of the slot that this file
+ measured — `pass` of a place at an owning `T`, which the language specifies —
+ cannot be written through the library any more. Its two calls read the `Vec`
+ as a loan, `vec_at::<string>(v, 0i64)`, because `vec_at` takes one since the
+diff --git a/tests/probe/defect/generic_owning_copy/case5_vec_at_destructive.npk b/tests/probe/defect/generic_owning_copy/case5_vec_at_destructive.npk
+index 9dfe35c734d2397d881ab8190815594724b23851..6aaa9cf568f32a141797b5fc299dc78caa960b52 100644
+--- a/tests/probe/defect/generic_owning_copy/case5_vec_at_destructive.npk
++++ b/tests/probe/defect/generic_owning_copy/case5_vec_at_destructive.npk
+@@ -5,10 +5,11 @@
+ // below, each refused where it is written.
+ //
+ // CASE 5, SINCE CYCLE 0.1.3c: THE CALL IS REFUSED (TM-194). `vec_at` takes
+-// `T: Pod`, a trait only a type that owns nothing can implement as it is
+-// declared, so at `T = string` each call below is `NITPICK-TYPE-017` --
+-// "`string` does not implement `Pod`, which `vec_at`'s parameter `T`
+-// requires" -- and the move this file measured cannot be written any more.
++// `T: Copy` -- the prelude's marker since cycle 0.2.0a, `Pod` until then
++// (TM-211) -- which only a type that owns nothing can claim, so at
++// `T = string` each call below is `NITPICK-TYPE-017` -- "`string` does not
++// implement `Copy`, which `vec_at`'s parameter `T` requires" -- and the move
++// this file measured cannot be written any more.
+ // THE REFUSAL IS THE ASSERTION (B-7). It is the library's refusal, not the
+ // pin's: the same text is refused the same way at `c3bdae2`.
+ //
+diff --git a/tests/probe/probe19_pod_owner_refused.npk b/tests/probe/probe19_pod_owner_refused.npk
+index df608e0195ef7bcfb944ac39db0e5585b8b811bd..e04941737fe5fdee3fb7c45ab9e00365af6108f8 100644
+--- a/tests/probe/probe19_pod_owner_refused.npk
++++ b/tests/probe/probe19_pod_owner_refused.npk
+@@ -1,7 +1,15 @@
+-// expect-error: NITPICK-TYPE-047
++// expect-error: NITPICK-TYPE-087
+ //
+-// PROBE 19 — AN OWNING TYPE CANNOT IMPLEMENT `Pod` AS IT IS DECLARED. The claim
+-// `vec_at`'s bound rests on (cycle 0.1.3c, TM-194; `SAFETY.md` S-18h).
++// PROBE 19 — AN OWNING TYPE CANNOT CLAIM `Copy`. The claim `vec_at`'s bound
++// rests on (cycle 0.1.3c, TM-194, and since cycle 0.2.0a TM-211; `SAFETY.md`
++// S-18h).
++//
++// SINCE CYCLE 0.2.0a THE BOUND IS THE PRELUDE'S `Copy` (the compiler's D-327)
++// and this file asks it: `impl:string:Copy = { };` is `NITPICK-TYPE-087`, once,
++// at the impl -- *"`string` owns what it holds, so a copy of it would be a
++// second owner"* -- measured at `5fbaf4a`. Until then the bound was this
++// library's `Pod` and the question below was `Pod`'s; its answer stands as
++// the record of it, and the file keeps its name.
+ //
+ // ASKS: may a consumer declare `string` a `Pod`, writing `pod_copy` as the
+ // trait declares it -- `self` lent, `pass self`?
+@@ -21,12 +29,14 @@
+ // the parameter `move`, and at `c970483` an impl that does is ACCEPTED, though
+ // the trait lends it -- the compiler's DEF-116, fixed at no pin of ours. Such
+ // an impl makes `vec_at` a double free (measured, `meta/roadmap/done/0.1/0.1.3c.md`
+-// §1.6). This library writes none; `nitpick-regex` pins the shape.
++// §1.6). This library writes none; `nitpick-regex` pins the shape. (CLOSED
++// at `5fbaf4a`: such an impl is `NITPICK-TYPE-014` there, the compiler's
++// landing 69, and `Copy` has no method to declare one on -- TM-211.)
+ mod:probe19_pod_owner_refused;
+ 
+ use "../../src/core/vec.npk".*;
+ 
+-impl:string:Pod = { func:pod_copy = string(string:self) never fails { pass self; }; };
++impl:string:Copy = { };
+ 
+ func:main = int32(cstring[]:_~argv) {
+     exit 0i32;
+diff --git a/tests/unit/vec_at_pod.npk b/tests/unit/vec_at_pod.npk
+index a1df46ba82fd60a88eccb08a48343b6fa3a12e3c..c6ddb2d76773ac48db153b828ffe58f0199c9fd0 100644
+--- a/tests/unit/vec_at_pod.npk
++++ b/tests/unit/vec_at_pod.npk
+@@ -1,13 +1,13 @@
+ // expect-exit: 0
+ //
+-// `vec_at<T: Pod>` FOR A CONSUMER'S OWN TYPES, THROUGH THE UMBRELLA -- the
++// `vec_at<T: Copy>` FOR A CONSUMER'S OWN TYPES, THROUGH THE UMBRELLA -- the
+ // positive twin of `probe19_pod_owner_refused.npk` (cycle 0.1.3c, TM-194;
+ // `SAFETY.md` S-18h).
+ //
+ // A bound that nothing can satisfy would pass that probe too, so this file
+-// implements `Pod` the way a consumer would -- in one line beside each type's
+-// declaration, importing `src/lib.npk` and nothing else, so the trait's
+-// re-export is under test as well -- and reads every element TWICE: a read
++// claims `Copy` the way a consumer would -- in one line beside each type's
++// declaration, importing `src/lib.npk` and nothing else -- and reads every
++// element TWICE: a read
+ // that moved the element out would fail the second (`generic_owning_copy/case5`
+ // measured exactly that until this cycle). Each wrong answer exits with its
+ // own code, none an arm code (TM-152):
+@@ -17,15 +17,19 @@
+ //   13, 14  a payload enum -- `FORMAT_MODEL.md`'s parts in miniature, the
+ //           element type cycle 0.4's `Layout` will hold -- read twice, the
+ //           payload intact;
+-//   20 ... 28  each of the nine scalar impls `src/core/vec.npk` declares,
+-//           read once, so a mistyped impl is found here and not by the first
+-//           consumer that instantiates it.
++//   20 ... 28  each of the nine scalars a specification here stores in a
++//           `Vec`, read once through the prelude's generated impls.
++//
++// UNTIL CYCLE 0.2.0a the bound was this library's `Pod`, and the file
++// implemented it -- `pod_copy` written `pass self` -- and read the nine impls
++// `src/core/vec.npk` declared; the prelude's `Copy` replaced it (TM-211), and
++// the file keeps its name.
+ mod:vec_at_pod;
+ 
+ use "../../src/lib.npk".*;
+ 
+ struct:Pt = { int64:x; int64:y; };
+-impl:Pt:Pod = { func:pod_copy = Pt(Pt:self) never fails { pass self; }; };
++impl:Pt:Copy = { };
+ 
+ enum:Part = {
+     Literal(uint16);
+@@ -33,7 +37,7 @@ enum:Part = {
+     Month2;
+     Day2;
+ };
+-impl:Part:Pod = { func:pod_copy = Part(Part:self) never fails { pass self; }; };
++impl:Part:Copy = { };
+ 
+ func:width = int64(Part:p) never fails {
+     int64:w = 0i64;

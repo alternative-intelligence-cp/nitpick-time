@@ -1,0 +1,52 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 98b45753c9d5b36b90230ece3582321707f81cfa..2aa5b4447ef06d7c158fb71fbd532af1d3b021cf 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -11,7 +11,7 @@
+ # ============================================================================
+ # THE TWO CONDITIONS THIS FILE EXISTS TO WRITE DOWN
+ # ============================================================================
+-# A green run here may be read as "ntime builds against compiler c970483" only
++# A green run here may be read as "ntime builds against compiler 5fbaf4a" only
+ # because BOTH of the following are stated AND enforced below. Either one
+ # missing and the claim is weaker than it sounds.
+ #
+@@ -167,7 +167,7 @@ permissions:
+   contents: read
+ 
+ env:
+-  # ../BOARD.md's pinned toolchain, by FULL sha. `c970483` is the short form
++  # ../BOARD.md's pinned toolchain, by FULL sha. `5fbaf4a` is the short form
+   # used in the roadmap and in the transcripts.
+   #
+   # THIS PIN WAS `0dfddac` UNTIL CYCLE 0.0.6 AND THE COMMENT ABOVE WAS FALSE
+@@ -189,15 +189,24 @@ env:
+   # `fixed_move_out/`'s moves still compile, and the unadopted tree is RED at
+   # `c970483`, so the pin and the tree it judges move in one commit and CI
+   # never pairs either with the other's (`meta/roadmap/done/0.1/0.1.4c.md` §3).
+-  NITPICK_COMMIT: c9704830ea9c738f523bf6646a355f52679b3aee
+-  NITPICK_COMMIT_SHORT: c970483
++  #
++  # AND IT WAS `c970483` UNTIL CYCLE 0.2.0a, which moves it to `5fbaf4a`, the
++  # compiler's last landing before its pause (the board's notice 82) -- IN A
++  # COMMIT OF ITS OWN, after the adoption's four and before the step below
++  # asserts the new pin's emission: the adopted tree is RED at `c970483`, whose
++  # emissions state no `target` line for the runner to hold (TM-209), and the
++  # unadopted tree is RED at `5fbaf4a`, where fifteen `cstring` copies are
++  # refused (TM-208). All of them are pushed together, so CI runs once, on the
++  # adopted tree (`meta/roadmap/0.2/0.2.0a.md` §3).
++  NITPICK_COMMIT: 5fbaf4a40a2f6b213754cd71b6c69700f8aa2c87
++  NITPICK_COMMIT_SHORT: 5fbaf4a
+   # nitpick.toml [toolchain] llvm. Condition (1) above.
+   LLVM_VERSION: 20.1.2
+   # The digests of the artefacts the workbench pins, from
+-  # ../.internal/toolchain/c970483/SHA256SUMS. Reported against CI's own, never
++  # ../.internal/toolchain/5fbaf4a/SHA256SUMS. Reported against CI's own, never
+   # asserted -- see the step that uses them for why.
+-  NPKC_SHA256_WORKBENCH: e4d95007018f313e5dabab5c69610b72dc0781eeb0f7b7414a6179b6e287c70e
+-  NPKRT_SHA256_WORKBENCH: 162b897539285a773a6a1a0329750e148a6c9590b45dda2d017704743b591824
++  NPKC_SHA256_WORKBENCH: c84007934e6d25c94de52e9a944a63acacb24fdd3aa9fca9c7d911817b770fee
++  NPKRT_SHA256_WORKBENCH: c8e5033ad17c70f838d567157738a6cc046af0ca3140ad92259fa71f0e747b4e
+ 
+ jobs:
+   build:

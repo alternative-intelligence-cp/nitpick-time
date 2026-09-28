@@ -1,0 +1,381 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 52c577c4eee2ea547d72c372ae1aadd7b1f8792e..0f6c84c02fe0b975b3c6a4cedd7f0a928fb41049 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -44,7 +44,8 @@
+ # `date_to_days` and `days_to_date`, and since 0.1.3 the derived fields --
+ # re-exported together as 58 public names [[sweep: lib_reexports=58]],
+ # so this IS evidence about behaviour, of the 113 units the runner reports at
+-# compiler `c970483` (62 at cycle 0.0.6, 67 at 0.1.0, 70 at 0.1.0b, 75 at
++# compiler `5fbaf4a` since cycle 0.2.0a (113 at `c970483` at cycle 0.1.5's
++# second half; 62 at cycle 0.0.6, 67 at 0.1.0, 70 at 0.1.0b, 75 at
+ # 0.1.0c, 78 at 0.1.1, 81 at 0.1.2, 86 at 0.1.3, 90 at 0.1.3b, 91 at 0.1.4 and
+ # 0.1.4b, all at `c3bdae2` from 0.1.0b on, 101 at 0.1.4c, and 112 at 0.1.3c and
+ # at the first half of 0.1.5, cycle 0.1's close). What
+@@ -113,13 +114,18 @@
+ # import paths decoded (`harness/lexical.py`, `TESTING.md` V-1k) -- and every
+ # tree check matches tokens across the lexer's whitespace, never a line
+ # (V-1l). Before it, eight shapes of source made the runner disagree with
+-# the compiler, and six of them passed a violation silently.
++# the compiler, and six of them passed a violation silently. AND SINCE CYCLE
++# 0.2.0a, AT COMPILER `5fbaf4a`: every emission states the pinned target and
++# the runner holds it there (`BUILD.md` B-1a); every refusal names each code
++# once per site it is reported at (B-7c); and `vec_at` takes the prelude's
++# `Copy` (TM-209 … TM-211).
+ #
+ # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
+ # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
+-# V-15): EIGHT of V-14's nine faults planted in scratch trees (seven of eight
+-# until cycle 0.1.4b's case 9, a program whose managed memory disagrees with
+-# its header) -- case 6 is
++# V-15): TWELVE of V-14's thirteen faults planted in scratch trees (eight of
++# nine from cycle 0.1.4b's case 9, a program whose managed memory disagrees
++# with its header, until cycle 0.2.0a's four -- two target pins, two site
++# counts, TM-209 and TM-210; seven of eight before) -- case 6 is
+ # `PEND` until cycle 0.5 and prints as pending rather than passing -- each
+ # requiring a RED run that names it AND a green control beside it; then one
+ # planted violation per tree check -- more than one where a check has two
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 3b3516ed981db652d5d4794b0e71f695148ee5ed..6a198deb2ef4095a353e358eadeffee575cca149 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -9,7 +9,32 @@ safety-critical systems language at `../../nitpick`.
+ 
+ **Status: cycle 0.1 CLOSED (2026-09-26), archived at `meta/roadmap/done/0.1/`
+ — the civil calendar, with its exhaustive gate on every run — and cycle 0.2,
+-instants and timestamps, is next**, from `meta/roadmap/0.2/0.2.0.md`, written at
++instants and timestamps, is OPEN: its 0.2.0a, the adoption of compiler
++`5fbaf4a`, is done, and `meta/roadmap/0.2/0.2.0.md` is next.**
++
++**After cycle 0.2.0a: the adoption of compiler `5fbaf4a`** — the compiler's
++last landing before its pause, carrying its landings 67 … 82. At the new pin
++the unchanged tree ran `RED -- 105 unit(s) of 113`, exactly the eight files
++holding a `cstring` copy — fifteen, each `NITPICK-TYPE-046` once `cstring`
++owns what `to_cstring` makes (the compiler's D-328) — so an `environ()`
++element is read in place and `to_cstring`'s answer moved out of its `Result`
++(TM-208). **The runner holds what the compiler's runners hold**: the manifest
++pins `triple` and `datalayout`, the layout is held to what the pinned `opt`
++derives and every emission's two `target` lines to both (`BUILD.md` B-1a,
++TM-209); and a refusal names each code once PER SITE it is reported at
++(B-7c, TM-210), which four headers did not. **`Pod` is retired into the
++prelude's `Copy`**: `vec_at<T: Copy>`, the umbrella at 58 names (TM-211).
++CI is pinned to `5fbaf4a` and ASSERTS the compiler's emission, `npkc.ll`,
++against the pinned commit's row (TM-212, the ecosystem audit's EC6); the
++budget's rule reads as the compiler charges it — every identity a reachable
++`fail` site raises, public or private (TM-213, EC3); and TM-202's re-read is
++this repository's reader only (ED1). The lexer moved a character literal's
++width and nothing `lexical.py` mirrors; `NITPICK-BORROW-015` is in the pin and
++reaches no file here; the hold on `for`, `loop` and `till` is lifted. The
++self-check plants 12 of V-14's 13 cases. A full invocation is **113 units
++green** at pin `5fbaf4a`.
++
++**Before it, cycle 0.1's close:** `meta/roadmap/0.2/0.2.0.md` was written at
+ the close. **The close's second half triaged the cycle audit's nineteen
+ findings**, every one fixed but for the check half of one, which a decision
+ places on cycle 0.2.3, and the four the audit asked to be fixed rather than
+@@ -77,7 +102,8 @@ rule P-1b** (TM-197), which strikes Q-6. **`Pod` is interim** (TM-198): the
+ compiler's D-327, ratified during this cycle and in no pin of ours yet, makes
+ `Copy` a prelude marker trait, and the re-pin that carries it replaces `Pod`
+ with it — a confined edit, the trait's one block, one bound, one call, one
+-umbrella line, three test impls. The umbrella re-exports 59 names —
++umbrella line, three test impls *(made at cycle 0.2.0a, the adoption of
++`5fbaf4a`: TM-211)*. The umbrella re-exports 59 names *(58 since then)* —
+ `Pod` and `bytes_capacity` joined — and eight files' managed memory is held to
+ the runtime's count <!-- [[sweep: heap_bounded=8]] -->. No arm bill moved. A
+ full invocation is **112 units green** at pin `c970483`.
+@@ -318,7 +344,8 @@ cycle 0.0 paid most for.**
+   operations — `vec_set`, `vec_clear`, `vec_truncate`, `vec_free` — owe an
+   element drop at an owning `T` and perform none**, a leak `exit 0` cannot
+   see. And **`vec_at` at an owning `T` is REFUSED since cycle 0.1.3c** — it
+-  takes `T: Pod` (S-18h), `NITPICK-TYPE-017` at the call — where it used to
++  takes `T: Copy` (S-18h; `T: Pod` until cycle 0.2.0a, TM-211),
++  `NITPICK-TYPE-017` at the call — where it used to
+   REMOVE the element, `pass` of a place moving implicitly; element lifetime at
+   an owning `T` still goes **at the instantiation**, where `SAFETY.md` S-18b
+   and S-18d put it. **And a `Vec` is move-only** (S-18g): a copy is refused,
+@@ -354,8 +381,9 @@ cycle 0.0 paid most for.**
+ 
+ **What 0.0.3 added, and the first item is the one that matters.**
+ `harness/selfcheck.py` runs **first** in every full invocation (`TESTING.md`
+-V-15) and plants **eight** of V-14's nine faults (seven of eight until cycle
+-0.1.4b's case 9, TM-187) — case 6 is `PEND` until 0.5
++V-15) and plants **twelve** of V-14's thirteen faults (eight of nine from cycle
++0.1.4b's case 9, TM-187, until cycle 0.2.0a's four, TM-209 and TM-210; seven
++of eight before it) — case 6 is `PEND` until 0.5
+ and prints as pending — plus at least one violation per tree check, three
+ arm-bill specimens, and (since 0.0.6) the verdict mechanisms of TM-137 and
+ TM-141 and the whole-tree walk's nested-repository pruning (TM-146). Each
+@@ -413,7 +441,10 @@ what to do when a cross-stream gate is not ready yet.
+ - **A settled decision's text is never rewritten.** Supersede it with a new
+   numbered decision that says why (the compiler's D-085/D-202 pattern).
+ - **Three public error identities, and three is a ceiling** (TM-017). REACH-002
+-  makes every one an arm every consuming program's `failsafe` must name. A
++  makes every one an arm every consuming program's `failsafe` must name —
++  and, sharper since cycle 0.2.0a (the ecosystem audit's EC3, TM-213), every
++  identity a reachable `fail` site raises, a PRIVATE one too, so
++  `check_error_budget` refuses any `error:` in `src/` it does not budget. A
+   fourth needs a decision saying why a shutdown handler would treat it
+   differently from all three — and it is a **major** version (TM-013).
+ - **Only `src/host/` is impure** (TM-018). No syscall, no clock, no environment
+@@ -442,6 +473,10 @@ Full statement in `meta/specs/SAFETY.md` §1. The ones that bite hardest here:
+   Every range is checked **before** the trap so the caller gets an answer.
+ - `Ord` derives in **declaration order**, so a struct's field order is
+   semantic (`Timestamp` is seconds-then-nanos for exactly this reason).
++- **A `cstring` owns what `to_cstring` makes, and is move-only** — since
++  compiler `5fbaf4a` (its D-328): a copy of one is `NITPICK-TYPE-046`. Read an
++  `environ()` element in place, `env[k].ptr`, and move `to_cstring`'s answer
++  out of its `Result`, `move(c.value)` (TM-208).
+ - Owning values are **move-only**, and a `fixed` table holds no owning value:
+   the language allows one and refuses the copy that reads a row out — and,
+   since compiler `c970483`, the move out of `fixed` storage too,
+diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
+index 2faf77115f630d2cf85d3a7cb49838f64f72275a..66ed8e08ea4ff210f6e8fadf199e3f411056089a 100644
+--- a/CONTRIBUTING.md
++++ b/CONTRIBUTING.md
+@@ -43,8 +43,11 @@ The first four are design. **The last two were measured** by cycle 0.0.0's
+ probes, against the real compiler, and each one falsified something a document
+ had asserted — which is why they are here rather than in a specification only.
+ 
+-1. **Every public `error:` this library declares becomes a mandatory `pick` arm
+-   in every consuming program's `failsafe`.** The language enforces it and
++1. **Every identity a reachable `fail` site raises becomes a mandatory `pick`
++   arm in every consuming program's `failsafe`** — public or private, named by
++   its module; a declaration nothing raises costs nothing. *(It read "Every
++   public `error:` this library declares" until @@DATE@@ — the ecosystem
++   audit's EC3, TM-213.)* The language enforces it and
+    forgetting one is a compile error. The budget is three, it is a ceiling, and
+    adding a fourth is a major version. A distinction the *caller* cares about
+    rides as a field on the returned value, not as a new error.
+diff --git a/README.md b/README.md
+index fc12ea11c3957af1bb49b6e31d96e930f40875d9..9296b914804e736a4f262a72a6d10334459146a2 100644
+--- a/README.md
++++ b/README.md
+@@ -21,7 +21,8 @@ answer on every machine.
+ > set is in [`meta/specs/`](meta/specs/) and the plan in
+ > [`meta/roadmap/`](meta/roadmap/), written the way the compiler's are — specs
+ > first, then a cycle map, then execution-grade subcycles, then code — against
+-> a compiler that is still moving, pinned by commit (`CLAUDE.md` names the pin).
++> a compiler that is still moving, pinned by commit (`CLAUDE.md` names the pin:
++> `5fbaf4a` since cycle 0.2.0a, the adoption that opened cycle 0.2).
+ >
+ > *(Until cycle 0.1.5 this block read "Status: planning. No code yet" — false
+ > since cycle 0.0.4 — and "the compiler itself is at cycle 1.5"; between the
+@@ -81,8 +82,10 @@ range stays the constructors' to refuse, `meta/specs/CALENDAR.md` C-8.)*
+ 
+ **Importing it costs a consumer at most three error identities — and one if all
+ you want is calendar arithmetic.** In this language every error identity a
+-library declares is a mandatory arm in every consuming program's shutdown
+-handler, so the number is an API decision, not an implementation detail.
++library's reachable code can raise is a mandatory arm in every consuming
++program's shutdown handler *("a library declares" until @@DATE@@: the
++ecosystem audit's EC3, TM-213 — a declaration nothing raises costs nothing, and
++a private one that is raised costs the arm)*, so the number is an API decision, not an implementation detail.
+ `ntime`'s is three. **The whole bill is larger**, because the language also
+ charges an arm for each kind of trap the imported code can reach — a division,
+ an overflow, an index, a loop's measure, a length's limit — on top of a floor
+diff --git a/harness/README.md b/harness/README.md
+index 58372ed8df5b587cb3971f8a2937ea43a9fb4c05..d6a6d4737cce04f156603966bab1fa641d916fdc 100644
+--- a/harness/README.md
++++ b/harness/README.md
+@@ -24,7 +24,7 @@ $ NPKC=… NPKRT=… python3 harness/run.py [--only SUBSTRING] [--quick]
+ | `checks.py` | the **tree checks** — `TESTING.md` §2's family, each one diffing the library against a document that describes it |
+ | `arms.py` | `check_failsafe_arms`: the S-6 arm generator, and `NITPICK-REACH-003` as its oracle |
+ | `repro.py` | B-4: two builds of one tree must be the same bytes. Also a command in its own right, with `--between` for `check_tables_regenerate` |
+-| `selfcheck.py` | **the only thing here that demonstrates the checks can fail.** V-14's nine cases, the tree checks on planted violations, the arm generator against the compiler, the verdict mechanisms, and — since cycle 0.1.5 — the reader against the compiler's lexer (part E) |
++| `selfcheck.py` | **the only thing here that demonstrates the checks can fail.** V-14's thirteen cases, the tree checks on planted violations, the arm generator against the compiler, the verdict mechanisms, and — since cycle 0.1.5 — the reader against the compiler's lexer (part E) |
+ | `run.py` | the driver: stage order, per-unit verdict lines, the summary and its counts |
+ 
+ ## The stage order, and each line is a reason
+@@ -50,11 +50,13 @@ names it. Five parts *(this said "Three parts" and listed three until cycle
+ 0.1.5, when the fifth joined; the fourth, the verdict mechanisms, had been
+ running unlisted since cycle 0.0.6)*:
+ 
+-- **V-14's nine cases** — a wrong `expect-exit`, a missing code, an unexpected
++- **V-14's thirteen cases** — a wrong `expect-exit`, a missing code, an unexpected
+   code (D-237), a golden differing by one byte, a file that does not parse, a
+-  sweep that ran short, a program whose `failsafe` has been deleted, and —
+-  since cycle 0.1.4b — a program whose managed memory disagrees with its
+-  header, five ways beside one control (TM-187). Case 6
++  sweep that ran short, a program whose `failsafe` has been deleted, since
++  cycle 0.1.4b a program whose managed memory disagrees with its header, five
++  ways beside one control (TM-187), and since cycle 0.2.0a a layout pin `opt`
++  does not derive, a tree pinned consistently to another target (TM-209), and
++  a code named once for two sites and three times for two (TM-210). Case 6
+   (a generator differing by one line) is **pending until 0.5** and prints as
+   pending rather than passing.
+ - **Forty-four planted violations across the tree checks since cycle 0.1.5's
+@@ -320,6 +322,17 @@ denominators, the seven arm bills among them (TM-205); parse over 128 files,
+ `91 + 35 + 2`; the defect corpus at 36 = 1 exempt + 35 asserted; and library +
+ repro + suite at **78** (**22 unit**). `113 = 35 + 78`.
+ 
++**At cycle 0.2.0a, compiler `5fbaf4a`, 113 units**: no test added. The
++self-check plants **12** of V-14's **13** cases — 10 and 11 the target pins,
++12 and 13 the site count — 44 tree-check violations with 44 clean controls, 3
++arm specimens, 4 verdict specimens and part E, which runs 0 at the new pin;
++the tree checks at `11 live`; and the library's IR 226 493 B — 228 227 B at
++`c970483`, 229 041 B for the unchanged tree at `5fbaf4a` (a `target datalayout`
++line and `cstring`'s drop pair), then less `Pod`'s block. The unchanged tree
++had run `RED -- 105 unit(s) of 113`: the eight files holding the fifteen
++`cstring` copies (`meta/roadmap/0.2/0.2.0a.md` §1). No heap figure and no sweep
++count moved.
++
+ The floor under all of it is still TM-117's: every root re-emits the prelude,
+ so a `npkc` invocation on anything that compiles costs a fixed amount and the
+ run makes about 200 of them. One that does *not* compile costs ~0.03 s.
+diff --git a/harness/checks.py b/harness/checks.py
+index f2d0feb32516089faf6aff2482d287031d47cd0c..cc21f7971252b6f1fd08199d1ae51fc363475b0e 100644
+--- a/harness/checks.py
++++ b/harness/checks.py
+@@ -358,7 +358,9 @@ def _spec_rows(tree):
+ 
+ 
+ def check_error_budget(tree, **_):
+-    """Public `error:` declarations against `SAFETY.md` §2's table.
++    """`error:` declarations, public AND private, against `SAFETY.md` §2's
++    table (the pattern has matched both since TM-203; this line said
++    "Public" until cycle 0.2.0a, TM-213).
+ 
+     THE UNIT IS THE COMPILER'S: A MODULE-QUALIFIED IDENTITY (cycle 0.1.5's
+     audit, C2; TM-203). `NITPICK-REACH-003` names an identity by the module
+diff --git a/harness/run.py b/harness/run.py
+index bf61b67fc7ebb652f01b543c2200ec15ce92d210..f3d6f30999637b9557685d72a159d9b1097ad673 100644
+--- a/harness/run.py
++++ b/harness/run.py
+@@ -4,8 +4,9 @@
+ WHAT A GREEN RUN HERE IS, AND IS NOT.
+ 
+   IT IS: the self-check green FIRST (V-15), so the runner has been shown able
+-  to fail EIGHT ways before it is believed about anything -- V-14 names nine,
+-  the ninth since cycle 0.1.4b (TM-187), and case 6 is `PEND` until cycle 0.5;
++  to fail TWELVE ways before it is believed about anything -- V-14 names
++  thirteen, the ninth since cycle 0.1.4b (TM-187) and the tenth to thirteenth
++  since cycle 0.2.0a (TM-209, TM-210), and case 6 is `PEND` until cycle 0.5;
+   this sentence claimed a wrong number for three cycles (TM-142); the manifest
+   read
+   and schema-checked; the three tools held to the pin's exact patch release;
+diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
+index 972795622d048385913c2718da0c00f2f4f73d76..b986929cffc06068d9ec4253836e0d5580903314 100644
+--- a/meta/DECISIONS.md
++++ b/meta/DECISIONS.md
+@@ -6068,6 +6068,38 @@ print and its premise** — EC6: the condition it waited on is one D-265 says
+ need never arrive; **drop the binary rows** — they are the evidence when
+ two machines disagree, and printing them costs nothing.
+ 
++### TM-213 — the budget's rule, stated as the compiler charges it: every identity a reachable `fail` site raises is an arm, public or private, and a declaration nothing raises is none
++
++**@@DATE@@, cycle 0.2.0a (the plan's PD-62) — the ecosystem audit of
++2026-09-26's EC3, corrected in the workbench's `PLAYBOOK.md` §2 on 2026-09-26
++and standing here in three sites. Amends `SAFETY.md` §1's REACH-002 row,
++`CONTRIBUTING.md`'s first surprise, `meta/roadmap/ROADMAP.md`'s architecture
++line, and the same claim in `CLAUDE.md`, `README.md`, `TESTING.md` §2's
++`check_error_budget` row and that check's docstring.**
++
++**What was found**, re-measured at `5fbaf4a` with consumers that declare no
++`failsafe`: a module whose PRIVATE `error:EPriv` is raised by a public function
++charges its importer `mpriv.EPriv` — `NITPICK-REACH-003` lists 8 identities for
++a consumer that relays it as its own `EC`, `cpriv.EC`, `mpriv.EPriv` and the
++floor of six — and a module declaring two public identities that nothing
++raises charges the floor alone, 6. So *"every public `error:` we declare is an
++arm every consuming program owes"* is wrong in both directions. The CHECK was
++already right: `check_error_budget` counts `(pub )?error:` keyed by module
++since TM-203, and a private `error:EPriv` planted in `src/span/` fails it —
++measured at planning.
++
++**The decision.** *Each statement reads as the PLAYBOOK's corrected row does:
++every identity a reachable `fail` site raises — public or private, qualified by
++the module that declares it — is an arm every consuming program owes, and a
++declaration never raised costs nothing. The old words stay struck or quoted
++beside a dated note; the budget — three identities, a ceiling (TM-017) — and
++every consequence drawn from it are unchanged.*
++
++*Alternatives declined:* **leave the three sites to the next audit** — the
++dispatch named them and the record's rule is that a correction seeded by a
++template is swept where it was copied; **rewrite the sentences silently** —
++the repository's rule is that a correction shows what it corrects.
++
+ ### TM-208 — the adoption of compiler `5fbaf4a`: the fifteen `cstring` copies read in place or moved, the lexer re-read, and what else the pin moved here
+ 
+ **@@DATE@@, cycle 0.2.0a (the plan's PD-57) — landings 67 … 82 over
+diff --git a/meta/roadmap/0.2/README.md b/meta/roadmap/0.2/README.md
+index 167c51664866c415626ec5b1b2465315799741a9..55c9c1cfbeb084f03522d2a54868571b4dc0b9c8 100644
+--- a/meta/roadmap/0.2/README.md
++++ b/meta/roadmap/0.2/README.md
+@@ -117,6 +117,8 @@ landings (`meta/roadmap/done/0.1/0.1.5.md` §12.3):
+    moved on a form its second half names; **and the adoption re-reads
+    `src/frontend/lexer.npk` at the new pin whatever part E says** (TM-202),
+    bringing `harness/lexical.py` to it **in both libraries** if it moved.
++   *(This repository's reader only — W-7; `nitpick-regex`'s is its own, under
++   its own re-read rule (its RX-176): TM-208, the ecosystem audit's ED1.)*
+ 6. **`NITPICK-BORROW-015`** (the compiler's D-325, O-N25) if the new pin
+    carries it: `tests/unit/bytes_view_lifetime.npk` holds a `bytes_view` view
+    across a growth on purpose, and is the first file to read.
+@@ -125,7 +127,8 @@ landings (`meta/roadmap/done/0.1/0.1.5.md` §12.3):
+ 
+ **Until the adoption lands, no `for`, `loop` or `till` is added** — the
+ compiler's loop defects at `c970483` are why (DEF-127 … DEF-130, item 4, and
+-the workbench board's hold on them).
++the workbench board's hold on them). *(LIFTED @@DATE@@ by 0.2.0a: the four
++are in `5fbaf4a`, the compiler's landing 75 — TM-208.)*
+ 
+ ## Gate
+ 
+diff --git a/meta/roadmap/ROADMAP.md b/meta/roadmap/ROADMAP.md
+index 8019b5255bd54c417c6f6c961ced475c3ee29b6b..2ca958eb7ca5dda19cea5ba914b802a0696bdb87 100644
+--- a/meta/roadmap/ROADMAP.md
++++ b/meta/roadmap/ROADMAP.md
+@@ -46,7 +46,9 @@ not resolve (`specs/BUILD.md` §1, `../OPEN_QUESTIONS.md` O-N1). Consequently:
+ 
+ And the one that shapes the *architecture*:
+ 
+-> **Every public `error:` costs every consumer a `failsafe` arm (REACH-002),
++> **Every identity a reachable `fail` site raises costs every consumer a
++> `failsafe` arm (REACH-002) — public or private; *"every public `error:`"* until
++> @@DATE@@, the ecosystem audit's EC3, TM-213 —
+ > integer overflow traps (D-210), and there is no format-specifier language
+ > (D-053).**
+ 
+@@ -73,7 +75,7 @@ sibling libraries.
+ |---|---|---|
+ | ~~**0.0**~~ | **Foundations** — the language probes, the harness, `src/core/` — **CLOSED 2026-09-06, archived at [`done/0.0/`](done/0.0/README.md)** | — |
+ | ~~**0.1**~~ | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **CLOSED 2026-09-26, archived at [`done/0.1/`](done/0.1/README.md)** | 0.0 ✓ |
+-| **0.2** | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **NEXT**: its opening subcycle, [`0.2/0.2.0.md`](0.2/0.2.0.md), written at cycle 0.1's close | 0.1 ✓ |
++| **0.2** | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **IN PROGRESS**: [`0.2/0.2.0a.md`](0.2/0.2.0a.md), the adoption of compiler `5fbaf4a`, done; [`0.2/0.2.0.md`](0.2/0.2.0.md), written at cycle 0.1's close and rehearsed over 0.2.0a, next | 0.1 ✓ |
+ | **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double | 0.2 |
+ | **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate | 0.2 |
+ | **0.5** | **The zone table** — the generator, the committed tables, the size measurement | 0.1 |
+diff --git a/meta/specs/SAFETY.md b/meta/specs/SAFETY.md
+index 663d6322306e7cf485a98468a472987fd2462486..760da01a1ec04837076f969bd2f3356243139a85 100644
+--- a/meta/specs/SAFETY.md
++++ b/meta/specs/SAFETY.md
+@@ -14,7 +14,7 @@ costs a library that does calendar arithmetic.
+ 
+ | Language rule | Where | Consequence for `ntime` |
+ |---|---|---|
+-| `failsafe`'s `pick` must **name** every error that can reach it | REACH-002 | Every public `error:` we declare is an arm every consuming program owes. §2. |
++| `failsafe`'s `pick` must **name** every error that can reach it | REACH-002 | ~~Every public `error:` we declare is an arm every consuming program owes.~~ **Every identity a REACHABLE `fail` site raises — public OR PRIVATE, qualified by the module that declares it — is an arm every consuming program owes; a declaration never raised costs nothing.** *(Corrected @@DATE@@, cycle 0.2.0a — the ecosystem audit's EC3, TM-213, re-measured at `5fbaf4a`: the arm is owed for every identity a REACHABLE `fail` site raises, PUBLIC OR PRIVATE, named by the module that declares it (`m.E`), and for no declaration nothing raises.)* §2. |
+ | Reachability is **import-scoped** | 1.4.8's `nsys` note | Module decomposition decides what a consumer's `failsafe` owes. §2. |
+ | Plain integer `+ - *` **traps** on overflow | D-210 | Every arithmetic path states its range and checks it **before** the trap fires. §4. |
+ | `/` and `%` by zero trap; signed `MIN / -1` traps | D-007, D-142 | The calendar algorithms divide constantly; every divisor is a nonzero literal or a proven value. §4. |
+diff --git a/meta/specs/TESTING.md b/meta/specs/TESTING.md
+index 57c4451e02f9efbad34fb7087f7c651c9da3bd2e..57ccdc6d8adc752e2e2f37233dde1093a84f7f8d 100644
+--- a/meta/specs/TESTING.md
++++ b/meta/specs/TESTING.md
+@@ -39,7 +39,7 @@ them found something on its first run.
+ | `check_host_isolation` | no module outside `src/host/` and `src/lib.npk` names a `host_` symbol |
+ | `check_tables_regenerate` | every committed generated file against a fresh run of its generator, byte for byte: the zone tables from cycle 0.5, and the civil cross-oracle's corpus (V-6), which exists from cycle 0.1.4 and joins the check when it goes live (TM-183) |
+ | `check_table_invariants` | every transition slice sorted and strictly increasing; every type index in range; every name-pool offset in range; the zone-name index lexicographically sorted |
+-| `check_error_budget` | the count and names of public `error:` declarations against `SAFETY.md` §2's table — each identity QUALIFIED BY ITS DECLARING MODULE, as `NITPICK-REACH-003` counts it, and held to the module S-4's table names for it (TM-203): a budgeted name declared in two modules, or outside its module, is a second arm in every consumer. *(Until cycle 0.1.5's second half the count was keyed by the bare name, and `cal.ETimeValue` beside `zone.ETimeValue` read as one identity — the cycle audit's C2.)* |
++| `check_error_budget` | the count and names of the `error:` declarations in `src/`, public AND private (*"public"* until @@DATE@@, though the check has counted both since TM-203 — TM-213), against `SAFETY.md` §2's table — each identity QUALIFIED BY ITS DECLARING MODULE, as `NITPICK-REACH-003` counts it, and held to the module S-4's table names for it (TM-203): a budgeted name declared in two modules, or outside its module, is a second arm in every consumer. *(Until cycle 0.1.5's second half the count was keyed by the bare name, and `cal.ETimeValue` beside `zone.ETimeValue` read as one identity — the cycle audit's C2.)* |
+ | `check_failsafe_arms` | the generated per-module arm list against programs that import each module and compile their `failsafe` |
+ | `check_layering` | `BUILD.md` §6's diagram against `src/` — its **edges** (every `use`) and its **nodes** (every layer the diagram names holds at least one module). The node half is D1's repair: cycle 0.0.1's acceptance claimed `run.py` "asserts the count is at least 7" and no such assertion was in the tree, so *"a directory whose placeholder was deleted rather than replaced is invisible to the sweep"* was live for four subcycles inside a ticked box |
+ | `check_no_owning_fields` | **no `fixed` table's element owns — itself, or through a field at any depth** (`SAFETY.md` S-19b). **It could not see a SINGLE-LINE struct until cycle 0.0.6 and both of this repository's structs are one** (TM-138), so neither type's real fields had ever been examined while the check reported `0 of 0`; the self-check now plants the same violation in both spellings. **And until cycle 0.1.3b it could not see an owning ELEMENT (`fixed string[2]`) or an owner two structs down, and it matched owners by substring**, so a field named `string_off` read as one — all three found by re-measuring the premise the check was written on, which was false (TM-177), and all three planted now |
+@@ -518,7 +518,8 @@ ways"* — printed on every run, and repeated in `run.py`'s header, `CLAUDE.md`,
+ `harness/README.md` and the CI workflow — was an overstatement for three
+ cycles (C3). `0.0/README.md`'s Gate said **seven** and was the only place that
+ had it right. *(Eight of nine since cycle 0.1.4b: case 9 is planted, and case
+-6 is still `PEND`.)* The number is now derived from `selfcheck.PLANTED_CASES` rather
++6 is still `PEND`. Twelve of thirteen since cycle 0.2.0a: cases 10 … 13 are
++planted, TM-209 and TM-210.)* The number is now derived from `selfcheck.PLANTED_CASES` rather
+ than typed, in every one of those places that still states it.
+ 
+ **Rule V-14b — every case carries a CONTROL, in the same run.** Each case's

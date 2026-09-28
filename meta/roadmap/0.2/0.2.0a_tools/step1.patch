@@ -1,0 +1,355 @@
+diff --git a/harness/lexical.py b/harness/lexical.py
+index aa85da311d1ca4827c32ebea427f1de10ba47f87..b2d5a9fc177e98724826e3b68c8f6be6d1131744 100644
+--- a/harness/lexical.py
++++ b/harness/lexical.py
+@@ -42,6 +42,12 @@ WHAT IT MIRRORS, READ AT COMPILER `c970483` WITH `git show`, NOT FROM A
+ SUMMARY: `src/frontend/lexer.npk`'s `is_space`, `lexer_skip_trivia` and
+ `lexer_next`; `src/frontend/escapes.npk`'s `escape_decode` and
+ `decode_string`; and `p_parse_import` in `src/frontend/parse_decl.npk`.
++AND AGAIN AT `5fbaf4a` (cycle 0.2.0a, the re-read TM-202 makes every
++adoption's; TM-208), where `lexer.npk` differs only in a character literal's
++WIDTH -- the compiler's DEF-145: one above U+00FF, or written `\\u{...}`, is
++`char32` -- and not in what a literal spans, and `escapes.npk`,
++`p_parse_import` and `LEXICAL_REFERENCE.md` not at all, so nothing below
++moved.
+ 
+   * THE TEXT IS BYTES. `read()` maps each byte to one character (latin-1), so
+     every offset is the compiler's byte offset, `\\n` (byte 10) is the only
+diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
+index 2e95dfa340a41a381c521e9647582193c3be0deb..f03ccc5928d7ba60b8ae6175ae9dc9895785b9fb 100644
+--- a/meta/DECISIONS.md
++++ b/meta/DECISIONS.md
+@@ -5687,6 +5687,11 @@ this cycle, and the length check's gap is real for the next accessor.
+ # Cycle 0.1.5's second half — the cycle audit's triage, ratified 2026-09-26
+ 
+ ### TM-202 — part E's second half asks the pinned compiler about the forms it names, each literal's value asserted, and the adoption that moves the pin re-reads the compiler's lexer whatever part E says
++> **SUPERSEDED IN PART by TM-208 (@@DATE@@).** Its "and brings `lexical.py` to
++> it in both libraries": this repository re-reads and brings its OWN reader;
++> `nitpick-regex`'s copy is that repository's, under its own re-read rule since
++> its cycle 0.1.0b, its RX-176 (the ecosystem audit's ED1). The rest stands. The text below
++> is left exactly as written.
+ 
+ **2026-09-26, cycle 0.1.5's second half, from the cycle audit's C1 (the
+ workbench's `meta/audits/nitpick-time-0.1-2026-09-26.md`). Amends
+@@ -5919,3 +5924,52 @@ leaves it: whether a read's length is `count`.*
+ *Alternatives declined:* **the item in cycle 0.5's checklist**, where the zone
+ tables arrive — they are `fixed` arrays, `T[N]`, which trap on their own and
+ lay no slice (`SAFETY.md` S-17b), so they are not the second subject.
++
++### TM-208 — the adoption of compiler `5fbaf4a`: the fifteen `cstring` copies read in place or moved, the lexer re-read, and what else the pin moved here
++
++**@@DATE@@, cycle 0.2.0a (the plan's PD-57) — landings 67 … 82 over
++`c970483`, one re-pin at the author's go. Amends `tests/probe/probe09*.npk`,
++six `tests/unit/sweep/` members and `harness/lexical.py`'s header;
++`SAFETY.md` §1's move-only row and S-22's view table; `OPEN_QUESTIONS.md`
++O-N25. It supersedes
++TM-202 in part.**
++
++**What was found.** The unchanged tree's full run at `5fbaf4a` is `RED -- 105
++unit(s) of 113 passed`, and the eight failures are exactly the eight files
++holding a binding-to-binding `cstring` copy — fifteen of them, each
++`NITPICK-TYPE-046`, as the compiler's census said (its landing 78, D-328: a
++`cstring` owns what `to_cstring` makes and is move-only). Every other verdict,
++exit and heap figure is as at `c970483`. The compiler's lexer moved
++(`lexer.npk` +13/−2) in a character literal's WIDTH only, its DEF-145 — one
++above U+00FF, or written `\u{…}`, is `char32` — not in what a literal spans;
++`escapes.npk`, `LEXICAL_REFERENCE.md` and `p_parse_import` did not move, and
++no `.npk` here holds a `\u{…}` or non-ASCII character literal. `NITPICK-BORROW-015`
++(the compiler's D-325, landing 67) is in the pin: the owner of a `string_bytes`
++view written while it lives is refused at 5:5 of a control that compiles at
++`c970483` — and `tests/unit/bytes_view_lifetime.npk` compiles and runs 0,
++because `bytes_view`'s answer is a `#wild_slice` over the body's pointer, which
++the freeze does not track. And an OWNING `cstring` is no longer a
++pointer-shaped root: a view of `to_cstring`'s answer's `.ptr`, returned from
++the function that made it, is `NITPICK-BORROW-001` at `5fbaf4a` and compiled
++at `c970483`; `SAFETY.md` S-22's table carries it. The compiler's loop defects
++this cycle's README held
++`for`, `loop` and `till` for (DEF-127 … DEF-130) landed at its 75, an ancestor.
++
++**The decision.** *An `environ()` element is read IN PLACE — `env[k].ptr`,
++`env[k].len` — never copied into a local: it owns nothing (its `cap` is 0), and
++probes 09 and 09b are about a view of the kernel's bytes. `to_cstring`'s answer
++is MOVED out of its `Result` — `cstring:s = move(c.value);` — and dropped at
++scope exit, where it leaked before. `harness/lexical.py` does not move; its
++header records the re-read at `5fbaf4a`. TM-202's "brings `lexical.py` to it in
++both libraries" is this repository's reader only: W-7 gives this repository no
++write in `nitpick-regex`, which has had its own re-read rule since its cycle
++0.1.0b (its RX-176) — the ecosystem audit's ED1. O-N25 is answered here: the
++freeze landed and reaches no file of ours, and S-18e's growth rule still
++governs `bytes_view`. The hold on `for`, `loop` and `till` lifts.*
++
++*Alternatives declined:* **`.clone()` each `environ()` element** — an owned
++copy per entry, where the probes' question is the view (and at `5fbaf4a`
++`.clone()` answers a `Result`, `NITPICK-TYPE-007` unwrapped); **`move` out of
++the element** — it would leave the environment block holding a vacancy;
++**`lexical.py` changed to type a character literal's width** — the reader
++blanks literals and never types them, so no answer of its moves.
+diff --git a/meta/OPEN_QUESTIONS.md b/meta/OPEN_QUESTIONS.md
+index 63a7fd0ec2903775b7d44071f7641d2176046d6e..508a9df05a4b082b6298a683d7125492bde98c1e 100644
+--- a/meta/OPEN_QUESTIONS.md
++++ b/meta/OPEN_QUESTIONS.md
+@@ -1190,7 +1190,17 @@ row type by name is a belt, not the guarantee, and
+ 
+ ---
+ 
+-### O-N25 — a view's root can be written while the view is live, so the view reads rewritten or freed memory — **OPEN here: the compiler's D-325 settles it, in pin `c970483`, and its refusal, `NITPICK-BORROW-015`, is at no pin of ours**
++### ~~O-N25 — a view's root can be written while the view is live, so the view reads rewritten or freed memory~~ — **ANSWERED @@DATE@@ (TM-208): `NITPICK-BORROW-015` is in the pin since `5fbaf4a`, and reaches no file of ours**
++
++> **Answered at the adoption of `5fbaf4a` (cycle 0.2.0a, TM-208).** A
++> `string_bytes` view's owner written while the view lives is
++> `NITPICK-BORROW-015` there, and compiles at `c970483`.
++> `tests/unit/bytes_view_lifetime.npk` compiles and runs 0: `bytes_view`'s
++> answer is a `#wild_slice` over the body's pointer, which the freeze does not
++> track, so `SAFETY.md` S-18e's growth rule and S-22's one exemption still
++> govern it. The heading read *"OPEN here: the compiler's D-325 settles it, in
++> pin `c970483`, and its refusal, `NITPICK-BORROW-015`, is at no pin of ours"*;
++> the entry below is left as written.
+ 
+ **Raised** from this repository's cycle 0.1.4b planning, 2026-09-25, at pin
+ `c3bdae2`, where `bytes_take` was found handing back a view of its sink typed
+diff --git a/meta/specs/SAFETY.md b/meta/specs/SAFETY.md
+index b84615a3965ef8bf14dcf779b5f77a4d4cb5906e..84d6865aaba0509b32a8533a353f0866ae5eb06b 100644
+--- a/meta/specs/SAFETY.md
++++ b/meta/specs/SAFETY.md
+@@ -19,7 +19,7 @@ costs a library that does calendar arithmetic.
+ | Plain integer `+ - *` **traps** on overflow | D-210 | Every arithmetic path states its range and checks it **before** the trap fires. §4. |
+ | `/` and `%` by zero trap; signed `MIN / -1` traps | D-007, D-142 | The calendar algorithms divide constantly; every divisor is a nonzero literal or a proven value. §4. |
+ | Indexing **a type that carries a length** is bounds-checked and traps | D-070 | a slice `T[]`, a fixed array `T[N]` and a `simd<T, N>` lane trap; **a bare pointer does not** — and `Vec<T>.items` and `Bytes`' `buffer` body are both reached as one. §4, S-17b. |
+-| Owning values are **move-only** | TYPE-046 | No binding-to-binding copies of a `string` — nor, since cycle 0.1.3c, of a `Vec` or of anything holding one (S-18g). **No `fixed` table holds an owning value** — the language lets one, then refuses the copy that reads a row out and, since compiler `c970483`, the move too (S-19b; through `c3bdae2` the move compiled and faulted, O-N20). §5. |
++| Owning values are **move-only** | TYPE-046 | No binding-to-binding copies of a `string` — nor, since cycle 0.1.3c, of a `Vec` or of anything holding one (S-18g), nor, since cycle 0.2.0a at compiler `5fbaf4a`, of a `cstring`, which owns what `to_cstring` makes (the compiler's D-328): an `environ()` element is read in place and `to_cstring`'s answer moved out of its `Result` (TM-208). **No `fixed` table holds an owning value** — the language lets one, then refuses the copy that reads a row out and, since compiler `c970483`, the move too (S-19b; through `c3bdae2` the move compiled and faulted, O-N20). §5. |
+ | Borrows are second class | D-004 | A view of the zone table cannot be returned or stored. §5. |
+ | A successful `exit 0` with live `wild` allocations **traps** | D-151 | Every `wild` byte is paired on every path. §5. |
+ | There are **no closures** | D-018 | A layout is data the formatter interprets, not a callback. FORMAT_MODEL.md. |
+@@ -1120,6 +1120,14 @@ is predicted. The evidence column names it.
+ | a view rooted at a plain **parameter** | **legal** | `probe10` §2, §3 |
+ | a view rooted at a **pointer-shaped binding** — a `wild` block, a `cstring`'s `.ptr`, a slice | **legal** | `probe10` §1, `probe09b` |
+ 
++*(Re-measured at compiler `5fbaf4a`, cycle 0.2.0a — TM-208.)* A `cstring` that
++OWNS — `to_cstring`'s answer, moved into a local — is no longer a pointer-shaped
++root: a view of its `.ptr`, returned, is `NITPICK-BORROW-001` there, where at
++`c970483` it compiled (its buffer never freed). An `environ()` element owns
++nothing and is read in place, and a view of `env[j].ptr` returned from a
++function taking `env` is legal — `probe09b`, whose root is now the parameter's
++element and no longer a local copy, which a move-only `cstring` refuses.
++
+ **The rule keys on the ROOT'S SHAPE, not on parameterhood** — which is the
+ correction TM-110 makes to TM-109, and it took two probes to establish, because
+ one cannot separate the two readings. A view whose place roots at a
+diff --git a/tests/probe/probe09_environ_split.npk b/tests/probe/probe09_environ_split.npk
+index 759f9ddf090c486f369b720cb390e499e251c2c4..28d7329192301b34e7282e71f5799e59c0ebf8b3 100644
+--- a/tests/probe/probe09_environ_split.npk
++++ b/tests/probe/probe09_environ_split.npk
+@@ -88,13 +88,13 @@ func:main = int32(cstring[]:_~argv) {
+     int64:k = 0i64;
+     int64:checked = 0i64;
+     while (k < env.len) decreases env.len - k {
+-        cstring:e = env[k];
+-        if (e.len <= 0i64)                              { exit 11i32; }
+-        // A view of the kernel's bytes. `e.ptr` is POINTER-SHAPED, so this
+-        // view aliases the pointee rather than this frame -- see probe 10.
+-        string:entry = string_from_bytes(e.ptr, e.len);
++        if (env[k].len <= 0i64)                              { exit 11i32; }
++        // A view of the kernel's bytes. `env[k].ptr` is POINTER-SHAPED, so
++        // this view aliases the pointee rather than this frame -- see
++        // probe 10. Read in place: a `cstring` is move-only (TM-208).
++        string:entry = string_from_bytes(env[k].ptr, env[k].len);
+         uint8[]:eb = string_bytes(entry);
+-        if (eb.len != e.len)                            { exit 12i32; }
++        if (eb.len != env[k].len)                            { exit 12i32; }
+         int64:eq = raw find_byte(eb, 61u8);             // '='
+         if (eq < 0i64)                                  { exit 13i32; }
+         if (eq == 0i64)                                 { exit 14i32; }
+@@ -119,8 +119,7 @@ func:main = int32(cstring[]:_~argv) {
+     int64:vhi = -1i64;
+     int64:j = 0i64;
+     while (j < env.len) decreases env.len - j {
+-        cstring:e2 = env[j];
+-        string:entry2 = string_from_bytes(e2.ptr, e2.len);
++        string:entry2 = string_from_bytes(env[j].ptr, env[j].len);
+         uint8[]:b2 = string_bytes(entry2);
+         if (raw starts_with(b2, wb)) {
+             found = j;
+@@ -146,8 +145,7 @@ func:main = int32(cstring[]:_~argv) {
+     // of this file already uses.
+     string:want_entry = "TZ=Europe/Kyiv";
+     uint8[]:web = string_bytes(want_entry);
+-    cstring:pre = env[found];
+-    string:pres = string_from_bytes(pre.ptr, pre.len);
++    string:pres = string_from_bytes(env[found].ptr, env[found].len);
+     uint8[]:preb = string_bytes(pres);
+     if (preb.len != web.len)                            { exit 39i32; }
+     int64:w = 0i64;
+@@ -161,8 +159,7 @@ func:main = int32(cstring[]:_~argv) {
+     // PAIR into an entry the caller still holds, not a returned slice.
+     if ((vhi - vlo) != 11i64)                           { exit 31i32; }
+ 
+-    cstring:hit = env[found];
+-    string:hs = string_from_bytes(hit.ptr, hit.len);
++    string:hs = string_from_bytes(env[found].ptr, env[found].len);
+     uint8[]:hb = string_bytes(hs);
+     if (hb[vlo] != 69u8)                                { exit 32i32; }   // 'E'
+     if (hb[vlo + 1i64] != 117u8)                        { exit 33i32; }   // 'u'
+@@ -175,9 +172,8 @@ func:main = int32(cstring[]:_~argv) {
+     // reclaimed or rewritten between calls, this is where it would show.
+     cstring[]:env2 = environ();
+     if (env2.len != env.len)                            { exit 40i32; }
+-    cstring:hit2 = env2[found];
+-    if (hit2.len != hit.len)                            { exit 41i32; }
+-    string:hs2 = string_from_bytes(hit2.ptr, hit2.len);
++    if (env2[found].len != env[found].len)                            { exit 41i32; }
++    string:hs2 = string_from_bytes(env2[found].ptr, env2[found].len);
+     uint8[]:hb2 = string_bytes(hs2);
+     int64:m = 0i64;
+     while (m < hb2.len) decreases hb2.len - m {
+@@ -190,7 +186,7 @@ func:main = int32(cstring[]:_~argv) {
+     // Two `environ()` calls hand back the same storage. This is what makes
+     // the entries' bytes safe to view without copying -- and it is the fact
+     // `host_system_zone` will rest on.
+-    if (!(hit2.ptr == hit.ptr))                         { exit 43i32; }
++    if (!(env2[found].ptr == env[found].ptr))                         { exit 43i32; }
+ 
+     // D-151: exit 0 asserts no `wild` allocation is live. This probe makes
+     // none -- every string here is a VIEW of the kernel's bytes, and
+diff --git a/tests/probe/probe09b_environ_view_returned.npk b/tests/probe/probe09b_environ_view_returned.npk
+index 07dd580695801e0357e6ce666d4568925b308fef..d9cc1f52dd4d9319b05ea2a77f8d8e578202ad7e 100644
+--- a/tests/probe/probe09b_environ_view_returned.npk
++++ b/tests/probe/probe09b_environ_view_returned.npk
+@@ -52,9 +52,8 @@ mod:probe09b_environ_view_returned;
+ func:tz_index = int64(cstring[]:env) never fails {
+     int64:j = 0i64;
+     while (j < env.len) decreases env.len - j {
+-        cstring:e = env[j];
+-        if (e.len >= 3i64) {
+-            string:entry = string_from_bytes(e.ptr, e.len);
++        if (env[j].len >= 3i64) {
++            string:entry = string_from_bytes(env[j].ptr, env[j].len);
+             uint8[]:b = string_bytes(entry);
+             if (b[0i64] == 84u8) {                      // 'T'
+                 if (b[1i64] == 90u8) {                  // 'Z'
+@@ -67,21 +66,23 @@ func:tz_index = int64(cstring[]:env) never fails {
+     pass -1i64;
+ };
+ 
+-// The whole question, in one function: the view's root is `e.ptr`, a member of
+-// a `cstring` -- POINTER-SHAPED. The bytes live in the kernel's mapping and
++// The whole question, in one function: the view's root is `env[j].ptr`, a
++// member of a `cstring` -- POINTER-SHAPED. (It was `e.ptr`, of a local copy
++// of the element, until cycle 0.2.0a: at compiler `5fbaf4a` a `cstring` is
++// move-only, the copy is `NITPICK-TYPE-046`, and the element is read in
++// place -- TM-208. The view's root is now the parameter's element.) The bytes live in the kernel's mapping and
+ // outlive every frame in the program.
+ func:tz_entry = string(cstring[]:env) never fails {
+     int64:j = 0i64;
+     while (j < env.len) decreases env.len - j {
+-        cstring:e = env[j];
+-        if (e.len >= 3i64) {
+-            string:entry = string_from_bytes(e.ptr, e.len);
++        if (env[j].len >= 3i64) {
++            string:entry = string_from_bytes(env[j].ptr, env[j].len);
+             uint8[]:b = string_bytes(entry);
+             if (b[0i64] == 84u8) {                      // 'T'
+                 if (b[1i64] == 90u8) {                  // 'Z'
+                     if (b[2i64] == 61u8) {              // '='
+                         // The view travels UP, out of this frame.
+-                        pass string_from_bytes(e.ptr, e.len);
++                        pass string_from_bytes(env[j].ptr, env[j].len);
+                     }
+                 }
+             }
+@@ -105,8 +106,7 @@ func:main = int32(cstring[]:_~argv) {
+     // (`NITPICK-BORROW-012`, TM-110).
+     string:want_entry = "TZ=Europe/Kyiv";
+     uint8[]:web = string_bytes(want_entry);
+-    cstring:pre = env[tzi];
+-    string:pres = string_from_bytes(pre.ptr, pre.len);
++    string:pres = string_from_bytes(env[tzi].ptr, env[tzi].len);
+     uint8[]:preb = string_bytes(pres);
+     if (preb.len != web.len)                            { exit 39i32; }
+     int64:w = 0i64;
+diff --git a/tests/unit/sweep/every_civil_date.npk b/tests/unit/sweep/every_civil_date.npk
+index 44f32014616bc4ef9e4ada942ea043099ef06042..e9b3d92f9b9f55b62e945bb04f4727123ea57909 100644
+--- a/tests/unit/sweep/every_civil_date.npk
++++ b/tests/unit/sweep/every_civil_date.npk
+@@ -128,7 +128,7 @@ func:say_swept = int32(int64:count) never fails {
+     string:line = string_concat(head, "\n");
+     Result<cstring>:c = to_cstring(line);
+     if (c.is_error) { pass 20i32; }
+-    cstring:s = c.value;
++    cstring:s = move(c.value);         // a `cstring` is move-only (TM-208)
+     Result<int64>:w = sys(1i64, 1i64, s.ptr, s.len);
+     if (w.is_error) { pass 21i32; }
+     if (w.value != s.len) { pass 22i32; }
+diff --git a/tests/unit/sweep/every_day_number.npk b/tests/unit/sweep/every_day_number.npk
+index a276f10741083bc35dfe261da28c4d0467f0eac7..56deee066b4fb008952bc214d4d59087bcd71956 100644
+--- a/tests/unit/sweep/every_day_number.npk
++++ b/tests/unit/sweep/every_day_number.npk
+@@ -71,7 +71,7 @@ func:say_swept = int32(int64:count) never fails {
+     string:line = string_concat(head, "\n");
+     Result<cstring>:c = to_cstring(line);
+     if (c.is_error) { pass 20i32; }
+-    cstring:s = c.value;
++    cstring:s = move(c.value);         // a `cstring` is move-only (TM-208)
+     Result<int64>:w = sys(1i64, 1i64, s.ptr, s.len);
+     if (w.is_error) { pass 21i32; }
+     if (w.value != s.len) { pass 22i32; }
+diff --git a/tests/unit/sweep/every_iso_week_date.npk b/tests/unit/sweep/every_iso_week_date.npk
+index 7657d98dbc7a8ca8f0400be41ec5082a0771496e..7227526b30f6052e8c9591191793d38d9bc12ee1 100644
+--- a/tests/unit/sweep/every_iso_week_date.npk
++++ b/tests/unit/sweep/every_iso_week_date.npk
+@@ -129,7 +129,7 @@ func:say_swept = int32(int64:count) never fails {
+     string:line = string_concat(head, "\n");
+     Result<cstring>:c = to_cstring(line);
+     if (c.is_error) { pass 20i32; }
+-    cstring:s = c.value;
++    cstring:s = move(c.value);         // a `cstring` is move-only (TM-208)
+     Result<int64>:w = sys(1i64, 1i64, s.ptr, s.len);
+     if (w.is_error) { pass 21i32; }
+     if (w.value != s.len) { pass 22i32; }
+diff --git a/tests/unit/sweep/every_month_length.npk b/tests/unit/sweep/every_month_length.npk
+index e2c9c76e9a62e38228377f1b93330661a4cc571b..5d2edc6889bd486d31b1233d70d2ba5c2cb63bf1 100644
+--- a/tests/unit/sweep/every_month_length.npk
++++ b/tests/unit/sweep/every_month_length.npk
+@@ -87,7 +87,7 @@ func:say_swept = int32(int64:count) never fails {
+     string:line = string_concat(head, "\n");
+     Result<cstring>:c = to_cstring(line);
+     if (c.is_error) { pass 20i32; }
+-    cstring:s = c.value;
++    cstring:s = move(c.value);         // a `cstring` is move-only (TM-208)
+     Result<int64>:w = sys(1i64, 1i64, s.ptr, s.len);
+     if (w.is_error) { pass 21i32; }
+     if (w.value != s.len) { pass 22i32; }
+diff --git a/tests/unit/sweep/every_oracle_date.npk b/tests/unit/sweep/every_oracle_date.npk
+index 7deba2ecd306f3c26afe2d24890da7b2bbf7db48..185333d9c192536be9054f568eb7853d2f7364fa 100644
+--- a/tests/unit/sweep/every_oracle_date.npk
++++ b/tests/unit/sweep/every_oracle_date.npk
+@@ -161,7 +161,7 @@ func:say_num = int32(int64:v, bool:last) never fails {
+     string:text = string_concat(digits, sep);
+     Result<cstring>:c = to_cstring(text);
+     if (c.is_error) { pass 20i32; }
+-    cstring:s = c.value;
++    cstring:s = move(c.value);         // a `cstring` is move-only (TM-208)
+     Result<int64>:w = sys(1i64, 1i64, s.ptr, s.len);
+     if (w.is_error) { pass 21i32; }
+     if (w.value != s.len) { pass 22i32; }
+@@ -177,7 +177,7 @@ func:say_swept = int32(int64:count) never fails {
+     string:line = string_concat(head, "\n");
+     Result<cstring>:c = to_cstring(line);
+     if (c.is_error) { pass 20i32; }
+-    cstring:s = c.value;
++    cstring:s = move(c.value);         // a `cstring` is move-only (TM-208)
+     Result<int64>:w = sys(1i64, 1i64, s.ptr, s.len);
+     if (w.is_error) { pass 21i32; }
+     if (w.value != s.len) { pass 22i32; }
+diff --git a/tests/unit/sweep/every_ordinal_date.npk b/tests/unit/sweep/every_ordinal_date.npk
+index 353db0f2be1c12d74546843d852204711734cee9..0ec33818b6a0f8a4699a3354f7180ad581643e58 100644
+--- a/tests/unit/sweep/every_ordinal_date.npk
++++ b/tests/unit/sweep/every_ordinal_date.npk
+@@ -88,7 +88,7 @@ func:say_swept = int32(int64:count) never fails {
+     string:line = string_concat(head, "\n");
+     Result<cstring>:c = to_cstring(line);
+     if (c.is_error) { pass 20i32; }
+-    cstring:s = c.value;
++    cstring:s = move(c.value);         // a `cstring` is move-only (TM-208)
+     Result<int64>:w = sys(1i64, 1i64, s.ptr, s.len);
+     if (w.is_error) { pass 21i32; }
+     if (w.value != s.len) { pass 22i32; }

@@ -1,0 +1,341 @@
+diff --git a/harness/selfcheck.py b/harness/selfcheck.py
+index 367a36c73457979ef5315477ad345463fd1914a7..e5a668ed28960fddf770cc91ea7fb1fe96a61ed3 100644
+--- a/harness/selfcheck.py
++++ b/harness/selfcheck.py
+@@ -624,6 +624,57 @@ def case_11_other_target(root, man, base):
+     return c
+ 
+ 
++# TWO SITES OF ONE CODE, measured at cycle 0.2.0a's planning at `5fbaf4a` and at
++# `c970483`: `NITPICK-TYPE-007` at 4:5 and at 5:5 -- two initialisers of the
++# wrong type, each its own report. Cases 12 and 13 are the two ways a header
++# can disagree with that COUNT while agreeing with its SET (TM-210).
++TWO_SITES = """mod:%(mod)s;
++
++func:main = int32(cstring[]:_~argv) {
++    int32:a = true;
++    int32:b = true;
++    exit 0i32;
++};
++""" + FAILSAFE
++
++
++def _sites_case(c, man, base, name, bad_lines, bad_name):
++    good = "// expect-error: NITPICK-TYPE-007\n" * 2
++    where = make_tree(
++        os.path.join(base, name), man,
++        [("tests/rejection/good_sites.npk",
++          good + TWO_SITES % {"mod": "good_sites"}),
++         ("tests/rejection/%s.npk" % bad_name,
++          "// expect-error: NITPICK-TYPE-007\n" * bad_lines
++          + TWO_SITES % {"mod": bad_name})],
++        [("rejection", "check", "tests/rejection")])
++    st, out, v = invoke(where)
++    c.red(st, out)
++    c.fails(v, "tests/rejection/%s.npk" % bad_name)
++    c.passes(v, "tests/rejection/good_sites.npk")
++    return out
++
++
++def case_12_code_named_once(root, man, base):
++    c = Case(12, "a `check` case naming a code once where it is reported at two sites")
++    # Under B-7's set equality this PASSES -- the code is named and reported.
++    # `probe15`, `probe11c`, `probe14` and `generic_owning_copy/case5` each
++    # named their code once for two to four sites until cycle 0.2.0a (F24).
++    c.says(_sites_case(c, man, base, "case12", 1, "one_line"),
++           "and 1 `expect-error` line(s) name it")
++    return c
++
++
++def case_13_silent_site(root, man, base):
++    c = Case(13, "a `check` case naming a code at three sites where it is reported at two")
++    # The compiler's own `silent_site` self-check case (D-332), ported: a site
++    # the compiler stopped reporting is invisible to a set, and to lines that
++    # carry no position.
++    c.says(_sites_case(c, man, base, "case13", 3, "three_lines"),
++           "and 3 `expect-error` line(s) name it")
++    return c
++
++
+ # CASE 9's SPECIMEN (cycle 0.1.4b, TM-187). HELD keeps one 4096-byte managed
+ # buffer live to its exit, so the runtime reports `allocated=4096
+ # peak_live=4096 count=1` -- measured at `c3bdae2` on both legs, and the
+@@ -1141,7 +1192,10 @@ PLANTED = [
+ #                 disagrees with its header, TM-187) and, since cycle 0.2.0a,
+ #                 its tenth and eleventh (a layout pin `opt` does not derive,
+ #                 and a tree pinned consistently to another target -- the
+-#                 compiler's two target checks, ported, TM-209).
++#                 compiler's two target checks, ported, TM-209), and its
++#                 twelfth and thirteenth (a code named once where it is
++#                 reported at two sites, and named at three where it is
++#                 reported at two -- the compiler's D-332, TM-210).
+ #   PLANTED_CASES what is actually planted: case 6 is PEND until cycle 0.5.
+ #   TREE_PLANTS   `PLANTED`'s rows, plus THREE that no row can express:
+ #                 `check_layering`'s node half (the fault is a file that is NOT
+@@ -1150,8 +1204,8 @@ PLANTED = [
+ #                 `check_specs_current` (which reports and never fails, so it
+ #                 is driven separately). Every one has a control beside it,
+ #                 which is why the two numbers printed are equal.
+-V14_CASES = 11
+-PLANTED_CASES = 10
++V14_CASES = 13
++PLANTED_CASES = 12
+ TREE_PLANTS = len(PLANTED) + 3
+ 
+ 
+@@ -1876,7 +1930,8 @@ def run(rep, root, steps):
+         ok = _report_case(rep, c) and ok
+     ok = _report_case(rep, case_8_failsafe_deleted(root, man, base, npkc)) and ok
+     ok = _report_case(rep, case_9_memory_disagrees(root, man, base)) and ok
+-    for fn in (case_10_layout_pin_wrong, case_11_other_target):     # TM-209
++    for fn in (case_10_layout_pin_wrong, case_11_other_target,      # TM-209
++               case_12_code_named_once, case_13_silent_site):       # TM-210
+         ok = _report_case(rep, fn(root, man, base)) and ok
+ 
+     problems = part_b(rep, base) + part_b_specs_current(rep, base)
+diff --git a/harness/stages.py b/harness/stages.py
+index 7dd335c5d1f4a7a7e13419c0d3416666301f2ca0..101b73ee005c1af6bb12842d628aa0d6e118f436 100644
+--- a/harness/stages.py
++++ b/harness/stages.py
+@@ -9,7 +9,9 @@ instead:
+ 
+     expect-error:  present  ->  a REFUSAL member. `npkc` must fail, and the SET
+                                of codes it reports must EQUAL the set the header
+-                               names (B-7, D-237). Never assembled, never run.
++                               names (B-7, D-237) -- each code, since cycle
++                               0.2.0a, at as many sites as lines name it (B-7c,
++                               TM-210). Never assembled, never run.
+     expect-exit:   present  ->  a RUN member. Emitted, scanned, assembled,
+                                linked and run at -O0, then again through
+                                `opt -O2` (B-3), the same exit both times.
+@@ -400,7 +402,9 @@ def _stem(rel):
+ 
+ 
+ def refusal(bld, rel, e):
+-    """A file that must not compile. B-7/D-237: the code SETS must be equal."""
++    """A file that must not compile. B-7/D-237: the code SETS must be equal --
++    and, since cycle 0.2.0a, each code reported at as many sites as lines name
++    it (B-7c, TM-210)."""
+     src = os.path.join(bld.root, rel)
+     ll = os.path.join(bld.out_dir, _stem(rel) + ".refused.ll")
+     st, out = bld.emit_expecting_refusal(src, ll)
+@@ -412,11 +416,14 @@ def refusal(bld, rel, e):
+                    " It also wrote %s." % ll)]
+ 
+     got_codes, got_at = set(), set()
++    got_sites = {}                  # code -> ["line:col", ...], one per report
+     for line in out.splitlines():
+         m = _DIAG.match(line)
+         if m:
+             got_codes.add(m.group(1))
+             got_at.add("%s:%s" % (m.group(3), m.group(4)))
++            got_sites.setdefault(m.group(1), []).append(
++                "%s:%s" % (m.group(3), m.group(4)))
+ 
+     problems = []
+     want_codes = set(e.errors)
+@@ -429,6 +436,21 @@ def refusal(bld, rel, e):
+         # as surely as a missing one.
+         problems.append("reported and not expected: %s (B-7: the set reported "
+                         "must EQUAL the set expected)" % ", ".join(unexpected))
++    # AND THE NUMBER OF SITES, PER CODE (TM-210, `BUILD.md` B-7c): the
++    # compiler's D-332, held by both of its runners since `5fbaf4a` and ported
++    # by way of `nitpick-regex`'s (its RX-178). The rule above compares SETS,
++    # and a set cannot see a silent site: a code expected at two places and
++    # reported at one passes it, and so does one reported at four and named
++    # once. Asked of codes both named and reported; a code on one side only is
++    # the two problems above.
++    for code in sorted(want_codes & got_codes):
++        at, named = got_sites[code], e.errors.count(code)
++        if len(at) != named:
++            problems.append(
++                "%s is reported at %d site(s) -- %s -- and %d `expect-error` "
++                "line(s) name it. One line per site (the compiler's D-332, "
++                "BUILD.md B-7c): a set of codes cannot see a silent site, so "
++                "the count is asserted too." % (code, len(at), ", ".join(at), named))
+     for at in e.error_at:
+         if at not in got_at:
+             problems.append("expected a diagnostic at %s; got %s"
+diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
+index 123e4aa79bcacbefbb79a5f31fbe88400fcc5287..ef48df3e8b2ad07ca42f53bc3bf56c12aabfcd7a 100644
+--- a/meta/DECISIONS.md
++++ b/meta/DECISIONS.md
+@@ -5955,6 +5955,42 @@ would pass it; **the belt on linked programs only, as regex has it** — `emit`
+ is this harness's one door to `npkc`, and holding it there costs one read per
+ emission and covers the library and the repro builds too.
+ 
++### TM-210 — a refusal names each code once per site it is reported at: the runner counts, as the compiler's runners do since its D-332
++
++**@@DATE@@, cycle 0.2.0a (the plan's PD-59) — the adoption of compiler
++`5fbaf4a`, its landing 82 (D-332) and advance notice F24. Amends
++`harness/stages.py` and `selfcheck.py`; `BUILD.md` (B-7c, new, and B-4c's and
++B-5's statements of the set); `TESTING.md` V-14 (cases 12, 13); `nitpick.toml`'s
++probe-entry comment; and four files' headers.**
++
++**What was found.** Rule B-7 compares SETS: the codes a refusal reports must
++equal the codes its header names. A set cannot see a silent site — a code
++expected at two places and reported at one passes it, and so does one
++reported at four and named once — and the compiler's own `not_constant.npk`
++expected a refusal for a month after D-222 had made it legal. So both of the
++compiler's runners count sites per code from `5fbaf4a`. Over this tree's 37
++files carrying `expect-error`, at both kept pins, four name a code once where
++it is reported more often — exactly F24's four: `probe15` (`TYPE-079` ×3, one
++per sealed field its literal writes), `probe11c` (`REACH-002` ×4, one per arm
++the import adds), `generic_owning_copy/case5` (`TYPE-017` ×2, its two calls)
++and `probe14` (`PARSE-001` ×2, the payload's `(` and `)`: the compiler's
++DEF-164, registered OPEN). Our runner passed all four.
++
++**The decision.** *`stages.refusal` requires, for every code both named and
++reported, as many `expect-error` lines as reported sites, and names the sites
++when they differ (`BUILD.md` B-7c). The four headers name each site;
++`probe14` pins both of its positions, so DEF-164's landing is a red run that
++names it. Self-check cases 12 and 13 are the two directions — a code named
++once where it is reported twice, and named three times where it is reported
++twice — beside a correct twin. The compiler's `counted_sites` and
++`silent_site`, by way of `nitpick-regex`'s port (its RX-178).*
++
++*Alternatives declined:* **the compiler's runners alone** — this runner is the
++one that judges this library, and it passed all four; **one line per distinct
++position** — `probe15`'s three reports share one position and are three
++facts until DEF-165 says otherwise; **counting notes too** — a note is the
++compiler's explanation, not a site, and B-7 has never counted them.
++
+ ### TM-208 — the adoption of compiler `5fbaf4a`: the fifteen `cstring` copies read in place or moved, the lexer re-read, and what else the pin moved here
+ 
+ **@@DATE@@, cycle 0.2.0a (the plan's PD-57) — landings 67 … 82 over
+diff --git a/meta/specs/BUILD.md b/meta/specs/BUILD.md
+index 34cf81d63e35a36c88bca96ce670815ea24e7b86..4e7481ec87579d95a71cc0659448cb8dd2867ece 100644
+--- a/meta/specs/BUILD.md
++++ b/meta/specs/BUILD.md
+@@ -206,7 +206,8 @@ A `[[test]]` selects by **directory** and `kind` is per entry, so one entry over
+ <!-- [[sweep: probe_exit=28]] -->
+ and the 21 carrying `expect-error:` (O-X7; 8 until cycle 0.1.0c, 13 until 0.1.3b, 15 until 0.1.3c). The runner therefore dispatches per
+ file: `expect-error:` present makes it a **refusal** member — `npkc` must fail
+-and the *set* of codes must equal the set named (B-7) — and `expect-exit:`
++and the *set* of codes must equal the set named (B-7), each code named once
++per site it is reported at (B-7c, since cycle 0.2.0a) — and `expect-exit:`
+ present makes it a **run** member. **Both markers is a failure; neither is a
+ failure and not a skip.** The compiler's own runner already has per-file
+ membership rules inside a stage, so this is an extension rather than a new
+@@ -234,7 +235,7 @@ compiler's:
+ 
+ ```
+ // expect-exit: 7            the exit a run must produce
+-// expect-error: NITPICK-TYPE-046      repeatable; the SET must match (B-7)
++// expect-error: NITPICK-TYPE-046      one line per reported site (B-7c); the SET must match (B-7)
+ // expect-error-at: 14:9
+ // env: TZ=Europe/Kyiv       one variable per line, repeatable (TM-120)
+ // stress: 40                run it that many times, the SAME answer every time
+@@ -291,6 +292,15 @@ the fix reads like a mystery otherwise.
+ (D-237): the set of codes a rejection test reports must **equal** the set its
+ expectations name.
+ 
++**Rule B-7c (TM-210) — and each code is named once PER SITE it is reported at.**
++A refusal's header carries one `expect-error` line for every site a code is
++reported at — the compiler's D-332, held by both of its runners since its
++landing 82 — because a set of codes cannot see a silent site: a code expected
++at two places and reported at one passes B-7, and so does one reported at four
++and named once. `harness/stages.py` counts, per code both named and reported,
++and names the sites when the count differs; self-check cases 12 and 13
++(`TESTING.md` V-14) are its reds. Notes are not sites. Since cycle 0.2.0a.
++
+ **Rule B-7b (TM-123) — the `parse` stage asserts the PARSE half, and only that.**
+ `npkc` has no parse-only mode, so the stage reads the diagnostic's code FAMILY:
+ `NITPICK-LEX-*` comes from the compiler's `src/frontend/diag_codes.npk` and
+diff --git a/meta/specs/TESTING.md b/meta/specs/TESTING.md
+index 09399ba4052fd172b18dc0c5482539450d2c7d26..57c4451e02f9efbad34fb7087f7c651c9da3bd2e 100644
+--- a/meta/specs/TESTING.md
++++ b/meta/specs/TESTING.md
+@@ -503,7 +503,14 @@ expectations and requires it to report every one as a failure:
+ 11. **a tree pinned consistently to another target** — `i686-unknown-linux-gnu`
+    and the layout the pinned `opt` derives for it — so case 10's check passes
+    and only the header belt can see every emission state x86-64 (TM-209): the
+-   compiler's `check_module_header`, ported.
++   compiler's `check_module_header`, ported;
++12. **a `check` case naming a code once where it is reported at two sites** —
++   since cycle 0.2.0a (TM-210, `BUILD.md` B-7c): under B-7's set equality it
++   passes, and the compiler's D-332 says it must not;
++13. **a `check` case naming a code at three sites where it is reported at
++   two** — a site the compiler stopped reporting, which neither a set nor
++   lines without positions can see: the compiler's own `silent_site` case,
++   ported (TM-210).
+ 
+ **SEVEN OF THE EIGHT ARE PLANTED, AND THE RUNNER SAYS SEVEN.** Case 6 is
+ `PEND` until cycle 0.5, so *"this runner has been shown able to fail eight
+diff --git a/nitpick.toml b/nitpick.toml
+index 47958104f56592fece0d68f85b22cc0366221f7f..8c13e7c9bce82aa5045c6d94bf0903e082b7124a 100644
+--- a/nitpick.toml
++++ b/nitpick.toml
+@@ -103,7 +103,8 @@ lld-flags     = ["-static"]
+ # probe11b_arm_omitted_refused, probe11c_import_arm_cost,
+ # probe11e_unused_import_refused. Each carries `// expect-error:` instead of
+ # `// expect-exit:`, and under TM-119 the runner reads that and holds the file
+-# to B-7's equal-sets rule instead of linking it. RE-MEASURED AT CYCLE 0.0.6
++# to B-7's equal-sets rule instead of linking it -- and, since cycle 0.2.0a,
++# to B-7c's count: one line per reported site (TM-210). RE-MEASURED AT CYCLE 0.0.6
+ # AND TAGGED SO IT CANNOT GO STALE AGAIN (TM-142): 32 files, 25 and 7, none
+ # with both markers and none with neither. The names above are the SEVEN as of
+ # 0.0.2 and the split has not moved; every probe added since carries
+diff --git a/tests/probe/defect/generic_owning_copy/case5_vec_at_destructive.npk b/tests/probe/defect/generic_owning_copy/case5_vec_at_destructive.npk
+index 84711ea8223e269015b9bb6bbfbdbc49d3584e06..9dfe35c734d2397d881ab8190815594724b23851 100644
+--- a/tests/probe/defect/generic_owning_copy/case5_vec_at_destructive.npk
++++ b/tests/probe/defect/generic_owning_copy/case5_vec_at_destructive.npk
+@@ -1,4 +1,8 @@
+ // expect-error: NITPICK-TYPE-017
++// expect-error: NITPICK-TYPE-017
++// ONE `expect-error` LINE PER REPORTED SITE since cycle 0.2.0a (the
++// compiler's D-332, its landing 82; `BUILD.md` B-7c, TM-210): the two calls
++// below, each refused where it is written.
+ //
+ // CASE 5, SINCE CYCLE 0.1.3c: THE CALL IS REFUSED (TM-194). `vec_at` takes
+ // `T: Pod`, a trait only a type that owns nothing can implement as it is
+diff --git a/tests/probe/probe11c_import_arm_cost.npk b/tests/probe/probe11c_import_arm_cost.npk
+index 7d0f038846eb6a3d407bdc3e809a9552e31831e9..bb42b5c2514643406a8d2e5ac26f6fbca7806827 100644
+--- a/tests/probe/probe11c_import_arm_cost.npk
++++ b/tests/probe/probe11c_import_arm_cost.npk
+@@ -1,4 +1,11 @@
+ // expect-error: NITPICK-REACH-002
++// expect-error: NITPICK-REACH-002
++// expect-error: NITPICK-REACH-002
++// expect-error: NITPICK-REACH-002
++// ONE `expect-error` LINE PER REPORTED SITE since cycle 0.2.0a (the
++// compiler's D-332, its landing 82; `BUILD.md` B-7c, TM-210): one per arm the
++// import adds -- the FOUR this file's answer names below -- so the count is
++// the answer, asserted, where the set could only say "at least one".
+ //
+ // PROBE 11c — WHAT AN IMPORT COSTS A CONSUMER'S `failsafe` WHEN THE IMPORTED
+ // MODULE DECLARES NO ERROR AT ALL. THIS FILE MUST NOT COMPILE.
+diff --git a/tests/probe/probe14_error_payload_refused.npk b/tests/probe/probe14_error_payload_refused.npk
+index 99e6e9e3b55d67af607ecbb507b3d2b7474f3031..b78435eb3e6d49b95eaf93aafc7fc736cd253567 100644
+--- a/tests/probe/probe14_error_payload_refused.npk
++++ b/tests/probe/probe14_error_payload_refused.npk
+@@ -1,5 +1,12 @@
+ // expect-error: NITPICK-PARSE-001
+-// expect-error-at: 49:21
++// expect-error: NITPICK-PARSE-001
++// expect-error-at: 56:21
++// expect-error-at: 56:32
++// ONE `expect-error` LINE PER REPORTED SITE since cycle 0.2.0a (the
++// compiler's D-332, its landing 82; `BUILD.md` B-7c, TM-210): the one payload
++// declaration is reported at its `(` and again at its `)` -- the compiler's
++// DEF-164, registered OPEN: one mistake, reported twice. When it lands the
++// count drops to one, and this run is red until the header follows.
+ //
+ // PROBE 14 — CAN AN `error:` IDENTITY CARRY A PAYLOAD? No. And this file is
+ // what keeps that answer checked rather than remembered.
+diff --git a/tests/probe/probe15_civil_literal_bypass.npk b/tests/probe/probe15_civil_literal_bypass.npk
+index 725f05f8e806b36b6e4f5a0377e0b35e6a0ddc96..cc2c7b4a6492c5a1dfdef9b74d8382a85771b438 100644
+--- a/tests/probe/probe15_civil_literal_bypass.npk
++++ b/tests/probe/probe15_civil_literal_bypass.npk
+@@ -1,4 +1,11 @@
+ // expect-error: NITPICK-TYPE-079
++// expect-error: NITPICK-TYPE-079
++// expect-error: NITPICK-TYPE-079
++// ONE `expect-error` LINE PER REPORTED SITE since cycle 0.2.0a (the
++// compiler's D-332, its landing 82; `BUILD.md` B-7c, TM-210): the literal writes
++// three sealed fields, and each is its own report at the literal's position.
++// The compiler's DEF-165, registered OPEN, asks whether that is one mistake or
++// three facts; if it lands as one, this count drops and the run says so.
+ //
+ // PROBE 15 — CAN A CONSUMER BUILD AN UNREAL `CivilDate` BY STRUCT LITERAL,
+ // BYPASSING THE VALIDATING CONSTRUCTOR? NO, SINCE COMPILER `c3bdae2`. From

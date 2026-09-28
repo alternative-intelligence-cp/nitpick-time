@@ -15,11 +15,11 @@ $ NPKC=… NPKRT=… python3 harness/run.py [--only SUBSTRING] [--quick]
 
 | File | What it is |
 |---|---|
-| `manifest.py` | `nitpick.toml`, parsed and **schema-checked in both directions** — an unknown key is named and refused, a required key that is missing is named too. P-12: nothing here hardcodes a path, a flag or a version |
-| `toolchain.py` | asks `llc`, `opt` and `ld.lld` their versions and holds each to `[toolchain] llvm` **exactly**. It asks the three tools it invokes, and not `llvm-config`, which ships in a `-dev` package the build never needs |
+| `manifest.py` | `nitpick.toml`, parsed and **schema-checked in both directions** — an unknown key is named and refused, a required key that is missing is named too. P-12: nothing here hardcodes a path, a flag or a version. Since cycle 0.2.0a `[toolchain]` carries `triple` and `datalayout`, as `npkg` requires (TM-209) |
+| `toolchain.py` | asks `llc`, `opt` and `ld.lld` their versions and holds each to `[toolchain] llvm` **exactly**. It asks the three tools it invokes, and not `llvm-config`, which ships in a `-dev` package the build never needs. And since cycle 0.2.0a `check_target` holds `[toolchain] datalayout` to what the pinned `opt` derives from `triple` (`BUILD.md` B-1a, TM-209) |
 | `elf.py` | the ELF64 symbol table, read with `struct`. The undefined-symbol scan and the runtime allowlist. **Read its header before citing the scan as a guarantee** |
 | `lexical.py` | **the harness's one reading of `.npk` source** (cycle 0.1.5, `TESTING.md` V-1k): every `.npk` file is opened here as bytes, and read as code — comments and literals blanked, `use` paths decoded — by the compiler lexer's rules. `nitpick-regex`'s reader, its code ported statement for statement |
-| `build.py` | the pipeline — `npkc` → `opt` → `llc` → scan → `ld.lld` — every argv built from the manifest's flag lists (B-1) |
+| `build.py` | the pipeline — `npkc` → `opt` → `llc` → scan → `ld.lld` — every argv built from the manifest's flag lists (B-1); and since cycle 0.2.0a every emission's two `target` lines held to the manifest's pins, in `Build.emit` (B-1a, TM-209) |
 | `stages.py` | the marker grammar, and the `program`, refusal, `parse`, `golden` and `sweep` stages — and, since cycle 0.1.4b, the `heap:` and `cap:` markers: the runtime's own `NPK_HEAP_STATS` line held to a file's bounds, and the address-space belt with the floor program as its control (`TESTING.md` V-17) |
 | `checks.py` | the **tree checks** — `TESTING.md` §2's family, each one diffing the library against a document that describes it |
 | `arms.py` | `check_failsafe_arms`: the S-6 arm generator, and `NITPICK-REACH-003` as its oracle |

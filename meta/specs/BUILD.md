@@ -73,6 +73,19 @@ the harness prints per-unit and total wall time on every run.
 `-O2` and would optimise a build the manifest declined, which cost the compiler
 project a measured 25× on one module.
 
+**Rule B-1a (TM-209) — the manifest pins the TARGET, and the runner holds every
+emission to it.** Since the compiler's landing 71 (its E-8, D-322 (5)) every
+module opens with a `target datalayout` and a `target triple` line, and `npkg`
+refuses a manifest without `[toolchain]`'s `triple` and `datalayout`. Both rows
+are here since cycle 0.2.0a, and both are READ: `harness/toolchain.py`'s
+`check_target` requires the layout to be exactly what the pinned `opt` derives
+from the triple — `opt` keeps a wrong layout as written and `llc` accepts one in
+silence, so a stated layout proves nothing about itself — and `harness/build.py`
+requires every emission's two `target` lines to be the pinned ones, in that
+order. The compiler's own runner does both (`check_datalayout_pin`,
+`check_module_header`); `nitpick-regex` ported them first (its RX-176), and
+self-check cases 10 and 11 (`TESTING.md` V-14) are each one's red.
+
 **Rule B-2.** The undefined-symbol scan is a **build step, not a test**. Every
 object is scanned and the build fails on any undefined symbol outside the
 runtime allowlist. This is what makes "no C, ever" structural rather than a

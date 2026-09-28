@@ -153,6 +153,8 @@ opt-level = 0
 
 [toolchain]
 llvm          = "%(llvm)s"
+triple        = "%(triple)s"
+datalayout    = "%(datalayout)s"
 llc-flags     = %(llc)s
 llc-opt-flags = %(llcopt)s
 opt-flags     = %(opt)s
@@ -237,7 +239,8 @@ def make_tree(where, man, files, entries):
         return "[" + ", ".join('"%s"' % x for x in xs) + "]"
 
     text = MANIFEST % {
-        "llvm": tc["llvm"], "llc": arr(tc["llc-flags"]),
+        "llvm": tc["llvm"], "triple": tc["triple"],
+        "datalayout": tc["datalayout"], "llc": arr(tc["llc-flags"]),
         "llcopt": arr(tc["llc-opt-flags"]), "opt": arr(tc["opt-flags"]),
         "lld": arr(tc["lld-flags"]),
     }
@@ -552,6 +555,72 @@ def case_8_failsafe_deleted(root, man, base, npkc):
         c.problems.append(
             "the control run did not pass `tests/unit/handler.npk`.\n"
             "      verdicts: %s" % (v2 or "none"))
+    return c
+
+
+def _target_case(c, root, man, base, name, fault):
+    """A manifest-level fault, and its control through the identical code path:
+    the same tree with the real manifest's rows must come back green, so the
+    red came from the planted pin and not from the tree (V-14b). `fault` maps
+    the generated manifest's text to the faulted one."""
+    where = make_tree(
+        os.path.join(base, name), man,
+        [("tests/unit/fine.npk",
+          "// expect-exit: 0\n" + TRIVIAL % {"mod": "fine", "code": "0"})],
+        [("unit", "program", "tests/unit")])
+    toml = os.path.join(where, "nitpick.toml")
+    with open(toml, "r", encoding="utf-8") as fh:
+        good = fh.read()
+    bad = fault(good)
+    if bad == good:
+        c.problems.append("the fault changed nothing in the scratch manifest; "
+                          "the case planted nothing")
+        return None
+    _write(toml, bad)
+    st, out, v = invoke(where)
+    c.red(st, out)
+    _write(toml, good)
+    st2, out2, v2 = invoke(where)
+    if st2 != 0 or not any(x.startswith("PASS tests/unit/fine.npk")
+                           for x in v2):
+        c.problems.append(
+            "the control run -- the same tree with the real manifest's pins -- "
+            "exited %d or did not pass `tests/unit/fine.npk`. The red above is "
+            "then not evidence about the pin.\n%s" % (st2, _indent(out2)))
+    return out, v
+
+
+def case_10_layout_pin_wrong(root, man, base):
+    c = Case(10, "a manifest whose layout pin is not what the pinned opt derives")
+    # One field of the layout dropped (TM-209, BUILD.md B-1a): the compiler's
+    # `check_datalayout_pin`, ported -- a stated layout proves nothing about
+    # itself, because `opt` keeps a wrong one as written and `llc` accepts one
+    # in silence.
+    got = _target_case(c, root, man, base, "case10",
+                       lambda t: t.replace("-n8:16:32:64-S128", "-n8:16:32-S128"))
+    if got:
+        c.says(got[0], "but the pinned `opt` derives")
+    return c
+
+
+def case_11_other_target(root, man, base):
+    c = Case(11, "a tree pinned consistently to another target")
+    # `i686-unknown-linux-gnu` and the layout the pinned `opt` derives for it
+    # (measured at cycle 0.2.0a's planning), so case 10's check PASSES and only
+    # the header belt can see that every module this compiler emits states
+    # x86-64 (TM-209): the compiler's `check_module_header`, ported.
+    got = _target_case(
+        c, root, man, base, "case11",
+        lambda t: t.replace('"x86_64-unknown-linux-gnu"',
+                            '"i686-unknown-linux-gnu"')
+                   .replace('"e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-'
+                            'i128:128-f80:128-n8:16:32:64-S128"',
+                            '"e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-'
+                            'i128:128-f64:32:64-f80:32-n8:16:32-S128"'))
+    if got:
+        c.fails(got[1], "tests/unit/fine.npk")
+        c.says(got[0], "the module's header is not the pinned one")
+        c.says(got[0], "i686-unknown-linux-gnu")
     return c
 
 
@@ -1069,7 +1138,10 @@ PLANTED = [
 #   V14_CASES     what `TESTING.md` V-14 names -- seven, plus this repository's
 #                 own eighth (a program whose `failsafe` has been deleted) and,
 #                 since cycle 0.1.4b, its ninth (a program whose managed memory
-#                 disagrees with its header, TM-187).
+#                 disagrees with its header, TM-187) and, since cycle 0.2.0a,
+#                 its tenth and eleventh (a layout pin `opt` does not derive,
+#                 and a tree pinned consistently to another target -- the
+#                 compiler's two target checks, ported, TM-209).
 #   PLANTED_CASES what is actually planted: case 6 is PEND until cycle 0.5.
 #   TREE_PLANTS   `PLANTED`'s rows, plus THREE that no row can express:
 #                 `check_layering`'s node half (the fault is a file that is NOT
@@ -1078,8 +1150,8 @@ PLANTED = [
 #                 `check_specs_current` (which reports and never fails, so it
 #                 is driven separately). Every one has a control beside it,
 #                 which is why the two numbers printed are equal.
-V14_CASES = 9
-PLANTED_CASES = 8
+V14_CASES = 11
+PLANTED_CASES = 10
 TREE_PLANTS = len(PLANTED) + 3
 
 
@@ -1804,6 +1876,8 @@ def run(rep, root, steps):
         ok = _report_case(rep, c) and ok
     ok = _report_case(rep, case_8_failsafe_deleted(root, man, base, npkc)) and ok
     ok = _report_case(rep, case_9_memory_disagrees(root, man, base)) and ok
+    for fn in (case_10_layout_pin_wrong, case_11_other_target):     # TM-209
+        ok = _report_case(rep, fn(root, man, base)) and ok
 
     problems = part_b(rep, base) + part_b_specs_current(rep, base)
     if problems:

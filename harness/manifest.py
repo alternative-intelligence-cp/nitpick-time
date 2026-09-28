@@ -57,8 +57,12 @@ SCHEMA = {
     "build": {
         "entry": STR, "output": STR, "opt-level": INT,
     },
+    # `triple` and `datalayout` since cycle 0.2.0a (TM-209): read out of the
+    # compiler's `npkg/manifest.npk` at `5fbaf4a`, where `npkg` REQUIRES both,
+    # and read here by `toolchain.check_target` and `build.Build` -- a key
+    # this schema carries is a key something reads.
     "toolchain": {
-        "llvm": STR,
+        "llvm": STR, "triple": STR, "datalayout": STR,
         "llc-flags": STRLIST, "llc-opt-flags": STRLIST,
         "opt-flags": STRLIST, "lld-flags": STRLIST,
     },
@@ -74,8 +78,8 @@ SCHEMA = {
 REQUIRED = {
     "project": ("name", "version", "target"),
     "build": ("entry", "output", "opt-level"),
-    "toolchain": ("llvm", "llc-flags", "llc-opt-flags", "opt-flags",
-                  "lld-flags"),
+    "toolchain": ("llvm", "triple", "datalayout", "llc-flags",
+                  "llc-opt-flags", "opt-flags", "lld-flags"),
     "dependencies": (),
     "test": ("name", "stage", "path"),
 }

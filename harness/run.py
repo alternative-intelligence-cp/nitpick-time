@@ -951,6 +951,7 @@ def main(argv):
     try:
         for tool, version, banner in toolchain.check(man):
             rep.say("  ok    %-8s %-8s %s" % (tool, version, banner))
+        rep.say("  ok    %s" % toolchain.check_target(man))     # TM-209
     except toolchain.ToolchainError as err:
         rep.fail("toolchain", err)
         ok_env = False

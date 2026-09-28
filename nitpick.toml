@@ -38,6 +38,16 @@ opt-level = 0
 # stated flag nothing consumes is the next stale document.
 [toolchain]
 llvm          = "20.1.2"
+# THE TARGET EVERY MODULE STATES (the compiler's E-8, D-322 (5), its landing 71;
+# carried since cycle 0.2.0a, TM-209). Every emission opens with a `target
+# datalayout` and a `target triple` line, and these two rows are what the runner
+# holds them to: `datalayout` to what the pinned `opt` derives from `triple`
+# (`harness/toolchain.py`), and every emission's two lines to both
+# (`harness/build.py`). Pins, not settings -- `npkg` refuses a manifest without
+# either, by name -- and the layout is the FULL string: `llvm-as` completes a
+# partial one, which then fails the belt. `nitpick-regex`'s rows, byte for byte.
+triple        = "x86_64-unknown-linux-gnu"
+datalayout    = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 llc-flags     = ["-O0", "-filetype=obj", "-relocation-model=static"]
 llc-opt-flags = ["-O2", "-filetype=obj", "-relocation-model=static"]
 opt-flags     = ["-O2", "-S"]

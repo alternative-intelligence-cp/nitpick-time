@@ -5925,6 +5925,36 @@ leaves it: whether a read's length is `count`.*
 tables arrive — they are `fixed` arrays, `T[N]`, which trap on their own and
 lay no slice (`SAFETY.md` S-17b), so they are not the second subject.
 
+### TM-209 — the manifest pins the target, `triple` and `datalayout`, and the runner holds the pin to what `opt` derives and every emission to the pin
+
+**2026-09-27, cycle 0.2.0a (the plan's PD-58) — the adoption of compiler
+`5fbaf4a`, its landing 71 (E-8, D-322 (5)). Amends `nitpick.toml`,
+`harness/manifest.py`, `toolchain.py`, `build.py`, `run.py` and
+`selfcheck.py`; `BUILD.md` (B-1a, new); `TESTING.md` V-14 (cases 10, 11).**
+
+**What was found.** At `5fbaf4a` every emission opens with `target datalayout`
+and `target triple`, and `npkg` refuses a manifest without `[toolchain]`'s two
+rows, by name. `harness/manifest.py` refuses a key its schema lacks — *"a
+harness that quietly ignored one would accept a manifest `npkg` will not"* — so
+the rows cannot be added without something reading them.
+
+**The decision.** *`nitpick.toml` carries F15's two rows verbatim, and both are
+read: `toolchain.check_target` requires the layout to be exactly what the pinned
+`opt -S` derives from a module stating only the triple (measured: F15's string;
+for `i686-unknown-linux-gnu` another), and `Build.emit` requires every emission's
+two `target` lines to be the pinned ones, in order — every emission the harness
+makes, the programs', the library's and both repro builds'. Self-check cases 10
+and 11 are each one's red, beside the same tree at the real pins as the control.
+The compiler's `check_datalayout_pin` and `check_module_header`, by way of
+`nitpick-regex`'s port (its RX-176).*
+
+*Alternatives declined:* **the two rows read by nothing** — the schema's own
+rule, and a pin nothing holds is the next stale document; **the header belt
+without the layout check** — a manifest pinned consistently to a wrong layout
+would pass it; **the belt on linked programs only, as regex has it** — `emit`
+is this harness's one door to `npkc`, and holding it there costs one read per
+emission and covers the library and the repro builds too.
+
 ### TM-208 — the adoption of compiler `5fbaf4a`: the fifteen `cstring` copies read in place or moved, the lexer re-read, and what else the pin moved here
 
 **2026-09-27, cycle 0.2.0a (the plan's PD-57) — landings 67 … 82 over

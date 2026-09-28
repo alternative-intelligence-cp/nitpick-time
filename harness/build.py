@@ -29,6 +29,7 @@ twice.
 """
 
 import os
+import re
 import resource
 import subprocess
 
@@ -146,6 +147,9 @@ def reachable_sources(root_npk):
     return order
 
 
+_TARGET_LINE = re.compile(r"^target .*$", re.M)
+
+
 class Build:
     """Everything a build needs, read once: the manifest, the pin, the allowlist."""
 
@@ -160,6 +164,9 @@ class Build:
         self.llc_opt_flags = tc["llc-opt-flags"]
         self.opt_flags = tc["opt-flags"]
         self.lld_flags = tc["lld-flags"]
+        # THE TWO LINES EVERY EMISSION STATES (TM-209, `BUILD.md` B-1a).
+        self.header = ['target datalayout = "%s"' % tc["datalayout"],
+                       'target triple = "%s"' % tc["triple"]]
         # Derived, never written (P-14 as corrected by TM-118): what the
         # object we actually link provides, plus what it requires of us.
         self.allowlist = elf.runtime_allowlist(npkrt)
@@ -180,7 +187,30 @@ class Build:
             raise BuildError("npkc", "exit 0 and wrote no %s. A status that "
                                      "disagrees with an artefact is the tell."
                              % out_ll)
+        self.module_header(out_ll)
         return out
+
+    def module_header(self, ll):
+        """Every emission states the pinned layout and triple, once each, in that
+        order -- the compiler's `check_module_header` (E-8, D-322 (5)), ported at
+        cycle 0.2.0a from `nitpick-regex`'s (its RX-176): TM-209, `BUILD.md` B-1a.
+        `toolchain.check_target` holds the pin to what `opt` derives; this holds
+        each emission to the pin, so the emitter's header, the manifest and the
+        toolchain cannot drift apart in silence. Here, in `emit`, it holds EVERY
+        emission the harness makes -- each program's, the library's, and both of
+        the repro builds'. A `target` line is one that BEGINS a line: a string
+        constant sits on an `@` line and a comment on a `;` line."""
+        with open(ll, "r", encoding="utf-8", errors="replace") as fh:
+            got = _TARGET_LINE.findall(fh.read())
+        if got != self.header:
+            raise BuildError(
+                "module header",
+                "%s: the module's header is not the pinned one -- expected `%s` "
+                "and `%s` (nitpick.toml [toolchain]), got %s (E-8, D-322 (5): "
+                "every module states the layout it assumes, and the runner "
+                "holds it to the pin -- BUILD.md B-1a)"
+                % (os.path.basename(ll), self.header[0], self.header[1],
+                   ("`" + "`, `".join(got) + "`") if got else "no `target` line"))
 
     def emit_expecting_refusal(self, src, out_ll, cwd=None):
         """`npkc src`, for a file that MUST NOT compile. Returns `(status, output)`.

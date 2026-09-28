@@ -88,6 +88,43 @@ def _ask(tool):
         "The output was:\n%s" % (tool, out.rstrip()))
 
 
+_LAYOUT = re.compile(r'^target datalayout = "([^"]*)"$', re.M)
+
+
+def check_target(manifest):
+    """The layout pin is what the pinned `opt` derives from the triple pin.
+
+    The compiler's `check_datalayout_pin` (its harness, since its landing 71:
+    E-8, D-322 (5)), ported at cycle 0.2.0a from `nitpick-regex`'s port of it
+    (its RX-176) -- TM-209, `BUILD.md` B-1a. Every module states a `target
+    datalayout`; `opt` keeps a wrong one as written and `llc` accepts one in
+    silence, so a stated layout proves nothing about itself. This holds the PIN
+    to the toolchain, and `build.Build.emit` holds every emission to the pin.
+    Returns the line the run log prints; raises on a mismatch (D-204).
+    """
+    triple = manifest["toolchain"]["triple"]
+    layout = manifest["toolchain"]["datalayout"]
+    try:
+        r = subprocess.run(["opt", "-S", "-"],
+                           input='target triple = "%s"\n' % triple,
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                           universal_newlines=True, timeout=30)
+    except (OSError, subprocess.SubprocessError) as err:
+        raise ToolchainError("`opt -S` over the triple probe failed: %s" % err)
+    m = _LAYOUT.search(r.stdout)
+    if r.returncode != 0 or not m:
+        raise ToolchainError(
+            "`opt -S` over a module stating only the pinned triple wrote no "
+            "`target datalayout` line: %r" % (r.stderr or r.stdout).strip()[:160])
+    if m.group(1) != layout:
+        raise ToolchainError(
+            "nitpick.toml [toolchain] pins the layout %r, but the pinned `opt` "
+            "derives %r from the triple %r -- the layout every module states "
+            "must be the one the toolchain lays the binary out under (E-8, "
+            "D-322 (5); BUILD.md B-1a)." % (layout, m.group(1), triple))
+    return "target %s, its layout the one the pinned opt derives" % triple
+
+
 def check(manifest):
     """Assert every tool matches `[toolchain] llvm` exactly.
 

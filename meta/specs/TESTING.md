@@ -495,7 +495,15 @@ expectations and requires it to report every one as a failure:
    byte under the measurement, a floor one allocation over it, a run whose
    report never reaches stderr, a `cap:` exit the program does not take, and a
    cap the floor program cannot start under — beside a control held exactly at
-   both bounds of every field and at a cap it starts under (V-17).
+   both bounds of every field and at a cap it starts under (V-17);
+10. **a manifest whose layout pin is not what the pinned `opt` derives** —
+   one field of the layout dropped — since cycle 0.2.0a (TM-209, `BUILD.md`
+   B-1a): the compiler's `check_datalayout_pin`, ported, with the same tree at
+   the real pins as its control;
+11. **a tree pinned consistently to another target** — `i686-unknown-linux-gnu`
+   and the layout the pinned `opt` derives for it — so case 10's check passes
+   and only the header belt can see every emission state x86-64 (TM-209): the
+   compiler's `check_module_header`, ported.
 
 **SEVEN OF THE EIGHT ARE PLANTED, AND THE RUNNER SAYS SEVEN.** Case 6 is
 `PEND` until cycle 0.5, so *"this runner has been shown able to fail eight

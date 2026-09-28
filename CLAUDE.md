@@ -9,7 +9,32 @@ safety-critical systems language at `../../nitpick`.
 
 **Status: cycle 0.1 CLOSED (2026-09-26), archived at `meta/roadmap/done/0.1/`
 — the civil calendar, with its exhaustive gate on every run — and cycle 0.2,
-instants and timestamps, is next**, from `meta/roadmap/0.2/0.2.0.md`, written at
+instants and timestamps, is OPEN: its 0.2.0a, the adoption of compiler
+`5fbaf4a`, is done, and `meta/roadmap/0.2/0.2.0.md` is next.**
+
+**After cycle 0.2.0a: the adoption of compiler `5fbaf4a`** — the compiler's
+last landing before its pause, carrying its landings 67 … 82. At the new pin
+the unchanged tree ran `RED -- 105 unit(s) of 113`, exactly the eight files
+holding a `cstring` copy — fifteen, each `NITPICK-TYPE-046` once `cstring`
+owns what `to_cstring` makes (the compiler's D-328) — so an `environ()`
+element is read in place and `to_cstring`'s answer moved out of its `Result`
+(TM-208). **The runner holds what the compiler's runners hold**: the manifest
+pins `triple` and `datalayout`, the layout is held to what the pinned `opt`
+derives and every emission's two `target` lines to both (`BUILD.md` B-1a,
+TM-209); and a refusal names each code once PER SITE it is reported at
+(B-7c, TM-210), which four headers did not. **`Pod` is retired into the
+prelude's `Copy`**: `vec_at<T: Copy>`, the umbrella at 58 names (TM-211).
+CI is pinned to `5fbaf4a` and ASSERTS the compiler's emission, `npkc.ll`,
+against the pinned commit's row (TM-212, the ecosystem audit's EC6); the
+budget's rule reads as the compiler charges it — every identity a reachable
+`fail` site raises, public or private (TM-213, EC3); and TM-202's re-read is
+this repository's reader only (ED1). The lexer moved a character literal's
+width and nothing `lexical.py` mirrors; `NITPICK-BORROW-015` is in the pin and
+reaches no file here; the hold on `for`, `loop` and `till` is lifted. The
+self-check plants 12 of V-14's 13 cases. A full invocation is **113 units
+green** at pin `5fbaf4a`.
+
+**Before it, cycle 0.1's close:** `meta/roadmap/0.2/0.2.0.md` was written at
 the close. **The close's second half triaged the cycle audit's nineteen
 findings**, every one fixed but for the check half of one, which a decision
 places on cycle 0.2.3, and the four the audit asked to be fixed rather than
@@ -77,7 +102,8 @@ rule P-1b** (TM-197), which strikes Q-6. **`Pod` is interim** (TM-198): the
 compiler's D-327, ratified during this cycle and in no pin of ours yet, makes
 `Copy` a prelude marker trait, and the re-pin that carries it replaces `Pod`
 with it — a confined edit, the trait's one block, one bound, one call, one
-umbrella line, three test impls. The umbrella re-exports 59 names —
+umbrella line, three test impls *(made at cycle 0.2.0a, the adoption of
+`5fbaf4a`: TM-211)*. The umbrella re-exports 59 names *(58 since then)* —
 `Pod` and `bytes_capacity` joined — and eight files' managed memory is held to
 the runtime's count <!-- [[sweep: heap_bounded=8]] -->. No arm bill moved. A
 full invocation is **112 units green** at pin `c970483`.
@@ -318,7 +344,8 @@ cycle 0.0 paid most for.**
   operations — `vec_set`, `vec_clear`, `vec_truncate`, `vec_free` — owe an
   element drop at an owning `T` and perform none**, a leak `exit 0` cannot
   see. And **`vec_at` at an owning `T` is REFUSED since cycle 0.1.3c** — it
-  takes `T: Pod` (S-18h), `NITPICK-TYPE-017` at the call — where it used to
+  takes `T: Copy` (S-18h; `T: Pod` until cycle 0.2.0a, TM-211),
+  `NITPICK-TYPE-017` at the call — where it used to
   REMOVE the element, `pass` of a place moving implicitly; element lifetime at
   an owning `T` still goes **at the instantiation**, where `SAFETY.md` S-18b
   and S-18d put it. **And a `Vec` is move-only** (S-18g): a copy is refused,
@@ -354,8 +381,9 @@ cycle 0.0 paid most for.**
 
 **What 0.0.3 added, and the first item is the one that matters.**
 `harness/selfcheck.py` runs **first** in every full invocation (`TESTING.md`
-V-15) and plants **eight** of V-14's nine faults (seven of eight until cycle
-0.1.4b's case 9, TM-187) — case 6 is `PEND` until 0.5
+V-15) and plants **twelve** of V-14's thirteen faults (eight of nine from cycle
+0.1.4b's case 9, TM-187, until cycle 0.2.0a's four, TM-209 and TM-210; seven
+of eight before it) — case 6 is `PEND` until 0.5
 and prints as pending — plus at least one violation per tree check, three
 arm-bill specimens, and (since 0.0.6) the verdict mechanisms of TM-137 and
 TM-141 and the whole-tree walk's nested-repository pruning (TM-146). Each
@@ -413,7 +441,10 @@ what to do when a cross-stream gate is not ready yet.
 - **A settled decision's text is never rewritten.** Supersede it with a new
   numbered decision that says why (the compiler's D-085/D-202 pattern).
 - **Three public error identities, and three is a ceiling** (TM-017). REACH-002
-  makes every one an arm every consuming program's `failsafe` must name. A
+  makes every one an arm every consuming program's `failsafe` must name —
+  and, sharper since cycle 0.2.0a (the ecosystem audit's EC3, TM-213), every
+  identity a reachable `fail` site raises, a PRIVATE one too, so
+  `check_error_budget` refuses any `error:` in `src/` it does not budget. A
   fourth needs a decision saying why a shutdown handler would treat it
   differently from all three — and it is a **major** version (TM-013).
 - **Only `src/host/` is impure** (TM-018). No syscall, no clock, no environment
@@ -442,6 +473,10 @@ Full statement in `meta/specs/SAFETY.md` §1. The ones that bite hardest here:
   Every range is checked **before** the trap so the caller gets an answer.
 - `Ord` derives in **declaration order**, so a struct's field order is
   semantic (`Timestamp` is seconds-then-nanos for exactly this reason).
+- **A `cstring` owns what `to_cstring` makes, and is move-only** — since
+  compiler `5fbaf4a` (its D-328): a copy of one is `NITPICK-TYPE-046`. Read an
+  `environ()` element in place, `env[k].ptr`, and move `to_cstring`'s answer
+  out of its `Result`, `move(c.value)` (TM-208).
 - Owning values are **move-only**, and a `fixed` table holds no owning value:
   the language allows one and refuses the copy that reads a row out — and,
   since compiler `c970483`, the move out of `fixed` storage too,

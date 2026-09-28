@@ -21,7 +21,8 @@ answer on every machine.
 > set is in [`meta/specs/`](meta/specs/) and the plan in
 > [`meta/roadmap/`](meta/roadmap/), written the way the compiler's are — specs
 > first, then a cycle map, then execution-grade subcycles, then code — against
-> a compiler that is still moving, pinned by commit (`CLAUDE.md` names the pin).
+> a compiler that is still moving, pinned by commit (`CLAUDE.md` names the pin:
+> `5fbaf4a` since cycle 0.2.0a, the adoption that opened cycle 0.2).
 >
 > *(Until cycle 0.1.5 this block read "Status: planning. No code yet" — false
 > since cycle 0.0.4 — and "the compiler itself is at cycle 1.5"; between the
@@ -81,8 +82,10 @@ range stays the constructors' to refuse, `meta/specs/CALENDAR.md` C-8.)*
 
 **Importing it costs a consumer at most three error identities — and one if all
 you want is calendar arithmetic.** In this language every error identity a
-library declares is a mandatory arm in every consuming program's shutdown
-handler, so the number is an API decision, not an implementation detail.
+library's reachable code can raise is a mandatory arm in every consuming
+program's shutdown handler *("a library declares" until 2026-09-27: the
+ecosystem audit's EC3, TM-213 — a declaration nothing raises costs nothing, and
+a private one that is raised costs the arm)*, so the number is an API decision, not an implementation detail.
 `ntime`'s is three. **The whole bill is larger**, because the language also
 charges an arm for each kind of trap the imported code can reach — a division,
 an overflow, an index, a loop's measure, a length's limit — on top of a floor

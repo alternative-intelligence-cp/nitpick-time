@@ -358,7 +358,9 @@ def _spec_rows(tree):
 
 
 def check_error_budget(tree, **_):
-    """Public `error:` declarations against `SAFETY.md` §2's table.
+    """`error:` declarations, public AND private, against `SAFETY.md` §2's
+    table (the pattern has matched both since TM-203; this line said
+    "Public" until cycle 0.2.0a, TM-213).
 
     THE UNIT IS THE COMPILER'S: A MODULE-QUALIFIED IDENTITY (cycle 0.1.5's
     audit, C2; TM-203). `NITPICK-REACH-003` names an identity by the module

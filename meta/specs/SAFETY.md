@@ -14,7 +14,7 @@ costs a library that does calendar arithmetic.
 
 | Language rule | Where | Consequence for `ntime` |
 |---|---|---|
-| `failsafe`'s `pick` must **name** every error that can reach it | REACH-002 | Every public `error:` we declare is an arm every consuming program owes. §2. |
+| `failsafe`'s `pick` must **name** every error that can reach it | REACH-002 | ~~Every public `error:` we declare is an arm every consuming program owes.~~ **Every identity a REACHABLE `fail` site raises — public OR PRIVATE, qualified by the module that declares it — is an arm every consuming program owes; a declaration never raised costs nothing.** *(Corrected 2026-09-27, cycle 0.2.0a — the ecosystem audit's EC3, TM-213, re-measured at `5fbaf4a`: the arm is owed for every identity a REACHABLE `fail` site raises, PUBLIC OR PRIVATE, named by the module that declares it (`m.E`), and for no declaration nothing raises.)* §2. |
 | Reachability is **import-scoped** | 1.4.8's `nsys` note | Module decomposition decides what a consumer's `failsafe` owes. §2. |
 | Plain integer `+ - *` **traps** on overflow | D-210 | Every arithmetic path states its range and checks it **before** the trap fires. §4. |
 | `/` and `%` by zero trap; signed `MIN / -1` traps | D-007, D-142 | The calendar algorithms divide constantly; every divisor is a nonzero literal or a proven value. §4. |

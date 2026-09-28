@@ -43,8 +43,11 @@ The first four are design. **The last two were measured** by cycle 0.0.0's
 probes, against the real compiler, and each one falsified something a document
 had asserted — which is why they are here rather than in a specification only.
 
-1. **Every public `error:` this library declares becomes a mandatory `pick` arm
-   in every consuming program's `failsafe`.** The language enforces it and
+1. **Every identity a reachable `fail` site raises becomes a mandatory `pick`
+   arm in every consuming program's `failsafe`** — public or private, named by
+   its module; a declaration nothing raises costs nothing. *(It read "Every
+   public `error:` this library declares" until 2026-09-27 — the ecosystem
+   audit's EC3, TM-213.)* The language enforces it and
    forgetting one is a compile error. The budget is three, it is a ceiling, and
    adding a fourth is a major version. A distinction the *caller* cares about
    rides as a field on the returned value, not as a new error.

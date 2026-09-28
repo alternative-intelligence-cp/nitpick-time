@@ -4,8 +4,9 @@
 WHAT A GREEN RUN HERE IS, AND IS NOT.
 
   IT IS: the self-check green FIRST (V-15), so the runner has been shown able
-  to fail EIGHT ways before it is believed about anything -- V-14 names nine,
-  the ninth since cycle 0.1.4b (TM-187), and case 6 is `PEND` until cycle 0.5;
+  to fail TWELVE ways before it is believed about anything -- V-14 names
+  thirteen, the ninth since cycle 0.1.4b (TM-187) and the tenth to thirteenth
+  since cycle 0.2.0a (TM-209, TM-210), and case 6 is `PEND` until cycle 0.5;
   this sentence claimed a wrong number for three cycles (TM-142); the manifest
   read
   and schema-checked; the three tools held to the pin's exact patch release;

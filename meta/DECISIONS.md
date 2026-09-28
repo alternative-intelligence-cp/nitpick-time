@@ -6068,6 +6068,38 @@ print and its premise** — EC6: the condition it waited on is one D-265 says
 need never arrive; **drop the binary rows** — they are the evidence when
 two machines disagree, and printing them costs nothing.
 
+### TM-213 — the budget's rule, stated as the compiler charges it: every identity a reachable `fail` site raises is an arm, public or private, and a declaration nothing raises is none
+
+**2026-09-27, cycle 0.2.0a (the plan's PD-62) — the ecosystem audit of
+2026-09-26's EC3, corrected in the workbench's `PLAYBOOK.md` §2 on 2026-09-26
+and standing here in three sites. Amends `SAFETY.md` §1's REACH-002 row,
+`CONTRIBUTING.md`'s first surprise, `meta/roadmap/ROADMAP.md`'s architecture
+line, and the same claim in `CLAUDE.md`, `README.md`, `TESTING.md` §2's
+`check_error_budget` row and that check's docstring.**
+
+**What was found**, re-measured at `5fbaf4a` with consumers that declare no
+`failsafe`: a module whose PRIVATE `error:EPriv` is raised by a public function
+charges its importer `mpriv.EPriv` — `NITPICK-REACH-003` lists 8 identities for
+a consumer that relays it as its own `EC`, `cpriv.EC`, `mpriv.EPriv` and the
+floor of six — and a module declaring two public identities that nothing
+raises charges the floor alone, 6. So *"every public `error:` we declare is an
+arm every consuming program owes"* is wrong in both directions. The CHECK was
+already right: `check_error_budget` counts `(pub )?error:` keyed by module
+since TM-203, and a private `error:EPriv` planted in `src/span/` fails it —
+measured at planning.
+
+**The decision.** *Each statement reads as the PLAYBOOK's corrected row does:
+every identity a reachable `fail` site raises — public or private, qualified by
+the module that declares it — is an arm every consuming program owes, and a
+declaration never raised costs nothing. The old words stay struck or quoted
+beside a dated note; the budget — three identities, a ceiling (TM-017) — and
+every consequence drawn from it are unchanged.*
+
+*Alternatives declined:* **leave the three sites to the next audit** — the
+dispatch named them and the record's rule is that a correction seeded by a
+template is swept where it was copied; **rewrite the sentences silently** —
+the repository's rule is that a correction shows what it corrects.
+
 ### TM-208 — the adoption of compiler `5fbaf4a`: the fifteen `cstring` copies read in place or moved, the lexer re-read, and what else the pin moved here
 
 **2026-09-27, cycle 0.2.0a (the plan's PD-57) — landings 67 … 82 over

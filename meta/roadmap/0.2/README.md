@@ -117,6 +117,8 @@ landings (`meta/roadmap/done/0.1/0.1.5.md` §12.3):
    moved on a form its second half names; **and the adoption re-reads
    `src/frontend/lexer.npk` at the new pin whatever part E says** (TM-202),
    bringing `harness/lexical.py` to it **in both libraries** if it moved.
+   *(This repository's reader only — W-7; `nitpick-regex`'s is its own, under
+   its own re-read rule (its RX-176): TM-208, the ecosystem audit's ED1.)*
 6. **`NITPICK-BORROW-015`** (the compiler's D-325, O-N25) if the new pin
    carries it: `tests/unit/bytes_view_lifetime.npk` holds a `bytes_view` view
    across a growth on purpose, and is the first file to read.
@@ -125,7 +127,8 @@ landings (`meta/roadmap/done/0.1/0.1.5.md` §12.3):
 
 **Until the adoption lands, no `for`, `loop` or `till` is added** — the
 compiler's loop defects at `c970483` are why (DEF-127 … DEF-130, item 4, and
-the workbench board's hold on them).
+the workbench board's hold on them). *(LIFTED 2026-09-27 by 0.2.0a: the four
+are in `5fbaf4a`, the compiler's landing 75 — TM-208.)*
 
 ## Gate
 

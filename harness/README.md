@@ -24,7 +24,7 @@ $ NPKC=… NPKRT=… python3 harness/run.py [--only SUBSTRING] [--quick]
 | `checks.py` | the **tree checks** — `TESTING.md` §2's family, each one diffing the library against a document that describes it |
 | `arms.py` | `check_failsafe_arms`: the S-6 arm generator, and `NITPICK-REACH-003` as its oracle |
 | `repro.py` | B-4: two builds of one tree must be the same bytes. Also a command in its own right, with `--between` for `check_tables_regenerate` |
-| `selfcheck.py` | **the only thing here that demonstrates the checks can fail.** V-14's nine cases, the tree checks on planted violations, the arm generator against the compiler, the verdict mechanisms, and — since cycle 0.1.5 — the reader against the compiler's lexer (part E) |
+| `selfcheck.py` | **the only thing here that demonstrates the checks can fail.** V-14's thirteen cases, the tree checks on planted violations, the arm generator against the compiler, the verdict mechanisms, and — since cycle 0.1.5 — the reader against the compiler's lexer (part E) |
 | `run.py` | the driver: stage order, per-unit verdict lines, the summary and its counts |
 
 ## The stage order, and each line is a reason
@@ -50,11 +50,13 @@ names it. Five parts *(this said "Three parts" and listed three until cycle
 0.1.5, when the fifth joined; the fourth, the verdict mechanisms, had been
 running unlisted since cycle 0.0.6)*:
 
-- **V-14's nine cases** — a wrong `expect-exit`, a missing code, an unexpected
+- **V-14's thirteen cases** — a wrong `expect-exit`, a missing code, an unexpected
   code (D-237), a golden differing by one byte, a file that does not parse, a
-  sweep that ran short, a program whose `failsafe` has been deleted, and —
-  since cycle 0.1.4b — a program whose managed memory disagrees with its
-  header, five ways beside one control (TM-187). Case 6
+  sweep that ran short, a program whose `failsafe` has been deleted, since
+  cycle 0.1.4b a program whose managed memory disagrees with its header, five
+  ways beside one control (TM-187), and since cycle 0.2.0a a layout pin `opt`
+  does not derive, a tree pinned consistently to another target (TM-209), and
+  a code named once for two sites and three times for two (TM-210). Case 6
   (a generator differing by one line) is **pending until 0.5** and prints as
   pending rather than passing.
 - **Forty-four planted violations across the tree checks since cycle 0.1.5's
@@ -319,6 +321,17 @@ module-qualified identities (TM-203) and `check_denominators` 31 measured
 denominators, the seven arm bills among them (TM-205); parse over 128 files,
 `91 + 35 + 2`; the defect corpus at 36 = 1 exempt + 35 asserted; and library +
 repro + suite at **78** (**22 unit**). `113 = 35 + 78`.
+
+**At cycle 0.2.0a, compiler `5fbaf4a`, 113 units**: no test added. The
+self-check plants **12** of V-14's **13** cases — 10 and 11 the target pins,
+12 and 13 the site count — 44 tree-check violations with 44 clean controls, 3
+arm specimens, 4 verdict specimens and part E, which runs 0 at the new pin;
+the tree checks at `11 live`; and the library's IR 226 493 B — 228 227 B at
+`c970483`, 229 041 B for the unchanged tree at `5fbaf4a` (a `target datalayout`
+line and `cstring`'s drop pair), then less `Pod`'s block. The unchanged tree
+had run `RED -- 105 unit(s) of 113`: the eight files holding the fifteen
+`cstring` copies (`meta/roadmap/0.2/0.2.0a.md` §1). No heap figure and no sweep
+count moved.
 
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the

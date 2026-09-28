@@ -46,7 +46,9 @@ not resolve (`specs/BUILD.md` §1, `../OPEN_QUESTIONS.md` O-N1). Consequently:
 
 And the one that shapes the *architecture*:
 
-> **Every public `error:` costs every consumer a `failsafe` arm (REACH-002),
+> **Every identity a reachable `fail` site raises costs every consumer a
+> `failsafe` arm (REACH-002) — public or private; *"every public `error:`"* until
+> 2026-09-27, the ecosystem audit's EC3, TM-213 —
 > integer overflow traps (D-210), and there is no format-specifier language
 > (D-053).**
 
@@ -73,7 +75,7 @@ sibling libraries.
 |---|---|---|
 | ~~**0.0**~~ | **Foundations** — the language probes, the harness, `src/core/` — **CLOSED 2026-09-06, archived at [`done/0.0/`](done/0.0/README.md)** | — |
 | ~~**0.1**~~ | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **CLOSED 2026-09-26, archived at [`done/0.1/`](done/0.1/README.md)** | 0.0 ✓ |
-| **0.2** | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **NEXT**: its opening subcycle, [`0.2/0.2.0.md`](0.2/0.2.0.md), written at cycle 0.1's close | 0.1 ✓ |
+| **0.2** | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **IN PROGRESS**: [`0.2/0.2.0a.md`](0.2/0.2.0a.md), the adoption of compiler `5fbaf4a`, done; [`0.2/0.2.0.md`](0.2/0.2.0.md), written at cycle 0.1's close and rehearsed over 0.2.0a, next | 0.1 ✓ |
 | **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double | 0.2 |
 | **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate | 0.2 |
 | **0.5** | **The zone table** — the generator, the committed tables, the size measurement | 0.1 |

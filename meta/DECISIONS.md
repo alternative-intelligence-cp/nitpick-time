@@ -6040,6 +6040,34 @@ declaration (`DERIVE-006`), which probe 19's `TYPE-087` already pins for the
 impl; **renaming `vec_at_pod` and `probe19_pod_owner_refused`** — every
 citation of either would move for a word.
 
+### TM-212 — CI asserts the compiler's emission, `npkc.ll`, against the pinned commit's row, and prints the binaries, which need not match
+
+**2026-09-27, cycle 0.2.0a (the plan's PD-61) — the ecosystem audit of
+2026-09-26's EC6. Amends `.github/workflows/ci.yml`.**
+
+**What was found.** The workflow's digest step printed CI's `npkc` and
+`npkrt.o` beside the workbench's and asserted nothing, *"If a run shows them
+equal, a later commit may promote these four lines to an assertion"*. The
+compiler's D-265 says a version is not a binary and the claim that holds
+across machines is its own EMISSION, `npkc.ll`; the compiler seat measured the binary
+differing between the workbench and a runner. So the promotion could never
+fire, and the one row that can hold was never printed. `nitpick-regex`'s CI
+asserts that row since its cycle 0.1.0b (its RX-180); at `c970483` its run
+36253106675 printed `d36a7e23…` / 28 188 736 B, the pin record's row, and at
+`5fbaf4a` its run 36338559696 printed `5630c2b4…` / 30 232 291 B, notice 82's.
+
+**The decision.** *The step prints every artefact the ladder leaves, size
+beside digest — `builder.o`, `builder`, `npkrt.o`, `npkc.ll`, `npkc.o`, `npkc` —
+and then fails unless `npkc.ll` is the pinned commit's row, carried in the
+workflow as `NPKC_LL_SHA256` and `NPKC_LL_BYTES` and moved with every pin. A
+difference is a compiler defect to raise, never a pin to bump. The workbench's
+binary digests stay printed, labelled as expected to differ.*
+
+*Alternatives declined:* **assert the binaries** — D-265, and the measurement; **keep the
+print and its premise** — EC6: the condition it waited on is one D-265 says
+need never arrive; **drop the binary rows** — they are the evidence when
+two machines disagree, and printing them costs nothing.
+
 ### TM-208 — the adoption of compiler `5fbaf4a`: the fifteen `cstring` copies read in place or moved, the lexer re-read, and what else the pin moved here
 
 **2026-09-27, cycle 0.2.0a (the plan's PD-57) — landings 67 … 82 over

@@ -1,7 +1,15 @@
-// expect-error: NITPICK-TYPE-047
+// expect-error: NITPICK-TYPE-087
 //
-// PROBE 19 — AN OWNING TYPE CANNOT IMPLEMENT `Pod` AS IT IS DECLARED. The claim
-// `vec_at`'s bound rests on (cycle 0.1.3c, TM-194; `SAFETY.md` S-18h).
+// PROBE 19 — AN OWNING TYPE CANNOT CLAIM `Copy`. The claim `vec_at`'s bound
+// rests on (cycle 0.1.3c, TM-194, and since cycle 0.2.0a TM-211; `SAFETY.md`
+// S-18h).
+//
+// SINCE CYCLE 0.2.0a THE BOUND IS THE PRELUDE'S `Copy` (the compiler's D-327)
+// and this file asks it: `impl:string:Copy = { };` is `NITPICK-TYPE-087`, once,
+// at the impl -- *"`string` owns what it holds, so a copy of it would be a
+// second owner"* -- measured at `5fbaf4a`. Until then the bound was this
+// library's `Pod` and the question below was `Pod`'s; its answer stands as
+// the record of it, and the file keeps its name.
 //
 // ASKS: may a consumer declare `string` a `Pod`, writing `pod_copy` as the
 // trait declares it -- `self` lent, `pass self`?
@@ -21,12 +29,14 @@
 // the parameter `move`, and at `c970483` an impl that does is ACCEPTED, though
 // the trait lends it -- the compiler's DEF-116, fixed at no pin of ours. Such
 // an impl makes `vec_at` a double free (measured, `meta/roadmap/done/0.1/0.1.3c.md`
-// §1.6). This library writes none; `nitpick-regex` pins the shape.
+// §1.6). This library writes none; `nitpick-regex` pins the shape. (CLOSED
+// at `5fbaf4a`: such an impl is `NITPICK-TYPE-014` there, the compiler's
+// landing 69, and `Copy` has no method to declare one on -- TM-211.)
 mod:probe19_pod_owner_refused;
 
 use "../../src/core/vec.npk".*;
 
-impl:string:Pod = { func:pod_copy = string(string:self) never fails { pass self; }; };
+impl:string:Copy = { };
 
 func:main = int32(cstring[]:_~argv) {
     exit 0i32;

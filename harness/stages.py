@@ -586,7 +586,7 @@ def parse_verdict(bld, rel, e):
     UNLESS its own header names a parse-phase code. That is what lets the stage
     cover the 37 files in this tree [[sweep: tests_error=37]] that must NOT
     compile -- they are refused at PARSE-001, LEX-004, PARSE-002, TYPE-009,
-    TYPE-017, TYPE-046, TYPE-047, TYPE-079, TYPE-080, TYPE-084, BORROW-001,
+    TYPE-017, TYPE-046, TYPE-079, TYPE-080, TYPE-084, TYPE-087, BORROW-001,
     BORROW-012, RESOLVE-001, REACH-002 and REACH-003, and every family after
     the first three is a phase that only runs on something that parsed. (30
     until cycle 0.1.3c, whose port made six new refusals -- four copies of an
@@ -597,7 +597,9 @@ def parse_verdict(bld, rel, e):
     `probe15` and four new probes refusals at TYPE-079 and TYPE-080, TM-156
     and TM-157. 26 until cycle 0.1.4c, whose re-pin made `fixed_move_out/`'s
     three `TYPE-084` refusals and whose `fixed_import_scope/` brought one
-    refused `RESOLVE-001`, TM-189 and TM-192.)
+    refused `RESOLVE-001`, TM-189 and TM-192. `TYPE-047` stood where
+    `TYPE-087` does until cycle 0.2.0a, whose `probe19` asks `Copy` of an
+    owner where it asked `Pod`, TM-211.)
     TWO files in the tree are expected not to parse, and the check is that it
     is exactly those two: `probe02d_wide_literal_refused.npk` (LEX-004,
     PARSE-002) and, since cycle 0.1.0,

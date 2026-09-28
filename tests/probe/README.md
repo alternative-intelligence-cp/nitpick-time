@@ -147,7 +147,7 @@ by the harness as ordinary `program`-stage entries from cycle 0.0.2.
 | `probe16i_bytes_body_write_refused.npk` | *(must not compile)* a write through `Bytes.body`'s pointer | S-17b — `NITPICK-TYPE-080` |
 | `probe18_zero_length_owner.npk` | does a `string[0]` field cost nothing, move, drop, and leave an `int64[0]` twin copyable? | S-18g — the language fact under `Vec`'s marker |
 | `probe18b_zero_length_owner_copy_refused.npk` | *(must not compile)* a struct whose one owning field is `string[0]`, copied | S-18g — `NITPICK-TYPE-046` |
-| `probe19_pod_owner_refused.npk` | *(must not compile)* `Pod` implemented for `string` as the trait declares it | S-18h — `NITPICK-TYPE-047` |
+| `probe19_pod_owner_refused.npk` | *(must not compile)* `Copy` claimed for `string` — until cycle 0.2.0a, `Pod` implemented as its trait declared it, `TYPE-047` (TM-211) | S-18h — `NITPICK-TYPE-087` |
 
 *(Cycle 0.1.3b: the three `probe17` rows are new. **Probes 12 to 16 — cycles
 0.0.4 to 0.1.0c — are not in this table**, and the heading above says "What is

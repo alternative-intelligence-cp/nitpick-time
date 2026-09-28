@@ -581,7 +581,9 @@ pass s[i];
 ```
 
 *(Since cycle 0.1.3c `vec_at` ends `pass raw s[i].pod_copy();` — it takes
-`T: Pod`, S-18h — and the index its slice guards is the same `s[i]`.)*
+`T: Pod`, S-18h — and the index its slice guards is the same `s[i]`. And
+since cycle 0.2.0a it ends `pass s[i];` again, at the prelude's `T: Copy` —
+TM-211.)*
 
 **THE EXCEPTION IS `push`, AND IT IS PART OF THE RULE RATHER THAN A DEPARTURE
 FROM IT (F2, TM-143).** This code block read *"over `count`, never over `cap`"*
@@ -856,7 +858,7 @@ SEES.**
 > exited 11 on the removal until then). So the destructive read is gone from
 > the list above and the restriction rests on the four drops alone, which no
 > type here states — `struct:Vec<T: Pod>` would, and is declined for now
-> (TM-194). **TM-150's churn pair is a program with bounds**:
+> (TM-194; the bound is the prelude's `T: Copy` since cycle 0.2.0a, TM-211). **TM-150's churn pair is a program with bounds**:
 > `tests/unit/vec_churn_pop.npk` holds two million push-then-pop cycles at
 > `T = string` to `peak_live <= 75000` (it measures 120) and
 > `vec_churn_clear.npk`, `vec_clear` in the pop's place, to `peak_live >=
@@ -991,10 +993,22 @@ walks the empty array and frees nothing, so the block is still `wild`,
 redden first if a compiler changes it. **Not closed by it**: the four element
 drops of S-18d, which no type here states.
 
-**Rule S-18h (TM-194, cycle 0.1.3c) — the one verb that hands an element back
+**Rule S-18h (TM-194, cycle 0.1.3c; restated for `Copy` by TM-211, cycle
+0.2.0a) — the one verb that hands an element back
 by value asks for a `T` that owns nothing, and the language decides which
-types those are.** `vec_at<T: Pod>` reads through `Pod`'s `pod_copy`, a
-`never fails` method whose `self` is LENT. For an owning type the body the
+types those are.** *Since cycle 0.2.0a (TM-211):* `vec_at<T: Copy>` hands back
+a copy of the element under the prelude's marker `Copy` (the compiler's D-327),
+which a type that owns anything cannot claim — `impl:string:Copy = { };` is
+`NITPICK-TYPE-087` (`tests/probe/probe19_pod_owner_refused.npk`), and a derive
+for a struct holding an owner is `NITPICK-DERIVE-006` — so `vec_at` at an owning
+`T` is `NITPICK-TYPE-017` at the call (`generic_owning_copy/case5`). A consumer's
+type that owns nothing claims it in one line, `impl:X:Copy = { };`
+(`tests/unit/vec_at_pod.npk`); the scalars' impls are the prelude's, and this
+library re-exports nothing for it. The guard is S-17c's slice, unchanged, and
+the hole below is closed: an impl's `move` on a lent parameter is
+`NITPICK-TYPE-014` since the compiler's DEF-116, and `Copy` has no method.
+*What the rule read until then, kept as its record:* `vec_at<T: Pod>` reads
+through `Pod`'s `pod_copy`, a `never fails` method whose `self` is LENT. For an owning type the body the
 trait admits, `pass self`, is `NITPICK-TYPE-047` — a lent owner cannot be
 passed on — so no owning type implements it as declared
 (`tests/probe/probe19_pod_owner_refused.npk`), and `vec_at` at an owning `T`

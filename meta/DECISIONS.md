@@ -2723,7 +2723,8 @@ line at all.
 > exactly as written.
 >
 > **SUPERSEDED IN PART by TM-194 as well (2026-09-26).** Its finding that
-> `vec_at<T>` is destructive at an owning `T`: since `vec_at` takes `T: Pod`,
+> `vec_at<T>` is destructive at an owning `T`: since `vec_at` takes `T: Pod`
+> (`T: Copy` since TM-211, 2026-09-27),
 > that read is refused at the call, `NITPICK-TYPE-017`, and `case5` asserts
 > the refusal. The restriction stands, on the four element drops.
 
@@ -5305,6 +5306,11 @@ the author on question 9.
 
 ### TM-194 — `vec_at` takes `T: Pod` and reads through a loan: `Pod` is `nitpick-regex`'s trait, text for text, which an owning type cannot implement as it is declared, so `vec_at` at an owning `T` is refused `NITPICK-TYPE-017`, and `generic_owning_copy/case5` asserts that refusal
 
+> **SUPERSEDED IN PART by TM-211 (2026-09-27).** Its trait: `vec_at` takes the
+> prelude's `Copy` since the adoption of `5fbaf4a` (the compiler's D-327), and
+> `Pod` and its nine impls are deleted. The loan, the refusal at an owning `T`
+> and `case5`'s assertion stand. The text below is left exactly as written.
+
 **2026-09-26, cycle 0.1.3c (PD-45). Replaces TM-136 in part — its "`vec_at<T>`
 is destructive" — adds `SAFETY.md` S-18h, and puts `Pod` on the umbrella.**
 `pub trait:Pod = { func:pod_copy = Self(Self:self) never fails; };` and its
@@ -5459,6 +5465,11 @@ live, `prove` included** — a plain build lowers `prove` to nothing, the silent
 no-op P-1 was written against.
 
 ### TM-198 — `Pod` is ported now, at `c970483`, and the prelude's `Copy` replaces it mechanically at the re-pin that carries the compiler's D-327; nothing in this library is named `Copy`
+
+> **SUPERSEDED IN PART by TM-211 (2026-09-27) — the replacement it scheduled,
+> made.** Its interim `Pod`: at the adoption of `5fbaf4a` the block is deleted
+> and `vec_at` bounded `T: Copy`, the spellings measured then. The text below
+> is left exactly as written.
 
 **2026-09-26, cycle 0.1.3c (PD-49) — taken at planning on the orchestrator's
 instruction of 2026-09-26, when the author ratified the copy marker the
@@ -5990,6 +6001,44 @@ one that judges this library, and it passed all four; **one line per distinct
 position** — `probe15`'s three reports share one position and are three
 facts until DEF-165 says otherwise; **counting notes too** — a note is the
 compiler's explanation, not a site, and B-7 has never counted them.
+
+### TM-211 — `Pod` retires into the prelude's `Copy`: `vec_at<T: Copy>` copies its element plainly, the trait and its nine impls are deleted, and the umbrella re-exports 58 names
+
+**2026-09-27, cycle 0.2.0a (the plan's PD-60) — the adoption of compiler
+`5fbaf4a`, its landing 73 (D-327) and landing 69 (DEF-116). Amends
+`src/core/vec.npk`, `src/lib.npk`, `tests/unit/vec_at_pod.npk`,
+`tests/probe/probe19_pod_owner_refused.npk` and `SAFETY.md` S-18h, with the
+notes in S-17c and S-18 that state the bound. It supersedes TM-194 and TM-198
+in part, as TM-198 said the decision at this
+re-pin would.**
+
+**What was found**, measured at `5fbaf4a` with the `Pod` block deleted:
+`vec_at<T: Copy>` whose body is `pass s[i];` compiles — in a generic body a
+`T: Copy` place is copied plainly — and at `T = string` both of
+`generic_owning_copy/case5`'s calls are still `NITPICK-TYPE-017`, now *"`string`
+does not implement `Copy`"*, at their positions. A consumer's struct of
+integers and its four-variant payload enum (`Literal(uint16)`) each claim it
+with `impl:X:Copy = { };`, and `vec_at_pod` exits 0 on both legs. An owning
+type cannot: `impl:string:Copy = { };` is `NITPICK-TYPE-087` once, at the impl;
+so is the impl for a struct holding a `string`, whose `#[derive(Copy)]` is
+`NITPICK-DERIVE-006`. The hole S-18h named — an impl declaring `move` on the
+`self` its trait lent, DEF-116 — is `NITPICK-TYPE-014` since landing 69, and
+`Copy` has no method to declare one on. Nothing in this tree is named `Copy`.
+
+**The decision.** *TM-198's replacement, as it listed it: the trait and its
+nine impls deleted from `src/core/vec.npk`; `vec_at<T: Copy>` returning
+`s[i]`; the umbrella's `Pod` line gone, 59 → 58 re-exported names; the unit's
+two impls `impl:Pt:Copy = { };` and `impl:Part:Copy = { };`; and probe 19 asking
+`impl:string:Copy = { };`, refused `NITPICK-TYPE-087`. `SAFETY.md` S-18h is
+restated for `Copy`. The two test files keep their names.*
+
+*Alternatives declined:* **`Pod` kept beside `Copy`** — two markers for one
+property, and the one the compiler checks is the prelude's; **the unit's types
+`#[derive(Copy)]`** — the explicit form is the one a reader of `vec_at`'s
+comment is told to write, and a derive of an owning struct is refused at the
+declaration (`DERIVE-006`), which probe 19's `TYPE-087` already pins for the
+impl; **renaming `vec_at_pod` and `probe19_pod_owner_refused`** — every
+citation of either would move for a word.
 
 ### TM-208 — the adoption of compiler `5fbaf4a`: the fifteen `cstring` copies read in place or moved, the lexer re-read, and what else the pin moved here
 

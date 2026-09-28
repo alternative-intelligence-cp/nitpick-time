@@ -130,10 +130,11 @@ documented exceptions and a test that counts them.
   So the wrapper wants a consuming take, a public name this cycle chooses with
   a caller in hand (TM-013), or a re-measurement at the pin it plans against.
   And every `string` it hands back is a copy (`SAFETY.md` S-18f).
-- **`Layout`'s `Vec<FmtPart>` needs `FmtPart: Pod`, and a `Layout` is
-  move-only** (cycle 0.1.3c; `SAFETY.md` S-18g, S-18h). `vec_at` takes
-  `T: Pod`, and `FmtPart` — a payload enum whose payload owns nothing —
-  implements it in one line beside its declaration: measured, a four-variant
+- **`Layout`'s `Vec<FmtPart>` needs `FmtPart: Copy`, and a `Layout` is
+  move-only** (cycle 0.1.3c; `SAFETY.md` S-18g, S-18h — `Pod` until cycle
+  0.2.0a, TM-211). `vec_at` takes `T: Copy`, and `FmtPart` — a payload enum
+  whose payload owns nothing — claims it in one line beside its declaration,
+  `impl:FmtPart:Copy = { };`: measured, a four-variant
   payload enum does, and reads back twice through `vec_at`
   (`tests/unit/vec_at_pod.npk`). A struct holding a `Vec` is move-only by
   containment, so a `Layout` is moved or lent, never copied; a formatter that

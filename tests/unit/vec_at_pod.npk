@@ -1,13 +1,13 @@
 // expect-exit: 0
 //
-// `vec_at<T: Pod>` FOR A CONSUMER'S OWN TYPES, THROUGH THE UMBRELLA -- the
+// `vec_at<T: Copy>` FOR A CONSUMER'S OWN TYPES, THROUGH THE UMBRELLA -- the
 // positive twin of `probe19_pod_owner_refused.npk` (cycle 0.1.3c, TM-194;
 // `SAFETY.md` S-18h).
 //
 // A bound that nothing can satisfy would pass that probe too, so this file
-// implements `Pod` the way a consumer would -- in one line beside each type's
-// declaration, importing `src/lib.npk` and nothing else, so the trait's
-// re-export is under test as well -- and reads every element TWICE: a read
+// claims `Copy` the way a consumer would -- in one line beside each type's
+// declaration, importing `src/lib.npk` and nothing else -- and reads every
+// element TWICE: a read
 // that moved the element out would fail the second (`generic_owning_copy/case5`
 // measured exactly that until this cycle). Each wrong answer exits with its
 // own code, none an arm code (TM-152):
@@ -17,15 +17,19 @@
 //   13, 14  a payload enum -- `FORMAT_MODEL.md`'s parts in miniature, the
 //           element type cycle 0.4's `Layout` will hold -- read twice, the
 //           payload intact;
-//   20 ... 28  each of the nine scalar impls `src/core/vec.npk` declares,
-//           read once, so a mistyped impl is found here and not by the first
-//           consumer that instantiates it.
+//   20 ... 28  each of the nine scalars a specification here stores in a
+//           `Vec`, read once through the prelude's generated impls.
+//
+// UNTIL CYCLE 0.2.0a the bound was this library's `Pod`, and the file
+// implemented it -- `pod_copy` written `pass self` -- and read the nine impls
+// `src/core/vec.npk` declared; the prelude's `Copy` replaced it (TM-211), and
+// the file keeps its name.
 mod:vec_at_pod;
 
 use "../../src/lib.npk".*;
 
 struct:Pt = { int64:x; int64:y; };
-impl:Pt:Pod = { func:pod_copy = Pt(Pt:self) never fails { pass self; }; };
+impl:Pt:Copy = { };
 
 enum:Part = {
     Literal(uint16);
@@ -33,7 +37,7 @@ enum:Part = {
     Month2;
     Day2;
 };
-impl:Part:Pod = { func:pod_copy = Part(Part:self) never fails { pass self; }; };
+impl:Part:Copy = { };
 
 func:width = int64(Part:p) never fails {
     int64:w = 0i64;

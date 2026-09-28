@@ -30,9 +30,11 @@ cycle 0.0.5 wrote it, in the tense that was true then.**
 
 **`case5_vec_at_destructive.npk` is the one file here that is the library's
 own, and it asserts a refusal now** (TM-194): `NITPICK-TYPE-017`, "`string`
-does not implement `Pod`, which `vec_at`'s parameter `T` requires", at each of
-its two calls. `vec_at` takes `T: Pod`, a trait only a type that owns nothing
-can implement as it is declared, so the move out of the slot that this file
+does not implement `Copy`, which `vec_at`'s parameter `T` requires", at each of
+its two calls — one `expect-error` line per call since cycle 0.2.0a (TM-210).
+`vec_at` takes `T: Copy`, the prelude's marker, which only a type that owns
+nothing can claim (`Pod`, this library's own trait, until cycle 0.2.0a:
+TM-211), so the move out of the slot that this file
 measured — `pass` of a place at an owning `T`, which the language specifies —
 cannot be written through the library any more. Its two calls read the `Vec`
 as a loan, `vec_at::<string>(v, 0i64)`, because `vec_at` takes one since the

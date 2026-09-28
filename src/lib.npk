@@ -19,8 +19,9 @@
 // deliberate. Adding a line here is the moment a name becomes public and, by
 // TM-013, a thing a MAJOR version is needed to take away.
 //
-// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 59
-// names now [[sweep: lib_reexports=59]], below -- 57 until cycle 0.1.3c added
+// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 58
+// names now [[sweep: lib_reexports=58]], below -- 59 until cycle 0.2.0a retired
+// `Pod` into the prelude's `Copy` (TM-211), 57 until cycle 0.1.3c added
 // `Pod` and `bytes_capacity`, 50 until cycle 0.1.3 added
 // the seven derived fields, 48 until cycle 0.1.1 added `date_to_days` and
 // `days_to_date`, counted by `grep -c` and
@@ -84,12 +85,12 @@ mod:lib;
 //
 // SINCE CYCLE 0.1.3c (TM-193, TM-194) A `Vec` IS MOVE-ONLY -- a copy of one is
 // `NITPICK-TYPE-046`, and a transfer is `move(...)` -- and `vec_at` reads
-// through a LOAN, bounded by `T: Pod`, so the element it hands back is a copy
-// of a `T` that owns nothing and at an owning `T` the call is refused
-// (`NITPICK-TYPE-017`). `Pod` is public so a consumer's own type that owns
-// nothing can implement it, in one line beside its declaration.
+// through a LOAN, bounded by `T: Copy` -- the prelude's marker, `Pod` until
+// cycle 0.2.0a (TM-211) -- so the element it hands back is a copy of a `T`
+// that owns nothing and at an owning `T` the call is refused
+// (`NITPICK-TYPE-017`). A consumer's own type that owns nothing claims `Copy`
+// in one line beside its declaration; nothing here re-exports it.
 pub use "./core/vec.npk".Vec;
-pub use "./core/vec.npk".Pod;
 pub use "./core/vec.npk".vec_init;
 pub use "./core/vec.npk".vec_reserve;
 pub use "./core/vec.npk".vec_push;

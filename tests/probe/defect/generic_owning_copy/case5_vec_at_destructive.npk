@@ -5,10 +5,11 @@
 // below, each refused where it is written.
 //
 // CASE 5, SINCE CYCLE 0.1.3c: THE CALL IS REFUSED (TM-194). `vec_at` takes
-// `T: Pod`, a trait only a type that owns nothing can implement as it is
-// declared, so at `T = string` each call below is `NITPICK-TYPE-017` --
-// "`string` does not implement `Pod`, which `vec_at`'s parameter `T`
-// requires" -- and the move this file measured cannot be written any more.
+// `T: Copy` -- the prelude's marker since cycle 0.2.0a, `Pod` until then
+// (TM-211) -- which only a type that owns nothing can claim, so at
+// `T = string` each call below is `NITPICK-TYPE-017` -- "`string` does not
+// implement `Copy`, which `vec_at`'s parameter `T` requires" -- and the move
+// this file measured cannot be written any more.
 // THE REFUSAL IS THE ASSERTION (B-7). It is the library's refusal, not the
 // pin's: the same text is refused the same way at `c3bdae2`.
 //

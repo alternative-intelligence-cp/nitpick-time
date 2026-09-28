@@ -39,7 +39,7 @@
 # `Vec<T>`, `Bytes` and thirteen named bounds -- and `src/cal/` since 0.1.0 --
 # the civil types and their validating constructors, and since 0.1.1 Hinnant's
 # `date_to_days` and `days_to_date`, and since 0.1.3 the derived fields --
-# re-exported together as 59 public names [[sweep: lib_reexports=59]],
+# re-exported together as 58 public names [[sweep: lib_reexports=58]],
 # so this IS evidence about behaviour, of the 113 units the runner reports at
 # compiler `c970483` (62 at cycle 0.0.6, 67 at 0.1.0, 70 at 0.1.0b, 75 at
 # 0.1.0c, 78 at 0.1.1, 81 at 0.1.2, 86 at 0.1.3, 90 at 0.1.3b, 91 at 0.1.4 and

@@ -73,7 +73,7 @@ index 6c721721d17c9f51eb3a1cc67d22043669f8ba31..895731266682ee284b7de20860f25aad
  subtract two clocks' readings by hand, which the library refuses only in
  `instant_since` and `instant_cmp`; and the language's `mono_now()` hands any
 diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
-index 5b4380a86505c5de91e7439cbdedbd17a5c7be92..d53e5e145bcc0725d116a3b5821cb1cc2cff31cc 100644
+index 7cd49d12a0da3876518788c29f9b40098b8c7b53..ee0bc7f25c6b4d019dff0c910e7f9b03e48b5929 100644
 --- a/meta/DECISIONS.md
 +++ b/meta/DECISIONS.md
 @@ -6268,6 +6268,12 @@ by a decision, the compiler's `List<T>` its shape (`vec_at`'s comment).
@@ -102,7 +102,7 @@ index 5b4380a86505c5de91e7439cbdedbd17a5c7be92..d53e5e145bcc0725d116a3b5821cb1cc
  **2026-10-01, cycle 0.2.0 (the plan's PD-54). Amends `TIME_MODEL.md` M-4 and
  `SAFETY.md` S-3, appends `ClockMismatch` to `src/cal/cal.npk`'s `ValueFault`,
  and strikes `OPEN_QUESTIONS.md` O-X3.**
-@@ -6778,3 +6790,53 @@ line, and its field order is read back; **its cases inside
+@@ -6786,3 +6798,53 @@ line, and its field order is read back; **its cases inside
  `timestamp_construct.npk`** — that file is the constructor's, with its own
  exits and imports; **the refusal's detail asserted** — how a refusal hands back
  its `ValueFault` is `OPEN_QUESTIONS.md` O-X8, still open.

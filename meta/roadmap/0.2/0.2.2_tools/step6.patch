@@ -83,7 +83,7 @@ index 1abe85327c98e9e4adb413d8b42f9a5e3571a3ba..056aa367ed52ebcafa2d77fca39b960a
      EVERY NUMBER IN THAT SENTENCE IS TAGGED AND CHECKED (TM-142). It read
      `50 = 1 + 27 + 3 + 19` until cycle 0.0.6, three subcycles after the tree
 diff --git a/meta/specs/BUILD.md b/meta/specs/BUILD.md
-index 964db6402d4f5fafee5b75b92c22eb3845b41ff8..6fded293b2682decb2ee18b55158cdcb99c440af 100644
+index 5b4e4320da858d8a766c396a2161ef4ad637e093..21a86977a1d2a3553ac31a3765b9e8641cffae69 100644
 --- a/meta/specs/BUILD.md
 +++ b/meta/specs/BUILD.md
 @@ -316,14 +316,15 @@ list kept the old code until cycle 0.2.0), `BORROW-001`, `BORROW-012`,

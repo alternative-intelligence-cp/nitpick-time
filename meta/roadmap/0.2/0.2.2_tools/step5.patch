@@ -158,7 +158,7 @@ index 8b8dcc41a37cfaf48bab82b6071843b6be8eb388..1abe85327c98e9e4adb413d8b42f9a5e
    dates anything" -- false since 0.1.0 gave `cal/` a body, and since 0.1.1
    converted a date to a day.) AND IT IS A MEMORY RESULT FOR THE MANAGED HALF
 diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
-index cfbb2a3a50321e922523fdf2ac5bf279722bfe9f..5b4380a86505c5de91e7439cbdedbd17a5c7be92 100644
+index cfbb2a3a50321e922523fdf2ac5bf279722bfe9f..7cd49d12a0da3876518788c29f9b40098b8c7b53 100644
 --- a/meta/DECISIONS.md
 +++ b/meta/DECISIONS.md
 @@ -730,6 +730,14 @@ that D-151 does not provide — cycle 0.0.3's business.
@@ -176,7 +176,7 @@ index cfbb2a3a50321e922523fdf2ac5bf279722bfe9f..5b4380a86505c5de91e7439cbdedbd17
  **2026-09-03. Measured by `tests/probe/probe11_failsafe_arms.npk` and its five
  twins** against compiler commit `950bb1d`. The transcript with every exit code
  is `tests/probe/probe11_arm_contract.txt`.
-@@ -6575,3 +6583,198 @@ measured and unasserted; **a function of the probe's own as `probe20c`'s
+@@ -6575,3 +6583,206 @@ measured and unasserted; **a function of the probe's own as `probe20c`'s
  parameter** — `Timestamp`'s `cmp` is the library's surface, and its program the
  realistic one: a deadline compared with a timestamp; **`tests/rejection/`
  and a `check` entry** — TM-218's reason, unchanged.
@@ -330,6 +330,14 @@ index cfbb2a3a50321e922523fdf2ac5bf279722bfe9f..5b4380a86505c5de91e7439cbdedbd17
 +lands, between its −O2 leg over a sample and its domain split across the two
 +legs.*
 +
++*And what it moves besides:* the stage holds eight members, so two more
++statements of what it holds move with them — `BUILD.md` §3's `sweep` row,
++*"the exhaustive calendar and zone sweeps"*, restated as `tests/README.md`'s
++row is; and `tests/unit/sweep/every_oracle_date.npk`'s note on its `swept`
++helper, *"the same helper as the other five members'"*, where the others are
++seven. Found by the executing worker's second sweep
++(`meta/roadmap/0.2/0.2.2.md`'s execution record).
++
 +*Alternatives declined:* **the boundaries as first instants alone** — blind to
 +the truncation, measured; **the 512 days from Python's `random`, committed as a
 +fixture** — a generator, a corpus and an exemption for what four lines of the
@@ -412,9 +420,18 @@ index 13accd02b8bc1588a17b013901b10dd12e82f6ab..57029a7ee8b4294edeb4f761613102e7
  | **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate | 0.2 |
  | **0.5** | **The zone table** — the generator, the committed tables, the size measurement | 0.1 |
 diff --git a/meta/specs/BUILD.md b/meta/specs/BUILD.md
-index 29797abfc93bcf5d121e31797064dd84883771d1..964db6402d4f5fafee5b75b92c22eb3845b41ff8 100644
+index 29797abfc93bcf5d121e31797064dd84883771d1..5b4e4320da858d8a766c396a2161ef4ad637e093 100644
 --- a/meta/specs/BUILD.md
 +++ b/meta/specs/BUILD.md
+@@ -178,7 +178,7 @@ The harness mirrors the compiler's stage vocabulary (`BUILD_REFERENCE.md`
+ | `check` | `tests/rejection/` | refused by the frontend with **exactly** the expected codes |
+ | `program` | `tests/unit/`, `tests/probe/` | emitted, scanned, assembled, linked, run at -O0 and again under `opt -O2`, the same exit both times |
+ | `golden` | `tests/golden/` | as `program`, and the emitted text matches the committed golden byte for byte |
+-| `sweep` | `tests/unit/sweep/` | as `program`, but **long** — the exhaustive calendar and zone sweeps, run in full on a full invocation and skipped loudly under `--quick` |
++| `sweep` | `tests/unit/sweep/` | as `program`, but **long** — the exhaustive sweeps: the calendar's, since cycle 0.2.2 the `Timestamp` ↔ civil round trip (TM-224), and from cycle 0.6 the zones' — run in full on a full invocation and skipped loudly under `--quick` |
+ | `fixture` | *(no entry; TM-181)* | the compiler's: a PROGRAM built and never run, its uppercased stem becoming an `// argv:` token. This library has none, and `tests/fixtures/` holds corpora instead — since cycle 0.1.4 `civil/civil_oracle.npk`, a generated module the `sweep` member `every_oracle_date.npk` imports, rooted by the `parse` stage alone and named in `EXPECT_EXEMPT` at `none`. Until then this row's directory read `tests/fixtures/` |
+ 
+ **Rule B-4b (TM-114) — `tests/conformance/` is `compile`/`positive`, and NOT
 @@ -407,6 +407,18 @@ chooses — the stage whole and this rule amended to its measured cost, the
  member's −O2 leg over a sample, or its domain split across the two legs — with
  the first the default if the stage stays under 60 s. `meta/roadmap/0.2/README.md`
@@ -654,6 +671,22 @@ index bb42b5c2514643406a8d2e5ac26f6fbca7806827..94e0d48d2f45ea989f269a1c3a318720
  //
  // WHY IT MATTERS RATHER THAN BEING A CURIOSITY. `SAFETY.md` §2's table is
  // published to consumers as the bill for importing each module, and S-6 has a
+diff --git a/tests/unit/sweep/every_oracle_date.npk b/tests/unit/sweep/every_oracle_date.npk
+index 185333d9c192536be9054f568eb7853d2f7364fa..8994b8b6d3fb30c7ce3d1e7b8d1c206c2f000703 100644
+--- a/tests/unit/sweep/every_oracle_date.npk
++++ b/tests/unit/sweep/every_oracle_date.npk
+@@ -169,8 +169,9 @@ func:say_num = int32(int64:v, bool:last) never fails {
+ };
+ 
+ // `swept <count>` and a newline, on stdout, exactly once -- the same helper
+-// as the other five members', and every copy is checked on every run by the
+-// harness reading what it printed.
++// as every other member's, and every copy is checked on every run by the
++// harness reading what it printed. (It said "the other five members'" until
++// cycle 0.2.2 brought the stage to eight.)
+ func:say_swept = int32(int64:count) never fails {
+     string:digits = int_to_string(count);
+     string:head = string_concat("swept ", digits);
 diff --git a/tests/unit/timestamp_construct.npk b/tests/unit/timestamp_construct.npk
 index 0596a33a7e4dadb77fad194fa604d530cd67c148..d4eeab3e96929aca65eb8305f45fc926eac28fee 100644
 --- a/tests/unit/timestamp_construct.npk

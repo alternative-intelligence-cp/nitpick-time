@@ -160,7 +160,7 @@ index d7d01f776fd4157bd073ea28ac83de2cfc053406..025d47895d8d68ff73a0bfd6df434ba3
    to a zone, a timestamp to a date, or text to either. (It said four until
    cycle 0.2.0. Until cycle 0.1.2 this said "the other five ... so nothing here
 diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
-index ecd4a2f19223fbba60e468591ccfb59c927b1596..fef15c8916e1883684f887b2b2a67c59d41d1d7f 100644
+index ecd4a2f19223fbba60e468591ccfb59c927b1596..b3633713937279657ac0a07d66804863a518466e 100644
 --- a/meta/DECISIONS.md
 +++ b/meta/DECISIONS.md
 @@ -6254,6 +6254,13 @@ by a decision, the compiler's `List<T>` its shape (`vec_at`'s comment).
@@ -339,7 +339,7 @@ index ecd4a2f19223fbba60e468591ccfb59c927b1596..fef15c8916e1883684f887b2b2a67c59
 +stated opt-out and not this library's property, and C-8c's precedent records it
 +measured and unasserted; **a function of the probe's own as `probe20c`'s
 +parameter** — `Timestamp`'s `cmp` is the library's surface, and its program the
-+realistic one: a deadline compared with a wall-clock time; **`tests/rejection/`
++realistic one: a deadline compared with a timestamp; **`tests/rejection/`
 +and a `check` entry** — TM-218's reason, unchanged.
 diff --git a/meta/roadmap/0.2/README.md b/meta/roadmap/0.2/README.md
 index 964ae41a2bfb13743c759643a8473b1e7c8d29b0..b28db1eee382fb41e4e1be50f9fed377a03efeb0 100644

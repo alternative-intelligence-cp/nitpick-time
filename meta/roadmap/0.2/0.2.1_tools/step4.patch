@@ -119,7 +119,7 @@ index 0000000000000000000000000000000000000000..81196cfa19367b11571e854e4f5e9b53
 +};
 diff --git a/tests/probe/probe20d_timestamp_as_instant_refused.npk b/tests/probe/probe20d_timestamp_as_instant_refused.npk
 new file mode 100644
-index 0000000000000000000000000000000000000000..828da615636469848bd67170278b4b5a72bf8696
+index 0000000000000000000000000000000000000000..f03dfd1f8a89d60e99efc5beaaa3e55433e0eb6c
 --- /dev/null
 +++ b/tests/probe/probe20d_timestamp_as_instant_refused.npk
 @@ -0,0 +1,51 @@
@@ -128,8 +128,8 @@ index 0000000000000000000000000000000000000000..828da615636469848bd67170278b4b5a
 +// PROBE 20d — A `Timestamp` IS NOT AN `Instant`, EVEN WHERE ONE IS TAKEN
 +// (cycle 0.2.1, TM-221; `TIME_MODEL.md` M-3: "in either direction").
 +//
-+// ASKS: may a consumer measure the time since a wall-clock reading on the
-+// monotonic clock -- `instant_since(a, t)`, `t` a `Timestamp`?
++// ASKS: may a consumer measure, on the monotonic clock, the time since a
++// point on the absolute scale -- `instant_since(a, t)`, `t` a `Timestamp`?
 +//
 +// MATTERS BECAUSE that is the timeout written against a wall clock, from the
 +// other side: NTP steps the absolute scale and never the monotonic one, so a
@@ -234,7 +234,7 @@ index 0000000000000000000000000000000000000000..1da4ed9b3b73a30035ff1318a455e25a
 +};
 diff --git a/tests/probe/probe20f_timestamp_cast_to_instant_refused.npk b/tests/probe/probe20f_timestamp_cast_to_instant_refused.npk
 new file mode 100644
-index 0000000000000000000000000000000000000000..987b70b2fc9dee88e620b8223ef527ae6043e33a
+index 0000000000000000000000000000000000000000..800b4f3bf17b67b85ab32dc3932c13d577a4c825
 --- /dev/null
 +++ b/tests/probe/probe20f_timestamp_cast_to_instant_refused.npk
 @@ -0,0 +1,49 @@
@@ -243,8 +243,8 @@ index 0000000000000000000000000000000000000000..987b70b2fc9dee88e620b8223ef527ae
 +// PROBE 20f — NOT EVEN `=>!` TURNS A `Timestamp` INTO AN `Instant` (cycle
 +// 0.2.1, TM-221; `TIME_MODEL.md` M-3: "in either direction, ever").
 +//
-+// ASKS: may a consumer reinterpret a wall-clock time as a reading of the
-+// monotonic clock with the language's unchecked cast, `t =>! Instant`?
++// ASKS: may a consumer reinterpret a point on the absolute scale as a reading
++// of the monotonic clock with the language's unchecked cast, `t =>! Instant`?
 +//
 +// MATTERS BECAUSE the cast in this direction would manufacture an
 +// `InstantClock` tag from a `uint32` -- which `=>!` permits between an

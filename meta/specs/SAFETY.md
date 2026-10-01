@@ -87,7 +87,7 @@ import-scoped:
 | `ntime/lib.npk` — **the umbrella**, the import a consumer writes | — (re-exports) | one arm today (`cal`'s) | **13** <!-- [[sweep: arms_lib=13]] --> (—) — generated since cycle 0.1.0b (TM-155): the floor of six, `cal.ETimeValue`, the four arithmetic arms, `DecreasesViolated` from `src/core/bytes.npk`'s measured loops, and — since cycle 0.1.0c (TM-156, TM-159) — `LimitViolated` from the `ListLen` on `src/core/`'s sealed lengths. It was **12** until then |
 | `ntime/core.npk` | — | nothing | **6** <!-- [[sweep: arms_core=6]] --> (4) — the floor; `core` is not yet reachable as its own public module, and its code is billed through the umbrella's row |
 | `ntime/cal.npk` | `ETimeValue` | one arm | **11** <!-- [[sweep: arms_cal=11]] --> (9) — measured 2026-09-06 and 2026-09-25 |
-| `ntime/span.npk` | — (raises `cal`'s) | one arm | **11** <!-- [[sweep: arms_span=11]] --> (—) — since cycle 0.2.0, measured: `cal.ETimeValue`, which `span` raises for two clocks' readings (TM-216), the floor of six, and `cal`'s four arithmetic arms, which reach every importer of `span` because `span` imports `cal`. **No new identity**: the umbrella's row stays 13. *(A placeholder until cycle 0.2.0, the row read **6** (4), the floor, "meaningless until cycle 0.2 gives the module a body".)* |
+| `ntime/span.npk` | — (raises `cal`'s) | one arm | **11** <!-- [[sweep: arms_span=11]] --> (—) — since cycle 0.2.0, measured: `cal.ETimeValue`, which `span` raises for two clocks' readings (TM-216) and, since cycle 0.2.1, for a `secs` outside the range or a `nanos` outside one second handed to `timestamp_of` (TM-220), the floor of six, and `cal`'s four arithmetic arms, which reach every importer of `span` because `span` imports `cal`. **No new identity**: the umbrella's row stays 13. *(A placeholder until cycle 0.2.0, the row read **6** (4), the floor, "meaningless until cycle 0.2 gives the module a body".)* |
 | `ntime/zone.npk` | `ETimeZone` | two arms | placeholder; **6** <!-- [[sweep: arms_zone=6]] --> (4) today (cycle 0.3) |
 | `ntime/fmt.npk` | `ETimeParse` | three arms | placeholder; **6** <!-- [[sweep: arms_fmt=6]] --> (4) today (cycle 0.4) |
 | `ntime/host.npk` | — (forwards errnos) | one arm | placeholder; **6** <!-- [[sweep: arms_host=6]] --> (4) today |
@@ -405,7 +405,9 @@ Gregorian, astronomical year numbering (year 0 exists and is 1 BCE).
 field order is semantic.** `#[derive(Ord)]` compares in declaration order (TRAITS_REFERENCE
 §2.5), so seconds-then-nanoseconds is exactly the comparison wanted, and
 reordering the fields would silently change what `Ord` means. A rule rather
-than a comment because it looks like a style question and is not.
+than a comment because it looks like a style question and is not. *(Cycle
+0.2.1, TM-219: both fields are `sealed`, `Ord` is derived on the type, and
+`tests/unit/timestamp_order.npk` asserts the order on it.)*
 
 **Rule S-15 — intermediate arithmetic widens explicitly.** Nanoseconds across
 the full year range exceed `int64`: ±9999 years is about 6.3 × 10^20

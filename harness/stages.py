@@ -3,9 +3,9 @@
 THE HEADER IS THE AUTHORITY (B-5), AND FROM THIS CYCLE IT ALSO DECIDES WHAT KIND
 OF TEST A FILE IS (O-X7, TM-119). A `[[test]]` entry selects by DIRECTORY and
 never by file, so one `program` entry over `tests/probe/` cannot be true about
-both the 28 files carrying `expect-exit:` [[sweep: probe_exit=28]] and the 23
-carrying `expect-error:` [[sweep: probe_error=23]] (21 until cycle 0.2.0). It
-dispatches per file instead:
+both the 28 files carrying `expect-exit:` [[sweep: probe_exit=28]] and the 29
+carrying `expect-error:` [[sweep: probe_error=29]] (23 until cycle 0.2.1, 21
+until 0.2.0). It dispatches per file instead:
 
     expect-error:  present  ->  a REFUSAL member. `npkc` must fail, and the SET
                                of codes it reports must EQUAL the set the header
@@ -584,13 +584,14 @@ def parse_verdict(bld, rel, e):
 
     THE RULE IS ONE LINE AND ITS CONSEQUENCE IS NOT OBVIOUS: a file must parse
     UNLESS its own header names a parse-phase code. That is what lets the stage
-    cover the 39 files in this tree [[sweep: tests_error=39]] that must NOT
-    compile -- they are refused at PARSE-001, LEX-004, PARSE-002, TYPE-009,
-    TYPE-017, TYPE-046, TYPE-079, TYPE-080, TYPE-084, TYPE-087, BORROW-001,
-    BORROW-012, RESOLVE-001, RESOLVE-002, REACH-002 and REACH-003, and every
-    family after the first three is a phase that only runs on something that
-    parsed. (37, without `RESOLVE-002`, until cycle 0.2.0's two `probe20`
-    refusals, TM-218. 30
+    cover the 45 files in this tree [[sweep: tests_error=45]] that must NOT
+    compile -- they are refused at PARSE-001, LEX-004, PARSE-002, TYPE-007,
+    TYPE-009, TYPE-017, TYPE-032, TYPE-046, TYPE-079, TYPE-080, TYPE-084,
+    TYPE-087, BORROW-001, BORROW-012, RESOLVE-001, RESOLVE-002, REACH-002 and
+    REACH-003, and every family after the first three is a phase that only
+    runs on something that parsed. (39, without `TYPE-007` and `TYPE-032`,
+    until cycle 0.2.1's six refusals, TM-221. 37, without `RESOLVE-002`, until
+    cycle 0.2.0's two `probe20` refusals, TM-218. 30
     until cycle 0.1.3c, whose port made six new refusals -- four copies of an
     owner at TYPE-046, one hidden field at TYPE-080 and one owning `Pod` impl at
     TYPE-047 -- and moved `generic_owning_copy/case5` to TYPE-017. 16, with

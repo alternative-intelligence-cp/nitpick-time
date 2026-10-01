@@ -1,0 +1,53 @@
+// expect-error: NITPICK-TYPE-007
+//
+// PROBE 20c — AN `Instant` IS NOT A `Timestamp`, EVEN WHERE ONE IS TAKEN
+// (cycle 0.2.1, TM-221; `TIME_MODEL.md` M-3, TM-010).
+//
+// ASKS: may a consumer hand a reading of the monotonic clock to a function
+// that takes a point on the absolute scale -- here `Timestamp`'s own
+// comparison, `t.cmp(a)` -- the two types being 16 bytes each?
+//
+// MATTERS BECAUSE comparing a deadline read from one clock with a time read
+// from the other is the program M-3 exists to make unwritable, and `probe20b`
+// asks only that no function converts by NAME: a language that took one
+// struct where another of its size is declared would leave the refusal a
+// convention. ANSWER, measured at `5fbaf4a`: NO -- `NITPICK-TYPE-007`,
+// "expected `Timestamp`, found `Instant`", exactly once, at the argument. THE
+// REFUSAL IS THE ASSERTION (B-7). `probe20d` is the other direction, and
+// `probe20e` and `probe20f` the language's unchecked cast each way -- one
+// probe per refusal (TM-218).
+mod:probe20c_instant_as_timestamp_refused;
+
+use "../../src/span/span.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    Instant:a = raw instant_of(1000i64, InstantClock.Monotonic);
+    Result<Timestamp>:r = timestamp_of(1000i64, 0i64);
+    if (r.is_error) { exit 10i32; }
+    Result<Ordering>:o = r.value.cmp(a);
+    exit 0i32;
+};
+
+// A SUPERSET of what `NITPICK-REACH-002` asks of a root importing `span`,
+// deliberately, as `probe16d` has (`SAFETY.md` S-6b, constraint 3: a superset
+// compiles): a later compiler that ran the reach analysis before the check this
+// file asserts could not add a stray `REACH-002` to the refusal.
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
+        (LimitViolated)     { exit 109i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

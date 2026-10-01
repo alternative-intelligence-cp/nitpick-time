@@ -136,7 +136,8 @@ against the summary line rather than left to review.
 - **Not that the WHOLE library works.** `src/core/` is real code since cycle
   0.0.4 and `src/cal/` since 0.1.0 — the civil types, Hinnant's two algorithms
   since 0.1.1, swept over the whole range since 0.1.2 — and the suite is
-  evidence about both — and about `src/span/`'s `Instant` since cycle 0.2.0;
+  evidence about both — and about `src/span/`'s `Instant` since cycle 0.2.0
+  and its `Timestamp` since 0.2.1;
   the other three `src/` directories are still placeholders, so nothing here
   converts a time to a zone, a timestamp to a date, or text to either. *(It
   said four placeholders until cycle 0.2.0. This read "there is none yet; `src/` is
@@ -356,6 +357,17 @@ over 130 files, `91 + 37 + 2`; the defect corpus unchanged at 36; the library
 reaching **6** sources and its IR **245 637 B**, `span`'s body and
 `ClockMismatch`; and library + repro + suite at **79** (**51 probe**, **21
 unit**). `114 = 35 + 79`.
+
+**At cycle 0.2.1, the same pin, 122 units**: eight tests added —
+`tests/unit/timestamp_construct.npk` and `timestamp_order.npk`, and the six
+refusals `probe20c` … `probe20f`, `probe21` and `probe21b` (TM-219 … TM-221)
+— and `instant_ops` changed in place, for 0.2.0's test gap. The self-check
+unchanged — 12 of V-14's 13 cases, 44 tree-check violations with 44 clean
+controls, 4 arm specimens and 4 verdict specimens; `exemption verdicts: 6 of
+6`; parse over 138 files, `93 + 43 + 2`; the defect corpus unchanged at 36;
+the library reaching 6 sources and its IR **258 249 B**, `Timestamp` and
+`timestamp_of`; and library + repro + suite at **87** (**57 probe**, **23
+unit**). `122 = 35 + 87`.
 
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the

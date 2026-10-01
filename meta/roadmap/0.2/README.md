@@ -76,12 +76,15 @@ file stands — make §5's table the authority and drop N-20's count. *(From cyc
 - [ ] `timestamp_to_utc` and `civil_to_utc`, over `cal`'s algorithms
 - [ ] the round trip over **every day boundary** in the range (7 304 484 cases — 7 304 485 until cycle 0.1.1 corrected the range's first day, TM-161)
 - [ ] the round trip over **every second of 512 randomly chosen days**, with the seed committed so the run is reproducible (~44 M cases)
+- [ ] **`VERIFICATION.md` P-4's stand-in extended to `civil_to_utc`**: every `Timestamp` it returns asserted normalised, in `tests/unit/timestamp_construct.npk`'s manner (TM-220) *(added at 0.2.1)*
 - [ ] a `sweep`-stage test, with the wall-clock cost recorded — **measured before it lands against `BUILD.md` B-9's 30 s threshold**, which the stage stood 7.6 s under at cycle 0.1's close (22.4 s for its six members, both legs); the stage whole and B-9 amended to its cost is the default if the stage stays under 60 s (B-9's dated note, cycle 0.1.5)
 
 ### 0.2.3 — `Duration` interop
 - [ ] `duration_mins`, `duration_hours`, `duration_days`, `duration_weeks`, all `never fails`, all over the prelude's constructors
 - [ ] `duration_days` documented as **exactly 86 400 × 10⁹ ns** and explicitly *not* a calendar day (N-2's note)
 - [ ] `timestamp_add(t, d)` with its range check
+- [ ] **`VERIFICATION.md` P-4's stand-in extended to `timestamp_add`** — the first operation that must re-establish M-7 rather than refuse: no sequence of additions, negative durations included, yields `nanos` outside one second (TM-220) *(added at 0.2.1)*
+- [ ] `VERIFICATION.md` P-3's `timestamp_add` sample names `SECS_MIN` and `SECS_MAX`, which `src/core/limits.npk` spells `NTIME_SECS_MIN` and `NTIME_SECS_MAX` (`BUILD.md` B-15) — restated when the function is written *(found at 0.2.1's planning)*
 - [ ] **`timestamp_since` returns `ETimeValue`/`Overflow` past ±292 years** (M-18) — and the test computes the exact boundary rather than approximating it
 - [ ] `timestamp_until(a, b, unit)` in whole days, months or years, as the calendar-scale answer (M-19)
 - [ ] **`check_check_registry` built FIRST, because this subcycle adds a check** (TM-201, `TESTING.md` V-14e): `TESTING.md` §2's table, `checks.LIVE`, `checks.PENDING` and the checks `run.py` drives outside step 5 diffed as one family, and seen red on a planted drift in each of the four — before the family moves

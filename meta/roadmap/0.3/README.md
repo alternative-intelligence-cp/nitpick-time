@@ -33,9 +33,9 @@ settled.
 - [ ] `host_now_utc` (CLOCK_REALTIME 0), `host_now_boot` (CLOCK_BOOTTIME 7)
 - [ ] `host_now_instant` calls the floor's `mono_now()`, **not** `clock_gettime` (H-5) — so an `ntime` `Instant` and an executor deadline are on the same timeline by construction
 - [ ] `host_clock_res` over `clock_getres`
-- [ ] **`BUILD.md` B-17 gains `host` → `span`, by decision, when `host` first imports it**: `host_now_instant` and `host_now_boot` return `Instant`s, and both fields of an `Instant` are sealed, so `host` builds them through `span`'s public `instant_of` (TM-215, TM-216) — B-17 draws `host` → `zone`, `cal`, `core` today *(handed on by `0.2/0.2.0.md` §7)*
+- [ ] **`BUILD.md` B-17 gains `host` → `span`, by decision, when `host` first imports it**: `host_now_instant` and `host_now_boot` return `Instant`s, and both fields of an `Instant` are sealed, so `host` builds them through `span`'s public `instant_of` (TM-215, TM-216) — B-17 draws `host` → `zone`, `cal`, `core` today *(handed on by `0.2/0.2.0.md` §7)* — and `host_now_utc`'s `Timestamp` through `timestamp_of`, its fields sealed since cycle 0.2.1 (TM-219, TM-220)
 - [ ] errnos **forwarded verbatim** (H-7), so this module declares no error and costs no arm — asserted by `check_error_budget`
-- [ ] the returned `Timestamp` range-checked (H-8): an unset machine clock is `ETimeValue`, not a value that fails somewhere less obvious
+- [ ] the returned `Timestamp` range-checked (H-8): an unset machine clock is `ETimeValue`, not a value that fails somewhere less obvious — by `timestamp_of`, whose `YearRange` refusal is H-8's (TM-220)
 - [ ] **no state in the module** (H-3): a test asserts two calls are two syscalls
 - [ ] `// stress: 40` on every clock test
 

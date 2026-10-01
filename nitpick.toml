@@ -69,8 +69,9 @@ lld-flags     = ["-static"]
 # AND THE OTHER HALF OF THAT RULE, LEARNED AT 0.0.1: an entry whose `kind`
 # disagrees with the files under its path is worse than an empty one, because
 # it fails for a reason that is not the library's. `tests/probe/` holds 28
-# positive probes [[sweep: probe_exit=28]] and 23 that MUST NOT COMPILE
-# [[sweep: probe_error=23]] (21 until cycle 0.2.0), and the schema selects by
+# positive probes [[sweep: probe_exit=28]] and 29 that MUST NOT COMPILE
+# [[sweep: probe_error=29]] (23 until cycle 0.2.1, 21 until 0.2.0), and the
+# schema selects by
 # directory, never by file (the compiler's runner globs `<path>/*.npk`). That
 # was O-X7, and it is SETTLED as TM-119: within a `program` entry the runner
 # dispatches on each FILE'S OWN HEADER -- `expect-error:` makes it a refusal
@@ -82,8 +83,8 @@ lld-flags     = ["-static"]
 # and again through `opt -O2`, the same exit required both times (B-3).
 #
 # NOT `recursive`, and the omission is the point: a plain glob is
-# `tests/probe/*.npk`, which is exactly the 51 probe programs
-# [[sweep: probe_dir=51]] and EXCLUDES the two subdirectories that must never
+# `tests/probe/*.npk`, which is exactly the 57 probe programs
+# [[sweep: probe_dir=57]] and EXCLUDES the two subdirectories that must never
 # be run as tests --
 #   tests/probe/support/  four library modules -- three probe 11 imports, and
 #                         since cycle 0.2.0 the self-check's relay specimen.
@@ -131,7 +132,7 @@ path  = "tests/probe"
 #   `parse`   HAS NO ENTRY BY DESIGN, not by omission (TM-123). It is a
 #             WHOLE-TREE stage: `BUILD.md` §3's Directory column for it reads
 #             "every `.npk` in the tree", and that is where its value is — of
-#             the 130 files here [[sweep: npk_total=130]], 41 are put in front of
+#             the 138 files here [[sweep: npk_total=138]], 41 are put in front of
 #             the compiler by nothing
 #             else. An entry would narrow it to one directory and silently
 #             un-cover the rest, so `stage = "parse"` is REFUSED BY NAME.
@@ -153,8 +154,9 @@ path  = "tests/probe"
 #             0.2.0's refusal of a conversion between `Instant` and
 #             `Timestamp` is the next, and its plan says where it lives.
 #             It lives in `tests/probe/` -- `probe20b`, and `probe20` for
-#             the struct literal, TM-218 -- so this directory is still
-#             empty.)
+#             the struct literal, TM-218 -- and so do cycle 0.2.1's six,
+#             `probe20c` ... `probe20f` and `probe21`/`probe21b`, TM-221 --
+#             so this directory is still empty.)
 #   `golden`  IMPLEMENTED, and `tests/golden/` is empty: nothing formats
 #             anything yet. Exercised by `selfcheck.py` case 4. Its entry
 #             arrives with `fmt` at cycle 0.4.

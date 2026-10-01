@@ -1,27 +1,28 @@
-// expect-error: NITPICK-RESOLVE-002
+// expect-error: NITPICK-TYPE-007
 //
-// PROBE 20b — THERE IS NO CONVERSION FROM AN `Instant` (cycle 0.2.0, TM-218;
-// `TIME_MODEL.md` M-3, TM-010).
+// PROBE 20d — A `Timestamp` IS NOT AN `Instant`, EVEN WHERE ONE IS TAKEN
+// (cycle 0.2.1, TM-221; `TIME_MODEL.md` M-3: "in either direction").
 //
-// ASKS: may a consumer call `instant_to_timestamp` -- or any function that
-// turns a reading of the monotonic scale into the absolute one?
+// ASKS: may a consumer measure, on the monotonic clock, the time since a
+// point on the absolute scale -- `instant_since(a, t)`, `t` a `Timestamp`?
 //
-// MATTERS BECAUSE M-3 is the model's load-bearing refusal, and a refusal that
-// is merely absent is not checked: the day somebody adds the convenience, this
-// file stops being refused, and the run says so. The conversion is refused BY
-// NAME -- `NITPICK-RESOLVE-002`, "cannot find `instant_to_timestamp` in this
-// scope" -- exactly once. THE REFUSAL IS THE ASSERTION (B-7).
-//
-// WHAT IT DOES NOT ASK, AND WHERE IT IS ASKED: an `Instant` passed where a
-// `Timestamp` is taken, and the reverse, are `probe20c` and `probe20d` since
-// cycle 0.2.1, and the unchecked cast each way `probe20e` and `probe20f` (TM-221).
-mod:probe20b_instant_conversion_refused;
+// MATTERS BECAUSE that is the timeout written against a wall clock, from the
+// other side: NTP steps the absolute scale and never the monotonic one, so a
+// distance between the two is a number that means nothing. `probe20c` asks
+// the direction the cycle README asked first; M-3 refuses both. ANSWER,
+// measured at `5fbaf4a`: NO -- `NITPICK-TYPE-007`, "expected `Instant`,
+// found `Timestamp`", exactly once, at the argument. THE REFUSAL IS THE
+// ASSERTION (B-7). One probe per refusal (TM-218): a file refused for two
+// reasons could not say which went away.
+mod:probe20d_timestamp_as_instant_refused;
 
 use "../../src/span/span.npk".*;
 
 func:main = int32(cstring[]:_~argv) {
     Instant:a = raw instant_of(1000i64, InstantClock.Monotonic);
-    int64:t = instant_to_timestamp(a);
+    Result<Timestamp>:r = timestamp_of(1000i64, 0i64);
+    if (r.is_error) { exit 10i32; }
+    Result<Duration>:d = instant_since(a, r.value);
     exit 0i32;
 };
 

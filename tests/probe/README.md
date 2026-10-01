@@ -151,6 +151,12 @@ by the harness as ordinary `program`-stage entries from cycle 0.0.2.
 | `probe19_pod_owner_refused.npk` | *(must not compile)* `Copy` claimed for `string` — until cycle 0.2.0a, `Pod` implemented as its trait declared it, `TYPE-047` (TM-211) | S-18h — `NITPICK-TYPE-087` |
 | `probe20_instant_literal_refused.npk` | *(must not compile)* an `Instant` built by a consumer's struct literal | `TIME_MODEL.md` M-2, TM-215 — `NITPICK-TYPE-079`, twice: one report per sealed field |
 | `probe20b_instant_conversion_refused.npk` | *(must not compile)* `instant_to_timestamp` called | M-3, TM-010 — `NITPICK-RESOLVE-002` |
+| `probe20c_instant_as_timestamp_refused.npk` | *(must not compile)* an `Instant` handed to `Timestamp`'s `cmp` | M-3, TM-221 — `NITPICK-TYPE-007` |
+| `probe20d_timestamp_as_instant_refused.npk` | *(must not compile)* a `Timestamp` handed to `instant_since` | M-3, TM-221 — `NITPICK-TYPE-007` |
+| `probe20e_instant_cast_to_timestamp_refused.npk` | *(must not compile)* `a =>! Timestamp` — the unchecked cast | M-3, TM-221 — `NITPICK-TYPE-032` |
+| `probe20f_timestamp_cast_to_instant_refused.npk` | *(must not compile)* `t =>! Instant` — the unchecked cast | M-3, TM-221 — `NITPICK-TYPE-032` |
+| `probe21_timestamp_literal_refused.npk` | *(must not compile)* a denormalised `Timestamp` built by a consumer's struct literal | M-7, TM-219 — `NITPICK-TYPE-079`, twice: one report per sealed field |
+| `probe21b_timestamp_field_write_refused.npk` | *(must not compile)* a consumer's write to a `Timestamp`'s `nanos` | M-7, TM-219 — `NITPICK-TYPE-079` |
 
 *(Cycle 0.1.3b: the three `probe17` rows are new. **Probes 12 to 16 — cycles
 0.0.4 to 0.1.0c — are not in this table**, and the heading above says "What is
@@ -169,6 +175,10 @@ directory.)*
 
 *(Cycle 0.2.0: the two `probe20` rows are new — `Instant`'s refusals, each a
 probe that imports the module it asks about (TM-218).)*
+
+*(Cycle 0.2.1: the six rows after `probe20b` are new — M-3's refusal at the
+type, both directions and through the unchecked cast, and `Timestamp`'s seal,
+one refusal per probe, each importing `span` and nothing more (TM-221).)*
 
 Probes 09 and 10 were planned in `0.0.0.md` §4 and **held, not merely
 unwritten**: they are the borrow-edge probes, and the author ruled O-N9

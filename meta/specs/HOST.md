@@ -99,6 +99,11 @@ reading from a machine whose clock is unset can be anything; if it is outside
 `CALENDAR.md` §2's range the answer is `ETimeValue`/`YearRange`, not a
 `Timestamp` that fails later somewhere less obvious.
 
+*(Cycle 0.2.1, TM-219 and TM-220: `Timestamp`'s fields are sealed, so
+`host_now_utc` builds its reading through `span`'s `timestamp_of`, whose
+refusal of a `secs` outside the range is this rule's `YearRange` — the `host`
+→ `span` arrow cycle 0.3's README owes for `Instant` already.)*
+
 ---
 
 ## 3. The test double

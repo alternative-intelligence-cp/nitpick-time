@@ -1,0 +1,54 @@
+// expect-error: NITPICK-TYPE-079
+// expect-error: NITPICK-TYPE-079
+//
+// PROBE 21 — A CONSUMER CANNOT SPELL A DENORMALISED `Timestamp` (cycle 0.2.1,
+// TM-219, TM-221; `TIME_MODEL.md` M-7).
+//
+// ASKS: may a consumer write `Timestamp{ secs: -1i64, nanos: 1500000000u32 }`
+// -- half a second after the epoch, spelled the second way, which
+// `timestamp_of` refuses?
+//
+// MATTERS BECAUSE M-7 holds of every `Timestamp` only if the constructor is
+// the one way to make one. A second spelling compares wrongly and silently:
+// this value orders BEFORE `timestamp_of(0, 500_000_000)`'s, which is the
+// same instant, because the derived order reads the seconds first (M-6).
+// ANSWER, measured at `5fbaf4a`: NO. Both fields are `sealed` (the compiler's
+// D-313), so the literal is `NITPICK-TYPE-079`, reported once per sealed field
+// it writes -- two reports at one position, so this header names the code
+// twice (`BUILD.md` B-7c), as `probe20` does. The compiler's DEF-165,
+// registered open, would make it one; when it lands this file reddens and
+// says so. THE REFUSAL IS THE ASSERTION (B-7). `probe21b` is the write; with
+// `timestamp_of`'s refusals they are `VERIFICATION.md` P-4's stand-in at
+// cycle 0.2.1, beside `tests/unit/timestamp_construct.npk` (TM-220).
+mod:probe21_timestamp_literal_refused;
+
+use "../../src/span/span.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    Timestamp:t = Timestamp{ secs: -1i64, nanos: 1500000000u32 };
+    exit 0i32;
+};
+
+// A SUPERSET of what `NITPICK-REACH-002` asks of a root importing `span`,
+// deliberately, as `probe16d` has (`SAFETY.md` S-6b, constraint 3: a superset
+// compiles): a later compiler that ran the reach analysis before the check this
+// file asserts could not add a stray `REACH-002` to the refusal.
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
+        (LimitViolated)     { exit 109i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

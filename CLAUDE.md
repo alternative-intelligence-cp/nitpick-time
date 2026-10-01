@@ -10,8 +10,33 @@ safety-critical systems language at `../../nitpick`.
 **Status: cycle 0.1 CLOSED (2026-09-26), archived at `meta/roadmap/done/0.1/`
 — the civil calendar, with its exhaustive gate on every run — and cycle 0.2,
 instants and timestamps, is OPEN: its 0.2.0a, the adoption of compiler
-`5fbaf4a`, its 0.2.0b, `Vec<T: Copy>`, and its 0.2.0, `Instant`, are done,
-and 0.2.1, `Timestamp`, is next.**
+`5fbaf4a`, its 0.2.0b, `Vec<T: Copy>`, its 0.2.0, `Instant`, and its 0.2.1,
+`Timestamp`, are done, and 0.2.2, the conversions, is next.**
+
+**After cycle 0.2.1: `Timestamp`.** `src/span/` holds `Timestamp` beside
+`Instant` — `{ sealed int64:secs; sealed uint32:nanos; }`, deriving `Eq`,
+`Ord`, `Clone`, `Debug` and `Copy`, the derived `Ord` its comparison, seconds
+first (M-6) — and one constructor, `timestamp_of(secs, nanos)`, which refuses
+a `secs` outside the range (`ValueFault.YearRange`) and a `nanos` outside one
+second (`NanoRange`) rather than carry it: one spelling per instant, M-7
+(TM-219, TM-220). **`VERIFICATION.md` P-4's stand-in** is
+`tests/unit/timestamp_construct.npk` — every boundary the constructor decides,
+from both sides, 132 pairs — beside the seal's two probes, `probe21` and
+`probe21b`; `tests/unit/timestamp_order.npk` asserts the order on the type, a
+negative second with a positive remainder among its neighbours. **M-3 is
+asserted at the type in both directions** — an `Instant` where a `Timestamp`
+is taken, and the reverse, `NITPICK-TYPE-007` — **and through `=>!`**, which
+refuses both, `NITPICK-TYPE-032`: six probes, one refusal each (TM-221).
+`Instant`'s `ns` stays sealed and readable — the author's answer to the
+workbench's question 15, recorded in TM-219. **And 0.2.0's unit had a mutant it
+could not see**: exit 14 read only a `Monotonic` clock — tag 0, the vacant
+value — so an `instant_add` that hard-coded `Monotonic` passed it; a `Boottime`
+reading goes through `instant_add` and through the `Vec` now, and every exit
+of the unit has been seen red on a mutant. `span` owes **11**
+<!-- [[sweep: arms_span=11]] --> arms and the umbrella **13**
+<!-- [[sweep: arms_lib=13]] --> still — no new identity — and the umbrella
+re-exports 66 <!-- [[sweep: lib_reexports=66]] --> names. A full invocation is
+**122 units green** at pin `5fbaf4a`.
 
 **After cycle 0.2.0: `Instant`.** `src/span/` has a body: `Instant`, a
 reading of one of two clocks — `{ sealed int64:ns; sealed InstantClock:clock; }`,

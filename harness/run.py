@@ -27,7 +27,8 @@ WHAT A GREEN RUN HERE IS, AND IS NOT.
   since cycle 0.0.4 -- `Vec<T>`, `Bytes` and thirteen named bounds -- and
   `src/cal/` since 0.1.0 -- the civil types, Hinnant's two algorithms since
   0.1.1, swept over the whole range since 0.1.2 -- and the suite is evidence
-  about both, and since 0.2.0 about `src/span/`'s `Instant`. The other three
+  about both, and since 0.2.0 about `src/span/`'s `Instant` -- and since
+  0.2.1 its `Timestamp`. The other three
   `src/` directories are still placeholders, so nothing here converts a time
   to a zone, a timestamp to a date, or text to either. (It said four until
   cycle 0.2.0. Until cycle 0.1.2 this said "the other five ... so nothing here
@@ -621,13 +622,14 @@ def run_parse(rep, root, bld):
     """Every `.npk` in the tree in front of the real parser, each exactly once.
 
     THE DENOMINATOR IS THE WHOLE TREE AND THAT IS WHY THE STAGE IS WORTH ITS
-    COST. Re-measured at cycle 0.2.0: of the 130 `.npk` files
-    here [[sweep: npk_total=130]] the library build roots 6
-    [[sweep: lib_reach=6]], the suite roots 79 [[sweep: suite_roots=79]]
+    COST. Re-measured at cycle 0.2.1: of the 138 `.npk` files
+    here [[sweep: npk_total=138]] the library build roots 6
+    [[sweep: lib_reach=6]], the suite roots 87 [[sweep: suite_roots=87]]
     (127 and 77 from cycle 0.1.3c until `tests/unit/civil_total_edges.npk`
     joined; 128 and 78 from then until cycle 0.2.0b retired the churn pair,
     TM-214; 126 and 76 until cycle 0.2.0 added `span`'s body to the
-    library's reach and a unit and two probes to the suite), and of the 4
+    library's reach and a unit and two probes to the suite; 130 and 79 until
+    cycle 0.2.1 added two units and six probes), and of the 4
     support modules [[sweep: support_total=4]] 3 are reached by `use` from
     a suite root -- and since cycle 0.1.4 so is the civil cross-oracle's
     corpus, which only its member imports -- so 41 are put in front of the
@@ -641,13 +643,14 @@ def run_parse(rep, root, bld):
     a support module no suite root imports, which only its part C compiles
     (TM-217).
 
-        130 = 6 (library) + 79 (suite roots) + 3 + 1 (reached by `use`) + 41
+        138 = 6 (library) + 87 (suite roots) + 3 + 1 (reached by `use`) + 41
 
     (It read `116 = 5 + 66 + 3 + 1 + 41` from cycle 0.1.4c until cycle 0.1.3c
     added eleven suite roots -- seven probes and four unit tests -- and none
     anywhere else; and `127 = 5 + 77 + 3 + 1 + 41` until cycle 0.2.0b -- a
     root short of the tagged sentence above from cycle 0.1.5's second half,
-    when `civil_total_edges` joined, and found at 0.2.0b's planning.)
+    when `civil_total_edges` joined, and found at 0.2.0b's planning; and
+    `130 = 6 + 79 + 3 + 1 + 41` until cycle 0.2.1.)
 
     EVERY NUMBER IN THAT SENTENCE IS TAGGED AND CHECKED (TM-142). It read
     `50 = 1 + 27 + 3 + 19` until cycle 0.0.6, three subcycles after the tree
@@ -750,8 +753,8 @@ def select(root, entry):
     """The files a `[[test]]` entry selects: `<path>/*.npk`, non-recursive.
 
     NOT recursive, and the omission is load-bearing (the manifest says so at
-    length): a plain glob over `tests/probe/` is exactly the 51
-    [[sweep: probe_dir=51]] probe programs and excludes `support/` -- four
+    length): a plain glob over `tests/probe/` is exactly the 57
+    [[sweep: probe_dir=57]] probe programs and excludes `support/` -- four
     library modules with no `main`, three until cycle 0.2.0 -- and `defect/`, whose files are
     reproductions rather than tests of this library and are judged by
     `run_defect_corpus` instead (TM-141). The schema has no `recursive` key, so

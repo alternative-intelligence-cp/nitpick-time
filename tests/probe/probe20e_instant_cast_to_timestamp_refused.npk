@@ -1,0 +1,52 @@
+// expect-error: NITPICK-TYPE-032
+//
+// PROBE 20e — NOT EVEN `=>!` TURNS AN `Instant` INTO A `Timestamp` (cycle
+// 0.2.1, TM-221; `TIME_MODEL.md` M-3: "ever").
+//
+// ASKS: may a consumer reinterpret a reading as a point on the absolute scale
+// with the language's unchecked cast, `a =>! Timestamp`?
+//
+// MATTERS BECAUSE `=>!` is this language's opt-out from a check, and a cast
+// that took one 16-byte struct to the other would be the conversion M-3 says
+// does not exist, written in one token. ANSWER, measured at `5fbaf4a`: NO --
+// `NITPICK-TYPE-032`, "there is no conversion from `Instant` to
+// `Timestamp`: these types have no values in common", the compiler adding
+// that `=>!` "opts out of a check, not of a meaning" -- exactly once. THE
+// REFUSAL IS THE ASSERTION (B-7). What remains is `wild` storage
+// reinterpreted through a POINTER cast -- measured at planning, a `Boottime`
+// reading read back that way as a `Timestamp` of 1 000 s and 1 ns -- the
+// opt-out `CALENDAR.md` C-8c states for every checked property, and not this
+// file's question. `probe20f` is the cast the other way.
+mod:probe20e_instant_cast_to_timestamp_refused;
+
+use "../../src/span/span.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    Instant:a = raw instant_of(1000i64, InstantClock.Monotonic);
+    Timestamp:t = a =>! Timestamp;
+    exit 0i32;
+};
+
+// A SUPERSET of what `NITPICK-REACH-002` asks of a root importing `span`,
+// deliberately, as `probe16d` has (`SAFETY.md` S-6b, constraint 3: a superset
+// compiles): a later compiler that ran the reach analysis before the check this
+// file asserts could not add a stray `REACH-002` to the refusal.
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
+        (LimitViolated)     { exit 109i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

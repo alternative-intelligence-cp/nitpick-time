@@ -6254,6 +6254,13 @@ by a decision, the compiler's `List<T>` its shape (`vec_at`'s comment).
 
 ### TM-215 — `Instant` is `{ sealed int64:ns; sealed InstantClock:clock; }`, and `InstantClock` is an enum, `{ Monotonic; Boottime; }`; each derives `Eq`, `Clone`, `Debug` and `Copy`, and neither `Ord`
 
+> **TM-219 (2026-10-01) adds a declined alternative it did not weigh: `hidden`
+> for `ns`.** The author's answer to the workbench's question 15 keeps `ns`
+> sealed — hiding it would not close the hole it is proposed for, a consumer
+> subtracting two clocks' readings by hand, because the floor's `mono_now()`
+> hands any program the same raw number, and a readable reading serves
+> logging. The text below is left exactly as written.
+
 **2026-10-01, cycle 0.2.0 (the plan's PD-53). Amends `TIME_MODEL.md` §2 and M-2
 and `HOST.md` H-6; implements TM-010's corollary, TM-010.1.**
 
@@ -6408,3 +6415,163 @@ entry** — every refusal this library asserts is a probe of this shape —
 one kind of file in two directories; worth it the day a refusal is not a
 probe's kind; **one probe for both refusals** — a file refused for two reasons
 cannot say which reason went away.
+
+---
+
+# Cycle 0.2.1 — `Timestamp`, ratified 2026-10-01
+
+### TM-219 — `Timestamp` is `{ sealed int64:secs; sealed uint32:nanos; }`, declared in `span` beside `Instant`; it derives `Eq`, `Ord`, `Clone`, `Debug` and `Copy`, and the derived `Ord` is its comparison; `hidden` is declined for its fields and for `Instant`'s `ns`
+
+**2026-10-01, cycle 0.2.1 (the plan's PD-64). Implements TM-011, `TIME_MODEL.md`
+M-6 and `SAFETY.md` S-14; amends `TIME_MODEL.md` §3's declaration; records the
+author's answer to the workbench's question 15, which TM-215's alternatives did
+not weigh.**
+
+**What was found** (`meta/roadmap/0.2/0.2.1.md` §1). Measured at compiler
+`5fbaf4a`: the type compiles with the five derives. A consumer's struct literal
+of it is `NITPICK-TYPE-079` once per sealed field it writes, and a write to
+`nanos` the same code once; a read of either field from outside `span`
+compiles, and with the fields `hidden` instead it is `NITPICK-TYPE-080` (the
+compiler's D-314). The derived `cmp` reads the seconds first — `1 s, 0 ns` is
+`Greater` than `0 s, 999 999 999 ns` — and with the two fields declared the
+other way round that verdict is the reverse: probe 01's verdict, which it
+measured at cycle 0.0.0 on a twin of this shape, holds of the type. Without
+`Copy`, a `Vec<Timestamp>` is `NITPICK-TYPE-017` at every site that names it —
+the type, its turbofish and each verb's call (TM-214's bound). With the fields
+unsealed, as TM-011 wrote them, the literal compiles.
+An `Instant` and a `Timestamp` are 16 bytes each. And the floor's `mono_now()`
+— the compiler's builtin, `() → int64`, `CLOCK_MONOTONIC` nanoseconds —
+compiles in a consumer's program.
+
+**The decision.** *`#[derive(Eq, Ord, Clone, Debug, Copy)] pub
+struct:Timestamp = { sealed int64:secs; sealed uint32:nanos; };`, declared in
+`src/span/span.npk`. The fields keep TM-011's order — the seconds, then the
+nanoseconds — so the derived `Ord` is the comparison M-6 asks for, and there is
+no `timestamp_cmp`. Both fields are sealed, by TM-215's reason: a consumer
+reads them, and builds a `Timestamp` only through `timestamp_of` (TM-220). And
+`Instant`'s `ns` stays sealed and not `hidden`: the author's answer to the
+workbench's question 15, 2026-10-01 — "your recommendation is fine for that".*
+
+*And what it moves besides:* the public `README.md` said an `Instant` "has no
+epoch and yields only differences". Its `ns` is readable, so a consumer can
+subtract two clocks' readings by hand, which only `instant_since` and
+`instant_cmp` refuse; the sentence now says what the library does, with a
+dated note.
+
+*Alternatives declined:* **TM-011's fields unsealed** —
+`Timestamp{ secs: -1i64, nanos: 1500000000u32 }` would compile: a second
+spelling of half a second after the epoch, ordered before the first because the
+derived order reads the seconds first, and M-7 broken in one line by any
+consumer; **`hidden` fields, here and for `Instant`'s `ns`** (question 15) —
+hiding would not close the hole it is proposed for, a consumer subtracting two
+clocks' readings by hand, because the floor's `mono_now()` hands any program the
+same raw number (measured, compiling in a consumer); a readable reading serves
+logging; and a hidden `Timestamp` field is unreadable outside `span`, so cycle
+0.4's formatter and cycle 0.6's zone lookup would each need an accessor — public
+names (TM-013) for what a sealed field already gives; **a hand-written
+`timestamp_cmp`** — probe 01's negative branch, and its verdict holds at
+`5fbaf4a`; the derive is what M-6 and S-14 chose, and it is one public name
+fewer; **no `Copy`** — a `Vec<Timestamp>` would not be writable (TM-214);
+**a module of its own** — it would cost every importer the same 11 arms, `cal`'s
+identity and arithmetic, and the cycle README puts both types in `src/span/`.
+
+### TM-220 — `timestamp_of(secs, nanos)` is `Timestamp`'s one constructor: it takes `int64`s, refuses a `secs` outside `[NTIME_SECS_MIN, NTIME_SECS_MAX]` (`ValueFault.YearRange`) and a `nanos` outside `[0, NTIME_NANOS_PER_SEC)` (`NanoRange`) with `ETimeValue`, and never normalises; with the seal, it is `VERIFICATION.md` P-4's stand-in until an operation yields a `Timestamp`
+
+**2026-10-01, cycle 0.2.1 (the plan's PD-65). Implements `TIME_MODEL.md` M-7 and
+M-8 at the constructor; adds two rows to §9's lattice and dates M-7, M-8, P-4,
+`VERIFICATION.md` §6's row and `HOST.md` H-8.**
+
+**What was found.** Measured at `5fbaf4a`, on both legs: over the cross product
+of eleven `secs` and twelve `nanos` at and around every bound — `int64`'s two
+ends among them — the constructor accepts the 35 pairs inside both ranges and
+refuses the 97 others, and each value it accepts hands back exactly what it was
+given. A `nanos` checked after the narrowing instead of before accepts 2^32 and
+`int64`'s minimum, each narrowed to 0 (`SAFETY.md` S-15b); the cross product
+carries both. A negative second's remainder counted toward zero — the
+representation got backwards — passes a seconds-first comparison and fails the
+eight-value chain `tests/unit/timestamp_order.npk` walks. The bill does not
+move: a root importing `span` owes 11 identities and the umbrella 13, by
+`NITPICK-REACH-003` and by `arms.compute_bill`.
+
+**The decision.** *`pub func:timestamp_of = Timestamp(int64:secs,
+int64:nanos)`, fallible. A `secs` below `NTIME_SECS_MIN` or above
+`NTIME_SECS_MAX` fails `ETimeValue`, `ValueFault.YearRange` — `HOST.md` H-8's
+variant for the same range, and `days_to_date`'s; a `nanos` below 0 or at or
+above `NTIME_NANOS_PER_SEC` fails `ETimeValue`, `NanoRange` — `civil_time`'s.
+Every check precedes the one narrowing, `nanos =>! uint32`, and the bounds are
+imported by name from `src/core/limits.npk` (S-16). It refuses a pair that would
+need carrying rather than carry it: one spelling per instant (M-7). It is
+public because cycle 0.3's `host_now_utc` builds its reading through it — H-8's
+range check. **`VERIFICATION.md` P-4's stand-in at this cycle** (P-1b) is
+`tests/unit/timestamp_construct.npk` — every boundary the constructor decides,
+from both sides, and M-7 asserted of every value it returns — with `probe21`
+and `probe21b`, which refuse a consumer's literal and write (TM-221): a consumer
+holds a `Timestamp` only through this function. Each cycle that adds an
+operation yielding a `Timestamp` adds that operation to the stand-in — 0.2.2's
+`civil_to_utc` and 0.2.3's `timestamp_add` — and the cycle README's checklists
+carry both.*
+
+*Alternatives declined:* **a normalising constructor**, carrying `nanos` into
+`secs` — it would accept a second spelling of every instant at the door, and
+its carry is arithmetic that can leave the range at either bound, a refusal the
+caller must then decode anyway; the arithmetic that normalises is 0.2.3's
+`timestamp_add`, whose result M-7 governs; **a `uint32` `nanos`** — it pushes
+the range to the caller, `civil_time`'s reason, and a `timespec`'s nanoseconds
+are an `int64` (H-4); **a `ValueFault` variant of its own for the seconds** —
+`YearRange` already names this range's refusal (H-8, `days_to_date`), and a
+variant appended is a change to a public enum; **a `never fails` constructor
+that traps** — `SAFETY.md` S-12: a caller's input is answered, not stopped;
+**more constructors** — from a count of nanoseconds, of milliseconds, of seconds
+alone — no specification names one, a nanosecond count spans ±292 years and is
+0.2.3's `Duration` interop, and each would be a public name (TM-013).
+
+### TM-221 — `Timestamp`'s refusals are six probes, one refusal each: `probe20c` and `probe20d`, M-3 at a parameter in both directions (`NITPICK-TYPE-007`); `probe20e` and `probe20f`, M-3 through the unchecked cast in both directions (`NITPICK-TYPE-032`); and `probe21` and `probe21b`, the seal (`NITPICK-TYPE-079`)
+
+**2026-10-01, cycle 0.2.1 (the plan's PD-66). Adds the six probes and their rows
+in `tests/probe/README.md`, and dates `TIME_MODEL.md` M-3 and §9's lattice;
+completes the item TM-218 handed to this cycle, and asks the direction it did
+not.**
+
+**What was found.** Measured at `5fbaf4a`, each in a consumer importing `span`:
+`t.cmp(a)` — an `Instant` where `Timestamp`'s comparison takes a `Timestamp` —
+is `NITPICK-TYPE-007`, *"expected `Timestamp`, found `Instant`"*;
+`instant_since(a, t)` is the same code the other way, and a binding of either
+type to the other the same. `a =>! Timestamp` and `t =>! Instant` — and the
+checked `=>` both ways — are `NITPICK-TYPE-032`, *"there is no conversion from
+`Instant` to `Timestamp`: these types have no values in common. `=>!` does not
+help — it opts out of a check, not of a meaning"*, though the two types are 16
+bytes each. `Timestamp{ secs: -1i64, nanos: 1500000000u32 }` is
+`NITPICK-TYPE-079` twice at one position, one report per sealed field (B-7c;
+the compiler's DEF-165, registered open, would make it one), and
+`t.nanos = 1500000000u32` once. What converts is `wild` storage reinterpreted
+through a POINTER cast: a `Boottime` reading of 1 000 ns, written through a
+`wild Instant->` and read through a `wild Timestamp->`, is 1 000 s and 1 ns —
+the opt-out `CALENDAR.md` C-8c states for every checked property.
+
+**The decision.** *Six probes under `tests/probe/`, each refused with exactly
+its codes at as many sites as its header names, each importing `span` and
+nothing more, each with a superset `failsafe` — TM-218's shape:
+`probe20c_instant_as_timestamp_refused.npk`,
+`probe20d_timestamp_as_instant_refused.npk`,
+`probe20e_instant_cast_to_timestamp_refused.npk`,
+`probe20f_timestamp_cast_to_instant_refused.npk`,
+`probe21_timestamp_literal_refused.npk` (the code named twice) and
+`probe21b_timestamp_field_write_refused.npk`. M-3's "in either direction,
+ever" holds against everything a consumer can write but the `wild` opt-out,
+which M-3's dated note states and no probe asserts.*
+
+*Alternatives declined:* **one probe per direction, or per code** — TM-218's
+rule: a file refused for two reasons cannot say which went away; **the casts
+unasserted** — `=>!` is the language's opt-out, and a later rule that let it
+reinterpret one 16-byte struct as another would open M-3 in one token under a
+green suite; and the two directions are two questions, because `=>!` narrows an
+integer to an enum (the compiler's D-140), which is what `Timestamp` →
+`Instant` would do to a clock tag; **the write unasserted, as `probe20` left
+`Instant`'s** — P-4 asks that no sequence of operations produce a denormalised
+value, and a field write is the one operation a consumer has that is not the
+library's; **the `wild` reinterpretation asserted** — it is the language's
+stated opt-out and not this library's property, and C-8c's precedent records it
+measured and unasserted; **a function of the probe's own as `probe20c`'s
+parameter** — `Timestamp`'s `cmp` is the library's surface, and its program the
+realistic one: a deadline compared with a timestamp; **`tests/rejection/`
+and a `check` entry** — TM-218's reason, unchanged.

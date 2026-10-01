@@ -1,0 +1,96 @@
+// expect-exit: 0
+//
+// `Timestamp`'s order, asserted on the type itself (cycle 0.2.1; TM-219;
+// `TIME_MODEL.md` M-6, `SAFETY.md` S-14, TM-011).
+//
+// ASKS: does `cmp` -- `Ord`, derived -- let the seconds decide and the
+// nanoseconds only break a tie, and does it put a negative second with a
+// positive remainder where the instant it spells belongs: `secs: -1, nanos:
+// 500_000_000` half a second BEFORE the epoch, after `-1, 0` and before `0, 0`?
+//
+// MATTERS BECAUSE the field order is the comparison (M-6): two fields declared
+// the other way round would silently change what `<` means, and the
+// negative-second representation is where a reader's intuition fails (the
+// cycle README's "watch for"). `tests/probe/probe01_derive_ord.npk` measured
+// the derive on this shape at cycle 0.0.0 -- `Pair{ int64:a; uint32:b; }` and
+// its flipped twin -- and exits 11 and 12 are its `p20` assertion made on
+// `Timestamp` itself: one second later is later, whatever the nanoseconds say.
+//
+// THE CHAIN is eight values in increasing order -- -1.000000001 s, -1 s,
+// -0.999999999 s, -0.5 s, -0.000000001 s, 0, 1 ns and 1 s -- every pair of them
+// compared both ways and with `eq`, each built by `timestamp_of`, so the chain
+// is the representation the constructor hands out.
+//
+// EXIT CODES, clear of every arm code (TM-152): 10 `timestamp_of` refused one
+// of the first pair, or `cmp` erred; 11 one second later is not `Greater`;
+// 12 the reverse is not `Less`; 20 a chain value was refused, or `cmp` or
+// `eq` erred; 21 an earlier value is not `Less` than a later; 22 a later one
+// is not `Greater` than an earlier; 23 a value is not `Equal` to itself; 24
+// `eq` disagrees with `cmp`. SEEN RED AT PLANNING, on both legs, in a copy of
+// the tree (`meta/roadmap/0.2/0.2.1.md`, step 4): 10 with the `nanos` bound
+// one low; 11 with the two fields declared the other way round; 20 with a
+// negative `secs` refused; 21 with a negative second's remainder stored
+// counted toward zero -- the representation got backwards, which 11 cannot
+// see -- and with `nanos` stored as 0; and without `Ord` the three `cmp`
+// calls are `NITPICK-TYPE-019`. 12, 22, 23 and 24 ask what the DERIVE must
+// do -- antisymmetry, reflexivity, `eq` agreeing with `cmp` -- and no edit of
+// this library reaches them: they are belts against a derive that compiles
+// and compares wrongly, the class O-N10 was (TM-111), stated rather than
+// counted as seen red.
+//
+// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
+// `span`: its eleven (`SAFETY.md` S-4).
+mod:timestamp_order;
+
+use "../../src/span/span.npk".*;
+
+fixed int64[8]:CHAIN_SECS  = [ -2i64, -1i64, -1i64, -1i64, -1i64, 0i64, 0i64, 1i64 ];
+fixed int64[8]:CHAIN_NANOS = [ 999999999i64, 0i64, 1i64, 500000000i64, 999999999i64, 0i64, 1i64, 0i64 ];
+
+func:main = int32(cstring[]:_~argv) {
+    Result<Timestamp>:r1 = timestamp_of(1i64, 0i64);
+    if (r1.is_error) { exit 10i32; }
+    Result<Timestamp>:r0 = timestamp_of(0i64, 999999999i64);
+    if (r0.is_error) { exit 10i32; }
+    Result<Ordering>:o10 = r1.value.cmp(r0.value);
+    if (o10.is_error) { exit 10i32; }
+    if (o10.value != Ordering.Greater) { exit 11i32; }
+    Result<Ordering>:o01 = r0.value.cmp(r1.value);
+    if (o01.is_error) { exit 10i32; }
+    if (o01.value != Ordering.Less) { exit 12i32; }
+    for (int64:i in 0i64..7i64) {
+        for (int64:j in 0i64..7i64) {
+            Result<Timestamp>:a = timestamp_of(CHAIN_SECS[i], CHAIN_NANOS[i]);
+            if (a.is_error) { exit 20i32; }
+            Result<Timestamp>:b = timestamp_of(CHAIN_SECS[j], CHAIN_NANOS[j]);
+            if (b.is_error) { exit 20i32; }
+            Result<Ordering>:o = a.value.cmp(b.value);
+            if (o.is_error) { exit 20i32; }
+            if (i < j && o.value != Ordering.Less)    { exit 21i32; }
+            if (i > j && o.value != Ordering.Greater) { exit 22i32; }
+            if (i == j && o.value != Ordering.Equal)  { exit 23i32; }
+            Result<bool>:e = a.value.eq(b.value);
+            if (e.is_error) { exit 20i32; }
+            if (e.value != (i == j)) { exit 24i32; }
+        }
+    }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

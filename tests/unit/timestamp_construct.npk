@@ -1,0 +1,128 @@
+// expect-exit: 0
+//
+// `Timestamp`'s one constructor, and the invariant it establishes (cycle
+// 0.2.1; TM-219, TM-220; `TIME_MODEL.md` M-7 and M-8, `VERIFICATION.md` P-4).
+//
+// ASKS: does `timestamp_of` accept exactly the pairs whose `secs` lies in
+// `[NTIME_SECS_MIN, NTIME_SECS_MAX]` and whose `nanos` lies in one second,
+// `[0, NTIME_NANOS_PER_SEC)`, refuse every other pair, and hand back what it
+// was given -- and is every `Timestamp` it returns normalised? And does a
+// `Vec<Timestamp>` hand one back?
+//
+// MATTERS BECAUSE M-7 is the invariant every comparison and every later
+// operation leans on -- "the one to prove first" (P-4) -- and a denormalised
+// `Timestamp` compares wrongly and prints wrongly without ever failing. THIS
+// FILE IS P-4'S STAND-IN AT CYCLE 0.2.1 (P-1b). A consumer holds a `Timestamp`
+// only through this constructor: the fields are sealed, so a literal and a
+// write are refused (`tests/probe/probe21_timestamp_literal_refused.npk`,
+// `probe21b`). So "no sequence of operations produces a denormalised value" is,
+// until cycle 0.2.2 adds `civil_to_utc` and 0.2.3 `timestamp_add`, a statement
+// about this function -- checked here at every boundary it decides, from both
+// sides -- and each of those cycles adds its operation to the statement.
+//
+// THE CASES are the cross product of eleven `secs` -- `int64`'s two ends, one
+// past each end of the range, each end, one inside each end, and the epoch's
+// second with its two neighbours -- and twelve `nanos` -- `int64`'s two ends,
+// -1, 0, 1, half a second, the last two nanoseconds of a second, one second
+// and one more, and 2^32 - 1 and 2^32: 132 pairs, 35 accepted and 97 refused,
+// every verdict WRITTEN in the tables below rather than computed. 2^32 and
+// `int64`'s minimum are the two that catch a check made after the narrowing:
+// `=>! uint32` takes each to 0 (`SAFETY.md` S-15b).
+//
+// EXIT CODES, clear of every arm code (TM-152): 30 a pair in range refused; 31
+// an accepted pair's `secs` not handed back; 32 its `nanos` not handed back;
+// 33 an accepted value's `nanos` not below one second -- M-7 itself, held
+// apart from the tables; 34 a pair out of range accepted; 35 the counts are
+// not 35 and 97; 40 the `Vec`'s value refused; 41 a `Vec<Timestamp>` did not
+// hand it back twice -- `Copy`, TM-219 -- read through both fields, neither
+// of them zero (the workbench `PLAYBOOK.md` §9: a positive test whose expected
+// value is the vacant value tests nothing). SEEN RED AT PLANNING, on both
+// legs, in a copy of the tree (`meta/roadmap/0.2/0.2.1.md`, step 4): 30 with
+// the lower `secs` bound one high; 31 with `secs` stored as the bound; 32 with
+// `nanos` stored as 0; 34 with each of the four checks deleted, the `nanos`
+// bound one high, and the two `nanos` checks replaced by one made after the
+// narrowing; 41 with the second read replaced by a vacant value; and without
+// `Copy` the six `Vec` sites are `NITPICK-TYPE-017`. 33 fires only when the
+// tables and the constructor are wrong together, and 35 only on a loop cut
+// short -- each seen red so, on a copy of this file. 40 is a guard: its pair is
+// in the cross product, so a constructor that refuses it stops at 30 first.
+//
+// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
+// `span`, `core/vec` and `core/limits`: `span`'s eleven (`SAFETY.md` S-4)
+// and `LimitViolated`, which `Vec`'s `ListLen` adds -- twelve.
+mod:timestamp_construct;
+
+use "../../src/span/span.npk".*;
+use "../../src/core/vec.npk".*;
+use "../../src/core/limits.npk".NTIME_NANOS_PER_SEC;
+
+// `int64`'s minimum cannot be spelled as a literal (`VERIFICATION.md` P-5,
+// `probe02d`), so it is built from the maximum.
+fixed int64[11]:SECS = [
+    (0i64 - 9223372036854775807i64) - 1i64,
+    -377705116801i64, -377705116800i64, -377705116799i64,
+    -1i64, 0i64, 1i64,
+    253402300798i64, 253402300799i64, 253402300800i64,
+    9223372036854775807i64
+];
+fixed bool[11]:SECS_IN = [ false, false, true, true, true, true, true, true, true, false, false ];
+
+fixed int64[12]:NANOS = [
+    (0i64 - 9223372036854775807i64) - 1i64,
+    -1i64, 0i64, 1i64, 500000000i64, 999999998i64, 999999999i64,
+    1000000000i64, 1000000001i64, 4294967295i64, 4294967296i64,
+    9223372036854775807i64
+];
+fixed bool[12]:NANOS_IN = [ false, false, true, true, true, true, true, false, false, false, false, false ];
+
+func:main = int32(cstring[]:_~argv) {
+    int64:accepted = 0i64;
+    int64:refused = 0i64;
+    for (int64:i in 0i64..10i64) {
+        for (int64:j in 0i64..11i64) {
+            int64:s = SECS[i];
+            int64:n = NANOS[j];
+            Result<Timestamp>:r = timestamp_of(s, n);
+            if (SECS_IN[i] && NANOS_IN[j]) {
+                if (r.is_error)                                      { exit 30i32; }
+                if (r.value.secs != s)                               { exit 31i32; }
+                if ((r.value.nanos => int64) != n)                   { exit 32i32; }
+                if ((r.value.nanos => int64) >= NTIME_NANOS_PER_SEC) { exit 33i32; }
+                accepted = accepted + 1i64;
+            } else {
+                if (!(r.is_error))                                   { exit 34i32; }
+                refused = refused + 1i64;
+            }
+        }
+    }
+    if (accepted != 35i64 || refused != 97i64) { exit 35i32; }
+    Result<Timestamp>:h = timestamp_of(-1i64, 500000000i64);
+    if (h.is_error) { exit 40i32; }
+    Vec<Timestamp>:v = raw vec_init::<Timestamp>(2i64);
+    drop vec_push(@v, h.value);
+    Timestamp:b1 = raw vec_at(v, 0i64);
+    Timestamp:b2 = raw vec_at(v, 0i64);
+    drop vec_free(@v);
+    if (b1.secs != -1i64 || b1.nanos != 500000000u32) { exit 41i32; }
+    if (b2.secs != -1i64 || b2.nanos != 500000000u32) { exit 41i32; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (LimitViolated)     { exit 109i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

@@ -22,9 +22,13 @@ that are *not* possible do not exist:
 
 ```
 Instant   ──✗──►  Timestamp        no epoch, and no relationship to one (M-3)
+Timestamp ──✗──►  Instant          the same refusal, the other way (M-3)
 Timestamp ──✓──►  CivilDateTime    given a zone, or as UTC
 CivilDateTime ──►  Timestamp       given a zone, AND an answer for §6's edge cases
 ```
+
+*(Cycle 0.2.1, TM-221: the second line is new. M-3 refuses both directions,
+and the diagram drew one.)*
 
 ---
 
@@ -65,6 +69,13 @@ A library that offers the conversion offers a caller the ability to write a
 timeout against a clock that a network time daemon can move backwards by an
 hour. Here that program does not compile.
 
+*(Cycle 0.2.1, TM-221: and it does not compile at the type, in both directions
+— an `Instant` where a `Timestamp` is taken, and the reverse, are
+`NITPICK-TYPE-007` — nor through the language's unchecked cast, `=>!`, either
+way, `NITPICK-TYPE-032`. What converts is `wild` storage reinterpreted through
+a pointer cast, the opt-out `CALENDAR.md` C-8c states for every checked
+property.)*
+
 **Rule M-4 — the only thing you can do with two `Instant`s is subtract them**,
 and the result is a `Duration` — or compare them; and both refuse a pair from
 two clocks:
@@ -96,7 +107,8 @@ prelude's `Duration` is what they produce.
 ## 3. `Timestamp` — the absolute scale
 
 ```nitpick
-pub struct:Timestamp = { int64:secs; uint32:nanos; };   // Unix epoch, UTC
+#[derive(Eq, Ord, Clone, Debug, Copy)]
+pub struct:Timestamp = { sealed int64:secs; sealed uint32:nanos; };   // Unix epoch, UTC
 ```
 
 - `secs` — SI seconds since `1970-01-01T00:00:00Z`, **ignoring leap seconds**
@@ -105,16 +117,29 @@ pub struct:Timestamp = { int64:secs; uint32:nanos; };   // Unix epoch, UTC
   before the epoch has a negative `secs` and a positive `nanos` and there is
   exactly one representation of every instant.
 
+*(Amended at cycle 0.2.1, TM-219. The block read `pub struct:Timestamp = {
+int64:secs; uint32:nanos; };` — the same fields in the same order. Both are
+sealed now, so a consumer reads them and builds a `Timestamp` only through
+`timestamp_of` (TM-220), and the derives are written out: `Ord` is the
+comparison M-6 names, and `Copy` lets a `Vec` hold one.)*
+
 **Rule M-6 (TM-011) — the field order is semantic.** `#[derive(Ord)]` compares in
 declaration order (TRAITS_REFERENCE §2.5), so seconds-then-nanoseconds is
 exactly the comparison wanted. Reordering the fields silently changes what `<`
 means, which is why `SAFETY.md` S-14 makes it a rule rather than a comment.
+*(Cycle 0.2.1, TM-219: asserted on the type itself by
+`tests/unit/timestamp_order.npk` — the seconds dominating, and a negative
+second with a positive remainder between its neighbours.)*
 
 **Rule M-7 — the normalisation invariant.** `nanos < 1_000_000_000` always. It
 is established by every constructor and re-established by every arithmetic
 operation, and it is the first thing the property tests check, because a
 denormalised `Timestamp` compares wrongly and prints wrongly and does so
-without ever failing.
+without ever failing. *(Cycle 0.2.1, TM-220: the one constructor,
+`timestamp_of`, establishes it by refusing a `nanos` outside one second rather
+than carrying it, and the seal holds it, refusing a consumer's literal and
+write (TM-219, TM-221). No arithmetic operation exists yet; 0.2.3's
+`timestamp_add` is the first that must re-establish it.)*
 
 **Rule M-8 (TM-014) — the supported range** is the civil range of `CALENDAR.md` §2,
 expressed in seconds:
@@ -126,7 +151,8 @@ expressed in seconds:
 
 Both fit `int64` with seven orders of magnitude to spare, so the range
 is a *policy*, not a representation limit — and it is checked at every
-constructor rather than left to the trap.
+constructor rather than left to the trap. *(Cycle 0.2.1, TM-220:
+`timestamp_of` checks it, `ETimeValue` with `ValueFault.YearRange`.)*
 
 *(Amended at cycle 0.1.1, TM-161. The minimum read `−377705203200`, which is
 midnight on −10000-12-31 — `CALENDAR.md` §2's first day was one day early and
@@ -302,7 +328,10 @@ normative: a conversion not on it does not exist.
 |---|---|---|---|
 | `Instant` | `Instant` | `+ Duration` | traps on overflow only |
 | `Instant`, `Instant` | `Duration` | `instant_since` | `ETimeValue` for two clocks (M-4) |
+| `int64` ns + `InstantClock` | `Instant` | `instant_of` | no |
 | `Instant` | `Timestamp` | **refused** (M-3) | — |
+| `Timestamp` | `Instant` | **refused** (M-3) | — |
+| `int64` secs + `int64` nanos | `Timestamp` | `timestamp_of` | `ETimeValue` outside range, or `nanos` outside one second |
 | `Timestamp` | `Timestamp` | `+ Duration` | `ETimeValue` outside range |
 | `Timestamp`, `Timestamp` | `Duration` | `timestamp_since` | `ETimeValue` past ±292 y (M-18) |
 | `Timestamp`, `Timestamp` | `Period` | `timestamp_until` | no |
@@ -316,6 +345,11 @@ normative: a conversion not on it does not exist.
 | `CivilDate` | `int64` days | `date_to_days` | no |
 | `int64` days | `CivilDate` | `days_to_date` | `ETimeValue` outside range |
 | `Period` + `Instant`/`Timestamp` | — | **refused** (M-16) | — |
+
+*(Amended at cycle 0.2.1, TM-220 and TM-221: the `timestamp_of` row is new;
+`Timestamp` → `Instant` is written out, M-3 refusing both directions where the
+table named one; and `instant_of`'s row, missing since cycle 0.2.0 added the
+function — found at 0.2.1's planning.)*
 
 *(Amended at cycle 0.2.0, TM-216: `instant_since`'s row read "no" — M-4's
 "never fails", which TM-010.1's refusal of two clocks makes false.)*

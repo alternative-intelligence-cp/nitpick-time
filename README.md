@@ -18,7 +18,8 @@ answer on every machine.
 > both ways, on every full run, and every date of years 1 … 9999 agrees with
 > Python's `datetime`. Since cycle 0.2.0, `src/span/` holds `Instant`, a
 > reading of one of two clocks that cannot be built from a number or converted
-> to a wall-clock time. Timestamps, zones, formats and the clocks are still
+> to a wall-clock time, and since cycle 0.2.1 `Timestamp`, a point on the UTC
+> scale with one spelling per instant. Zones, formats and the clocks are still
 > placeholders, each replaced by the cycle
 > [`meta/roadmap/ROADMAP.md`](meta/roadmap/ROADMAP.md) names. The specification
 > set is in [`meta/specs/`](meta/specs/) and the plan in
@@ -30,8 +31,9 @@ answer on every machine.
 > *(Until cycle 0.1.5 this block read "Status: planning. No code yet" — false
 > since cycle 0.0.4 — and "the compiler itself is at cycle 1.5"; between the
 > close's two halves, that cycle 0.1 "is in its close … and the audit that
-> closes it is next"; and until cycle 0.2.0b, that cycle 0.2 "is next", which
-> 0.2.0a had opened.)*
+> closes it is next"; until cycle 0.2.0b, that cycle 0.2 "is next", which
+> 0.2.0a had opened; and until cycle 0.2.1, that timestamps were placeholders
+> too.)*
 
 ---
 
@@ -45,10 +47,16 @@ worth stating out loud instead of discovering.
 reading and a wall-clock reading are not the same kind of thing: NTP steps the
 wall clock and never the monotonic one, which is why the compiler's own
 deadline substrate refuses to use a wall clock at all (D-176). `ntime` makes
-that structural — an `Instant` has no epoch and yields only differences, a
-`Timestamp` is an absolute point on the UTC scale, and **there is no conversion
-between them**. A timeout measured against the wall clock is a bug you cannot
-write here.
+that structural — an `Instant` has no epoch, and the library measures only the
+distance between two readings of one clock; a `Timestamp` is an absolute point
+on the UTC scale; and **there is no conversion between them**, not even by the
+language's unchecked cast. A timeout measured against the wall clock is a bug
+you cannot write here. *(Until cycle 0.2.1 this said an `Instant` "yields only
+differences". Its number is readable — a sealed field — so a program can
+subtract two clocks' readings by hand, which the library refuses only in
+`instant_since` and `instant_cmp`; and the language's `mono_now()` hands any
+program the same number, so hiding it would close nothing — the workbench's
+question 15, TM-219.)*
 
 **Wall time and calendar time are also different types.** A `CivilDateTime` —
 "2026-03-29 02:30" — is not a point in time until you say where. In most of

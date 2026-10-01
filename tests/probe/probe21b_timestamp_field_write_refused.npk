@@ -1,27 +1,27 @@
-// expect-error: NITPICK-RESOLVE-002
+// expect-error: NITPICK-TYPE-079
 //
-// PROBE 20b — THERE IS NO CONVERSION FROM AN `Instant` (cycle 0.2.0, TM-218;
-// `TIME_MODEL.md` M-3, TM-010).
+// PROBE 21b — A CONSUMER CANNOT DENORMALISE A `Timestamp` IT HOLDS (cycle
+// 0.2.1, TM-219, TM-221; `TIME_MODEL.md` M-7).
 //
-// ASKS: may a consumer call `instant_to_timestamp` -- or any function that
-// turns a reading of the monotonic scale into the absolute one?
+// ASKS: may a consumer take a `Timestamp` from `timestamp_of` and write
+// `t.nanos = 1500000000u32` -- the operation that would turn a value the
+// constructor checked into one it refuses?
 //
-// MATTERS BECAUSE M-3 is the model's load-bearing refusal, and a refusal that
-// is merely absent is not checked: the day somebody adds the convenience, this
-// file stops being refused, and the run says so. The conversion is refused BY
-// NAME -- `NITPICK-RESOLVE-002`, "cannot find `instant_to_timestamp` in this
-// scope" -- exactly once. THE REFUSAL IS THE ASSERTION (B-7).
-//
-// WHAT IT DOES NOT ASK, AND WHERE IT IS ASKED: an `Instant` passed where a
-// `Timestamp` is taken, and the reverse, are `probe20c` and `probe20d` since
-// cycle 0.2.1, and the unchecked cast each way `probe20e` and `probe20f` (TM-221).
-mod:probe20b_instant_conversion_refused;
+// MATTERS BECAUSE `VERIFICATION.md` P-4 asks that NO SEQUENCE OF OPERATIONS
+// produce a denormalised value, and a field write is the one operation a
+// consumer has that is not the library's. ANSWER, measured at `5fbaf4a`: NO
+// -- `NITPICK-TYPE-079`, exactly once: `nanos` is `sealed`, written only in
+// `span` (the compiler's D-313). THE REFUSAL IS THE ASSERTION (B-7).
+// `probe21` is the literal.
+mod:probe21b_timestamp_field_write_refused;
 
 use "../../src/span/span.npk".*;
 
 func:main = int32(cstring[]:_~argv) {
-    Instant:a = raw instant_of(1000i64, InstantClock.Monotonic);
-    int64:t = instant_to_timestamp(a);
+    Result<Timestamp>:r = timestamp_of(0i64, 500000000i64);
+    if (r.is_error) { exit 10i32; }
+    Timestamp:t = r.value;
+    t.nanos = 1500000000u32;
     exit 0i32;
 };
 

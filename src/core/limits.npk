@@ -107,9 +107,13 @@ pub fixed int64:NTIME_OFFSET_MAX = 64800i64;
 // rather than bounds, and `check_constants_named`'s `_BOUND_DECL` pattern
 // matches only the bound suffixes. They live here anyway because S-16 names
 // 86400 and 1000000000 as numbers a date library gets wrong by copying, and
-// `CONSTANT_OWNER` maps both to `cal` -- with module `core` permitted, which is
-// what lets this file hold them. A SECOND literal copy in `cal` or `span` is a
-// finding, and that is the point.
+// `CONSTANT_OWNER` maps 86400 to `core` alone and 1000000000 to `cal` -- with
+// module `core` permitted for both, which is what lets this file hold them. So
+// a literal 86400 anywhere else in `src/` is a finding: `span`'s conversions
+// divide by `NTIME_SECS_PER_DAY` and spell no copy (TM-223). (Until cycle 0.2.2
+// the map gave both numbers to `cal`, and this said "A SECOND literal copy in
+// `cal` or `span` is a finding" -- which the map made false of `cal`, whose
+// copy it permitted; the self-check's control planted one in `cal`, silent.)
 //
 // 86400 IS NOT ALWAYS A DAY to a caller who has heard of leap seconds; it is
 // the number of SI seconds in a day in this library's model, which does not

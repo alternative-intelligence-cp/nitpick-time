@@ -10,8 +10,36 @@ safety-critical systems language at `../../nitpick`.
 **Status: cycle 0.1 CLOSED (2026-09-26), archived at `meta/roadmap/done/0.1/`
 — the civil calendar, with its exhaustive gate on every run — and cycle 0.2,
 instants and timestamps, is OPEN: its 0.2.0a, the adoption of compiler
-`5fbaf4a`, its 0.2.0b, `Vec<T: Copy>`, its 0.2.0, `Instant`, and its 0.2.1,
-`Timestamp`, are done, and 0.2.2, the conversions, is next.**
+`5fbaf4a`, its 0.2.0b, `Vec<T: Copy>`, its 0.2.0, `Instant`, its 0.2.1,
+`Timestamp`, and its 0.2.2, the conversions and the cycle's gate, are done,
+and 0.2.3, the `Duration` interop, is next.**
+
+**After cycle 0.2.2: the conversions, and cycle 0.2's gate.** `src/span/`
+converts between the absolute scale and the civil one, read as UTC — every day
+86 400 seconds (M-11). `timestamp_to_utc(t)` gives a `Timestamp`'s civil
+reading and never fails: its day number is a FLOOR division of the seconds —
+`-1 s, 500 000 000 ns` is 1969-12-31T23:59:59.5, and a truncating `/` would
+hand `civil_time` a second of −1 — and the two refusals no `Timestamp` can
+meet are `?| #unreachable()` (`SAFETY.md` S-15c). `civil_to_utc(c)` gives the
+`Timestamp` a civil reading names, through `timestamp_of`, so it fails
+`ETimeValue` only for a reading forged through the opt-out, and is total over
+every field value (TM-222). **The gate**: both sides of every day boundary in
+the range — a day's first instant alone cannot tell a truncating split from a
+flooring one — and every second of 512 days a seeded xorshift chooses, each
+both ways, each direction handed a walk's value:
+`tests/unit/sweep/every_day_boundary.npk` and `every_sampled_second.npk`,
+7 304 484 dates and 44 236 800 seconds. With them the `sweep` stage costs about
+43 s, so `BUILD.md` B-9's threshold is 60 s from here (TM-224). **P-4's
+stand-in reaches `civil_to_utc`** through `tests/unit/civil_to_utc_edges.npk`,
+whose refusing cases are forged in `wild` storage — the only cases that see a
+conversion writing its own `Timestamp` literal, which passes everything else,
+measured (TM-225) — and `tests/unit/utc_vectors.npk` holds sixteen instants to
+their civil readings, `timestamp_order.npk`'s chain among them. **86 400
+belongs to `core` alone** in `check_constants_named`'s owner map: `span`
+divides by `NTIME_SECS_PER_DAY`, read by name, and `SAFETY.md` S-16 moved with
+the map (TM-223). `span` owes **11** arms and the umbrella **13** still, and
+the umbrella re-exports 68 <!-- [[sweep: lib_reexports=68]] --> names. A full
+invocation is **126 units green** at pin `5fbaf4a`.
 
 **After cycle 0.2.1: `Timestamp`.** `src/span/` holds `Timestamp` beside
 `Instant` — `{ sealed int64:secs; sealed uint32:nanos; }`, deriving `Eq`,
@@ -35,7 +63,7 @@ reading goes through `instant_add` and through the `Vec` now, and every exit
 of the unit has been seen red on a mutant. `span` owes **11**
 <!-- [[sweep: arms_span=11]] --> arms and the umbrella **13**
 <!-- [[sweep: arms_lib=13]] --> still — no new identity — and the umbrella
-re-exports 66 <!-- [[sweep: lib_reexports=66]] --> names. A full invocation is
+re-exports 66 names. A full invocation is
 **122 units green** at pin `5fbaf4a`.
 
 **After cycle 0.2.0: `Instant`.** `src/span/` has a body: `Instant`, a

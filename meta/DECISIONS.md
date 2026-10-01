@@ -730,6 +730,14 @@ that D-151 does not provide — cycle 0.0.3's business.
 ---
 
 ### TM-107 — an import's arm bill is its `fail` SITES plus its ARITHMETIC, and it is charged per module rather than per call
+
+> **TM-223 (2026-10-01) reads one clause of it:** *"`cal` divides by 4, 100, 400,
+> 146097, 86400 and 1000000000"* was `SAFETY.md` S-16's list when this was
+> written. `cal` has never divided by 86 400 or 1 000 000 000 — TM-163 restated
+> S-16 at cycle 0.1.1 — and since cycle 0.2.2 the one division by 86 400 is
+> `span`'s, by name. The four arms stand: `cal` divides by Hinnant's literals,
+> indexes its month table and adds. The text below is left exactly as written.
+
 **2026-09-03. Measured by `tests/probe/probe11_failsafe_arms.npk` and its five
 twins** against compiler commit `950bb1d`. The transcript with every exit code
 is `tests/probe/probe11_arm_contract.txt`.
@@ -6575,3 +6583,206 @@ measured and unasserted; **a function of the probe's own as `probe20c`'s
 parameter** — `Timestamp`'s `cmp` is the library's surface, and its program the
 realistic one: a deadline compared with a timestamp; **`tests/rejection/`
 and a `check` entry** — TM-218's reason, unchanged.
+
+# Cycle 0.2.2 — the conversions, ratified 2026-10-01
+
+### TM-222 — `timestamp_to_utc` and `civil_to_utc`, in `span`, over `cal`'s algorithms: `timestamp_to_utc` never fails, its day number a FLOOR division of the seconds and its two unreachable refusals `?| #unreachable()`; `civil_to_utc` fallible, through `timestamp_of`, and so total over every field value
+
+**2026-10-01, cycle 0.2.2 (the plan's PD-67). Implements `TIME_MODEL.md`
+M-11 and §9's two conversion rows as they are written, and dates both; dates
+`SAFETY.md` S-15c and S-4's `span` row.**
+
+**What was found** (`meta/roadmap/0.2/0.2.2.md` §1). Measured at compiler
+`5fbaf4a`: `/` and `%` truncate toward zero (`probe07`), so `-1 s, 500 000 000
+ns` split by them is day 0 and second −1 — which `civil_time` refuses — and
+floored it is day −1, second 86 399: 1969-12-31T23:59:59.5. A `never fails`
+function may call a fallible one and read its `Result`; but `if (r.is_error) {
+#unreachable(); }` leaves `r.value` tainted, `NITPICK-TAINT-001` — the taint
+analysis does not count the builtin as leaving the block — while `?|
+#unreachable()` compiles, the builtin typed as whatever its position expects,
+and traps `Unreachable` through the floor, as `?! Unreachable` does through
+`npk_raise`. A division by `NTIME_SECS_PER_DAY`, a `fixed` read from `core`, is
+emitted with the compiler's zero check. A `CivilDate` and a `CivilTime` forged
+in `wild` storage — year 10 000, a `nanos` of one second — read back field for
+field and are refused by a `civil_to_utc` that builds through `timestamp_of`,
+never trapped. The bill does not move: a root importing `span` owes 11
+identities and the umbrella 13, by `NITPICK-REACH-003` and by
+`arms.compute_bill`.
+
+**The decision.** *In `src/span/span.npk`, `pub func:timestamp_to_utc =
+CivilDateTime(Timestamp:t) never fails`: the day number is `t.secs` divided by
+`NTIME_SECS_PER_DAY` and FLOORED — the truncating `/` and `%` corrected by one
+day when the remainder is negative — and the second of the day its
+non-negative remainder; the day goes to `days_to_date`, and the second, split
+into hour, minute and second by literal divisors, with `t.nanos` to
+`civil_time`. Neither callee can refuse a `Timestamp` that `timestamp_of`
+built (M-7, M-8), and each refusal is `?| #unreachable()` — `SAFETY.md` S-15c's
+stop for a value whose range holds by construction; a `Timestamp` forged
+outside it stops there, through the floor's `Unreachable`. And `pub
+func:civil_to_utc = Timestamp(CivilDateTime:c)`, fallible: `date_to_days` of
+the date, times `NTIME_SECS_PER_DAY`, plus the second of the day, with the
+time's `nanos`, relayed through `timestamp_of`, the one constructor. A reading
+from the constructors always converts; one forged outside the range, or with a
+`nanos` of a second or more, is refused with `ETimeValue` and
+`timestamp_of`'s `YearRange` or `NanoRange` — so the function is total over
+every field value, `CALENDAR.md` C-8b's second bullet. Both are public, and the
+umbrella re-exports them: 68 names. `tests/unit/utc_vectors.npk` holds sixteen
+instants to their civil readings both ways, each written beside it and
+computed apart from `cal` — `tests/unit/timestamp_order.npk`'s chain among
+them.*
+
+*Alternatives declined:* **the conversions in `cal`** — `cal` may not import
+`span` (`BUILD.md` B-17), and `Timestamp` is `span`'s; **a module of their
+own** — the same 11 arms, and the cycle README puts them in `span`;
+**`timestamp_to_utc` fallible** — §9 says it never fails, a `Timestamp` is in
+the range by construction, and a `Result` there would cost every formatter and
+zone lookup to come a test for a refusal no constructed value reaches; **the
+statement form, `if (r.is_error) { #unreachable(); }`** —
+`NITPICK-TAINT-001`, measured; **`?! Unreachable`** — the same identity, but
+spelled as a program raising a floor identity, where `#unreachable()` says the
+point cannot be reached, which is S-15c's word; **`civil_to_utc` `never fails`,
+its refusal an `#unreachable()`** — a reading forged through the opt-out would
+stop the program where §9 and C-8b say it is answered, and the `Result` costs
+a caller nothing it does not pay already: a parser that builds a reading is
+fallible anyway; **`civil_to_utc` writing its `Timestamp` as a literal** —
+`span` may write its own sealed fields, and a forged `nanos` of one second
+would come back denormalised: P-4's stand-in sees it, and nothing else in the
+suite does, measured (TM-225); **a truncating split** — the representation's
+subtlety, refused at the first negative second by `civil_time`, and seen red on
+every member of the gate.
+
+### TM-223 — `check_constants_named`'s owner of 86 400 is `core` alone: the conversions divide by `NTIME_SECS_PER_DAY`, read by name, and `SAFETY.md` S-16 and the map move together, as both said they must
+
+**2026-10-01, cycle 0.2.2 (the plan's PD-68). Amends `harness/checks.py`'s
+`CONSTANT_OWNER` and `harness/selfcheck.py`'s row for it; dates `SAFETY.md`
+S-16 and `TESTING.md` §2's row; corrects `src/core/limits.npk`'s comment.**
+
+**What was found.** S-16's note (TM-163) kept 86 400 and 1 000 000 000 in its
+list because `check_constants_named`'s owner map cites the rule for them,
+*"which `src/cal/` does not divide by yet: they are the conversions to come,
+and this rule and that map move together when a second module wants them"*,
+and the map's own comment said the same of `span`. The conversions are
+`span`'s — `cal` may not import `Timestamp` — so the first code in the library
+to divide by 86 400 is `span`'s, and it reads the number by name,
+`NTIME_SECS_PER_DAY`; `cal` never spelled it. And `src/core/limits.npk` said
+*"a SECOND literal copy in `cal` or `span` is a finding"*, which the map,
+giving both numbers to `cal`, made false of `cal`: the self-check's control
+for this check planted `86400i64` in `cal` and expected silence.
+
+**The decision.** *`CONSTANT_OWNER["86400"]` is `core`: the number is spelled
+once, in `src/core/limits.npk`, and read by name everywhere — so a literal
+86 400 anywhere else in `src/`, `span` included, is a finding. The
+self-check's row plants `s / 86400i64` in `span`, which the map refuses,
+beside the one copy in `core`, which it permits. S-16 is dated: `span` divides
+by the name, a `fixed` the compiler checks against zero at run time —
+`DivByZero`, which every importer of `span` owes already — and
+`tests/unit/limits_named.npk` holds it to 24 × 60 × 60 on every run. 1 000 000 000 stays `cal`'s: cycle 0.2.3's nanosecond
+arithmetic is the first that would divide by it, and that subcycle's checklist
+carries the question, to be decided by this reasoning.*
+
+*And what it moves besides:* TM-107 and
+`tests/probe/probe11c_import_arm_cost.npk`'s header restated S-16's list as it
+stood at cycle 0.0 — `cal` *"divides by 4, 100, 400, 146097, 86400 and
+1000000000"* — which TM-163 corrected in S-16 at cycle 0.1.1 and left in both:
+`cal` has never divided by 86 400 or 1 000 000 000. The probe's header says
+what `cal` divides by, its line count kept, and TM-107 gains a marker; its
+four arms stand. Found at planning, by the omission sweep's preview.
+
+*Alternatives declined:* **the map as it was** — it would name as 86 400's
+owner a module that never used the number, under a rule and a comment that each
+said the map moves when a second module wants it; **`span` the owner** — the
+module whose arithmetic it is, but owning it would PERMIT `span` a literal: a
+second copy beside `core`'s, the copy the check exists to refuse, which the old
+map refused `span` and allowed `cal`; **`span` dividing by the literal
+`86400i64`** — S-16 visible at the site, and a second copy of a number the
+library publishes by name, `NTIME_SECS_PER_DAY` re-exported; **1 000 000 000
+moved too** — nothing divides by it yet, and 0.2.1 handed that question to
+0.2.3, whose arithmetic is the first that would.
+
+### TM-224 — the gate is two `sweep` members, each direction handed a walk's value: `every_day_boundary.npk`, both sides of every day boundary in the range, and `every_sampled_second.npk`, every second of 512 days a seeded xorshift chooses; the stage stays whole, and `BUILD.md` B-9 is amended to its measured cost
+
+**2026-10-01, cycle 0.2.2 (the plan's PD-69). Restates `TESTING.md` V-2's row
+for the round trip and dates V-16; amends `BUILD.md` B-9.**
+
+**What was found** (`0.2.2.md` §1). A day's first instant is a whole number of
+days from the epoch, where a truncating split and a flooring one agree, so a
+sweep of first instants alone passes a truncating conversion; its last instant,
+before the epoch, is where they part. Measured at `5fbaf4a`: with the floor's
+correction deleted, `civil_time` is handed a second of −1 on the range's first
+day, and every member of the gate stops at 95, `Unreachable`. On a full
+invocation, both legs and compile included, the 44 236 800 round trips cost
+15.1 s, the boundary member 5.3 s, and the eight sweeps 43.3 s together — over
+B-9's 30 s threshold, and under the 60 s line B-9's note of cycle 0.1.5 drew.
+The seed 20 261 001, chosen before any run, gives 512 distinct days, 321 of them
+before the epoch, from −9875-01-21 to 9915-10-06, as a transcription of the
+generator in Python gives too.
+
+**The decision.** *Two members of `tests/unit/sweep/`. `every_day_boundary.npk`:
+every date the leap rule and the month table walk, its first instant and its
+last, each from a `Timestamp` built from a COUNT of seconds to its civil reading
+and from the walk's civil reading back — 7 304 484 dates.
+`every_sampled_second.npk`: 512 days, each `NTIME_DAY_MIN + x mod 7 304 484` of
+a 64-bit xorshift — `x ^= x << 13; x ^= x >> 7; x ^= x << 17` — begun at the
+seed the file commits, and every second of each walked as an hour, a minute
+and a second, both ways — 44 236 800 seconds. Each declares its domain and
+prints what it visited (`TESTING.md` V-16), each domain is tagged where the
+specifications state it (V-1h), and each direction is held to a value neither
+conversion computed (V-4b). The `sweep` stage stays whole on both legs (B-3), as
+B-9's note made the default under 60 s; B-9 is amended to that cost, and the
+next member that would take the stage past 60 s chooses, measured before it
+lands, between its −O2 leg over a sample and its domain split across the two
+legs.*
+
+*And what it moves besides:* the stage holds eight members, so two more
+statements of what it holds move with them — `BUILD.md` §3's `sweep` row,
+*"the exhaustive calendar and zone sweeps"*, restated as `tests/README.md`'s
+row is; and `tests/unit/sweep/every_oracle_date.npk`'s note on its `swept`
+helper, *"the same helper as the other five members'"*, where the others are
+seven. Found by the executing worker's second sweep
+(`meta/roadmap/0.2/0.2.2.md`'s execution record).
+
+*Alternatives declined:* **the boundaries as first instants alone** — blind to
+the truncation, measured; **the 512 days from Python's `random`, committed as a
+fixture** — a generator, a corpus and an exemption for what four lines of the
+test say, and the seed is what makes a run reproducible, which it does in the
+file; **days at a fixed stride** — the checklist asks for days chosen at random,
+and a stride beside the calendar's own cycles, seven days and 146 097, meets the
+same shapes of day again and again; **the second member's −O2 leg over a
+sample, or its domain split across the legs** — B-9's note made either the
+choice past 60 s, and the stage is 43.3 s; **a `nanos` per second** — the
+boundary member and the vectors hold the nanoseconds at 0, 1, 500 000 000, 789
+000 000 and 999 999 999, and the second's split is what this member is for;
+**round trips that build their input from the value under test** — V-4b,
+TM-174: they pass two functions that are wrong together.
+
+### TM-225 — `VERIFICATION.md` P-4's stand-in extends to `civil_to_utc`: `tests/unit/civil_to_utc_edges.npk`, both sides of every boundary the conversion decides, the refusing side forged through C-8c's opt-out, and M-7 asserted of every value it returns
+
+**2026-10-01, cycle 0.2.2 (the plan's PD-70). Dates `VERIFICATION.md` P-4 and
+§6's row; discharges the item TM-220 added to this cycle.**
+
+**What was found.** A civil reading from `civil_date` and `civil_time` always
+converts, so a stand-in built from constructed values alone sees neither of
+`civil_to_utc`'s refusals — and measured, `utc_vectors.npk` and both members of
+the gate pass a `civil_to_utc` that writes its `Timestamp` as a literal, exit 0
+at each, though a forged `nanos` of one second comes back from it denormalised.
+Forged as `CALENDAR.md` C-8c's opt-out allows — an unsealed struct of the same
+fields written through a `wild` pointer and read back through the sealed type
+— a `CivilDate` and a `CivilTime` are 8 bytes each and read back exactly.
+
+**The decision.** *The cross product of six dates — the days before and after
+the range forged, its first and last days and the two either side of the epoch
+built by `civil_date` — and five times — 00:00:00, one nanosecond past it and
+23:59:59.999999999 built by `civil_time`, and 23:59:59 with a `nanos` of one
+second and of 2^32 − 1 forged: thirty pairs, 12 accepted and 18 refused, every
+verdict written; each accepted value its instant to the nanosecond, and M-7
+asserted of it apart from the tables; every forged value read back field by
+field first. With `tests/unit/timestamp_construct.npk` and the seal's two
+probes, it is P-4's stand-in (P-1b) until 0.2.3's `timestamp_add` joins it.*
+
+*Alternatives declined:* **constructed values only** — blind to the literal,
+measured; **the forge as `civil_total_edges.npk`'s, through slices over the
+bytes** — an unsealed struct of the same fields says what it writes in one
+line, and its field order is read back; **its cases inside
+`timestamp_construct.npk`** — that file is the constructor's, with its own
+exits and imports; **the refusal's detail asserted** — how a refusal hands back
+its `ValueFault` is `OPEN_QUESTIONS.md` O-X8, still open.

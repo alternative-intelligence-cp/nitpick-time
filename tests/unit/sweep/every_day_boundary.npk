@@ -1,0 +1,159 @@
+// expect-exit: 0
+// sweep-count: 7304484
+//
+// EVERY DAY BOUNDARY IN THE RANGE, FROM BOTH SIDES, AS A `Timestamp` AND AS A
+// CIVIL READING -- the first half of cycle 0.2's gate (`TESTING.md` V-2, V-4;
+// `TIME_MODEL.md` M-11; TM-224). For every date in [-9999-01-01, 9999-12-31],
+// walked by the leap rule and the month table: its first instant, 00:00:00,
+// and its last, 23:59:59.999999999, each go from a `Timestamp` to their civil
+// reading and from the civil reading back to the `Timestamp`. Run in full, at
+// -O0 and again under `opt -O2` (B-3), on every full invocation (B-9).
+//
+// BOTH SIDES OF EACH BOUNDARY, BECAUSE ONE SIDE CANNOT SEE THE FLOOR. A day's
+// first instant is a whole number of days from the epoch, and there a
+// truncating division and a flooring one agree; its last instant, before the
+// epoch, is where they part -- `-1 s` is 1969-12-31T23:59:59, and a
+// truncation hands `civil_time` a second of -1. With the last instants alone
+// the boundary is seen from the left, with the first alone from the right,
+// and every boundary between two days is the first instant of one and the
+// last of the other.
+//
+// EACH DIRECTION IS HANDED THE WALK'S VALUE, NOT THE OTHER DIRECTION'S ANSWER
+// (`TESTING.md` V-4b, TM-174). The walk's date is built by `civil_date` from
+// the walk's integers, and its instant is a COUNT of seconds -- begun at
+// `NTIME_SECS_MIN`, advanced by one day per date -- so `civil_to_utc` is held
+// to a number neither conversion computed, and `timestamp_to_utc` to the
+// walk's integers. The reverse runs first, so a `cal` constructor that refuses
+// a walked date is seen at 12 rather than inside a conversion. The walk is
+// `every_civil_date.npk`'s, which the gate of cycle 0.1 holds to C-16.
+//
+// THE COUNT IS THE EVIDENCE (`TESTING.md` V-16, TM-122): N is the dates whose
+// two instants passed every check, and the harness requires it to equal the
+// domain declared above, which is tagged where the specifications state it
+// (`TESTING.md` V-1h, TM-168).
+//
+// Three `for` loops over ranges, bounded by construction: no `decreases`, no
+// `DecreasesViolated`, and the eleven identities of any program importing
+// `span` (`SAFETY.md` S-4) -- measured.
+//
+// EXIT CODES, clear of every arm code (V-1j): 10 `civil_time` refused
+// 00:00:00 or 23:59:59.999999999; 11 `days_in_month` refused a month from 1 to
+// 12; 12 `civil_date` refused a date the month's length admits; 13
+// `civil_to_utc` refused a date's first instant; 14 its answer is not the
+// count; 15 it refused a date's last instant; 16 its answer is not the count
+// plus 86 399 s and 999 999 999 ns; 17 `timestamp_of` refused the count's
+// first or last instant; 18 `timestamp_to_utc`'s date for the first instant is
+// not the walk's; 19 its time is not 00:00:00; 23 its date for the last
+// instant is not the walk's; 24 its time is not 23:59:59.999999999; 25 the
+// walk did not end on `NTIME_SECS_MAX`'s second; 20, 21 and 22 the `swept`
+// line could not be built, could not be written, or was written short. SEEN
+// RED AT PLANNING, on both legs, in a copy of the tree
+// (`meta/roadmap/0.2/0.2.2.md`, step 3): 10 with `civil_time` refusing the
+// last nanosecond of a second; 11 with `days_in_month` refusing December; 12
+// with `civil_date` refusing a month's last day; 13 with `civil_to_utc` a
+// second short; 14 with it a second long; 15 with its nanoseconds doubled; 16
+// with its minutes counted as 61 seconds; 18 with `timestamp_to_utc` a day
+// late; 19 with its nanoseconds one high; 23 with the floor's correction
+// moving the second and not the day; 24 with the minute divided by 61, and
+// with the nanoseconds dropped; 25 with the walk's last year cut; and with
+// the correction deleted
+// -- the truncation -- `civil_time` refuses the first day's last second, and
+// the file stops at 95, `Unreachable`. 17 is a guard: `civil_to_utc` builds
+// through the same `timestamp_of`, so a constructor that refuses the count
+// stops at 13 or 15 first.
+mod:every_day_boundary;
+
+use "../../../src/span/span.npk".*;
+use "../../../src/cal/cal.npk".CivilDate;
+use "../../../src/cal/cal.npk".CivilTime;
+use "../../../src/cal/cal.npk".CivilDateTime;
+use "../../../src/cal/cal.npk".civil_date;
+use "../../../src/cal/cal.npk".civil_time;
+use "../../../src/cal/cal.npk".days_in_month;
+use "../../../src/core/limits.npk".NTIME_YEAR_MIN;
+use "../../../src/core/limits.npk".NTIME_YEAR_MAX;
+use "../../../src/core/limits.npk".NTIME_SECS_MIN;
+use "../../../src/core/limits.npk".NTIME_SECS_MAX;
+use "../../../src/core/limits.npk".NTIME_SECS_PER_DAY;
+
+func:main = int32(cstring[]:_~argv) {
+    Result<CivilTime>:t0 = civil_time(0i64, 0i64, 0i64, 0i64);
+    if (t0.is_error) { exit 10i32; }
+    Result<CivilTime>:t1 = civil_time(23i64, 59i64, 59i64, 999999999i64);
+    if (t1.is_error) { exit 10i32; }
+    int64:count = 0i64;
+    int64:secs = NTIME_SECS_MIN;
+    for (int64:y in NTIME_YEAR_MIN..NTIME_YEAR_MAX) {
+        for (int64:m in 1i64..12i64) {
+            Result<int64>:dim = days_in_month(y, m);
+            if (dim.is_error) { exit 11i32; }
+            for (int64:d in 1i64..dim.value) {
+                Result<CivilDate>:cd = civil_date(y, m, d);
+                if (cd.is_error) { exit 12i32; }
+                int64:last = secs + (NTIME_SECS_PER_DAY - 1i64);
+                Result<Timestamp>:b0 = civil_to_utc(CivilDateTime{ date: cd.value, time: t0.value });
+                if (b0.is_error) { exit 13i32; }
+                if (b0.value.secs != secs || b0.value.nanos != 0u32) { exit 14i32; }
+                Result<Timestamp>:b1 = civil_to_utc(CivilDateTime{ date: cd.value, time: t1.value });
+                if (b1.is_error) { exit 15i32; }
+                if (b1.value.secs != last || b1.value.nanos != 999999999u32) { exit 16i32; }
+                Result<Timestamp>:a0 = timestamp_of(secs, 0i64);
+                if (a0.is_error) { exit 17i32; }
+                Result<Timestamp>:a1 = timestamp_of(last, 999999999i64);
+                if (a1.is_error) { exit 17i32; }
+                CivilDateTime:c0 = raw timestamp_to_utc(a0.value);
+                if ((c0.date.year => int64) != y)  { exit 18i32; }
+                if ((c0.date.month => int64) != m) { exit 18i32; }
+                if ((c0.date.day => int64) != d)   { exit 18i32; }
+                if (c0.time.hour != 0u8 || c0.time.minute != 0u8) { exit 19i32; }
+                if (c0.time.second != 0u8 || c0.time.nanos != 0u32) { exit 19i32; }
+                CivilDateTime:c1 = raw timestamp_to_utc(a1.value);
+                if ((c1.date.year => int64) != y)  { exit 23i32; }
+                if ((c1.date.month => int64) != m) { exit 23i32; }
+                if ((c1.date.day => int64) != d)   { exit 23i32; }
+                if (c1.time.hour != 23u8 || c1.time.minute != 59u8) { exit 24i32; }
+                if (c1.time.second != 59u8 || c1.time.nanos != 999999999u32) { exit 24i32; }
+                secs = secs + NTIME_SECS_PER_DAY;
+                count = count + 1i64;
+            }
+        }
+    }
+    if (secs - 1i64 != NTIME_SECS_MAX) { exit 25i32; }
+    int32:said = raw say_swept(count);
+    if (said != 0i32) { exit said; }
+    exit 0i32;
+};
+
+// `swept <count>` and a newline, on stdout, exactly once -- the same helper
+// as `every_day_number.npk`'s, and every copy is checked on every run by the
+// harness reading what it printed.
+func:say_swept = int32(int64:count) never fails {
+    string:digits = int_to_string(count);
+    string:head = string_concat("swept ", digits);
+    string:line = string_concat(head, "\n");
+    Result<cstring>:c = to_cstring(line);
+    if (c.is_error) { pass 20i32; }
+    cstring:s = move(c.value);         // a `cstring` is move-only (TM-208)
+    Result<int64>:w = sys(1i64, 1i64, s.ptr, s.len);
+    if (w.is_error) { pass 21i32; }
+    if (w.value != s.len) { pass 22i32; }
+    pass 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

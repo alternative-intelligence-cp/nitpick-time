@@ -136,11 +136,13 @@ against the summary line rather than left to review.
 - **Not that the WHOLE library works.** `src/core/` is real code since cycle
   0.0.4 and `src/cal/` since 0.1.0 — the civil types, Hinnant's two algorithms
   since 0.1.1, swept over the whole range since 0.1.2 — and the suite is
-  evidence about both — and about `src/span/`'s `Instant` since cycle 0.2.0
-  and its `Timestamp` since 0.2.1;
+  evidence about both — and about `src/span/`'s `Instant` since cycle 0.2.0,
+  its `Timestamp` since 0.2.1 and the conversions between a `Timestamp` and
+  its civil reading since 0.2.2;
   the other three `src/` directories are still placeholders, so nothing here
-  converts a time to a zone, a timestamp to a date, or text to either. *(It
-  said four placeholders until cycle 0.2.0. This read "there is none yet; `src/` is
+  converts a time to a zone, or between a time and text. *(It said "a
+  timestamp to a date" too until cycle 0.2.2, and four placeholders until
+  cycle 0.2.0. This read "there is none yet; `src/` is
   placeholders" for two subcycles after `src/core/` landed — C6. And until
   cycle 0.1.2 it read "the other five `src/` directories are still
   placeholders, so nothing here dates anything" — false since 0.1.0 gave
@@ -368,6 +370,21 @@ controls, 4 arm specimens and 4 verdict specimens; `exemption verdicts: 6 of
 the library reaching 6 sources and its IR **258 249 B**, `Timestamp` and
 `timestamp_of`; and library + repro + suite at **87** (**57 probe**, **23
 unit**). `122 = 35 + 87`.
+
+**At cycle 0.2.2, the same pin, 126 units**: four tests added —
+`tests/unit/utc_vectors.npk` and `civil_to_utc_edges.npk`, and the two members
+of cycle 0.2's gate, `tests/unit/sweep/every_day_boundary.npk` and
+`every_sampled_second.npk` (TM-222 … TM-225). The self-check's counts
+unchanged — 12 of V-14's 13 cases, 44 tree-check violations with 44 clean
+controls, `check_constants_named`'s 86 400 row planting in `span` beside the
+one copy in `core` since TM-223, 4 arm specimens and 4 verdict specimens;
+`exemption verdicts: 6 of 6`; parse over 142 files, `97 + 43 + 2`; the defect
+corpus unchanged at 36; the library reaching 6 sources and its IR **270 070
+B**, the two conversions; and library + repro + suite at **91** (**57 probe**,
+**25 unit**, **8 sweep**). `126 = 35 + 91`. At planning the eight sweeps took
+2.9 + 5.3 + 2.1 + 8.1 + 0.6 + 5.6 + 3.6 + 15.1 = 43.3 s — over B-9's 30 s,
+under its 60 s, and B-9 is amended to that cost (TM-224) — and a full
+invocation about 200 s, some 24 s more than at cycle 0.2.1.
 
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the

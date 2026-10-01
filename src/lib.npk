@@ -19,8 +19,9 @@
 // deliberate. Adding a line here is the moment a name becomes public and, by
 // TM-013, a thing a MAJOR version is needed to take away.
 //
-// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 66
-// names now [[sweep: lib_reexports=66]], below -- 64 until cycle 0.2.1 added
+// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 68
+// names now [[sweep: lib_reexports=68]], below -- 66 until cycle 0.2.2 added
+// `timestamp_to_utc` and `civil_to_utc`, 64 until cycle 0.2.1 added
 // `Timestamp` and `timestamp_of`, 58 until cycle 0.2.0 added
 // `span`'s six, 59 until cycle 0.2.0a retired
 // `Pod` into the prelude's `Copy` (TM-211), 57 until cycle 0.1.3c added
@@ -246,8 +247,9 @@ pub use "./cal/cal.npk".iso_weekday;
 pub use "./cal/cal.npk".iso_week_to_date;
 
 // ===========================================================================
-// span -- instants (cycle 0.2.0) and timestamps (0.2.1). NO NEW IDENTITY, AND
-// NO NEW ARM.
+// span -- instants (cycle 0.2.0), timestamps (0.2.1) and the conversions
+// between a timestamp and a civil reading (0.2.2). NO NEW IDENTITY, AND NO NEW
+// ARM.
 // ===========================================================================
 //
 // `Instant` and its clock tag, and the four operations (TM-215, TM-216). `span`
@@ -278,3 +280,17 @@ pub use "./span/span.npk".instant_cmp;
 // measured. TWO NAMES, each a MAJOR version to take away (TM-013).
 pub use "./span/span.npk".Timestamp;
 pub use "./span/span.npk".timestamp_of;
+
+// The two conversions between the absolute scale and the civil one (cycle
+// 0.2.2; TM-222; `TIME_MODEL.md` M-11 and §9), each over `cal`'s algorithms and
+// each read as UTC -- every day 86 400 seconds, no leap second, so the mapping
+// is a bijection and the round trip is the gate. `timestamp_to_utc` gives a
+// `Timestamp`'s civil reading and never fails: a `Timestamp` is in the range by
+// construction. `civil_to_utc` gives the `Timestamp` a civil reading names
+// through `timestamp_of`, so it fails `cal`'s `ETimeValue` -- and only for a
+// reading forged through the language's opt-out, since one from the
+// constructors always converts. Neither moves the bill: 11 for `span` alone
+// [[sweep: arms_span=11]] and 13 here [[sweep: arms_lib=13]], measured. TWO
+// NAMES, each a MAJOR version to take away (TM-013).
+pub use "./span/span.npk".timestamp_to_utc;
+pub use "./span/span.npk".civil_to_utc;

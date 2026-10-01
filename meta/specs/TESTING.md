@@ -17,7 +17,7 @@ than sampled. Where that is possible it is the gate, and §3 says where.
 
 | Stage | Answers |
 |---|---|
-| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **41 files of 138 that no other stage roots** <!-- [[sweep: npk_total=138]] --> |
+| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **41 files of 142 that no other stage roots** <!-- [[sweep: npk_total=142]] --> |
 | `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
 | `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
 | `check` | every documented refusal actually refuses, with exactly its code |
@@ -44,7 +44,7 @@ them found something on its first run.
 | `check_layering` | `BUILD.md` §6's diagram against `src/` — its **edges** (every `use`) and its **nodes** (every layer the diagram names holds at least one module). The node half is D1's repair: cycle 0.0.1's acceptance claimed `run.py` "asserts the count is at least 7" and no such assertion was in the tree, so *"a directory whose placeholder was deleted rather than replaced is invisible to the sweep"* was live for four subcycles inside a ticked box |
 | `check_no_owning_fields` | **no `fixed` table's element owns — itself, or through a field at any depth** (`SAFETY.md` S-19b). **It could not see a SINGLE-LINE struct until cycle 0.0.6 and both of this repository's structs are one** (TM-138), so neither type's real fields had ever been examined while the check reported `0 of 0`; the self-check now plants the same violation in both spellings. **And until cycle 0.1.3b it could not see an owning ELEMENT (`fixed string[2]`) or an owner two structs down, and it matched owners by substring**, so a field named `string_off` read as one — all three found by re-measuring the premise the check was written on, which was false (TM-177), and all three planted now |
 | `check_int128_sites` | `int128` appears at exactly the three sites `SPAN_MODEL.md` §5 names, and nowhere else |
-| `check_constants_named` | no bound outside `src/core/limits.npk`; no magic 86400, 146097, 719468 or 1000000000 outside the algorithm module that owns it |
+| `check_constants_named` | no bound outside `src/core/limits.npk`; no magic 86400, 146097, 719468 or 1000000000 outside the module that owns it — `core` alone for 86400 since cycle 0.2.2 (TM-223), "the algorithm module" for all four until then |
 | `check_literal_divisors` (TM-163) | **every `/`, `%`, `/=` and `%=` in `src/cal/` against `CALENDAR.md` C-11**: the divisor must be a positive decimal integer literal with its width suffix, standing alone — nothing after it that binds tighter than `/`, since `256i64 =>! uint8` is 0 — so D-007's divide-by-zero and `MIN / −1` traps are unreachable by construction. It reads code with comments AND strings blanked, because every `use` path in `cal.npk` holds a `/`; `+%`, `-%` and `*%` are the wrapping operators and not divisions. It is C-11's list of divisors, which a list in the rule's text could not be: the one C-11 carried was short by eight the day `civil_from_days` arrived. *(Until cycle 0.1.5 this row said its docstring's limits — block comments, character literals, raw strings and templates "not modelled", `src/cal/` having none — and the docstring called the gap the safe direction. Measured at 0.1.5's planning, a `'"'`, a template's `//` and a lone CR in a `//` comment each HID a division, and a `//` inside a `/* */` hid a clock call and a declaration from the checks beside this one; since then it reads through V-1k's reader, and each shape is planted.)* |
 | `check_no_format_string` | no function anywhere takes a pattern `string` and interprets it — `FORMAT_MODEL.md` F-5's rule, made checkable. **Pending until cycle 0.4**: nothing enforces F-5 before then, and V-1a's table says why |
 | `check_raw_index` | **no index through a bare pointer in `src/`, by FIELD or by BINDING.** `Vec<T>.items` and `Bytes`' buffer body are bare pointers, which the language does not bounds-check (TM-108, `SAFETY.md` S-17b), so the accessor pair is the only bound there is. It was two literal substrings until cycle 0.0.6 and was **evadable in one line** — bind the pointer to a local and index the local, which was built at `aaffb87`, ran, and read four elements past the live prefix while the check reported `0 sites` (TM-144). Every `wild T->:name` in a file is now watched. **The limit is stated: it is lexical and per-file**, so a bare pointer passed to another function and indexed there is still not covered; cycle 0.5 gets the widening |
@@ -304,7 +304,7 @@ is, and that is the gate.** Sampling is what you do when you cannot enumerate.
 | month lengths match the leap rule | every (year, month) in range | 239 988 <!-- [[sweep: domain_every_month_length=239988]] --> | 0.1 |
 | ordinal date: `day_of_year` equals a count of the year's days, `ordinal_to_date` of the count is the date, and the day after each year's last is refused | every date in the range | 7 304 484 <!-- [[sweep: domain_every_ordinal_date=7304484]] --> | 0.1 — at 0.1.3 |
 | ISO week date: the three fields equal a walk of ISO 8601's rule, `iso_week_to_date` of the walk's three is the date, and the week after each week-year's last is refused | every date in the range | 7 304 484 <!-- [[sweep: domain_every_iso_week_date=7304484]] --> | 0.1 — at 0.1.3 |
-| `Timestamp` ↔ civil round trip | every second would be too many; every **day boundary**, plus every second of 512 randomly chosen days | 7.3 M + 44 M | 0.2 |
+| `Timestamp` ↔ civil round trip, both directions | every second would be too many; every **day boundary** in the range from both sides — each date's first instant and its last — plus every second of 512 days a seeded generator chooses | 7 304 484 <!-- [[sweep: domain_every_day_boundary=7304484]] --> + 44 236 800 <!-- [[sweep: domain_every_sampled_second=44236800]] --> | 0.2 — at 0.2.2 (TM-224) |
 | zone transition sweep | every transition in the table, ±1 second | ~27 000 × 4 | 0.6 |
 | format/parse round trip | the generated corpus × every layout | ~10⁶ | 0.4 |
 
@@ -329,6 +329,13 @@ sweep | — | 0.1": a round trip that builds its input from the value under test
 passes two functions that are wrong together, so each representation is now
 checked against a walk of its own rule and has a member, and a declared domain,
 of its own (TM-174, V-4b).)*
+
+*(Amended at cycle 0.2.2, TM-224: the round trip's row read "every **day
+boundary**, plus every second of 512 randomly chosen days | 7.3 M + 44 M". A
+day's first instant alone cannot tell a truncating conversion from a flooring
+one — they agree on whole days — so each boundary is taken from both sides; the
+sizes are the two members' declared domains, tagged; and the days are chosen by
+a generator whose seed the member commits, so every run visits the same ones.)*
 
 **Rule V-3 — the civil sweep is the strongest statement this library makes.**
 It is self-evident (a round trip is obviously the right property), it needs no
@@ -639,7 +646,11 @@ denominator too (TM-174). **Since cycle 0.1.4 it holds six**:
 — a member of this stage because it is exhaustive over its domain and must
 prove it ran, and not a gate because it trusts Python (TM-026). What it checks
 each year beside the digest, and why it hands no reverse constructor anything,
-is TM-182.
+is TM-182. **Since cycle 0.2.2 it holds eight**: `every_day_boundary.npk` and
+`every_sampled_second.npk`, V-2's `Timestamp` ↔ civil round trip, over 7 304 484 dates <!-- [[sweep: domain_every_day_boundary=7304484]] -->
+and 44 236 800 seconds <!-- [[sweep: domain_every_sampled_second=44236800]] -->,
+each direction handed a walk's value (V-4b), the second's 512 days chosen by a
+generator whose seed it commits (TM-224).
 
 ---
 

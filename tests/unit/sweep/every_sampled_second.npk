@@ -1,0 +1,141 @@
+// expect-exit: 0
+// sweep-count: 44236800
+//
+// EVERY SECOND OF 512 DAYS CHOSEN AT RANDOM, AS A `Timestamp` AND AS A CIVIL
+// READING -- the second half of cycle 0.2's gate (`TESTING.md` V-2, V-4;
+// `TIME_MODEL.md` M-11; TM-224): 512 x 86 400 seconds, each from a
+// `Timestamp` to its civil reading and from the civil reading back. Run in
+// full, at -O0 and again under `opt -O2` (B-3), on every full invocation (B-9).
+//
+// WHAT THIS ADDS TO `every_day_boundary.npk`: every second of the day, where
+// that file takes two instants of each. A conversion that splits the second
+// of the day into hours, minutes and seconds wrongly -- a minute divided by
+// 61, a remainder taken twice -- is right at 00:00:00 and can be right at
+// 23:59:59, and is seen here at the second it goes wrong.
+//
+// THE DAYS ARE CHOSEN BY A SEED COMMITTED IN THIS FILE, so every run visits
+// the same 512 days and a failure reproduces. The generator is a 64-bit
+// xorshift -- `x ^= x << 13; x ^= x >> 7; x ^= x << 17` on a `uint64`, three
+// shifts and three exclusive-ors, none of which can trap -- begun at the seed
+// 20 261 001, the date the plan was written, chosen before any run; each step
+// gives one day, `NTIME_DAY_MIN + x mod 7 304 484`. Measured at planning,
+// beside a transcription of the same steps in Python: the 512 days are
+// distinct, 321 of them before the epoch, from -9875-01-21 to 9915-10-06.
+//
+// EACH DIRECTION IS HANDED THE WALK'S VALUE (`TESTING.md` V-4b, TM-174): the
+// hour, minute and second are three nested counts, and the instant is the
+// day's first second plus a COUNT of seconds, so neither conversion is held
+// to the other's answer. The date of a chosen day is `days_to_date`'s, which
+// the gate of cycle 0.1 holds to C-16 over the whole range. The reverse runs
+// first, so a `cal` constructor that refuses the walk's reading is seen at 11.
+//
+// THE COUNT IS THE EVIDENCE (`TESTING.md` V-16, TM-122): N is the seconds
+// that passed every check, and the harness requires it to equal the domain
+// declared above, which is tagged where the specifications state it
+// (`TESTING.md` V-1h, TM-168).
+//
+// Four `for` loops over ranges, bounded by construction: no `decreases`, no
+// `DecreasesViolated`, and the eleven identities of any program importing
+// `span` (`SAFETY.md` S-4) -- measured. The shifts' amounts are literals, so
+// no `ShiftRange` arm either.
+//
+// EXIT CODES, clear of every arm code (V-1j): 10 `days_to_date` refused a
+// chosen day; 11 `civil_time` refused the walk's reading; 12 `civil_to_utc`
+// refused it; 13 its answer is not the count; 14 `timestamp_of` refused the
+// count; 15 `timestamp_to_utc`'s date is not the chosen day's; 16 its time is
+// not the walk's; 17 a chosen day was not 86 400 seconds long; 20, 21 and 22
+// the `swept` line could not be built, could not be written, or was written
+// short. SEEN RED AT PLANNING, on both legs, in a copy of the tree
+// (`meta/roadmap/0.2/0.2.2.md`, step 3): 10 with `days_to_date` refusing a day
+// before the epoch; 11 with `civil_time` refusing second 59; 12 with
+// `civil_to_utc`'s day number multiplied by 1 000; 13 with its minutes counted
+// as 61 seconds; 15 with the floor's correction taking two days; 16 with the
+// minute divided by 61; 17 with the walk's last hour cut; and with the
+// correction deleted -- the truncation -- `civil_time` refuses the second
+// second of the first day before the epoch, and the file stops at 95,
+// `Unreachable`. 14 is a guard: `civil_to_utc` builds through the same
+// `timestamp_of`, so a constructor that refuses the count stops at 12 first.
+mod:every_sampled_second;
+
+use "../../../src/span/span.npk".*;
+use "../../../src/cal/cal.npk".CivilDate;
+use "../../../src/cal/cal.npk".CivilTime;
+use "../../../src/cal/cal.npk".CivilDateTime;
+use "../../../src/cal/cal.npk".days_to_date;
+use "../../../src/cal/cal.npk".civil_time;
+use "../../../src/core/limits.npk".NTIME_DAY_MIN;
+use "../../../src/core/limits.npk".NTIME_SECS_PER_DAY;
+
+func:main = int32(cstring[]:_~argv) {
+    uint64:x = 20261001u64;
+    int64:count = 0i64;
+    for (int64:k in 1i64..512i64) {
+        x = x ^ (x << 13u64);
+        x = x ^ (x >> 7u64);
+        x = x ^ (x << 17u64);
+        // `x mod 7 304 484` is below 2^23, so the narrowing keeps every bit of it.
+        int64:n = NTIME_DAY_MIN + ((x % 7304484u64) =>! int64);
+        Result<CivilDate>:cd = days_to_date(n);
+        if (cd.is_error) { exit 10i32; }
+        int64:first = n * NTIME_SECS_PER_DAY;
+        int64:s = 0i64;
+        for (int64:h in 0i64..23i64) {
+            for (int64:mi in 0i64..59i64) {
+                for (int64:se in 0i64..59i64) {
+                    Result<CivilTime>:ct = civil_time(h, mi, se, 0i64);
+                    if (ct.is_error) { exit 11i32; }
+                    Result<Timestamp>:b = civil_to_utc(CivilDateTime{ date: cd.value, time: ct.value });
+                    if (b.is_error) { exit 12i32; }
+                    if (b.value.secs != first + s || b.value.nanos != 0u32) { exit 13i32; }
+                    Result<Timestamp>:t = timestamp_of(first + s, 0i64);
+                    if (t.is_error) { exit 14i32; }
+                    CivilDateTime:c = raw timestamp_to_utc(t.value);
+                    if (c.date.year != cd.value.year || c.date.month != cd.value.month) { exit 15i32; }
+                    if (c.date.day != cd.value.day) { exit 15i32; }
+                    if ((c.time.hour => int64) != h || (c.time.minute => int64) != mi) { exit 16i32; }
+                    if ((c.time.second => int64) != se || c.time.nanos != 0u32) { exit 16i32; }
+                    s = s + 1i64;
+                    count = count + 1i64;
+                }
+            }
+        }
+        if (s != NTIME_SECS_PER_DAY) { exit 17i32; }
+    }
+    int32:said = raw say_swept(count);
+    if (said != 0i32) { exit said; }
+    exit 0i32;
+};
+
+// `swept <count>` and a newline, on stdout, exactly once -- the same helper
+// as `every_day_number.npk`'s, and every copy is checked on every run by the
+// harness reading what it printed.
+func:say_swept = int32(int64:count) never fails {
+    string:digits = int_to_string(count);
+    string:head = string_concat("swept ", digits);
+    string:line = string_concat(head, "\n");
+    Result<cstring>:c = to_cstring(line);
+    if (c.is_error) { pass 20i32; }
+    cstring:s = move(c.value);         // a `cstring` is move-only (TM-208)
+    Result<int64>:w = sys(1i64, 1i64, s.ptr, s.len);
+    if (w.is_error) { pass 21i32; }
+    if (w.value != s.len) { pass 22i32; }
+    pass 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

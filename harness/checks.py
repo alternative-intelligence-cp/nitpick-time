@@ -487,17 +487,23 @@ def check_error_budget(tree, **_):
 # ---------------------------------------------------------------------------
 
 # THE OWNER MAP IS THE SPECIFICATIONS' AND NOT THIS FILE'S OPINION. `SAFETY.md`
-# S-16 says in as many words that *the calendar algorithms* divide by 4, 100,
-# 400, 146097, 86400 and 1000000000, and `CALENDAR.md` §4 is where 146097 and
-# 719468 appear in Hinnant's civil-from-days. So all four belong to `cal` as the
-# documents stand TODAY. When 0.2 gives `span` its own nanosecond arithmetic the
-# right move is to amend S-16 and this map together, in one commit -- which is
-# the whole contract of this check family: it fails when the tree and the
-# document disagree, and the fix is whichever of the two is wrong.
+# S-16 names the numbers the calendar algorithms divide by, and `CALENDAR.md` §4
+# is where 146097 and 719468 appear in Hinnant's civil-from-days, so those two
+# are `cal`'s, and so is 1000000000 until cycle 0.2.3's nanosecond arithmetic
+# decides where it lives. 86400 IS `core`'S ALONE SINCE CYCLE 0.2.2 (TM-223):
+# `cal` works in days and never spelled it, and the first code to divide by it,
+# `span`'s conversions between a `Timestamp` and a civil reading, reads it by
+# name, `NTIME_SECS_PER_DAY` -- so the one copy is `src/core/limits.npk`'s, and
+# a literal anywhere else in `src/` is a second. S-16 and this map moved
+# together, in one commit, as this comment said they must when a second module
+# wanted the number: the whole contract of this check family is that it fails
+# when the tree and the document disagree, and the fix is whichever of the two
+# is wrong. (Until cycle 0.2.2 all four were `cal`'s, "as the documents stand
+# TODAY".)
 CONSTANT_OWNER = {
     "146097": "cal",        # days in 400 Gregorian years -- CALENDAR.md §4
     "719468": "cal",        # the 0000-03-01 era shift  -- CALENDAR.md §4
-    "86400": "cal",         # seconds per day           -- SAFETY.md S-16
+    "86400": "core",        # seconds per day, read by name -- S-16, TM-223
     "1000000000": "cal",    # nanoseconds per second    -- SAFETY.md S-16
 }
 

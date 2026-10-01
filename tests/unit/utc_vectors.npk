@@ -1,0 +1,126 @@
+// expect-exit: 0
+//
+// The two conversions at sixteen instants whose civil readings are WRITTEN
+// beside them (cycle 0.2.2; TM-222; `TIME_MODEL.md` M-11 and §9).
+//
+// ASKS: does `civil_to_utc` give each written civil reading's instant, and
+// `timestamp_to_utc` each written instant's civil reading, in UTC -- around the
+// epoch to the nanosecond, at the range's two ends, and where the calendar
+// turns?
+//
+// MATTERS BECAUSE the representation's subtlety bites a second time here (the
+// cycle README's "watch for"): `-1 s, 500 000 000 ns` is half a second BEFORE
+// the epoch (M-7), so it lies on 1969-12-31, and the day number is a FLOOR
+// division of the seconds -- a conversion that truncates toward zero puts it
+// on day 0 with a second of -1. The vectors, in order: the range's first
+// instant; the last instant of year -1 and the first of year 0 (1 BCE, a leap
+// year, C-2); year 0's February 29; the last instant of 1900's February 28 and
+// the first of its March 1 (no leap day: the century rule);
+// `tests/unit/timestamp_order.npk`'s chain, -1.000000001 s ... 1 s, which
+// 0.2.1 handed on for this; 12:34:56.789 on 2000-02-29 (the 400-year rule),
+// whose hour, minute and second are three different numbers; and the range's
+// last instant.
+//
+// THE WRITTEN VALUES ARE INDEPENDENT OF `cal`: computed at planning by
+// Python's `datetime` for years >= 1, and below year 1 by moving the date
+// into its range by whole 400-year cycles of 146 097 days -- each vector
+// checked both ways there (`meta/research/CURRENCY.md`'s Python row). Each
+// direction is handed the written value, never the other direction's answer
+// (`TESTING.md` V-4b), and the reverse runs first, so a refusal by a `cal`
+// constructor is seen here at 10 rather than inside a conversion.
+//
+// EXIT CODES, clear of every arm code (TM-152): 10 `civil_date` or
+// `civil_time` refused a written reading; 11 `civil_to_utc` refused one; 12
+// its seconds are not the written ones; 13 its nanoseconds are not; 14
+// `timestamp_of` refused a written instant; 15 `timestamp_to_utc`'s date is
+// not the written one; 16 its hour, minute or second is not; 17 its
+// nanoseconds are not. SEEN RED AT PLANNING, on both legs, in a copy of the
+// tree (`meta/roadmap/0.2/0.2.2.md`, step 3): 10 with `civil_date` refusing
+// the range's first year; 11 with `civil_to_utc` a second short; 12 with its
+// minutes counted as 61 seconds; 13 with its nanoseconds dropped; 15 with the
+// floor's correction taking two days; 16 with the minute divided by 61; 17
+// with `timestamp_to_utc`'s nanoseconds dropped; and with the correction
+// deleted -- the truncation -- `civil_time` is handed a negative second, its
+// refusal reaches `#unreachable()`, and this file stops at 95, `Unreachable`,
+// at the second vector. 14 is a guard: `civil_to_utc` builds through the same
+// `timestamp_of`, so a constructor that refuses a written instant stops at 11
+// first.
+//
+// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
+// `span` and `cal`: `span`'s eleven (`SAFETY.md` S-4).
+mod:utc_vectors;
+
+use "../../src/span/span.npk".*;
+use "../../src/cal/cal.npk".CivilDate;
+use "../../src/cal/cal.npk".CivilTime;
+use "../../src/cal/cal.npk".CivilDateTime;
+use "../../src/cal/cal.npk".civil_date;
+use "../../src/cal/cal.npk".civil_time;
+
+fixed int64[16]:SECS  = [ -377705116800i64, -62167219201i64, -62167219200i64, -62162121600i64,
+                          -2203891201i64, -2203891200i64,
+                          -2i64, -1i64, -1i64, -1i64, -1i64, 0i64, 0i64, 1i64,
+                          951827696i64, 253402300799i64 ];
+fixed int64[16]:NANOS = [ 0i64, 999999999i64, 0i64, 0i64, 999999999i64, 0i64,
+                          999999999i64, 0i64, 1i64, 500000000i64, 999999999i64, 0i64, 1i64, 0i64,
+                          789000000i64, 999999999i64 ];
+fixed int64[16]:YEAR  = [ -9999i64, -1i64, 0i64, 0i64, 1900i64, 1900i64,
+                          1969i64, 1969i64, 1969i64, 1969i64, 1969i64, 1970i64, 1970i64, 1970i64,
+                          2000i64, 9999i64 ];
+fixed int64[16]:MONTH = [ 1i64, 12i64, 1i64, 2i64, 2i64, 3i64,
+                          12i64, 12i64, 12i64, 12i64, 12i64, 1i64, 1i64, 1i64,
+                          2i64, 12i64 ];
+fixed int64[16]:DAY   = [ 1i64, 31i64, 1i64, 29i64, 28i64, 1i64,
+                          31i64, 31i64, 31i64, 31i64, 31i64, 1i64, 1i64, 1i64,
+                          29i64, 31i64 ];
+fixed int64[16]:HOUR  = [ 0i64, 23i64, 0i64, 0i64, 23i64, 0i64,
+                          23i64, 23i64, 23i64, 23i64, 23i64, 0i64, 0i64, 0i64,
+                          12i64, 23i64 ];
+fixed int64[16]:MIN   = [ 0i64, 59i64, 0i64, 0i64, 59i64, 0i64,
+                          59i64, 59i64, 59i64, 59i64, 59i64, 0i64, 0i64, 0i64,
+                          34i64, 59i64 ];
+fixed int64[16]:SEC   = [ 0i64, 59i64, 0i64, 0i64, 59i64, 0i64,
+                          58i64, 59i64, 59i64, 59i64, 59i64, 0i64, 0i64, 1i64,
+                          56i64, 59i64 ];
+
+func:main = int32(cstring[]:_~argv) {
+    for (int64:i in 0i64..15i64) {
+        Result<CivilDate>:cd = civil_date(YEAR[i], MONTH[i], DAY[i]);
+        if (cd.is_error) { exit 10i32; }
+        Result<CivilTime>:ct = civil_time(HOUR[i], MIN[i], SEC[i], NANOS[i]);
+        if (ct.is_error) { exit 10i32; }
+        Result<Timestamp>:back = civil_to_utc(CivilDateTime{ date: cd.value, time: ct.value });
+        if (back.is_error) { exit 11i32; }
+        if (back.value.secs != SECS[i]) { exit 12i32; }
+        if ((back.value.nanos => int64) != NANOS[i]) { exit 13i32; }
+        Result<Timestamp>:t = timestamp_of(SECS[i], NANOS[i]);
+        if (t.is_error) { exit 14i32; }
+        CivilDateTime:c = raw timestamp_to_utc(t.value);
+        if ((c.date.year => int64) != YEAR[i])   { exit 15i32; }
+        if ((c.date.month => int64) != MONTH[i]) { exit 15i32; }
+        if ((c.date.day => int64) != DAY[i])     { exit 15i32; }
+        if ((c.time.hour => int64) != HOUR[i])   { exit 16i32; }
+        if ((c.time.minute => int64) != MIN[i])  { exit 16i32; }
+        if ((c.time.second => int64) != SEC[i])  { exit 16i32; }
+        if ((c.time.nanos => int64) != NANOS[i]) { exit 17i32; }
+    }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

@@ -1,0 +1,170 @@
+// expect-exit: 0
+//
+// `civil_to_utc` at every boundary it decides, from both sides, and every
+// `Timestamp` it returns normalised (cycle 0.2.2; TM-225; `VERIFICATION.md`
+// P-4, `TIME_MODEL.md` M-7 and M-8).
+//
+// ASKS: does `civil_to_utc` convert every civil reading whose instant lies in
+// the range, and refuse every one whose instant lies outside it or whose
+// `nanos` is a second or more -- and is every `Timestamp` it returns
+// normalised?
+//
+// MATTERS BECAUSE P-4 asks that no sequence of operations produce a
+// denormalised `Timestamp`, and `civil_to_utc` is the first operation since
+// `timestamp_of` to yield one. THIS FILE EXTENDS P-4'S STAND-IN TO IT (P-1b),
+// beside `tests/unit/timestamp_construct.npk` and the seal's two probes. A
+// reading built by `civil_date` and `civil_time` always converts -- its date
+// is in the range and its `nanos` below a second (`CALENDAR.md` C-8c, C-9) --
+// so the refusing side of each boundary is built through the opt-out C-8c
+// names, `wild` storage reinterpreted, as `tests/unit/civil_total_edges.npk`
+// builds its dates. That side is what tells a conversion that builds through
+// `timestamp_of` from one that writes a `Timestamp` literal: handed a forged
+// `nanos` of one second, the second returns a denormalised value.
+//
+// THE CASES are the cross product of six dates -- the day before the range
+// (forged, year -10000), its first day, 1969-12-31, 1970-01-01, its last day,
+// and the day after it (forged, year 10000) -- and five times -- 00:00:00,
+// one nanosecond past it, 23:59:59.999999999, and 23:59:59 with a `nanos` of
+// one second and of 2^32 - 1 (both forged): thirty pairs, 12 accepted and 18
+// refused, every verdict WRITTEN in the tables below rather than computed, and
+// each accepted value's instant computed from the day numbers written beside
+// the dates. Every forged value is read back field by field before it is
+// converted, so a forge that wrote the wrong bytes exits with its own code.
+//
+// EXIT CODES, clear of every arm code (TM-152): 30 `civil_date` or
+// `civil_time` refused a reading in its range; 31 a forged date did not read
+// back; 32 a forged time did not; 33 a pair in range refused; 34 an accepted
+// pair's seconds not the instant's; 35 its nanoseconds not; 36 an accepted
+// value's `nanos` not below one second -- M-7 itself, held apart from the
+// tables; 37 a pair out of range accepted; 38 the counts are not 12 and 18.
+// SEEN RED AT PLANNING, on both legs, in a copy of the tree
+// (`meta/roadmap/0.2/0.2.2.md`, step 3): 30 with `civil_time` refusing the
+// last nanosecond of a second; 33 with `timestamp_of`'s lower bound one high;
+// 34 with `civil_to_utc`'s minutes counted as 59 seconds; 35 with its
+// nanoseconds dropped; 37 with it writing a `Timestamp` literal instead of
+// calling `timestamp_of`, and with `timestamp_of`'s upper bound deleted. 31,
+// 32, 36 and 38 are reached only by editing this file, and were so measured:
+// 31 with the date's forge declaring its month and day the other way round,
+// 32 with the time's declaring its hour and minute so, 36 when the tables and
+// the literal are wrong together, and 38 when the loop is cut short.
+//
+// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
+// `span` and `cal`: `span`'s eleven (`SAFETY.md` S-4).
+mod:civil_to_utc_edges;
+
+use "../../src/span/span.npk".*;
+use "../../src/cal/cal.npk".CivilDate;
+use "../../src/cal/cal.npk".CivilTime;
+use "../../src/cal/cal.npk".CivilDateTime;
+use "../../src/cal/cal.npk".civil_date;
+use "../../src/cal/cal.npk".civil_time;
+use "../../src/core/limits.npk".NTIME_NANOS_PER_SEC;
+
+// `CivilDate` and `CivilTime` field for field, unsealed -- the forge's shapes.
+// Each is 8 bytes, as the sealed types are (measured at planning), and every
+// forged value is read back through the sealed type before it is used.
+struct:RawDate = { int32:year; uint8:month; uint8:day; };
+struct:RawTime = { uint8:hour; uint8:minute; uint8:second; uint32:nanos; };
+
+fixed int64[6]:Y           = [ -10000i64, -9999i64, 1969i64, 1970i64, 9999i64, 10000i64 ];
+fixed int64[6]:M           = [ 12i64, 1i64, 12i64, 1i64, 12i64, 1i64 ];
+fixed int64[6]:D           = [ 31i64, 1i64, 31i64, 1i64, 31i64, 1i64 ];
+fixed int64[6]:DAYNUM      = [ -4371588i64, -4371587i64, -1i64, 0i64, 2932896i64, 2932897i64 ];
+fixed bool[6]:DATE_FORGED  = [ true, false, false, false, false, true ];
+fixed bool[6]:DATE_IN      = [ false, true, true, true, true, false ];
+
+fixed int64[5]:H           = [ 0i64, 0i64, 23i64, 23i64, 23i64 ];
+fixed int64[5]:MI          = [ 0i64, 0i64, 59i64, 59i64, 59i64 ];
+fixed int64[5]:S           = [ 0i64, 0i64, 59i64, 59i64, 59i64 ];
+fixed int64[5]:N           = [ 0i64, 1i64, 999999999i64, 1000000000i64, 4294967295i64 ];
+fixed bool[5]:TIME_FORGED  = [ false, false, false, true, true ];
+fixed bool[5]:TIME_IN      = [ true, true, true, false, false ];
+
+func:main = int32(cstring[]:_~argv) {
+    wild int8->:md = alloc(8i64);
+    wild int8->:mt = alloc(8i64);
+    int64:accepted = 0i64;
+    int64:refused = 0i64;
+    for (int64:i in 0i64..5i64) {
+        for (int64:j in 0i64..4i64) {
+            CivilDate:cd = raw forged_date(md, i);
+            CivilTime:ct = raw forged_time(mt, j);
+            if (!(DATE_FORGED[i])) {
+                Result<CivilDate>:rd = civil_date(Y[i], M[i], D[i]);
+                if (rd.is_error) { dalloc(md); dalloc(mt); exit 30i32; }
+                cd = rd.value;
+            }
+            if (!(TIME_FORGED[j])) {
+                Result<CivilTime>:rt = civil_time(H[j], MI[j], S[j], N[j]);
+                if (rt.is_error) { dalloc(md); dalloc(mt); exit 30i32; }
+                ct = rt.value;
+            }
+            int32:back = raw read_back(cd, ct, i, j);
+            if (back != 0i32) { dalloc(md); dalloc(mt); exit back; }
+            Result<Timestamp>:r = civil_to_utc(CivilDateTime{ date: cd, time: ct });
+            if (DATE_IN[i] && TIME_IN[j]) {
+                if (r.is_error) { dalloc(md); dalloc(mt); exit 33i32; }
+                int64:want = (DAYNUM[i] * 86400i64) + (H[j] * 3600i64) + (MI[j] * 60i64) + S[j];
+                if (r.value.secs != want)                            { dalloc(md); dalloc(mt); exit 34i32; }
+                if ((r.value.nanos => int64) != N[j])                { dalloc(md); dalloc(mt); exit 35i32; }
+                if ((r.value.nanos => int64) >= NTIME_NANOS_PER_SEC) { dalloc(md); dalloc(mt); exit 36i32; }
+                accepted = accepted + 1i64;
+            } else {
+                if (!(r.is_error)) { dalloc(md); dalloc(mt); exit 37i32; }
+                refused = refused + 1i64;
+            }
+        }
+    }
+    dalloc(md);
+    dalloc(mt);
+    if (accepted != 12i64 || refused != 18i64) { exit 38i32; }
+    exit 0i32;
+};
+
+// A `CivilDate` built through `wild` storage from row `i` of the date table --
+// the opt-out C-8c names. Its fields are checked by `read_back`.
+func:forged_date = CivilDate(wild int8->:mem, int64:i) never fails {
+    wild RawDate->:w = mem =>! wild RawDate->;
+    <-w = RawDate{ year: Y[i] =>! int32, month: M[i] =>! uint8, day: D[i] =>! uint8 };
+    wild CivilDate->:r = mem =>! wild CivilDate->;
+    pass <-r;
+};
+
+// The same for row `j` of the time table.
+func:forged_time = CivilTime(wild int8->:mem, int64:j) never fails {
+    wild RawTime->:w = mem =>! wild RawTime->;
+    <-w = RawTime{ hour: H[j] =>! uint8, minute: MI[j] =>! uint8,
+                   second: S[j] =>! uint8, nanos: N[j] =>! uint32 };
+    wild CivilTime->:r = mem =>! wild CivilTime->;
+    pass <-r;
+};
+
+// 0, or 31 / 32 when a field of the date or the time is not its table's.
+func:read_back = int32(CivilDate:cd, CivilTime:ct, int64:i, int64:j) never fails {
+    if ((cd.year => int64) != Y[i] || (cd.month => int64) != M[i] || (cd.day => int64) != D[i]) {
+        pass 31i32;
+    }
+    if ((ct.hour => int64) != H[j] || (ct.minute => int64) != MI[j]
+        || (ct.second => int64) != S[j] || (ct.nanos => int64) != N[j]) {
+        pass 32i32;
+    }
+    pass 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

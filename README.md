@@ -19,7 +19,10 @@ answer on every machine.
 > Python's `datetime`. Since cycle 0.2.0, `src/span/` holds `Instant`, a
 > reading of one of two clocks that cannot be built from a number or converted
 > to a wall-clock time, and since cycle 0.2.1 `Timestamp`, a point on the UTC
-> scale with one spelling per instant. Zones, formats and the clocks are still
+> scale with one spelling per instant. Since cycle 0.2.2 a `Timestamp` converts
+> to its civil reading in UTC and back, and both directions are checked on
+> every full run, over both sides of every day boundary in the range and every
+> second of 512 days chosen at random. Zones, formats and the clocks are still
 > placeholders, each replaced by the cycle
 > [`meta/roadmap/ROADMAP.md`](meta/roadmap/ROADMAP.md) names. The specification
 > set is in [`meta/specs/`](meta/specs/) and the plan in

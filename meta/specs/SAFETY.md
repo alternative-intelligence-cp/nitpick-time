@@ -87,7 +87,7 @@ import-scoped:
 | `ntime/lib.npk` — **the umbrella**, the import a consumer writes | — (re-exports) | one arm today (`cal`'s) | **13** <!-- [[sweep: arms_lib=13]] --> (—) — generated since cycle 0.1.0b (TM-155): the floor of six, `cal.ETimeValue`, the four arithmetic arms, `DecreasesViolated` from `src/core/bytes.npk`'s measured loops, and — since cycle 0.1.0c (TM-156, TM-159) — `LimitViolated` from the `ListLen` on `src/core/`'s sealed lengths. It was **12** until then |
 | `ntime/core.npk` | — | nothing | **6** <!-- [[sweep: arms_core=6]] --> (4) — the floor; `core` is not yet reachable as its own public module, and its code is billed through the umbrella's row |
 | `ntime/cal.npk` | `ETimeValue` | one arm | **11** <!-- [[sweep: arms_cal=11]] --> (9) — measured 2026-09-06 and 2026-09-25 |
-| `ntime/span.npk` | — (raises `cal`'s) | one arm | **11** <!-- [[sweep: arms_span=11]] --> (—) — since cycle 0.2.0, measured: `cal.ETimeValue`, which `span` raises for two clocks' readings (TM-216) and, since cycle 0.2.1, for a `secs` outside the range or a `nanos` outside one second handed to `timestamp_of` (TM-220), the floor of six, and `cal`'s four arithmetic arms, which reach every importer of `span` because `span` imports `cal`. **No new identity**: the umbrella's row stays 13. *(A placeholder until cycle 0.2.0, the row read **6** (4), the floor, "meaningless until cycle 0.2 gives the module a body".)* |
+| `ntime/span.npk` | — (raises `cal`'s) | one arm | **11** <!-- [[sweep: arms_span=11]] --> (—) — since cycle 0.2.0, measured: `cal.ETimeValue`, which `span` raises for two clocks' readings (TM-216), since cycle 0.2.1 for a `secs` outside the range or a `nanos` outside one second handed to `timestamp_of` (TM-220), and since cycle 0.2.2 for a civil reading `civil_to_utc` cannot convert, `timestamp_of`'s refusal relayed (TM-222), the floor of six, and `cal`'s four arithmetic arms, which reach every importer of `span` because `span` imports `cal`. **No new identity**: the umbrella's row stays 13. *(A placeholder until cycle 0.2.0, the row read **6** (4), the floor, "meaningless until cycle 0.2 gives the module a body".)* |
 | `ntime/zone.npk` | `ETimeZone` | two arms | placeholder; **6** <!-- [[sweep: arms_zone=6]] --> (4) today (cycle 0.3) |
 | `ntime/fmt.npk` | `ETimeParse` | three arms | placeholder; **6** <!-- [[sweep: arms_fmt=6]] --> (4) today (cycle 0.4) |
 | `ntime/host.npk` | — (forwards errnos) | one arm | placeholder; **6** <!-- [[sweep: arms_host=6]] --> (4) today |
@@ -472,6 +472,12 @@ fall through, silently (`meta/roadmap/done/0.1/0.1.3.md` §2). The one site toda
 `src/cal/cal.npk`'s `weekday_index`, whose modulus correction keeps every
 index in 0 … 6; the check after it is what makes the correction's absence a
 stop rather than a `Weekday` that is no weekday (`CALENDAR.md` C-13).
+*(Cycle 0.2.2, TM-222: "the one site" was true until `src/span/span.npk`'s
+`timestamp_to_utc`, which applies this rule's answer to a refusal rather than a
+narrowing. The day number and the second of the day it computes lie in the
+range by construction — a `Timestamp` is in it, and the floor keeps the second
+in 0 … 86 399 — so the refusals of `days_to_date` and `civil_time` cannot meet
+them, and each is `?| #unreachable()`: a controlled stop, and no new arm.)*
 
 **Rule S-16.** Nothing divides by a value it has not proven nonzero on the same
 path. The calendar algorithms divide by literals and nothing else — among them
@@ -487,6 +493,15 @@ named because `check_constants_named`'s owner map cites this rule for 86400 and
 1000000000, which `src/cal/` does not divide by yet: they are the conversions to
 come, and this rule and that map move together when a second module wants
 them.)*
+
+*(Cycle 0.2.2, TM-223: the conversions came, and they are `span`'s, not
+`cal`'s. `timestamp_to_utc` divides the seconds by `NTIME_SECS_PER_DAY`, read by
+name from `src/core/limits.npk` — a `fixed` that `tests/unit/limits_named.npk`
+holds to 24 × 60 × 60 on every run, divided by under the compiler's own zero
+check, `DivByZero`, which every importer of `span` owes already (the IR at
+`5fbaf4a`). The owner map moved with this rule, as the note above said: 86400
+belongs to `core` alone, spelled once and read by name everywhere, and
+1000000000 stays `cal`'s until cycle 0.2.3's nanosecond arithmetic decides.)*
 
 **Rule S-17.** Every index into the zone tables goes through one accessor pair,
 and the accessor is where the bound is checked. Callers do not index raw

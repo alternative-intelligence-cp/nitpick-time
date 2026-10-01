@@ -178,7 +178,7 @@ The harness mirrors the compiler's stage vocabulary (`BUILD_REFERENCE.md`
 | `check` | `tests/rejection/` | refused by the frontend with **exactly** the expected codes |
 | `program` | `tests/unit/`, `tests/probe/` | emitted, scanned, assembled, linked, run at -O0 and again under `opt -O2`, the same exit both times |
 | `golden` | `tests/golden/` | as `program`, and the emitted text matches the committed golden byte for byte |
-| `sweep` | `tests/unit/sweep/` | as `program`, but **long** — the exhaustive calendar and zone sweeps, run in full on a full invocation and skipped loudly under `--quick` |
+| `sweep` | `tests/unit/sweep/` | as `program`, but **long** — the exhaustive sweeps: the calendar's, since cycle 0.2.2 the `Timestamp` ↔ civil round trip (TM-224), and from cycle 0.6 the zones' — run in full on a full invocation and skipped loudly under `--quick` |
 | `fixture` | *(no entry; TM-181)* | the compiler's: a PROGRAM built and never run, its uppercased stem becoming an `// argv:` token. This library has none, and `tests/fixtures/` holds corpora instead — since cycle 0.1.4 `civil/civil_oracle.npk`, a generated module the `sweep` member `every_oracle_date.npk` imports, rooted by the `parse` stage alone and named in `EXPECT_EXEMPT` at `none`. Until then this row's directory read `tests/fixtures/` |
 
 **Rule B-4b (TM-114) — `tests/conformance/` is `compile`/`positive`, and NOT
@@ -316,14 +316,15 @@ list kept the old code until cycle 0.2.0), `BORROW-001`, `BORROW-012`,
 `RESOLVE-001`, `RESOLVE-002` (since cycle 0.2.0, `probe20b`),
 `REACH-002` and `REACH-003`, and every family
 after the first three runs only on something that parsed. Re-measured at pin
-`5fbaf4a`, cycle 0.2.1: **138 files = 93 parse cleanly + 43
+`5fbaf4a`, cycle 0.2.2: **142 files = 97 parse cleanly + 43
 parse and are refused later + 2 do not parse**
-<!-- [[sweep: npk_total=138]] --> (`127 = 90 + 35 + 2` from cycle 0.1.3c until
+<!-- [[sweep: npk_total=142]] --> (`127 = 90 + 35 + 2` from cycle 0.1.3c until
 `tests/unit/civil_total_edges.npk` joined, `128 = 91 + 35 + 2` from then
 until cycle 0.2.0b retired the churn pair, TM-214, `126 = 89 + 35 + 2`
 until cycle 0.2.0 added `Instant`'s unit, its two refusals and the relay
-specimen, and `130 = 91 + 37 + 2` until cycle 0.2.1 added `Timestamp`'s two
-units and six refusals), and the two
+specimen, `130 = 91 + 37 + 2` until cycle 0.2.1 added `Timestamp`'s two
+units and six refusals, and `138 = 93 + 43 + 2` until cycle 0.2.2 added the
+conversions' two units and two sweeps), and the two
 are `probe02d_wide_literal_refused.npk` (LEX-004, PARSE-002) and
 `probe14_error_payload_refused.npk` (PARSE-001, TM-147). It read
 `50 = 36 + 13 + 1` for three subcycles after the tree stopped being that size,
@@ -407,6 +408,18 @@ chooses — the stage whole and this rule amended to its measured cost, the
 member's −O2 leg over a sample, or its domain split across the two legs — with
 the first the default if the stage stays under 60 s. `meta/roadmap/0.2/README.md`
 carries it.)*
+*(Measured at cycle 0.2.2's planning, compiler `5fbaf4a`, when the round trip's
+two members joined: the eight sweeps cost **43.3 s** together on a full
+invocation — 2.9 + 5.3 + 2.1 + 8.1 + 0.6 + 5.6 + 3.6 + 15.1 s for
+`every_civil_date`, `every_day_boundary`, `every_day_number`,
+`every_iso_week_date`, `every_month_length`, `every_oracle_date`,
+`every_ordinal_date` and `every_sampled_second`, both legs, compile included,
+the harness's own per-unit figures. Over the 30 s threshold and under the note
+above's 60 s, so the stage stays whole — that note's default — and this rule
+is amended to its cost (TM-224): **the threshold is 60 s from here**, and the
+member that would take the stage past it chooses, measured before it lands,
+between its −O2 leg over a sample and its domain split across the two legs.
+"Seconds, not minutes" still holds.)*
 
 **Rule B-9b (TM-125) — no CI workflow may pass `--quick`**, and O-X5 is settled
 that way. The argument is not that the sweeps are cheap — they are, and that

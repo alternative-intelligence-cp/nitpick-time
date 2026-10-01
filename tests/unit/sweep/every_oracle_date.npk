@@ -169,8 +169,9 @@ func:say_num = int32(int64:v, bool:last) never fails {
 };
 
 // `swept <count>` and a newline, on stdout, exactly once -- the same helper
-// as the other five members', and every copy is checked on every run by the
-// harness reading what it printed.
+// as every other member's, and every copy is checked on every run by the
+// harness reading what it printed. (It said "the other five members'" until
+// cycle 0.2.2 brought the stage to eight.)
 func:say_swept = int32(int64:count) never fails {
     string:digits = int_to_string(count);
     string:head = string_concat("swept ", digits);

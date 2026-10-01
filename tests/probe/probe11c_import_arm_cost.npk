@@ -32,8 +32,8 @@
 // (`src/driver/pipeline.npk`'s `rc0` loop), and the system-arm conditions are
 // set by ANY module's text, not by the root's. A consumer of `ntime/cal.npk`
 // therefore owes `DivByZero`, `DivOverflow`, `IntOverflow` and `OutOfBounds`
-// no matter what it does itself -- `cal` divides by 4, 100, 400, 146097,
-// 86400 and 1000000000, indexes the month tables, and adds.
+// no matter what it does itself -- `cal` divides by Hinnant's literals,
+// 146097 among them, indexes its month table, and adds (TM-223).
 //
 // WHY IT MATTERS RATHER THAN BEING A CURIOSITY. `SAFETY.md` §2's table is
 // published to consumers as the bill for importing each module, and S-6 has a

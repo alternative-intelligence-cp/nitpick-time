@@ -2,15 +2,17 @@
 // four things a caller may do with readings: build one, subtract two of the
 // same clock, add a `Duration`, compare two of the same clock (cycle 0.2.0;
 // `TIME_MODEL.md` M-2 and M-4 and `HOST.md` H-6, as TM-215 and TM-216 amend
-// them); and `Timestamp`, a point on the absolute UTC scale, with its one
+// them); `Timestamp`, a point on the absolute UTC scale, with its one
 // constructor, which refuses a `secs` outside the range and a `nanos` outside
 // one second (cycle 0.2.1; `TIME_MODEL.md` §3 and M-6 ... M-8, TM-219 and
-// TM-220). The conversions to and from the civil scale are cycle 0.2.2's;
-// the `Duration` interop -- `timestamp_add`, `timestamp_since` and the
-// constructors `ntime` adds -- 0.2.3's; and the clocks themselves cycle 0.3's:
-// `host_now_instant` and `host_now_boot` will build their answers through
-// `instant_of`, and `host_now_utc` through `timestamp_of`, which is why both
-// are public.
+// TM-220); and the two conversions between that scale and the civil one,
+// `timestamp_to_utc` and `civil_to_utc` (cycle 0.2.2; `TIME_MODEL.md` M-11 and
+// §9, TM-222). The `Duration` interop -- `timestamp_add`, `timestamp_since` and
+// the constructors `ntime` adds -- is 0.2.3's, and the clocks themselves cycle
+// 0.3's: `host_now_instant` and `host_now_boot` will build their answers
+// through `instant_of`, and `host_now_utc` through `timestamp_of`, which is why
+// both are public. (Until cycle 0.2.2 this said the conversions were that
+// cycle's.)
 //
 // A TIMEOUT CANNOT BE WRITTEN AGAINST A WALL CLOCK, and this module is half of
 // why: there is no conversion between an `Instant` and anything else (TM-010),
@@ -76,17 +78,60 @@
 // anything narrower pushes the range to the caller -- and a `timespec`'s
 // nanoseconds are an `int64` (H-4).
 //
+// THE CONVERSIONS ARE `cal`'S ALGORITHMS, AND EVERY DAY IS 86 400 SECONDS
+// (M-11, TM-222). `timestamp_to_utc` splits the seconds into a day number and
+// a second of the day by a FLOOR division, and hands the first to
+// `days_to_date` and the second to `civil_time`. `/` truncates toward zero here
+// (`tests/probe/probe07_negative_div.npk`), so a negative remainder moves the
+// day back by one: `-1 s, 500 000 000 ns` is 1969-12-31T23:59:59.5, the last
+// half-second of day -1, and a truncating split hands `civil_time` a second of
+// -1 instead. Neither callee can refuse what a `Timestamp` from `timestamp_of`
+// hands it -- its range IS the civil range in seconds (M-8), and its remainder
+// lies below one second (M-7) -- so the function is `never fails`, as
+// `TIME_MODEL.md` §9 says, and each refusal ends in `#unreachable()`:
+// `SAFETY.md` S-15c's answer for a value whose range holds by construction. A
+// `Timestamp` outside the range can only come from `wild` storage
+// reinterpreted, and it stops there, through the floor's `Unreachable` -- an
+// arm every consumer owes already. (The statement
+// form, `if (r.is_error) { #unreachable(); }`, leaves `r.value` tainted --
+// `NITPICK-TAINT-001`, measured at planning: the taint analysis does not count
+// the builtin as leaving the block. `?|`'s fallback is the builtin itself,
+// which the compiler types as whatever its position expects.)
+//
+// `civil_to_utc` IS FALLIBLE, AS §9 SAYS, AND THAT IS WHAT MAKES IT TOTAL. It
+// adds the day number `date_to_days` gives to the second of the day and builds
+// its answer through `timestamp_of`, the one constructor, so the range check
+// and M-7 are that function's, and nothing here writes a `Timestamp` literal.
+// A `CivilDateTime` built from the constructors always converts -- its date
+// lies in the range -- so the refusal is reached only through C-8c's opt-out:
+// a forged year of 10 000, or a forged `nanos` of one second, is refused, and
+// never trapped or carried (`tests/unit/civil_to_utc_edges.npk`, which is
+// `VERIFICATION.md` P-4's stand-in for this function). That is `CALENDAR.md`
+// C-8b's second bullet -- total where it can be. And nothing here can trap on
+// the way: a day number from any `int32` year is at most 7.84e11 in magnitude
+// (C-12), times 86 400 is 6.8e16, and the second of the day is at most 933 555
+// from three `uint8`s, all far inside `int64`.
+//
+// THE GATE is the round trip, both ways, each direction handed a walk's value
+// rather than the value under test (`TESTING.md` V-4b): both sides of every
+// day boundary in the range, `tests/unit/sweep/every_day_boundary.npk`, and
+// every second of 512 days chosen by a seeded generator,
+// `tests/unit/sweep/every_sampled_second.npk`.
+//
 // `raw` BEFORE EVERY `never fails` CALL FROM A FALLIBLE BODY: `duration_ns` is
 // the prelude's, `never fails`, and `pass duration_ns(...)` inside
 // `instant_since` is `NITPICK-TYPE-007` without it (measured at planning).
 // `instant_add` overflows only 292 years past the clock's origin, and traps
 // there (D-210), as `TIME_MODEL.md` §8 has said since cycle 0.0.
 //
-// WHAT IT MAY IMPORT: `cal` and `core` (`BUILD.md` B-17). It imports `cal`, for
-// `ETimeValue`, and `core`'s `limits`, for the three bounds `timestamp_of`
-// checks -- by name, because `check_constants_named` refuses a second literal
-// copy of the number of nanoseconds in a second outside the module that owns
-// it (`SAFETY.md` S-16). (It imported `cal` alone until cycle 0.2.1.)
+// WHAT IT MAY IMPORT: `cal` and `core` (`BUILD.md` B-17). It imports `cal` for
+// `ETimeValue` and, since cycle 0.2.2, for the three civil types and the three
+// functions the conversions are made of; and `core`'s `limits` for the three
+// bounds `timestamp_of` checks and, since 0.2.2, the seconds in a day -- each
+// number by name, because `src/core/limits.npk` holds the one copy of it and
+// `check_constants_named` refuses a second (`SAFETY.md` S-16, TM-223). (It
+// imported `cal` alone until cycle 0.2.1, and `cal`'s identity and nothing
+// else of it until 0.2.2.)
 //
 // WHAT IT MUST NOT DECLARE: a `Duration` (TM-004). The prelude's is the
 // ecosystem's one span type; a second would immediately become the type
@@ -96,9 +141,16 @@
 mod:span;
 
 use "../cal/cal.npk".ETimeValue;
+use "../cal/cal.npk".CivilDate;
+use "../cal/cal.npk".CivilTime;
+use "../cal/cal.npk".CivilDateTime;
+use "../cal/cal.npk".days_to_date;
+use "../cal/cal.npk".date_to_days;
+use "../cal/cal.npk".civil_time;
 use "../core/limits.npk".NTIME_SECS_MIN;
 use "../core/limits.npk".NTIME_SECS_MAX;
 use "../core/limits.npk".NTIME_NANOS_PER_SEC;
+use "../core/limits.npk".NTIME_SECS_PER_DAY;
 
 #[derive(Eq, Clone, Debug, Copy)]
 pub enum:InstantClock = { Monotonic; Boottime; };
@@ -139,4 +191,31 @@ pub func:timestamp_of = Timestamp(int64:secs, int64:nanos) {
     if (nanos < 0i64)                 { fail ETimeValue; }   // ValueFault.NanoRange
     if (nanos >= NTIME_NANOS_PER_SEC) { fail ETimeValue; }   // ValueFault.NanoRange
     pass Timestamp{ secs: secs, nanos: nanos =>! uint32 };
+};
+
+// The civil reading, in UTC, of a point on the absolute scale (M-11, §9).
+// `never fails`: a `Timestamp` is in the range and normalised by construction,
+// so neither refusal below can happen to one, and each is S-15c's stop.
+pub func:timestamp_to_utc = CivilDateTime(Timestamp:t) never fails {
+    int64:days = t.secs / NTIME_SECS_PER_DAY;
+    int64:sod = t.secs % NTIME_SECS_PER_DAY;
+    if (sod < 0i64) {                                // `/` truncates: floor it
+        days = days - 1i64;
+        sod = sod + NTIME_SECS_PER_DAY;
+    }
+    CivilDate:d = days_to_date(days) ?| #unreachable();             // M-8
+    CivilTime:c = civil_time(sod / 3600i64, (sod / 60i64) % 60i64, sod % 60i64,
+                             t.nanos => int64) ?| #unreachable();   // M-7
+    pass CivilDateTime{ date: d, time: c };
+};
+
+// The point on the absolute scale a civil reading names, read as UTC (M-11,
+// §9). Fallible, and only through `timestamp_of`: a reading from the
+// constructors always converts, and a forged one is refused, not trapped.
+pub func:civil_to_utc = Timestamp(CivilDateTime:c) {
+    int64:days = raw date_to_days(c.date);
+    int64:sod = ((c.time.hour => int64) * 3600i64)
+                + ((c.time.minute => int64) * 60i64) + (c.time.second => int64);
+    pass (relay timestamp_of((days * NTIME_SECS_PER_DAY) + sod,
+                             c.time.nanos => int64));
 };

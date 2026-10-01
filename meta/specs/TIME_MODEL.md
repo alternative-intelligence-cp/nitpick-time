@@ -206,6 +206,12 @@ This is the POSIX `time_t` model. It is chosen because:
   a function of the table's version, which would take the whole library out of
   `SAFETY.md` §3's purity rule.
 
+*(Cycle 0.2.2, TM-222 and TM-224: the bijection is code, and it is the gate.
+`timestamp_to_utc` and `civil_to_utc` are `src/span/`'s, and on every full run
+both sides of every day boundary in the range, and every second of 512 days a
+seeded generator chooses, go each way and back — each direction handed a
+walk's value, never the other's answer.)*
+
 **Rule M-12 — the consequence, stated rather than hidden.** A `Duration`
 computed between two `Timestamp`s that straddle a leap second is short by one
 second against true elapsed SI time. As of this writing 27 leap seconds have
@@ -353,6 +359,14 @@ function — found at 0.2.1's planning.)*
 
 *(Amended at cycle 0.2.0, TM-216: `instant_since`'s row read "no" — M-4's
 "never fails", which TM-010.1's refusal of two clocks makes false.)*
+
+*(Cycle 0.2.2, TM-222: the two conversion rows are code, as they are written.
+`timestamp_to_utc` never fails — a `Timestamp` is in the range and normalised by
+construction, so the refusals of `days_to_date` and `civil_time` it is built
+on cannot meet one, and each ends in `#unreachable()` (`SAFETY.md` S-15c).
+`civil_to_utc` fails `ETimeValue`, `timestamp_of`'s refusal relayed — and only
+for a reading forged through `CALENDAR.md` C-8c's opt-out, since one from the
+constructors always converts.)*
 
 ---
 

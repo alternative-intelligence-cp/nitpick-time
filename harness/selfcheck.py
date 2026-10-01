@@ -901,12 +901,17 @@ PLANTED = [
      ("src/cal/cal.npk", "mod:cal;\npub error:ETimeOops;\n"),
      ("src/cal/cal.npk", "mod:cal;\npub error:ETimeValue;\n"),
      "three is a ceiling"),
+    # 86400 IS `core`'S ALONE SINCE CYCLE 0.2.2 (TM-223): the plant is the
+    # conversion's own module spelling it, the slip the map now refuses, and
+    # the control is the one copy, declared where `src/core/limits.npk`
+    # declares it. (The plant was `zone`'s and the control `cal`'s, the owner
+    # then, until cycle 0.2.2.)
     (checks_mod.check_constants_named,
-     ("src/zone/zone.npk", "mod:zone;\nfunc:f = int64() never fails "
-                           "{ pass 86400i64; };\n"),
-     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() never fails "
-                         "{ pass 86400i64; };\n"),
-     "belongs to module `cal`"),
+     ("src/span/span.npk", "mod:span;\nfunc:f = int64(int64:s) never fails "
+                           "{ pass s / 86400i64; };\n"),
+     ("src/core/limits.npk",
+      "mod:limits;\npub fixed int64:NTIME_SECS_PER_DAY = 86400i64;\n"),
+     "belongs to module `core`"),
     (checks_mod.check_constants_named,
      ("src/cal/cal.npk", "mod:cal;\nfixed int64:YEAR_MAX = 9999i64;\n"),
      ("src/core/limits.npk", "mod:limits;\nfixed int64:YEAR_MAX = 9999i64;\n"),

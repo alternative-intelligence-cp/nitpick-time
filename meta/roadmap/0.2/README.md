@@ -24,7 +24,8 @@ file stands — make §5's table the authority and drop N-20's count. *(From cyc
 | # | Topic | Ends with |
 |---|---|---|
 | 0.2.0a | **The adoption of compiler `5fbaf4a`** — the fifteen `cstring` copies, the target pinned and held, the per-site count, `Pod` retired into `Copy`, CI's pin and its emission asserted, and the ecosystem audit's EC3, EC6 and ED1 — **[`0.2.0a.md`](0.2.0a.md)**, planned and rehearsed 2026-09-27; it runs FIRST | the tree `GREEN` at `5fbaf4a`, locally and in CI |
-| 0.2.0 | **`Instant`** — the type, the clock tag, `instant_since`, and the refusals — **[`0.2.0.md`](0.2.0.md)**, written at cycle 0.1's close and rehearsed at `5fbaf4a` over 0.2.0a's tree on 2026-09-27 | a timeout cannot be written against a wall clock |
+| 0.2.0b | **`Vec<T: Copy>`** — `nitpick-regex`'s answer to the question TM-194 left open (its RX-188), ported: the bound on the type and on every verb, TM-150's churn pair retired, `case5` at six sites, no element check — **[`0.2.0b.md`](0.2.0b.md)**, planned and rehearsed 2026-09-30; it runs SECOND, after 0.2.0a and before 0.2.0 | an owning element refused wherever it is written, and the IR of every program that compiles both ways unchanged |
+| 0.2.0 | **`Instant`** — the type, the clock tag, `instant_since`, and the refusals — **[`0.2.0.md`](0.2.0.md)**, written at cycle 0.1's close, its §1 re-measured at `5fbaf4a` over 0.2.0a's tree on 2026-09-27, and its steps rehearsed from their blocks over 0.2.0b's tree on 2026-09-30 | a timeout cannot be written against a wall clock |
 | 0.2.1 | **`Timestamp`** — the type, the normalisation invariant, the range check | one representation per instant |
 | 0.2.2 | **Conversion** — `timestamp_to_utc`, `civil_to_utc`, and the round trip | the second gate |
 | 0.2.3 | **`Duration` interop** — the added constructors, `timestamp_add`, `timestamp_since` and its ±292-year refusal | the mismatch handled honestly |
@@ -41,13 +42,22 @@ file stands — make §5's table the authority and drop N-20's count. *(From cyc
 - [x] EC3's three sites and every other phrasing of the claim corrected (PD-62); ED1 (PD-57) — TM-213, `23cb2da`, and TM-208; block 7b's sweep read line by line, no omission (`0.2.0a.md`'s execution record)
 - [x] `GREEN` at `5fbaf4a` locally and in CI, read from the job log — `GREEN -- 113` on block 7's run over `23cb2da`, and in CI run 36364840105's job log with `compiler HEAD == 5fbaf4a40a2f6b213754cd71b6c69700f8aa2c87 (clean)` and `12 of V-14's 13`
 
+### 0.2.0b — `Vec<T: Copy>` (its §5 is the acceptance list)
+- [ ] `struct:Vec<T: Copy>` and the bound on the eight verbs that lacked it; TM-150's churn pair retired; `case5` at six sites; `SAFETY.md` S-18b … S-18h, `BUILD.md` B-12 and `TESTING.md` V-17 amended (PD-63)
+- [ ] the masked IR of every program and root that compiles before and after the bound identical — the site-line table the one mask
+- [ ] no element check, by PD-63's declined alternative — measured: a `Copy` struct holding a pointer or a slice is a legal element, and drops nothing
+- [ ] the prose, and block 3's sweep read line by line
+- [ ] `GREEN` at `5fbaf4a` locally and in CI, read from the job log
+
 ### 0.2.0 — `Instant`
-- [ ] `Instant { int64:ns; uint8:clock }` with the clock tag from H-6
-- [ ] `instant_since`, `instant_add`, `instant_cmp`
-- [ ] **`instant_since` refuses a pair from different clocks** with `ETimeValue` (TM-010.1), and a test proves it
+*(Restated 2026-09-30, at 0.2.0's rehearsal, to the plan's decisions: the first item read `Instant { int64:ns; uint8:clock }` with the clock tag from H-6, and none named `instant_of`, `instant_cmp`'s refusal or the generator's fix.)*
+- [ ] `Instant { sealed int64:ns; sealed InstantClock:clock }`, `InstantClock` an enum; both `Copy`, neither `Ord` (PD-53)
+- [ ] `instant_of`, `instant_since`, `instant_add`, `instant_cmp` (PD-54)
+- [ ] **`instant_since` and `instant_cmp` refuse a pair from different clocks** with `ETimeValue`, `ValueFault.ClockMismatch` (TM-010.1, PD-54), and a test proves it
 - [ ] **there is no `instant_to_timestamp` and no `timestamp_to_instant`** — a rejection test asserts that a program attempting the conversion does not compile, so the refusal is checked rather than merely absent. **It is the library's next refusal, and it is a probe**: `nitpick.toml`'s `check` stage is still empty, and every refusal the library has asserted so far is a probe under `tests/probe/` dispatched by its own header (`BUILD.md` B-4c) — `0.2.0.md` says which probes, and why not a `check` entry
-- [ ] O-X3 decided: `instant_clock(i)` read-only accessor, or not
-- [ ] the compiler's `npk_mono_now` comment quoted in the module header, because it is the argument
+- [ ] O-X3 decided: `instant_clock(i)` read-only accessor, or not — PD-54: the sealed field, and no accessor
+- [ ] the compiler's `npk_mono_now` comment quoted in the module header, because it is the argument — from `git show 5fbaf4a:runtime/npkrt.ll`, where it heads the monotonic-clock block above `npk_chain_reset`
+- [ ] the S-6 generator names an identity by the module that declares it, and part C's fourth specimen was red before the fix and silent after (PD-55)
 
 ### 0.2.1 — `Timestamp`
 - [ ] `Timestamp { int64:secs; uint32:nanos }`, field order asserted against probe 01's verdict
@@ -69,7 +79,7 @@ file stands — make §5's table the authority and drop N-20's count. *(From cyc
 - [ ] **`timestamp_since` returns `ETimeValue`/`Overflow` past ±292 years** (M-18) — and the test computes the exact boundary rather than approximating it
 - [ ] `timestamp_until(a, b, unit)` in whole days, months or years, as the calendar-scale answer (M-19)
 - [ ] **`check_check_registry` built FIRST, because this subcycle adds a check** (TM-201, `TESTING.md` V-14e): `TESTING.md` §2's table, `checks.LIVE`, `checks.PENDING` and the checks `run.py` drives outside step 5 diffed as one family, and seen red on a planted drift in each of the four — before the family moves
-- [ ] **`check_no_view_returns` live** (`SAFETY.md` S-22, TM-204 — the cycle audit's C3, placed here at cycle 0.1's close): every function in `src/` whose result is a `uint8[]`, a `cstring` or a struct holding one is a finding but S-22's named exemption, `bytes_view`, whose reason is re-derived on every run rather than its name merely matched (TM-137) — a planted view return red, the exemption naming a function that is gone red, and `bytes_view` silent; §2's table gains its row and V-1a's arithmetic moves with it, in the same commit. **Before cycle 0.4**, whose parsers are the first code that could want a view back
+- [ ] **`check_no_view_returns` live** (`SAFETY.md` S-22, TM-204 — the cycle audit's C3, placed here at cycle 0.1's close): every function in `src/` whose result is a `uint8[]`, a `cstring` or a struct holding one is a finding but S-22's named exemption, `bytes_view`, whose reason is re-derived on every run rather than its name merely matched (TM-137) — a planted view return red, the exemption naming a function that is gone red, and `bytes_view` silent; §2's table gains its row and V-1a's arithmetic moves with it, in the same commit. **Before cycle 0.4**, whose parsers are the first code that could want a view back. *(And one question for it, from 0.2.0b's planning: a `#[derive(Copy)]` struct holding a slice is a legal `Vec` element under `Vec<T: Copy>`, so whether S-22's "a struct containing one" reaches through a `Vec`'s element type is this check's to decide when it reads a result's type — `0.2.0b.md` §1.5 and §8.)*
 - [ ] `check_int128_sites` goes live: `int128` at exactly the sites `SPAN_MODEL.md` §5 names
 
 ## The adoption, when the pin moves

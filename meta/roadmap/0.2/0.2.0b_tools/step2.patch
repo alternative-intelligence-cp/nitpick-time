@@ -1,0 +1,271 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index aa348e459bd1ffb48c0dd63635c7d73953561cc1..4369456f0ebdb88ae19f3d9073e86590162ee220 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -43,12 +43,13 @@
+ # the civil types and their validating constructors, and since 0.1.1 Hinnant's
+ # `date_to_days` and `days_to_date`, and since 0.1.3 the derived fields --
+ # re-exported together as 58 public names [[sweep: lib_reexports=58]],
+-# so this IS evidence about behaviour, of the 113 units the runner reports at
+-# compiler `5fbaf4a` since cycle 0.2.0a (113 at `c970483` at cycle 0.1.5's
+-# second half; 62 at cycle 0.0.6, 67 at 0.1.0, 70 at 0.1.0b, 75 at
+-# 0.1.0c, 78 at 0.1.1, 81 at 0.1.2, 86 at 0.1.3, 90 at 0.1.3b, 91 at 0.1.4 and
+-# 0.1.4b, all at `c3bdae2` from 0.1.0b on, 101 at 0.1.4c, and 112 at 0.1.3c and
+-# at the first half of 0.1.5, cycle 0.1's close). What
++# so this IS evidence about behaviour, of the 111 units the runner reports at
++# compiler `5fbaf4a` since cycle 0.2.0b (113 at cycle 0.2.0a, and at
++# `c970483` at cycle 0.1.5's second half; 62 at cycle 0.0.6, 67 at 0.1.0,
++# 70 at 0.1.0b, 75 at 0.1.0c, 78 at 0.1.1, 81 at 0.1.2, 86 at 0.1.3, 90 at
++# 0.1.3b, 91 at 0.1.4 and 0.1.4b, all at `c3bdae2` from 0.1.0b on, 101 at
++# 0.1.4c, and 112 at 0.1.3c and at the first half of 0.1.5, cycle 0.1's
++# close). What
+ # it is evidence of: the pinned compiler builds from a clean checkout at exactly
+ # LLVM 20.1.2, every `.npk` under `src/` compiles, every unit under `tests/`
+ # meets its own header at -O0 and again under `opt -O2`, the whole
+@@ -118,7 +119,9 @@
+ # 0.2.0a, AT COMPILER `5fbaf4a`: every emission states the pinned target and
+ # the runner holds it there (`BUILD.md` B-1a); every refusal names each code
+ # once per site it is reported at (B-7c); and `vec_at` takes the prelude's
+-# `Copy` (TM-209 … TM-211).
++# `Copy` (TM-209 … TM-211). AND SINCE CYCLE 0.2.0b: `Vec<T: Copy>` -- an
++# owning element is refused at the type and at every verb, not only at
++# `vec_at`'s call (TM-214).
+ #
+ # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
+ # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 74beeebfe47e1c328dd17166894955ddc62257b7..4e7b3ab23f6dab03478e640a6d9b193bde8ee163 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -10,7 +10,24 @@ safety-critical systems language at `../../nitpick`.
+ **Status: cycle 0.1 CLOSED (2026-09-26), archived at `meta/roadmap/done/0.1/`
+ — the civil calendar, with its exhaustive gate on every run — and cycle 0.2,
+ instants and timestamps, is OPEN: its 0.2.0a, the adoption of compiler
+-`5fbaf4a`, is done, and `meta/roadmap/0.2/0.2.0.md` is next.**
++`5fbaf4a`, and its 0.2.0b, `Vec<T: Copy>`, are done, and
++`meta/roadmap/0.2/0.2.0.md` is next.**
++
++**After cycle 0.2.0b: `Vec<T: Copy>`** — `nitpick-regex`'s answer to the
++question TM-194 left open, ported (its RX-188). The type is
++`struct:Vec<T: Copy>` and every verb states the bound, so the compiler refuses
++an owning element wherever it is written — at the type, at each turbofish and
++at each verb's call — where until now only `vec_at`'s call was refused; the
++restriction TM-132 made is the type's, and the four element drops `SAFETY.md`
++S-18d rested it on are owed at no `T` the type admits (TM-214). **Nothing
++changed at a `T` it admits**: of the tree's 128 `.npk`, the 89 that compile both
++with the bound and without it emit byte-identical IR. Three verdicts moved:
++TM-150's churn pair, which measured `vec_pop` and `vec_clear` at `T = string`,
++is refused and retired — the instrument keeps its two known leaks, `probe06b`
++and `probe12` — and `generic_owning_copy/case5` names six sites where it named
++two. No element check is added: `Copy` states this library's element rule
++whole, and a `Copy` element that holds a pointer is S-18e's and S-22's. A full
++invocation is **111 units green** at pin `5fbaf4a`.
+ 
+ **After cycle 0.2.0a: the adoption of compiler `5fbaf4a`** — the compiler's
+ last landing before its pause, carrying its landings 67 … 82. At the new pin
+@@ -332,9 +349,12 @@ and cycle 0.0.6 put ~19 s back by asserting 21 more units.
+ **THREE things to know before touching `src/core/`, and the third is the one
+ cycle 0.0 paid most for.**
+ 
+-- **`Vec<T>` is for a NON-OWNING `T`** (TM-132; the reason changed at 0.0.5 —
+-  TM-136 — and again at 0.1.0b — TM-150). **O-N17 is FIXED** at pin `aaffb87`,
+-  and **O-N19 is FIXED at `c3bdae2`**: `NITPICK-TYPE-046` did not fire inside
++- **`Vec<T>` is for a NON-OWNING `T`, and since cycle 0.2.0b the TYPE says
++  so: `Vec<T: Copy>`, every verb bounded, an owning `T` refused wherever it is
++  written** (TM-214; the restriction is TM-132's, its reason changed at 0.0.5 —
++  TM-136 — and again at 0.1.0b — TM-150). *Until 0.2.0b, as follows:*
++  **O-N17 is FIXED** at pin `aaffb87`, and **O-N19 is FIXED at `c3bdae2`**:
++  `NITPICK-TYPE-046` did not fire inside
+   a generic function body, so `T:x = s[i]` at an owning `T` — a copy of an
+   owner — compiled, linked, ran, and left two owners of one heap body (exit
+   170 on the second read); the compiler's D-264 now refuses it where it is
+diff --git a/README.md b/README.md
+index 81fbb17521189cbc86b350b215378af27bf53e0d..7baa638596345f0f986f2924f32b4ec40e510bd0 100644
+--- a/README.md
++++ b/README.md
+@@ -8,9 +8,10 @@ answer on every machine.
+ 
+ > **Status: cycle 0.1, the civil calendar, CLOSED on 2026-09-26, archived at
+ > [`meta/roadmap/done/0.1/`](meta/roadmap/done/0.1/README.md)** — its code, its
+-> gate and its audit done — **and cycle 0.2, instants and timestamps, is next.**
+-> What exists: `src/core/` (`Vec<T>`,
+-> `Bytes` and the named limits) since cycle 0.0, and `src/cal/` — `CivilDate`,
++> gate and its audit done — **and cycle 0.2, instants and timestamps, is open.**
++> What exists: `src/core/` — `Vec<T>`, `Bytes` and the named limits — since
++> cycle 0.0, its `Vec` holding only `Copy` elements since cycle 0.2.0b; and
++> `src/cal/` — `CivilDate`,
+ > `CivilTime`, `CivilDateTime`, `Weekday`, `Month`, the day-number algorithms,
+ > the weekday, the day of the year and the ISO week date — whose gate is
+ > exhaustive: every day of years −9999 … +9999 goes to its day number and back,
+@@ -27,7 +28,8 @@ answer on every machine.
+ > *(Until cycle 0.1.5 this block read "Status: planning. No code yet" — false
+ > since cycle 0.0.4 — and "the compiler itself is at cycle 1.5"; between the
+ > close's two halves, that cycle 0.1 "is in its close … and the audit that
+-> closes it is next".)*
++> closes it is next"; and until cycle 0.2.0b, that cycle 0.2 "is next", which
++> 0.2.0a had opened.)*
+ 
+ ---
+ 
+diff --git a/harness/README.md b/harness/README.md
+index 4caae6b128076811b44ff9f94f41c1f149b93a6f..36527e61d8fb32155daea8ae63d5e66e2ee156f1 100644
+--- a/harness/README.md
++++ b/harness/README.md
+@@ -334,6 +334,16 @@ had run `RED -- 105 unit(s) of 113`: the eight files holding the fifteen
+ `cstring` copies (`meta/roadmap/0.2/0.2.0a.md` §1). No heap figure and no sweep
+ count moved.
+ 
++**At cycle 0.2.0b, the same pin, 111 units**: two tests retired — TM-150's
++churn pair, `vec_churn_pop` and `vec_churn_clear`, whose `Vec<string>`
++`Vec<T: Copy>` refuses (TM-214). The self-check unchanged — 12 of V-14's 13
++cases, 44 tree-check violations with 44 clean controls; parse over 126 files,
++`89 + 35 + 2`; the defect corpus at 36 = 1 exempt + 35 asserted, `case5` a
++refusal at six sites; two twin pairs and the two `Bytes` tests held to their
++heap bounds, the twins under the cap; and library + repro + suite at **76**
++(**20 unit**). `111 = 35 + 76`. The library's IR is 226 493 B, as it was: the
++bound moves no emission. The churn pair's 3.4 s is off every full run.
++
+ The floor under all of it is still TM-117's: every root re-emits the prelude,
+ so a `npkc` invocation on anything that compiles costs a fixed amount and the
+ run makes about 200 of them. One that does *not* compile costs ~0.03 s.
+diff --git a/meta/OPEN_QUESTIONS.md b/meta/OPEN_QUESTIONS.md
+index f1a8288072c455aa7bfa8513f55b967da83e131a..6feb48ceb0a05e650429a81d452293ec58c48379 100644
+--- a/meta/OPEN_QUESTIONS.md
++++ b/meta/OPEN_QUESTIONS.md
+@@ -1041,7 +1041,9 @@ better style anyway (`src/core/limits.npk`).
+ > was refused by the same check, so it relocates with `ralloc`; `vec_pop`'s
+ > `move` is still the right spelling; and `Vec<T>` stays restricted to a
+ > non-owning `T`, now on one reason — the four element drops it does not
+-> perform. The record below is left standing.
++> perform. The record below is left standing. *(Since cycle 0.2.0b the
++> restriction is the type's — `Vec<T: Copy>`, TM-214 — and the four drops are
++> owed at no `T` it admits.)*
+ 
+ **Raised** from this repository at cycle 0.0.5 while checking whether O-N17's
+ fix lifted TM-132's restriction; **numbered O-N19** in the workbench registry;
+diff --git a/meta/roadmap/0.4/README.md b/meta/roadmap/0.4/README.md
+index 3dc9e3db6c21ef0d5e7806a9799cbc46b04642b0..8508706ac3bffeec965eee4169adf1099c0224c4 100644
+--- a/meta/roadmap/0.4/README.md
++++ b/meta/roadmap/0.4/README.md
+@@ -136,7 +136,10 @@ documented exceptions and a test that counts them.
+   whose payload owns nothing — claims it in one line beside its declaration,
+   `impl:FmtPart:Copy = { };`: measured, a four-variant
+   payload enum does, and reads back twice through `vec_at`
+-  (`tests/unit/vec_at_pod.npk`). A struct holding a `Vec` is move-only by
++  (`tests/unit/vec_at_pod.npk`). *(Since cycle 0.2.0b the TYPE asks it too —
++  `Vec<T: Copy>`, TM-214 — so without it `Layout`'s `Vec<FmtPart>` field is
++  `NITPICK-TYPE-017` where it is declared, and every enum `FmtPart` holds
++  claims it as well.)* A struct holding a `Vec` is move-only by
+   containment, so a `Layout` is moved or lent, never copied; a formatter that
+   takes one by loan reads its parts as `vec_at(l.parts, i)` — which compiles for
+   a lent struct's field and for another module's `sealed` field alike — where
+diff --git a/meta/roadmap/ROADMAP.md b/meta/roadmap/ROADMAP.md
+index dffc925d4741fbfd75829349f7e74af27a80c1e2..2f2ff060ad00637d679c7d2e6d1364fb616651b4 100644
+--- a/meta/roadmap/ROADMAP.md
++++ b/meta/roadmap/ROADMAP.md
+@@ -75,7 +75,7 @@ sibling libraries.
+ |---|---|---|
+ | ~~**0.0**~~ | **Foundations** — the language probes, the harness, `src/core/` — **CLOSED 2026-09-06, archived at [`done/0.0/`](done/0.0/README.md)** | — |
+ | ~~**0.1**~~ | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **CLOSED 2026-09-26, archived at [`done/0.1/`](done/0.1/README.md)** | 0.0 ✓ |
+-| **0.2** | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **IN PROGRESS**: [`0.2/0.2.0a.md`](0.2/0.2.0a.md), the adoption of compiler `5fbaf4a`, done; [`0.2/0.2.0.md`](0.2/0.2.0.md), written at cycle 0.1's close and rehearsed over 0.2.0a, next | 0.1 ✓ |
++| **0.2** | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **IN PROGRESS**: [`0.2/0.2.0a.md`](0.2/0.2.0a.md), the adoption of compiler `5fbaf4a`, done; [`0.2/0.2.0b.md`](0.2/0.2.0b.md), `Vec<T: Copy>`, done; [`0.2/0.2.0.md`](0.2/0.2.0.md), written at cycle 0.1's close and rehearsed over 0.2.0b, next | 0.1 ✓ |
+ | **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double | 0.2 |
+ | **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate | 0.2 |
+ | **0.5** | **The zone table** — the generator, the committed tables, the size measurement | 0.1 |
+diff --git a/src/core/README.md b/src/core/README.md
+index 19686fec1c9b1a25c6c01c72ef177496dab6e959..7eff74f1427006ffcc98aabed8f9becc14783455 100644
+--- a/src/core/README.md
++++ b/src/core/README.md
+@@ -1,5 +1,6 @@
+ # `src/core/` — storage primitives
+ 
+-`Vec<T>`, `Bytes` (an owning byte sink with an allocation-free decimal writer),
++`Vec<T: Copy>` (an element owns nothing, since cycle 0.2.0b), `Bytes` (an
++owning byte sink with an allocation-free decimal writer),
+ and `limits.npk` — every named bound in the library, in one file. Depends on
+ nothing. Governed by `meta/specs/BUILD.md` §5. Built in cycle 0.0.4.
+diff --git a/src/core/bytes.npk b/src/core/bytes.npk
+index 10f00bc4393612000b882679554ef12b39d9a041..58161149eecbe7a01c8fb5a320b2405c31c9cc69 100644
+--- a/src/core/bytes.npk
++++ b/src/core/bytes.npk
+@@ -414,7 +414,8 @@ pub func:bytes_take = string(Bytes->:b) never fails {
+ // formatter reusing one sink across a million rows wants the capacity back
+ // without a new buffer. Nothing is dropped, because the bytes are `uint8` and
+ // own nothing -- unlike `Vec<T>`, where the same operation owes an element
+-// drop at an owning `T` (TM-127, S-18c).
++// drop at an owning `T` (TM-127, S-18c) -- a `T` that `Vec<T: Copy>` refuses
++// since cycle 0.2.0b (TM-214).
+ pub func:bytes_clear = NIL(Bytes->:b) never fails {
+     b.len = 0i64;
+     pass NIL;
+diff --git a/src/lib.npk b/src/lib.npk
+index c7873888c03111d3c8a8136cd87ad4094b1d9a08..3a88d324d292c5ff579b8f04c0c77167d8971083 100644
+--- a/src/lib.npk
++++ b/src/lib.npk
+@@ -77,7 +77,9 @@ mod:lib;
+ // at `c3bdae2` by the compiler's D-264, which refuses a copy of a `T` place
+ // where it is written. The restriction stands on the one reason left: four of
+ // the nine operations owe an element drop at an owning `T` and perform none
+-// (`SAFETY.md` S-18d).
++// (`SAFETY.md` S-18d). SINCE CYCLE 0.2.0b (TM-214) THE TYPE STATES IT:
++// `Vec<T: Copy>`, every verb bounded, so an owning `T` is refused wherever it
++// is written and the four drops are owed at no `T` the type admits.
+ //
+ // SINCE CYCLE 0.1.0c (TM-156) its `items` is `hidden` and its `count` and `cap`
+ // are `sealed` under the prelude's `ListLen`: a consumer reads the two lengths
+diff --git a/tests/probe/defect/generic_owning_copy/README.md b/tests/probe/defect/generic_owning_copy/README.md
+index 2bea43ce73f6feb3b37f50d4bcf37d8e5fc8f059..f4a75fdc196fff3747da4644f75726412470bbfb 100644
+--- a/tests/probe/defect/generic_owning_copy/README.md
++++ b/tests/probe/defect/generic_owning_copy/README.md
+@@ -40,6 +40,11 @@ cannot be written through the library any more. Its two calls read the `Vec`
+ as a loan, `vec_at::<string>(v, 0i64)`, because `vec_at` takes one since the
+ same cycle; its header says why, and the rest of its header is its record.
+ 
++*(Since cycle 0.2.0b it names SIX sites, TM-214: `Vec` is `Vec<T: Copy>` and
++every verb states the bound, so the `Vec<string>` declaration, its turbofish,
++the `vec_push` and the `vec_free` are refused beside the two calls — the type
++before the read. The two calls are refused as they were.)*
++
+ | `case5`, both legs | at `c3bdae2` | at `c970483` |
+ |---|---|---|
+ | the text and the library before cycle 0.1.3c — the record | run 11 | run 11 |
+@@ -158,6 +163,11 @@ why "restricted to a non-owning `T`" had felt like a statement about tidiness.
+ > header). `vec_reserve`'s row above no longer exists in that form either: it
+ > relocates with `ralloc`, a bitwise move of the whole block, because D-264
+ > refused its `into[i] = from[i]`.
++>
++> **At cycle 0.2.0b the restriction became the type's** (TM-214):
++> `struct:Vec<T: Copy>`, every verb bounded, so the compiler refuses an owning
++> `T` wherever it is written and the four drops are owed at no `T` the type
++> admits. `case5` names six sites. The paragraph below is the record of why.
+ 
+ **It keeps it, for a stronger reason than the one it had.** TM-132 restricted
+ `Vec<T>` to a non-owning `T` because O-N17 blocked the element-drop path.
+diff --git a/tests/probe/probe12_set_overwrite_leak.npk b/tests/probe/probe12_set_overwrite_leak.npk
+index 408da252634e5eedc4db143067818a3cf475d68f..52104cb44d8c14ae1f821139746923c8e7347f39 100644
+--- a/tests/probe/probe12_set_overwrite_leak.npk
++++ b/tests/probe/probe12_set_overwrite_leak.npk
+@@ -122,6 +122,9 @@
+ // compiler's D-264, cycle 0.1.0b, TM-150), so that reason has closed too; the
+ // pair stays at the instantiation because `Vec<T>` still performs no element
+ // drop at an owning `T`, which is the restriction's one remaining reason.
++// (Since cycle 0.2.0b the restriction is the TYPE's -- `Vec<T: Copy>`,
++// TM-214 -- and this pair, over a `Vec` of its own, is the measured fact it
++// rests on, and one of the instrument's two twin pairs (`TESTING.md` V-17).)
+ mod:probe12_set_overwrite_leak;
+ 
+ struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };
+diff --git a/tests/probe/probe12b_set_overwrite_drop.npk b/tests/probe/probe12b_set_overwrite_drop.npk
+index d7591d6c72c9411cab7619f4c03e5c96a939c5ab..be91440244179830e4e05fa9e35447ffdcf2e868 100644
+--- a/tests/probe/probe12b_set_overwrite_drop.npk
++++ b/tests/probe/probe12b_set_overwrite_drop.npk
+@@ -76,6 +76,9 @@
+ // compiler's D-264, cycle 0.1.0b, TM-150), so that reason has closed too; the
+ // pair stays at the instantiation because `Vec<T>` still performs no element
+ // drop at an owning `T`, which is the restriction's one remaining reason.
++// (Since cycle 0.2.0b the restriction is the TYPE's -- `Vec<T: Copy>`,
++// TM-214 -- and this pair, over a `Vec` of its own, is the measured fact it
++// rests on, and one of the instrument's two twin pairs (`TESTING.md` V-17).)
+ mod:probe12b_set_overwrite_drop;
+ 
+ struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };

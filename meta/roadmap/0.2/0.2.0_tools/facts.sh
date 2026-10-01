@@ -1,13 +1,17 @@
 # meta/roadmap/0.2/0.2.0_tools/facts.sh -- `0.2.0.md` §1.8: re-derive §1 at the pin, in a
-# scratch copy of the tree, never in it. Sourced after `env.sh` (§0), in one Bash call:
+# scratch copy of the tree, never in it. Sourced after `env.sh`, in one Bash call --
+# block 0b of the plan:
 #
-#     source "$REPO/.internal/w020/env.sh"; source "$REPO/meta/roadmap/0.2/0.2.0_tools/facts.sh"
+#     . "$REPO/meta/roadmap/0.2/0.2.0_tools/env.sh"; . "$T/facts.sh"
 #
 # It writes §4.2's module and §4.4's specimen EXTRACTED FROM `0.2.0.md` (the first
 # `nitpick` fence after each heading), the consumer programs §1.3 … §1.6 name, compiles
 # each with the pinned `npkc`, runs `m2_use` at -O0 and after `opt -O2`, and asks
 # `harness/arms.py` for the bill it computes -- then prints one line per fact. It is
-# rehearsed: its output at planning is §1.8's Expect.
+# rehearsed: its output at planning is §1.8's Expect. Since 0.2.0's step rehearsal
+# it also compiles §4.2's module with the derives taken off the enum, and with `Copy`
+# on `Instant` alone -- PD-53's two measured refusals, which until then §1.2 stated
+# and nothing re-derived.
 : "${REPO:?}" "${NPKC:?}" "${NPKRT:?}" "${W:?}"
 P=$W/facts; rm -rf "${P:?}"; mkdir -p "$P/tests/probe/support"
 cp -r "$REPO/src" "$REPO/harness" "$P/" && cp "$REPO"/tests/probe/support/*.npk "$P/tests/probe/support/"
@@ -104,6 +108,26 @@ sed -i 's/#\[derive(Eq, Clone, Debug, Copy)\]/#[derive(Eq, Clone, Debug)]/' "$Q/
 cp "$P/tests/m2_use.npk" "$Q/tests/"
 echo "m2_use, Copy dropped from both derives: $(cd "$Q/tests" && "$NPKC" m2_use.npk -o /dev/null 2>&1 \
   | grep -oE '^NITPICK-[A-Z]+-[0-9]+ [^ ]+' | sed -E 's|[^ ]*/([^/ ]+)$|\1|' | tr '\n' ' ')"
+for v in no_enum_derive copy_on_instant_alone; do
+  sed -n '/^mod:span;/,$p' "$P/src/span/span.npk" > "$Q/src/span/span.npk"
+  case $v in
+    no_enum_derive)        python3 - "$Q/src/span/span.npk" <<'PY2'
+import sys; p = sys.argv[1]; s = open(p).read()
+s = s.replace("#[derive(Eq, Clone, Debug, Copy)]\npub enum:InstantClock", "pub enum:InstantClock")
+s = s.replace("#[derive(Eq, Clone, Debug, Copy)]\npub struct:Instant", "#[derive(Eq, Clone, Debug)]\npub struct:Instant")
+open(p, "w").write(s)
+PY2
+                           ;;
+    copy_on_instant_alone) python3 - "$Q/src/span/span.npk" <<'PY2'
+import sys; p = sys.argv[1]; s = open(p).read()
+s = s.replace("#[derive(Eq, Clone, Debug, Copy)]\npub enum:InstantClock", "#[derive(Eq, Clone, Debug)]\npub enum:InstantClock")
+open(p, "w").write(s)
+PY2
+                           ;;
+  esac
+  echo "span.npk, $v: $(cd "$Q/src/span" && "$NPKC" span.npk -o /dev/null 2>&1 \
+    | grep -oE '^NITPICK-[A-Z]+-[0-9]+ [^ ]+' | sed -E 's|[^ ]*/([^/ ]+)$|\1|' | tr '\n' ' ')"
+done
 sed '/^func:failsafe/,$d; s/^mod:m2_use;/mod:m3_bill;/' "$P/tests/m2_use.npk" > "$P/tests/m3_bill.npk"
 for m in m3_bill m6_bill m7_relay m9_umbrella; do
   echo "$m: $(cd tests && "$NPKC" $m.npk -o /dev/null 2>&1 | grep -oE 'NITPICK-REACH-003|[0-9]+ identities: [^-]*' | tr '\n' ' ' | sed 's/ *$//')"

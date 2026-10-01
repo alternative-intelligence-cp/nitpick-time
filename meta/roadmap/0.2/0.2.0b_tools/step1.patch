@@ -1,0 +1,741 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index a6a0375838ac776ed2fd4e354ae22e420a9455e3..aa348e459bd1ffb48c0dd63635c7d73953561cc1 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -153,10 +153,11 @@
+ # a green run is not a MEMORY result for the managed
+ # half: D-151's exit-0 trap counts `wild` allocations and a `buffer` is managed
+ # (TM-106), so `exit 0` says nothing about `Bytes` (S-18b, S-18e) -- except
+-# that, since cycle 0.1.4b, the files whose headers bound it -- eight since
+-# cycle 0.1.3c [[sweep: heap_bounded=8]] -- are held on both legs to the
+-# runtime's own NPK_HEAP_STATS count, and six of them
+-# [[sweep: cap_belted=6]] again under a 64 MiB cap (`TESTING.md` V-17).
++# that, since cycle 0.1.4b, the files whose headers bound it -- six since
++# cycle 0.2.0b [[sweep: heap_bounded=6]], eight from cycle 0.1.3c until it
++# retired the churn pair (TM-214) -- are held on both legs to the runtime's
++# own NPK_HEAP_STATS count, and four of them
++# [[sweep: cap_belted=4]] again under a 64 MiB cap (`TESTING.md` V-17).
+ #
+ # NOT PINNED, AND KNOWN: `actions/checkout@v4` and `actions/cache@v4` are moving
+ # tags -- the only inputs in this file that are not immutable. A workflow this
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 6a198deb2ef4095a353e358eadeffee575cca149..74beeebfe47e1c328dd17166894955ddc62257b7 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -105,7 +105,8 @@ with it — a confined edit, the trait's one block, one bound, one call, one
+ umbrella line, three test impls *(made at cycle 0.2.0a, the adoption of
+ `5fbaf4a`: TM-211)*. The umbrella re-exports 59 names *(58 since then)* —
+ `Pod` and `bytes_capacity` joined — and eight files' managed memory is held to
+-the runtime's count <!-- [[sweep: heap_bounded=8]] -->. No arm bill moved. A
++the runtime's count *(six since cycle 0.2.0b retired the churn pair
++<!-- [[sweep: heap_bounded=6]] -->, TM-214)*. No arm bill moved. A
+ full invocation is **112 units green** at pin `c970483`.
+ 
+ **After cycle 0.1.4c: the adoption to compiler `c970483`** — the end
+diff --git a/harness/README.md b/harness/README.md
+index d6a6d4737cce04f156603966bab1fa641d916fdc..4caae6b128076811b44ff9f94f41c1f149b93a6f 100644
+--- a/harness/README.md
++++ b/harness/README.md
+@@ -148,9 +148,10 @@ against the summary line rather than left to review.
+   headers bound it.** D-151's exit-0 trap counts `wild` allocations and a
+   `buffer` is managed (TM-106), so exit 0 says nothing about `Bytes`
+   (`SAFETY.md` S-18b). Since cycle 0.1.4b the files whose headers bound it are
+-  held to the runtime's own `NPK_HEAP_STATS` count on both legs — eight
+-  <!-- [[sweep: heap_bounded=8]] --> since cycle 0.1.3c, six until then — and
+-  six of them <!-- [[sweep: cap_belted=6]] --> again under a 64 MiB cap
++  held to the runtime's own `NPK_HEAP_STATS` count on both legs — six
++  <!-- [[sweep: heap_bounded=6]] --> since cycle 0.2.0b, eight from cycle
++  0.1.3c until it retired the churn pair (TM-214), six before — and four of
++  them <!-- [[sweep: cap_belted=4]] --> again under a 64 MiB cap
+   (`TESTING.md` V-17); every other file's managed memory is asserted by
+   nothing.
+ - **Not that a view into a `Bytes` is used correctly.** Every gate here is a
+diff --git a/harness/run.py b/harness/run.py
+index f3d6f30999637b9557685d72a159d9b1097ad673..6c283fd7f05750557b9e1b90d9ef9b5178c0d618 100644
+--- a/harness/run.py
++++ b/harness/run.py
+@@ -35,12 +35,13 @@ WHAT A GREEN RUN HERE IS, AND IS NOT.
+   ONLY WHERE A HEADER SAYS SO: D-151's exit-0 trap counts `wild` allocations
+   and a `buffer` is managed (TM-106), so exit 0 says nothing about `Bytes`
+   (S-18b, S-18e). Since cycle 0.1.4b the files whose headers carry `heap:`
+-  -- eight [[sweep: heap_bounded=8]], the three leak/remedy twin pairs and
+-  the two `Bytes` tests (six, and two pairs, until cycle 0.1.3c committed
+-  TM-150's churn pair) -- are held on both legs to the runtime's own
+-  `NPK_HEAP_STATS` line, and the six twins [[sweep: cap_belted=6]] again
+-  under a 64 MiB address-space cap (TM-184 ... TM-186). Every other file's
+-  managed memory is asserted by nothing.
++  -- six [[sweep: heap_bounded=6]], the two leak/remedy twin pairs and the
++  two `Bytes` tests (eight, and three pairs, from cycle 0.1.3c, which
++  committed TM-150's churn pair, until cycle 0.2.0b retired it: TM-214) --
++  are held on both legs to the runtime's own `NPK_HEAP_STATS` line, and the
++  four twins [[sweep: cap_belted=4]] again under a 64 MiB address-space cap
++  (TM-184 ... TM-186). Every other file's managed memory is asserted by
++  nothing.
+ 
+   IT IS NOT a `--quick` or `--only` run. Both say so twice, at the top and at
+   the bottom, and both refuse to print the word GREEN on its own.
+@@ -613,11 +614,12 @@ def run_parse(rep, root, bld):
+     """Every `.npk` in the tree in front of the real parser, each exactly once.
+ 
+     THE DENOMINATOR IS THE WHOLE TREE AND THAT IS WHY THE STAGE IS WORTH ITS
+-    COST. Re-measured at cycle 0.1.5's second half: of the 128 `.npk` files
+-    here [[sweep: npk_total=128]] the library build roots 5
+-    [[sweep: lib_reach=5]], the suite roots 78 [[sweep: suite_roots=78]]
++    COST. Re-measured at cycle 0.2.0b: of the 126 `.npk` files
++    here [[sweep: npk_total=126]] the library build roots 5
++    [[sweep: lib_reach=5]], the suite roots 76 [[sweep: suite_roots=76]]
+     (127 and 77 from cycle 0.1.3c until `tests/unit/civil_total_edges.npk`
+-    joined), and 3 more are reached by
++    joined; 128 and 78 from then until cycle 0.2.0b retired the churn pair,
++    TM-214), and 3 more are reached by
+     `use` from a suite root [[sweep: support_total=3]] -- and since cycle
+     0.1.4 so is the civil cross-oracle's corpus, which only its member
+     imports -- so 41 are put in front of the compiler by NOTHING ELSE. Five
+@@ -628,11 +630,13 @@ def run_parse(rep, root, bld):
+     then went three cycles asserted by nothing (TM-141), for exactly this
+     reason.
+ 
+-        127 = 5 (library) + 77 (suite roots) + 3 + 1 (reached by `use`) + 41
++        126 = 5 (library) + 76 (suite roots) + 3 + 1 (reached by `use`) + 41
+ 
+     (It read `116 = 5 + 66 + 3 + 1 + 41` from cycle 0.1.4c until cycle 0.1.3c
+     added eleven suite roots -- seven probes and four unit tests -- and none
+-    anywhere else.)
++    anywhere else; and `127 = 5 + 77 + 3 + 1 + 41` until cycle 0.2.0b -- a
++    root short of the tagged sentence above from cycle 0.1.5's second half,
++    when `civil_total_edges` joined, and found at 0.2.0b's planning.)
+ 
+     EVERY NUMBER IN THAT SENTENCE IS TAGGED AND CHECKED (TM-142). It read
+     `50 = 1 + 27 + 3 + 19` until cycle 0.0.6, three subcycles after the tree
+diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
+index 406765c9e5978e3a2bade214e556b4288496a482..19d39199b38b83c86a266941afba1deb0739d932 100644
+--- a/meta/DECISIONS.md
++++ b/meta/DECISIONS.md
+@@ -2420,6 +2420,10 @@ happens when it is run at every point rather than at the ends.
+ > **And at cycle 0.1.0b, read TM-150.** O-N19 is fixed at compiler `c3bdae2`,
+ > so the restriction no longer rests on it; it stands on the four element drops
+ > `Vec<T>` does not perform at an owning `T`.
++>
++> **And at cycle 0.2.0b, read TM-214.** The restriction is the type's —
++> `Vec<T: Copy>` — so the compiler refuses an owning `T` wherever it is
++> written, and the four drops are owed at no `T` the type admits.
+ 
+ **2026-09-05, cycle 0.0.4. Establishes the extent of O-N17, amends `SAFETY.md`
+ S-18c and `0.0.4.md` §2's API table, and settles what `src/core/vec.npk` ships.**
+@@ -2727,6 +2731,10 @@ line at all.
+ > (`T: Copy` since TM-211, 2026-09-27),
+ > that read is refused at the call, `NITPICK-TYPE-017`, and `case5` asserts
+ > the refusal. The restriction stands, on the four element drops.
++>
++> **SUPERSEDED IN PART by TM-214 as well (@@DATE@@).** The restriction is
++> stated at the type since `Vec<T: Copy>`: an owning `T` is refused wherever
++> it is written, and the four drops are owed at no `T` the type admits.
+ 
+ **2026-09-05, cycle 0.0.5. Amends `SAFETY.md` S-18, `src/core/vec.npk`,
+ `src/lib.npk` and `0.0.4.md` §2's API table. Does not supersede TM-132: that
+@@ -3652,6 +3660,13 @@ what the constant is.
+ 
+ ### TM-150 — `vec_reserve<T>` relocates with `ralloc`, and TM-132's restriction now stands on the element drops alone
+ 
++> **SUPERSEDED IN PART by TM-214 (@@DATE@@).** The restriction it left
++> resting on the four element drops is stated at the type, `Vec<T: Copy>`,
++> and the compiler refuses an owning `T` wherever it is written. Its
++> `ralloc` row stands, and so do its measurements — the churn pair TM-196
++> committed for them retires with the `T` it measured. The text below is
++> left exactly as written.
++
+ **2026-09-25, cycle 0.1.0b (PD-2). Supersedes TM-136 in part.** The compiler's
+ D-264 makes a bare type parameter move-only in the body that names it, because
+ a generic body is checked once for every type it is instantiated at. It refused
+@@ -5310,6 +5325,13 @@ the author on question 9.
+ > prelude's `Copy` since the adoption of `5fbaf4a` (the compiler's D-327), and
+ > `Pod` and its nine impls are deleted. The loan, the refusal at an owning `T`
+ > and `case5`'s assertion stand. The text below is left exactly as written.
++>
++> **SUPERSEDED IN PART by TM-214 (@@DATE@@).** Its declined `struct:Vec<T:
++> Pod>` is taken, as `struct:Vec<T: Copy>`: both reasons it gave are gone —
++> DEF-116 is `NITPICK-TYPE-014` since the compiler's landing 69, and
++> `nitpick-regex` answered its open question with the bound (its RX-188) —
++> and the churn pair it would refuse is retired. The loan stands, and
++> `case5` asserts six sites.
+ 
+ **2026-09-26, cycle 0.1.3c (PD-45). Replaces TM-136 in part — its "`vec_at<T>`
+ is destructive" — adds `SAFETY.md` S-18h, and puts `Pod` on the umbrella.**
+@@ -5405,6 +5427,13 @@ whether they should read loans is cycle 0.4's to shape with a caller in hand
+ 
+ ### TM-196 — TM-150's churn pair is committed: `tests/unit/vec_churn_pop.npk` and `vec_churn_clear.npk`, two million push-then-pop cycles at `T = string` against the same with `vec_clear`, held to the runtime's count by TM-185's rule and under TM-186's cap
+ 
++> **SUPERSEDED by TM-214 (@@DATE@@).** The pair is retired: under
++> `Vec<T: Copy>` each half is `NITPICK-TYPE-017` at five sites, because the
++> `Vec<string>` it measures cannot be written. Its text is at `db05d8d`, its
++> numbers are TM-150's, and the instrument keeps its two known leaks,
++> `probe06b` and `probe12` (`TESTING.md` V-17). The text below is left
++> exactly as written.
++
+ **2026-09-26, cycle 0.1.3c (PD-47), carried here by `0.1.4b.md` §15.** TM-150
+ measured the pair at cycle 0.1.0b in a scratch directory — `peak_live` 120 for
+ the pop and 48 000 096 for the clear — and `SAFETY.md` S-18d,
+@@ -6148,3 +6177,68 @@ copy per entry, where the probes' question is the view (and at `5fbaf4a`
+ the element** — it would leave the environment block holding a vacancy;
+ **`lexical.py` changed to type a character literal's width** — the reader
+ blanks literals and never types them, so no answer of its moves.
++
++---
++
++# Cycle 0.2.0b — `Vec<T: Copy>`, ratified @@DATE@@
++
++### TM-214 — `Vec` is `Vec<T: Copy>`: the bound on the type and on every verb, so the compiler refuses an owning element wherever it is written; TM-150's churn pair retires, `case5` asserts six sites, and no element check is added
++
++**@@DATE@@, cycle 0.2.0b (the plan's PD-63) — `nitpick-regex`'s answer to the
++same question (its RX-188), which TM-194 said this library would follow.
++Amends `src/core/vec.npk`, `tests/probe/defect/generic_owning_copy/case5_vec_at_destructive.npk`,
++`SAFETY.md` S-18b, S-18c, S-18d, S-18g, S-18h and §4's note on `List<T>`,
++`BUILD.md` B-12 and `TESTING.md` V-17, and retires `tests/unit/vec_churn_pop.npk`
++and `vec_churn_clear.npk`. It supersedes TM-196, and TM-194 in part — its
++declined `struct:Vec<T: Pod>` — and marks TM-132, TM-136 and TM-150, whose
++restriction it states at the type.**
++
++**What was found**, measured at compiler `5fbaf4a` over the tree at `db05d8d`
++(`meta/roadmap/0.2/0.2.0b.md` §1). With `pub struct:Vec<T: Copy>` and nothing
++else, each of the eight verbs that did not state the bound is
++`NITPICK-TYPE-017` at its own definition — *"`T` does not implement `Copy`,
++which `Vec`'s parameter `T` requires"* — because a generic body is checked once,
++against the bounds it declares; `vec_at` stated it already (TM-211). With every
++verb bounded, all 128 `.npk` were compiled before and after: the 89 that compile
++both ways emit byte-identical IR, and three verdicts move — the churn pair's two
++halves, from compiling to `NITPICK-TYPE-017` at five sites each, and
++`generic_owning_copy/case5`, from two sites to six. An owning element is refused
++at the type, at the turbofish and at each verb's call — `string`, `Bytes`,
++`Vec<int64>`, `cstring`, a pointer, a slice, an optional and a fixed array as
++`T`, and a consumer's struct field, generic wrapper and parameter. A struct of
++scalars that does not claim `Copy` is refused the same way. **And a
++`#[derive(Copy)]` struct holding a pointer or a slice is a legal element**:
++`Copy` asks that an element own nothing, and a pointer owns nothing.
++
++**The decision.** *`pub struct:Vec<T: Copy>`, and `<T: Copy>` on `vec_init`,
++`vec_reserve`, `vec_push`, `vec_set`, `vec_pop`, `vec_truncate`, `vec_clear` and
++`vec_free`, beside `vec_at`'s; no field, body or signature otherwise changes.
++The restriction TM-132 made — `Vec<T>` is for a non-owning `T` — is the type's:
++the four drops S-18d rests it on are owed at no `T` the type admits, and the
++compiler says so where an owning `T` is written. The churn pair is retired with
++the `T` it measured; its text is at `db05d8d` and its numbers are TM-150's.
++`case5` keeps its name and its record and names six sites. No check is added:
++the rule this library states for an element is S-18d's — it drops nothing —
++and `Copy` states it whole; a `Copy` element that holds a pointer or a slice
++is a view, and S-18e and S-22 govern a view wherever it is held.*
++
++*Alternatives declined:* **the bound on `vec_at` alone, as since TM-194** —
++eight verbs then compile at `Vec<string>`, four of them orphaning what they
++discard, behind a rule only a reader enforces; **the churn pair kept as
++refusals** — two more copies of the refusal `case5` asserts; **the churn pair
++re-homed in `tests/probe/` over a `Vec` of its own** — a third copy of the leak
++and remedy `probe06b`/`probe06c` and `probe12`/`probe12b` already are, over a
++type that no longer ships, where TM-196 put it in `tests/unit/` because it
++asserted this library's own verbs, which it no longer can; **a probe calling
++every verb at `Vec<string>`** — `case5`'s type site reddens if the struct's
++bound goes, and a verb without the bound does not compile while the struct
++has it (measured), so every verb is pinned already; **a check that an element
++holds no block, as `nitpick-regex` keeps** (its RX-190, for the second half
++of its element rule) — this library has no such rule to enforce, and no `Vec` in `src/` to
++read yet (the first is cycle 0.4's `Vec<FmtPart>`), so it would examine nothing and
++assert a rule nothing states; **`move` dropped from `vec_push`'s and `vec_set`'s
++`T`** — at a `Copy` `T` it is a copy either way, and the spelling stays right
++for the day a cycle lifts the bound; **waiting for a consumer that needs an
++owning element** — none is planned (the zone tables hold offsets, Z-7, and
++`FmtPart` and `Instant` own nothing), and a cycle that needs one lifts the bound
++by a decision, the compiler's `List<T>` its shape (`vec_at`'s comment).
+diff --git a/meta/specs/BUILD.md b/meta/specs/BUILD.md
+index 4e7481ec87579d95a71cc0659448cb8dd2867ece..e325c58bf0efcf63c3426137de9b1f360e7cae35 100644
+--- a/meta/specs/BUILD.md
++++ b/meta/specs/BUILD.md
+@@ -312,10 +312,11 @@ refused at `PARSE-001`, `LEX-004`, `PARSE-002`, `TYPE-009`, `TYPE-017`,
+ `TYPE-046`, `TYPE-047`, `TYPE-079`, `TYPE-080`, `TYPE-084`, `BORROW-001`,
+ `BORROW-012`, `RESOLVE-001`, `REACH-002` and `REACH-003`, and every family
+ after the first three runs only on something that parsed. Re-measured at pin
+-`c970483`, cycle 0.1.5's second half: **128 files = 91 parse cleanly + 35
++`5fbaf4a`, cycle 0.2.0b: **126 files = 89 parse cleanly + 35
+ parse and are refused later + 2 do not parse**
+-<!-- [[sweep: npk_total=128]] --> (`127 = 90 + 35 + 2` from cycle 0.1.3c until
+-`tests/unit/civil_total_edges.npk` joined), and the two
++<!-- [[sweep: npk_total=126]] --> (`127 = 90 + 35 + 2` from cycle 0.1.3c until
++`tests/unit/civil_total_edges.npk` joined, and `128 = 91 + 35 + 2` from then
++until cycle 0.2.0b retired the churn pair, TM-214), and the two
+ are `probe02d_wide_literal_refused.npk` (LEX-004, PARSE-002) and
+ `probe14_error_payload_refused.npk` (PARSE-001, TM-147). It read
+ `50 = 36 + 13 + 1` for three subcycles after the tree stopped being that size,
+@@ -460,7 +461,10 @@ and the trap error identities. Every module has it bound with no import.
+   touched by nothing outside `vec`, the two lengths are read anywhere and
+   written only there, and each length is checked against the prelude's
+   `ListLen` after every write. Until then the shape read `{ wild T->:items;
+-  int64:count; int64:cap; }`.)*
++  int64:count; int64:cap; }`.)* *(Since cycle 0.2.0b the type is `Vec<T:
++  Copy>` and every function over it states the bound — an owning element is
++  refused where it is written (TM-214, `SAFETY.md` S-18d). The fields are
++  unchanged.)*
+ - **`Bytes`** — `{ hidden buffer:body; sealed limit<ListLen> int64:len; }`
+   since cycle 0.1.3c (TM-195; from 0.1.0c, TM-156, `body` was sealed and not
+   hidden, because its `cap` was read across modules — `bytes_capacity` reads
+diff --git a/meta/specs/SAFETY.md b/meta/specs/SAFETY.md
+index 29ac35bb017ad0251422e428a9270969f23589b6..70c0099f127181b7907cb99c1c0636d6dab4417a 100644
+--- a/meta/specs/SAFETY.md
++++ b/meta/specs/SAFETY.md
+@@ -697,6 +697,10 @@ holds no element and `items` is a bare pointer the walk does not follow
+ (`tests/probe/probe18_zero_length_owner.npk`). The conclusion stands: the
+ element-lifetime obligation is `ntime`'s.)*
+ 
++*(Cycle 0.2.0b, TM-214: it is `ntime`'s, and the type discharges it —
++`Vec<T: Copy>` admits no element with anything to drop, which the compiler
++checks where the `Vec` is written (S-18d's amendment).)*
++
+ ---
+ 
+ ## 5. Resources
+@@ -778,6 +782,15 @@ a generic function has no scope in which a bare `T` may simply die. S-18's "so
+ `exit 0` never trips D-151" is therefore a statement about the block alone —
+ correct, and not the whole obligation.
+ 
++*(Cycle 0.2.0b, TM-214: since `Vec<T: Copy>`, the library's `Vec` holds no
++owning `T` — a `Vec<string>` is `NITPICK-TYPE-017` where it is written — so
++this rule's obligation arises for no `Vec` of this library's, and S-18's
++statement about the block is the whole of it. The rule stands as the measured
++fact under the bound: a container of owning elements in `wild` storage leaks
++what it does not drop, and `exit 0` cannot see it — `probe06b` and `probe06c`
++pin it with a `Vec` of their own, and remain the instrument's leak and remedy
++(`TESTING.md` V-17).)*
++
+ **Rule S-18c (TM-127) — OVERWRITING an element discards one too, so the
+ obligation covers `vec_set` and not only the three that sound like it does.**
+ S-18b and `0.0.4.md` §2 both name three entries that discard elements —
+@@ -830,10 +843,38 @@ by construction, so there is nothing there to discard.
+ > written at the instantiation, which is where this rule already puts element
+ > lifetime. `tests/probe/defect/generic_element_move/`.
+ 
++*(Cycle 0.2.0b, TM-214: `vec_set` is `vec_set<T: Copy>`, so the element it
++overwrites has nothing to drop, and at an owning `T` it is not written —
++`NITPICK-TYPE-017`. The pair above keeps its own `Vec` and is the measured fact
++the bound rests on, and the instrument's second known leak.)*
++
+ **Rule S-18d (TM-136, amended by TM-150) — THE RESTRICTION STAYS, AND WHAT IT
+ RESTS ON NOW IS THE ELEMENT DROPS, WHICH NO COMPILER CHECK AND NO LEAK GATE
+ SEES.**
+ 
++> **Amended at cycle 0.2.0b (TM-214) — THE COMPILER CHECKS IT NOW, AT THE
++> TYPE.** `Vec` is `struct:Vec<T: Copy>`, and every one of its nine verbs states
++> `T: Copy`: a generic body is checked once, against the bounds it declares, so
++> with the struct bounded a verb without the bound is `NITPICK-TYPE-017` at its
++> own definition (measured, all eight that lacked it). An owning `T` is refused
++> wherever it is written — the type, each turbofish, each verb's call;
++> `Vec<string>`, `Vec<Bytes>`, `Vec<Vec<int64>>`, `Vec<cstring>`, a pointer, a
++> slice, an optional and a fixed array as the element each `NITPICK-TYPE-017`
++> at all three — and `generic_owning_copy/case5` asserts six such sites. So the
++> four drops below are owed at no `T` the type admits, which is the
++> restriction, stated where the compiler reads it; this rule's title and the
++> amendments under it are the record of how it was reached. **At every `T` the
++> type admits, no code changed**: of the tree's 128 `.npk`, the 89 that compile
++> both without the bound and with it emit byte-identical IR, and three verdicts
++> moved — the two halves of TM-150's churn pair, from compiling to refused, and
++> `case5`, from two sites to six. **The churn pair is retired** (TM-196's two files):
++> the `T` it measured cannot be written over this `Vec`, and the language fact
++> it stood for is `probe06b`/`probe06c`'s and `probe12`/`probe12b`'s, each over
++> a `Vec` of its own. **What `Copy` does not ask**: a `#[derive(Copy)]` struct
++> holding a pointer or a slice is a legal element (measured) — it drops
++> nothing, which is all this rule asks; where its view points is S-18e's rule
++> and S-22's, wherever the view is held.
++
+ > **Amended at cycle 0.1.0b (TM-150).** This rule's title read *"THE
+ > RESTRICTION IS NOT ENFORCEABLE BY THE COMPILER"*, and its reason — below, as
+ > written — was that `NITPICK-TYPE-046` does not fire inside a generic function
+@@ -991,7 +1032,9 @@ walks the empty array and frees nothing, so the block is still `wild`,
+ `WildLeak` at `exit 0` — S-18's guarantee is unchanged. `probe18` and
+ `probe18b` pin the language fact under the marker with no library code, and
+ redden first if a compiler changes it. **Not closed by it**: the four element
+-drops of S-18d, which no type here states.
++drops of S-18d, which no type here states. *(Closed since cycle 0.2.0b by the
++type: `Vec<T: Copy>`, S-18d's amendment, TM-214. The marker is unchanged — a
++`Vec` of `Copy` elements is still an owner, by its fourth field.)*
+ 
+ **Rule S-18h (TM-194, cycle 0.1.3c; restated for `Copy` by TM-211, cycle
+ 0.2.0a) — the one verb that hands an element back
+@@ -1007,6 +1050,10 @@ type that owns nothing claims it in one line, `impl:X:Copy = { };`
+ library re-exports nothing for it. The guard is S-17c's slice, unchanged, and
+ the hole below is closed: an impl's `move` on a lent parameter is
+ `NITPICK-TYPE-014` since the compiler's DEF-116, and `Copy` has no method.
++*Since cycle 0.2.0b (TM-214):* the bound is the type's and every verb's, not
++`vec_at`'s alone — `struct:Vec<T: Copy>` (S-18d's amendment) — so at an owning
++`T` the refusal comes first where the `Vec` is written, and `case5` names six
++sites, its two `vec_at` calls among them.
+ *What the rule read until then, kept as its record:* `vec_at<T: Pod>` reads
+ through `Pod`'s `pod_copy`, a `never fails` method whose `self` is LENT. For an owning type the body the
+ trait admits, `pass self`, is `NITPICK-TYPE-047` — a lent owner cannot be
+diff --git a/meta/specs/TESTING.md b/meta/specs/TESTING.md
+index df79a8f8d734b24e9a6e6e11d593b21b3c6a6bdc..6224b263d899e07eb5e494ac22672416d4e1aef4 100644
+--- a/meta/specs/TESTING.md
++++ b/meta/specs/TESTING.md
+@@ -17,7 +17,7 @@ than sampled. Where that is possible it is the gate, and §3 says where.
+ 
+ | Stage | Answers |
+ |---|---|
+-| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **41 files of 128 that no other stage roots** <!-- [[sweep: npk_total=128]] --> |
++| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **41 files of 126 that no other stage roots** <!-- [[sweep: npk_total=126]] --> |
+ | `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
+ | `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
+ | `check` | every documented refusal actually refuses, with exactly its code |
+@@ -691,10 +691,13 @@ at cycle 0.0.4 and never run by the harness.
+   with opposite outcomes under it**; a clean run alone is a statement the floor
+   program also makes.
+ 
+-Eight files carry a bound <!-- [[sweep: heap_bounded=8]] --> and six of them
+-a cap <!-- [[sweep: cap_belted=6]] --> — `SAFETY.md` S-18b, S-18c and S-18d
+-name the three twin pairs, and the two `Bytes` tests say why theirs in their
+-own headers. Both counts are measured denominators (TM-142). *(Six and four
++Six files carry a bound <!-- [[sweep: heap_bounded=6]] --> and four of them
++a cap <!-- [[sweep: cap_belted=4]] --> — `SAFETY.md` S-18b and S-18c name
++the two twin pairs, and the two `Bytes` tests say why theirs in their own
++headers. Both counts are measured denominators (TM-142). *(Six and four
+ until cycle 0.1.3c committed TM-150's churn pair, `tests/unit/vec_churn_pop.npk`
+ and `vec_churn_clear.npk` — a churn by this rule's own definition, with
+-opposite outcomes under the cap, 0 and 92.)*
++opposite outcomes under the cap, 0 and 92 — and eight and six, three pairs,
++until cycle 0.2.0b retired it: `Vec<T: Copy>` refuses the `Vec<string>` both
++halves are written over, `NITPICK-TYPE-017` at five sites each, and the
++instrument keeps its two known leaks, `probe06b` and `probe12` — TM-214.)*
+diff --git a/nitpick.toml b/nitpick.toml
+index 8c13e7c9bce82aa5045c6d94bf0903e082b7124a..12f25cc6ae0dd41f59c661f530e75670ab35bd24 100644
+--- a/nitpick.toml
++++ b/nitpick.toml
+@@ -129,7 +129,7 @@ path  = "tests/probe"
+ #   `parse`   HAS NO ENTRY BY DESIGN, not by omission (TM-123). It is a
+ #             WHOLE-TREE stage: `BUILD.md` §3's Directory column for it reads
+ #             "every `.npk` in the tree", and that is where its value is — of
+-#             the 128 files here [[sweep: npk_total=128]], 41 are put in front of
++#             the 126 files here [[sweep: npk_total=126]], 41 are put in front of
+ #             the compiler by nothing
+ #             else. An entry would narrow it to one directory and silently
+ #             un-cover the rest, so `stage = "parse"` is REFUSED BY NAME.
+diff --git a/src/core/vec.npk b/src/core/vec.npk
+index ff39fef3d1540798508f5a050870fa086d3391b0..6a70e09d198ee6a38546a508a04c94a5613a0db1 100644
+--- a/src/core/vec.npk
++++ b/src/core/vec.npk
+@@ -8,7 +8,8 @@
+ // of it is this file's job.
+ //
+ // ===========================================================================
+-// THE RESTRICTION, WHICH IS THE FIRST THING TO READ (TM-132, TM-136, TM-150)
++// THE RESTRICTION, WHICH IS THE FIRST THING TO READ (TM-132, TM-136, TM-150,
++// TM-214)
+ // ===========================================================================
+ //
+ // `Vec<T>` IS FOR A NON-OWNING `T`. Every function below is correct at a `T`
+@@ -84,6 +85,22 @@
+ // `../../tests/unit/vec_churn_pop.npk` and `vec_churn_clear.npk` hold 120 and
+ // 48 000 096 to the runtime's own count on every run.
+ //
++// AT CYCLE 0.2.0b (TM-214) THE BOUND THE PARAGRAPH ABOVE DECLINES IS TAKEN:
++// `struct:Vec<T: Copy>`, and every verb below repeats it -- a generic body is
++// checked once, against the bounds it declares, so a verb without it is
++// `NITPICK-TYPE-017` at its own definition. So the compiler refuses an owning
++// `T` wherever one is written: at the type, at each turbofish, at each verb's
++// call (`generic_owning_copy/case5` asserts six such sites). The four drops
++// above are owed at no `T` the type admits, which is the whole restriction,
++// stated where the compiler reads it; and the churn pair is retired, because
++// the `T` it measured cannot be written. At every `T` the type does admit
++// nothing changed: the IR of every program here that compiles before the bound
++// and after it is byte for byte the same (`meta/roadmap/0.2/0.2.0b.md` §1).
++// It is `nitpick-regex`'s answer to the same question (its RX-188), which
++// TM-194 said this library would follow. What `Copy` does not ask -- that an
++// element hold no pointer or slice -- this library has no rule for: `SAFETY.md`
++// S-18e and S-22 govern a view wherever it is held.
++//
+ // WHY THAT IS NOT A WORKAROUND (W-11). No function here is bent around the
+ // bug; each is the one that would have been written anyway. `0.0.4.md` §2
+ // required each element-discarding entry to have *"an element-drop path for an
+@@ -240,7 +257,12 @@ mod:vec;
+ // The same field over `int64[0]`, whose element owns nothing, changes nothing
+ // at all (measured): the element's ownership is what does it. `hidden`, so no
+ // module but this one can name it, and `vec_init` fills it with `[]`.
+-pub struct:Vec<T> = { hidden wild T->:items; sealed limit<ListLen> int64:count; sealed limit<ListLen> int64:cap; hidden string[0]:move_only; };
++//
++// `<T: Copy>`, SINCE CYCLE 0.2.0b (TM-214): the element type owns nothing,
++// stated to the compiler -- the header's restriction, where it is checked. It
++// changes no field and no byte: the bound is a fact about `T`, and a `Copy`
++// `T` was the only one this file was ever correct at.
++pub struct:Vec<T: Copy> = { hidden wild T->:items; sealed limit<ListLen> int64:count; sealed limit<ListLen> int64:cap; hidden string[0]:move_only; };
+ 
+ // `ensures answer.count == 0 && answer.cap >= 1`
+ //
+@@ -253,7 +275,7 @@ pub struct:Vec<T> = { hidden wild T->:items; sealed limit<ListLen> int64:count;
+ // `alloc(0)` would give a block no element can be written to while `cap` said
+ // otherwise, and this type has no error identity to raise (`SAFETY.md` S-4:
+ // `core` declares none, and the budget is three with a ceiling).
+-pub func:vec_init<T> = Vec<T>(int64:cap) never fails {
++pub func:vec_init<T: Copy> = Vec<T>(int64:cap) never fails {
+     int64:n = cap;
+     if (n < 1i64) { n = 1i64; }
+     // `n * #size_of<T>()` is where this module's `IntOverflow` arm comes from,
+@@ -269,7 +291,7 @@ pub func:vec_init<T> = Vec<T>(int64:cap) never fails {
+ // The new capacity is at least `count + need` and at least twice the old, which
+ // makes `vec_push`'s loop O(1) amortised without a special case for the first
+ // element.
+-pub func:vec_reserve<T> = NIL(Vec<T>->:v, int64:need) never fails {
++pub func:vec_reserve<T: Copy> = NIL(Vec<T>->:v, int64:need) never fails {
+     int64:want = v.count + need;
+     if (v.cap >= want) { pass NIL; }
+     int64:n = v.cap * 2i64;
+@@ -303,7 +325,7 @@ pub func:vec_reserve<T> = NIL(Vec<T>->:v, int64:need) never fails {
+ // reason must be stated because the line of code is identical to `vec_set`'s
+ // (TM-127, `SAFETY.md` S-18c): it writes AT `count`, which is past the last
+ // live element by construction, so there is nothing there to discard.
+-pub func:vec_push<T> = NIL(Vec<T>->:v, move T:x) never fails {
++pub func:vec_push<T: Copy> = NIL(Vec<T>->:v, move T:x) never fails {
+     drop vec_reserve(v, 1i64);
+     // OVER `cap`, uniquely in this file: the valid index here is `count`
+     // itself, which a slice over `count` would reject. `vec_reserve` above has
+@@ -326,7 +348,8 @@ pub func:vec_push<T> = NIL(Vec<T>->:v, move T:x) never fails {
+ // struct holding a `string`, whose derive is `NITPICK-DERIVE-006`
+ // (`../../tests/probe/probe19_pod_owner_refused.npk` asserts the first) -- so
+ // `T: Copy` on `vec_at` states TM-132's restriction TO THE COMPILER for the one
+-// verb that hands an element back, at every consumer's call. A consumer's type
++// verb that hands an element back, at every consumer's call -- and since cycle
++// 0.2.0b for the type and every verb (TM-214, the header). A consumer's type
+ // that owns nothing claims it in one line where it is declared --
+ // `impl:Pt:Copy = { };` for a struct of integers or a payload enum such as
+ // `FORMAT_MODEL.md`'s parts (`../../tests/unit/vec_at_pod.npk`) -- and needs
+@@ -391,8 +414,10 @@ pub func:vec_at<T: Copy> = T(Vec<T>:v, int64:i) never fails {
+ // and written generically over this function's one slice it is refused
+ // `NITPICK-MOVE-001` instead -- the header's reason 1, measured again at
+ // compiler `c3bdae2` at cycle 0.1.0b. At a non-owning `T`, the type this file
+-// is for, there is nothing to drop and this is complete.
+-pub func:vec_set<T> = NIL(Vec<T>->:v, int64:i, move T:x) never fails {
++// is for, there is nothing to drop and this is complete. (Since cycle 0.2.0b
++// that is the only `T` there is: `T: Copy`, TM-214. The paragraph is the record
++// of why the bound was needed.)
++pub func:vec_set<T: Copy> = NIL(Vec<T>->:v, int64:i, move T:x) never fails {
+     T[]:s = #wild_slice<T>(v.items, v.count);
+     s[i] = move(x);
+     pass NIL;
+@@ -421,8 +446,12 @@ pub func:vec_set<T> = NIL(Vec<T>->:v, int64:i, move T:x) never fails {
+ // drops at the caller's binding. `../../tests/unit/vec_churn_pop.npk` holds two
+ // million push-then-pop cycles of `string`s to `peak_live <= 75000` -- it
+ // measures 120 -- where `vec_churn_clear.npk`, `vec_clear` in the pop's place,
+-// holds all 48 000 096 bytes (TM-196).
+-pub func:vec_pop<T> = T(Vec<T>->:v) never fails {
++// holds all 48 000 096 bytes (TM-196). (Both retired at cycle 0.2.0b, when
++// `T: Copy` made `Vec<string>` unwritable -- TM-214; their text is
++// `git show db05d8d:tests/unit/vec_churn_pop.npk` and its twin, and the
++// numbers are TM-150's. At a `Copy` `T` the `move` is a copy, and the body's
++// IR is what it was.)
++pub func:vec_pop<T: Copy> = T(Vec<T>->:v) never fails {
+     T[]:s = #wild_slice<T>(v.items, v.count);
+     T:answer = move(s[v.count - 1i64]);
+     v.count = v.count - 1i64;
+@@ -433,15 +462,16 @@ pub func:vec_pop<T> = T(Vec<T>->:v) never fails {
+ //
+ // At a non-owning `T` dropping the tail is exactly lowering `count`. At an
+ // owning `T` it would additionally owe a drop per discarded element (S-18c),
+-// which is the blocked path above.
+-pub func:vec_truncate<T> = NIL(Vec<T>->:v, int64:n) never fails {
++// which is the blocked path above -- and since cycle 0.2.0b an owning `T` is
++// refused at the type (TM-214).
++pub func:vec_truncate<T: Copy> = NIL(Vec<T>->:v, int64:n) never fails {
+     if (n < 0i64) { v.count = 0i64; pass NIL; }
+     if (n < v.count) { v.count = n; }
+     pass NIL;
+ };
+ 
+ // `ensures v.count == 0`
+-pub func:vec_clear<T> = NIL(Vec<T>->:v) never fails {
++pub func:vec_clear<T: Copy> = NIL(Vec<T>->:v) never fails {
+     v.count = 0i64;
+     pass NIL;
+ };
+@@ -473,12 +503,14 @@ pub func:vec_clear<T> = NIL(Vec<T>->:v) never fails {
+ // which watches `wild` allocations, and this block is one. THAT GUARANTEE IS
+ // ABOUT THE BLOCK ALONE (TM-106, S-18b): D-151 cannot see a managed body, so an
+ // unemptied `Vec<string>` would pass `exit 0` and still leak. It is the reason
+-// this type is restricted to a non-owning `T` rather than trusted at any `T`.
++// this type is restricted to a non-owning `T` rather than trusted at any `T`
++// -- the restriction the type states since cycle 0.2.0b, `Vec<T: Copy>`, under
++// which a `Vec<string>` is not written at all (TM-214).
+ // (Since cycle 0.1.3c a `Vec` owns, so the compiler generates a drop for one:
+ // it walks `move_only`'s empty array and frees nothing, and this is still the
+ // only release of the block -- a `Vec` never freed still exits 96, measured,
+ // TM-193.)
+-pub func:vec_free<T> = NIL(Vec<T>->:v) never fails {
++pub func:vec_free<T: Copy> = NIL(Vec<T>->:v) never fails {
+     dalloc(v.items =>! wild int8->);
+     v.count = 0i64;
+     v.cap = 0i64;
+diff --git a/tests/probe/defect/generic_owning_copy/case5_vec_at_destructive.npk b/tests/probe/defect/generic_owning_copy/case5_vec_at_destructive.npk
+index 6aaa9cf568f32a141797b5fc299dc78caa960b52..3a94eab2899ef7c40820ea93bdf39741748ccf83 100644
+--- a/tests/probe/defect/generic_owning_copy/case5_vec_at_destructive.npk
++++ b/tests/probe/defect/generic_owning_copy/case5_vec_at_destructive.npk
+@@ -1,9 +1,19 @@
+ // expect-error: NITPICK-TYPE-017
+ // expect-error: NITPICK-TYPE-017
++// expect-error: NITPICK-TYPE-017
++// expect-error: NITPICK-TYPE-017
++// expect-error: NITPICK-TYPE-017
++// expect-error: NITPICK-TYPE-017
+ // ONE `expect-error` LINE PER REPORTED SITE since cycle 0.2.0a (the
+ // compiler's D-332, its landing 82; `BUILD.md` B-7c, TM-210): the two calls
+ // below, each refused where it is written.
+ //
++// SIX SITES SINCE CYCLE 0.2.0b (TM-214): the TYPE is `Vec<T: Copy>`, and every
++// verb states the bound, so `Vec<string>` is refused where it is written as
++// well as where `vec_at` is called -- the declaration and its turbofish, the
++// `vec_push`, the two `vec_at` calls and the `vec_free`, one line each. The
++// two calls are still among them, refused as they were.
++//
+ // CASE 5, SINCE CYCLE 0.1.3c: THE CALL IS REFUSED (TM-194). `vec_at` takes
+ // `T: Copy` -- the prelude's marker since cycle 0.2.0a, `Pod` until then
+ // (TM-211) -- which only a type that owns nothing can claim, so at
+diff --git a/tests/unit/vec_churn_clear.npk b/tests/unit/vec_churn_clear.npk
+deleted file mode 100644
+index a5600325aae673d95e0a70e207d88dc6910af77e..0000000000000000000000000000000000000000
+--- a/tests/unit/vec_churn_clear.npk
++++ /dev/null
+@@ -1,65 +0,0 @@
+-// expect-exit: 0
+-// heap: peak_live >= 48000000
+-// cap: 65536 KiB, exit 92
+-//
+-// NOT A TEST OF SOMETHING WORKING. This file exits 0 and that IS the finding:
+-// `vec_clear` at an owning `T` orphans every element it discards, and the
+-// language's own leak gate does not notice.
+-//
+-// `vec_clear` AT AN OWNING `T` -- TM-150's churn pair, the LEAKING HALF,
+-// committed at cycle 0.1.3c (TM-196).
+-//
+-// ASKS: the same two million cycles as `vec_churn_pop.npk`, with `vec_clear`
+-// where the pop is -- what does it cost?
+-//
+-// MATTERS BECAUSE `vec_clear` is one of the four operations `SAFETY.md` S-18d
+-// rests the restriction on: at an owning `T` it discards elements it does not
+-// drop, and `exit 0` cannot see it -- D-151 counts `wild` blocks, and a
+-// `string`'s body is managed (TM-106). Every one of the two million bodies is
+-// still live at exit. The day a cycle gives `vec_clear` an element drop, this
+-// file goes red, and the restriction's reason has to be re-read.
+-//
+-// ITS TWIN IS `vec_churn_pop.npk`, which differs in the one operation that
+-// ends each cycle. `peak_live >= 48000000` is the leak's arithmetic -- two
+-// million 24-byte bodies, every one live at the peak -- so it is also this
+-// repository's second known-leaking control for the instrument (`TESTING.md`
+-// V-17), beside `probe06b`. Measured at compiler `c970483` and at `c3bdae2`,
+-// both legs: `allocated=48000096 peak_live=48000096 count=2000001` -- the 96-byte
+-// block and every body. Under a 64 MiB cap it takes `HeapOom`, 92, where its
+-// twin exits 0. By hand: `NPK_HEAP_STATS=1 <binary>`.
+-//
+-// EXIT CODE, clear of every arm code (TM-152): 11 the `Vec` is not empty after
+-// the last clear.
+-mod:vec_churn_clear;
+-
+-use "../../src/core/vec.npk".*;
+-
+-func:main = int32(cstring[]:_~argv) {
+-    Vec<string>:v = raw vec_init::<string>(4i64);
+-    int64:i = 0i64;
+-    while (i < 2000000i64) decreases 2000000i64 - i {
+-        drop vec_push(@v, string_concat("Europe/Kyiv_", "0123456789ab"));
+-        drop vec_clear(@v);
+-        i = i + 1i64;
+-    }
+-    if (v.count != 0i64) { exit 11i32; }
+-    drop vec_free(@v);
+-    exit 0i32;
+-};
+-
+-func:failsafe = int32(Error:e) {
+-    pick (e) {
+-        (HeapBadRequest)    { exit 91i32; },
+-        (HeapOom)           { exit 92i32; },
+-        (IntOverflow)       { exit 93i32; },
+-        (OutOfBounds)       { exit 94i32; },
+-        (Unreachable)       { exit 95i32; },
+-        (WildLeak)          { exit 96i32; },
+-        (StackExhausted)    { exit 106i32; },
+-        (MachineFault)      { exit 107i32; },
+-        (DecreasesViolated) { exit 108i32; },
+-        (LimitViolated)     { exit 109i32; },
+-        (*)                 { exit 99i32; }
+-    }
+-    exit 9i32;
+-};
+diff --git a/tests/unit/vec_churn_pop.npk b/tests/unit/vec_churn_pop.npk
+deleted file mode 100644
+index 3777f300233a98023fd900919346aea13c6d433d..0000000000000000000000000000000000000000
+--- a/tests/unit/vec_churn_pop.npk
++++ /dev/null
+@@ -1,73 +0,0 @@
+-// expect-exit: 0
+-// heap: count >= 2000000
+-// heap: peak_live <= 75000
+-// cap: 65536 KiB, exit 0
+-//
+-// `vec_pop` AT AN OWNING `T` HANDS THE ELEMENT OVER -- TM-150's churn pair, the
+-// REMEDY HALF, committed at cycle 0.1.3c (TM-196).
+-//
+-// ASKS: two million cycles of `vec_push` then `vec_pop` on one `Vec<string>`,
+-// each popped string bound and dropped at the bottom of its iteration -- does
+-// anything accumulate?
+-//
+-// MATTERS BECAUSE `vec_pop` is the one element-removing verb in
+-// `src/core/vec.npk` that is NOT among the four that orphan an owning element
+-// (`SAFETY.md` S-18d): its `move` hands the element to the caller, whose binding
+-// drops it. TM-150 measured that at cycle 0.1.0b in a scratch directory -- 120
+-// bytes at the peak against `vec_clear`'s 48 000 096 -- and quoted the pair in
+-// `vec.npk`, S-18d and the workbench's `PLAYBOOK.md` with no program behind
+-// it: a number whose program is not committed is a claim, not evidence (the
+-// playbook §6). This is the program, and its twin is `vec_churn_clear.npk`,
+-// which differs in the one operation that ends each cycle.
+-//
+-// THE THREE MARKERS ARE EACH A STATEMENT ITS TWIN FAILS (`TESTING.md` V-17).
+-// `count >= 2000000`: the loop made its two million bodies, so a copy whose
+-// loop was emptied -- which retains nothing because it allocates nothing -- is
+-// red. `peak_live <= 75000`: none of them was retained, where the twin retains
+-// every one. And exit 0 under a 64 MiB cap, where the twin takes 92. Derived
+-// from the source before it was measured: the block is `vec_init(4)` of
+-// 24-byte `string` headers, 96 bytes, allocated once and never grown, since
+-// `count` never passes 1; each cycle allocates one 24-byte body --
+-// `"Europe/Kyiv_"` and `"0123456789ab"`, twelve bytes each -- and drops it
+-// before the next, so the peak is 96 + 24 = 120 and the count 1 + 2 000 000.
+-// Measured at compiler `c970483` and at `c3bdae2`, both legs: `allocated=48000096
+-// peak_live=120 count=2000001`. The ceiling is TM-185's rule: the geometric
+-// mean of 120 and the twin's 48 000 096, 75 894, rounded down to two
+-// significant figures. By hand: `NPK_HEAP_STATS=1 <binary>`.
+-//
+-// EXIT CODES, clear of every arm code (TM-152): 10 a popped string is not the
+-// one pushed; 11 the `Vec` is not empty after the last pop.
+-mod:vec_churn_pop;
+-
+-use "../../src/core/vec.npk".*;
+-
+-func:main = int32(cstring[]:_~argv) {
+-    Vec<string>:v = raw vec_init::<string>(4i64);
+-    int64:i = 0i64;
+-    while (i < 2000000i64) decreases 2000000i64 - i {
+-        drop vec_push(@v, string_concat("Europe/Kyiv_", "0123456789ab"));
+-        string:s = raw vec_pop(@v);
+-        if (string_byte_length(s) != 24i64) { exit 10i32; }
+-        i = i + 1i64;
+-    }
+-    if (v.count != 0i64) { exit 11i32; }
+-    drop vec_free(@v);
+-    exit 0i32;
+-};
+-
+-func:failsafe = int32(Error:e) {
+-    pick (e) {
+-        (HeapBadRequest)    { exit 91i32; },
+-        (HeapOom)           { exit 92i32; },
+-        (IntOverflow)       { exit 93i32; },
+-        (OutOfBounds)       { exit 94i32; },
+-        (Unreachable)       { exit 95i32; },
+-        (WildLeak)          { exit 96i32; },
+-        (StackExhausted)    { exit 106i32; },
+-        (MachineFault)      { exit 107i32; },
+-        (DecreasesViolated) { exit 108i32; },
+-        (LimitViolated)     { exit 109i32; },
+-        (*)                 { exit 99i32; }
+-    }
+-    exit 9i32;
+-};

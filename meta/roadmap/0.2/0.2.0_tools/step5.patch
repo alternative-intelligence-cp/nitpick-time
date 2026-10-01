@@ -1,0 +1,514 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 625fe84c163e05bbfdd245d33607c28f9139fdf3..dbab041feea0ac8aa97650be3fbc141cb5507ca7 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -147,9 +147,11 @@
+ # Until 0.0.3 that was the honest gap here, and it was written in this comment
+ # for three cycles.
+ #
+-# WHAT IT IS STILL NOT EVIDENCE OF. Four of the six `src/` directories are
+-# still placeholders -- `span/`, `zone/`, `fmt/`, `host/` -- so nothing here
+-# converts a time to a zone, a timestamp to a date, or text to either. (This
++# WHAT IT IS STILL NOT EVIDENCE OF. Three of the six `src/` directories are
++# still placeholders -- `zone/`, `fmt/`, `host/` -- and `span/` holds `Instant`
++# alone since cycle 0.2.0, so nothing here converts a time to a zone, a
++# timestamp to a date, or text to either. (It said four, `span/` among them,
++# until cycle 0.2.0. This
+ # said five placeholders, `cal/` among them, until cycle 0.1.0b; `cal/` had had
+ # a body since 0.1.0. And until cycle 0.1.2 it said `cal/` held "the types and
+ # constructors but not yet the day-number algorithms (cycle 0.1.1), so nothing
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 006a09297462cf339f7175eb95f8b88f0bffde85..5b1844b82ff8e15e80168ce70abb3bbbd8f715b6 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -10,8 +10,28 @@ safety-critical systems language at `../../nitpick`.
+ **Status: cycle 0.1 CLOSED (2026-09-26), archived at `meta/roadmap/done/0.1/`
+ — the civil calendar, with its exhaustive gate on every run — and cycle 0.2,
+ instants and timestamps, is OPEN: its 0.2.0a, the adoption of compiler
+-`5fbaf4a`, and its 0.2.0b, `Vec<T: Copy>`, are done, and
+-`meta/roadmap/0.2/0.2.0.md` is next.**
++`5fbaf4a`, its 0.2.0b, `Vec<T: Copy>`, and its 0.2.0, `Instant`, are done,
++and 0.2.1, `Timestamp`, is next.**
++
++**After cycle 0.2.0: `Instant`.** `src/span/` has a body: `Instant`, a
++reading of one of two clocks — `{ sealed int64:ns; sealed InstantClock:clock; }`,
++`InstantClock` an enum, `{ Monotonic; Boottime; }` — and four operations:
++`instant_of`, the one constructor; `instant_since` and `instant_cmp`, which
++refuse a pair from two clocks with `ETimeValue` (`ValueFault.ClockMismatch`,
++appended); and `instant_add`, which keeps its clock (TM-215, TM-216;
++`TIME_MODEL.md` M-2 and M-4 and `HOST.md` H-6 amended). **A timeout cannot be
++written against a wall clock**: a consumer can neither build an `Instant` by a
++struct literal nor edit one — `NITPICK-TYPE-079`, `probe20` — and there is no
++conversion to a `Timestamp` — `NITPICK-RESOLVE-002`, `probe20b` (TM-218). The
++clock is read as the sealed field, so O-X3 is settled without an accessor.
++**The S-6 generator was wrong, and only `span` could show it**: it named an
++identity by the module whose `fail` site raised it, where the compiler names
++it by the module that declares it, so `span` raising `cal`'s `ETimeValue` would
++have published a `span.ETimeValue` that does not exist; it names the declaring
++module now, and a fourth calibration specimen, `probe11_relay_lib`, was red
++before the fix (TM-217). `span` owes **11** arms and the umbrella **13** still
++— no new identity — and re-exports 64 names. A full invocation is **114 units
++green** at pin `5fbaf4a`.
+ 
+ **After cycle 0.2.0b: `Vec<T: Copy>`** — `nitpick-regex`'s answer to the
+ question TM-194 left open, ported (its RX-188). The type is
+diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
+index 378e0a40644d060e39e815b48777be59c1974f71..0e5d9d25e31d4a6a92d1d6e89562083ab1b40bf0 100644
+--- a/CONTRIBUTING.md
++++ b/CONTRIBUTING.md
+@@ -5,9 +5,10 @@ That is unusual and it is deliberate: the specifications catch design mistakes
+ that would otherwise be found by writing the wrong code twice.
+ 
+ **Where it stands:** cycle 0.1, the civil calendar, is closed (2026-09-26);
+-cycle 0.2, instants and timestamps, is next. `src/core/`
+-and `src/cal/` are real; the other four `src/` directories hold one placeholder
+-each until the cycle `meta/roadmap/ROADMAP.md` names replaces it.
++cycle 0.2, instants and timestamps, is open. `src/core/`
++and `src/cal/` are real, and `src/span/` holds `Instant` since cycle 0.2.0; the
++other three `src/` directories hold one placeholder each until the cycle
++`meta/roadmap/ROADMAP.md` names replaces it.
+ `harness/run.py` is the runner, and it proves first, on every full run, that it
+ can fail (`meta/specs/TESTING.md` V-14, V-15). *(This paragraph described cycle
+ 0.0.1's skeleton — "no self-check yet" — until cycle 0.1.5, and said the cycle
+diff --git a/README.md b/README.md
+index 7baa638596345f0f986f2924f32b4ec40e510bd0..b8e8cfd8d93584fc590810f1e7dd3679e8743b72 100644
+--- a/README.md
++++ b/README.md
+@@ -16,7 +16,9 @@ answer on every machine.
+ > the weekday, the day of the year and the ISO week date — whose gate is
+ > exhaustive: every day of years −9999 … +9999 goes to its day number and back,
+ > both ways, on every full run, and every date of years 1 … 9999 agrees with
+-> Python's `datetime`. Instants, zones, formats and the clocks are still
++> Python's `datetime`. Since cycle 0.2.0, `src/span/` holds `Instant`, a
++> reading of one of two clocks that cannot be built from a number or converted
++> to a wall-clock time. Timestamps, zones, formats and the clocks are still
+ > placeholders, each replaced by the cycle
+ > [`meta/roadmap/ROADMAP.md`](meta/roadmap/ROADMAP.md) names. The specification
+ > set is in [`meta/specs/`](meta/specs/) and the plan in
+diff --git a/harness/README.md b/harness/README.md
+index 2a151ef60154e8d47e4639b403b30aa55095c388..e8fe1f6bd4369f447fc6e07294dcd0270e0109b0 100644
+--- a/harness/README.md
++++ b/harness/README.md
+@@ -136,9 +136,10 @@ against the summary line rather than left to review.
+ - **Not that the WHOLE library works.** `src/core/` is real code since cycle
+   0.0.4 and `src/cal/` since 0.1.0 — the civil types, Hinnant's two algorithms
+   since 0.1.1, swept over the whole range since 0.1.2 — and the suite is
+-  evidence about both; the other four `src/` directories are still
+-  placeholders, so nothing here converts a time to a zone, a timestamp to a
+-  date, or text to either. *(This read "there is none yet; `src/` is
++  evidence about both — and about `src/span/`'s `Instant` since cycle 0.2.0;
++  the other three `src/` directories are still placeholders, so nothing here
++  converts a time to a zone, a timestamp to a date, or text to either. *(It
++  said four placeholders until cycle 0.2.0. This read "there is none yet; `src/` is
+   placeholders" for two subcycles after `src/core/` landed — C6. And until
+   cycle 0.1.2 it read "the other five `src/` directories are still
+   placeholders, so nothing here dates anything" — false since 0.1.0 gave
+diff --git a/harness/run.py b/harness/run.py
+index 41323c344824590b08192e67929fd9ad0edf50f0..89be7465b070365166fef0e844b1eff3f981b0cb 100644
+--- a/harness/run.py
++++ b/harness/run.py
+@@ -27,9 +27,10 @@ WHAT A GREEN RUN HERE IS, AND IS NOT.
+   since cycle 0.0.4 -- `Vec<T>`, `Bytes` and thirteen named bounds -- and
+   `src/cal/` since 0.1.0 -- the civil types, Hinnant's two algorithms since
+   0.1.1, swept over the whole range since 0.1.2 -- and the suite is evidence
+-  about both. The other four `src/` directories are still placeholders, so
+-  nothing here converts a time to a zone, a timestamp to a date, or text to
+-  either. (Until cycle 0.1.2 this said "the other five ... so nothing here
++  about both, and since 0.2.0 about `src/span/`'s `Instant`. The other three
++  `src/` directories are still placeholders, so nothing here converts a time
++  to a zone, a timestamp to a date, or text to either. (It said four until
++  cycle 0.2.0. Until cycle 0.1.2 this said "the other five ... so nothing here
+   dates anything" -- false since 0.1.0 gave `cal/` a body, and since 0.1.1
+   converted a date to a day.) AND IT IS A MEMORY RESULT FOR THE MANAGED HALF
+   ONLY WHERE A HEADER SAYS SO: D-151's exit-0 trap counts `wild` allocations
+@@ -151,7 +152,7 @@ EXPECT_EXEMPT = {
+     # THE CIVIL CROSS-ORACLE'S CORPUS -- cycle 0.1.4 (TM-181). A module of data,
+     # generated by `tools/gen_civil_oracle.py` and imported by
+     # `tests/unit/sweep/every_oracle_date.npk` alone: no `main`, no `failsafe`,
+-    # so no exit code and no diagnostic to expect, exactly as the three support
++    # so no exit code and no diagnostic to expect, exactly as the four support
+     # modules above. Its `none` is re-derived on every run like every verdict
+     # here (TM-137), so the day it grows a `main`, the harness says so.
+     "tests/fixtures/civil/civil_oracle.npk": ("none",
+diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
+index 19d39199b38b83c86a266941afba1deb0739d932..b5eb6ea86bf65a18228a4c2d8f8b03042ee652cf 100644
+--- a/meta/DECISIONS.md
++++ b/meta/DECISIONS.md
+@@ -6242,3 +6242,147 @@ for the day a cycle lifts the bound; **waiting for a consumer that needs an
+ owning element** — none is planned (the zone tables hold offsets, Z-7, and
+ `FmtPart` and `Instant` own nothing), and a cycle that needs one lifts the bound
+ by a decision, the compiler's `List<T>` its shape (`vec_at`'s comment).
++
++---
++
++# Cycle 0.2.0 — `Instant`, ratified @@DATE@@
++
++### TM-215 — `Instant` is `{ sealed int64:ns; sealed InstantClock:clock; }`, and `InstantClock` is an enum, `{ Monotonic; Boottime; }`; each derives `Eq`, `Clone`, `Debug` and `Copy`, and neither `Ord`
++
++**@@DATE@@, cycle 0.2.0 (the plan's PD-53). Amends `TIME_MODEL.md` §2 and M-2
++and `HOST.md` H-6; implements TM-010's corollary, TM-010.1.**
++
++**What was found** (`meta/roadmap/0.2/0.2.0.md` §1). The specifications
++disagreed about what an `Instant` is: `TIME_MODEL.md` §2 declared `{ int64:ns; }`,
++*"a reading of `CLOCK_MONOTONIC`"*, while `HOST.md` H-6 and TM-010.1 gave it a
++clock field and made `instant_since` refuse a pair from two clocks — and both
++cannot be built. Measured at compiler `5fbaf4a`: a derive reaches each field's
++own impl, so `#[derive(Eq, Clone, Debug)]` on `Instant` with nothing on the
++enum is `NITPICK-TYPE-019` three times, and `Copy` on `Instant` alone is
++`NITPICK-TYPE-087`; with the four derives on both, the module compiles. A
++consumer's struct literal of an `Instant` with sealed fields is
++`NITPICK-TYPE-079` once per field, and a write to one is the same code. And
++`Vec<T: Copy>` (TM-214) asks `Copy` at the type: without it, a
++`Vec<Instant>` is `NITPICK-TYPE-017` at the type, at its turbofish and at every
++verb's call.
++
++**The decision.** *`pub enum:InstantClock = { Monotonic; Boottime; };` and
++`pub struct:Instant = { sealed int64:ns; sealed InstantClock:clock; };`, both
++`#[derive(Eq, Clone, Debug, Copy)]`, declared in `src/span/span.npk`. The
++fields are sealed, so a consumer reads an `Instant` and never builds or edits
++one; `instant_of` (TM-216) is the one constructor.*
++
++*Alternatives declined:* **M-2 as written, `{ int64:ns; }`** — no clock, and
++TM-010.1 unbuildable; **H-6's `uint8:clock`** — 254 values that are no clock,
++and `SAFETY.md` S-15c is this library's measurement that a tag outside its enum
++makes an exhaustive `pick` fall through silently; **unsealed fields** —
++`Instant{ ns: wall_clock_ns, clock: InstantClock.Monotonic }` would compile,
++the type-level half of "a timeout cannot be written against a wall clock" gone;
++**`#[derive(Ord)]`** — a derived order compares two clocks' readings as one,
++and `instant_cmp` is the comparison, which refuses them; **no `Copy`** — a
++`Vec<Instant>` would not be writable at all.
++
++### TM-216 — `Instant`'s operations: `instant_of` builds one, `never fails`; `instant_since` and `instant_cmp` refuse two clocks with `ETimeValue`, `ValueFault.ClockMismatch`; `instant_add` keeps the clock and traps on overflow; the clock is read as the sealed field, and O-X3 is settled without an accessor
++
++**@@DATE@@, cycle 0.2.0 (the plan's PD-54). Amends `TIME_MODEL.md` M-4 and
++`SAFETY.md` S-3, appends `ClockMismatch` to `src/cal/cal.npk`'s `ValueFault`,
++and strikes `OPEN_QUESTIONS.md` O-X3.**
++
++**What was found.** M-4 gave `instant_since` as `Duration(…)` *"never fails"*,
++which it cannot be and also refuse two clocks (TM-010.1), and said nothing of
++`instant_cmp` and two clocks, where the same argument applies. A `never fails`
++callee is called `raw` from a fallible body: `pass duration_ns(…)` inside
++`instant_since` is `NITPICK-TYPE-007`, *"expected `Duration`, found
++`Result<Duration>`"*; and `!=` on a payload-free enum compiles. A program
++importing `span` owes 11 identities — `cal.ETimeValue`, the floor of six, and
++`cal`'s four arithmetic arms — and the umbrella with `span` re-exported still
++13: no new identity.
++
++**The decision.** *`instant_of = Instant(int64:ns, InstantClock:clock) never
++fails`, public — cycle 0.3's `host` builds its readings through it, and a
++module may not write another's sealed field; a caller who hands it a
++wall-clock reading has opted out in writing, as `CALENDAR.md` C-8b says a
++caller of `=>!` has. `instant_since = Duration(Instant:later,
++Instant:earlier)` and `instant_cmp = Ordering(Instant:a, Instant:b)` are
++fallible, and each fails `ETimeValue` for a pair from two clocks — detail
++`ValueFault.ClockMismatch`, appended to `cal`'s enum so every earlier variant
++keeps its tag; how a refusal hands its detail back stays O-X8.
++`instant_add = Instant(Instant:t, Duration:d) never fails` keeps `t`'s clock
++and traps on overflow, as `TIME_MODEL.md` §8's table has said since cycle 0.0.
++The clock is read as the field, `i.clock`: a sealed field is read anywhere and
++written only in its module (the compiler's D-313), which is the read-only
++exposure O-X3 recommended, and there is no `instant_clock` function.*
++
++*Alternatives declined:* **`instant_since` `never fails`, with a trap for two
++clocks** — a stop where the caller can answer; **`instant_cmp` `never fails`,
++ordering two clocks by their numbers** — the meaningless comparison TM-010.1
++exists to refuse; **an `instant_clock(i)` accessor, O-X3's recommendation as
++written** — one public name more (TM-013) beside a field that already reads;
++**`ClockMismatch` in an enum of `span`'s own** — `ETimeValue`'s detail enum IS
++`ValueFault` (`SAFETY.md` S-3), and a second enum would split one identity's
++details across two modules; **`instant_of` private, readings built only in
++`host`** — `host` is another module, and a sealed field is written only in its
++own.
++
++### TM-217 — the S-6 generator names an identity by the module that DECLARES it, never by the module whose `fail` site raises it; a fourth calibration specimen raises an identity it imports
++
++**@@DATE@@, cycle 0.2.0 (the plan's PD-55). Amends `harness/arms.py`'s
++`compute_bill`, `harness/selfcheck.py`'s `CALIBRATION` and `SAFETY.md` S-6b
++(the specimens' table and a fourth constraint), adds
++`tests/probe/support/probe11_relay_lib.npk` and its `EXPECT_EXEMPT` entry, and
++restates `TESTING.md` V-14d and §2's `selfcheck.part_c` row for four
++specimens.**
++
++**What was found, at planning.** `arms.compute_bill` qualified each `fail X`
++site by the module holding the site; the compiler's `NITPICK-REACH-003`
++qualifies an identity by the module that DECLARES it. The two agree while every
++module raises only its own identity, which was true until `span` raised
++`cal`'s `ETimeValue`: over the candidate `span`, `compute_bill` gave 12 — the
++compiler's 11 and a `span.ETimeValue` that does not exist — and over the
++umbrella 14 against 13. Reproduced without `span`: `probe11_relay_lib.npk`
++imports `probe11_arms_lib`'s `EProbeZone` and fails with it; `REACH-003` lists
++7 (`probe11_arms_lib.EProbeZone` and the floor), the generator 8. **Seen red
++first**: with the fourth calibration row and the old generator, the
++self-check's part C reports the generator OVERSTATES by
++`probe11_relay_lib.EProbeZone`; with the fix, it is silent.
++
++**The decision.** *For a `fail X` site in module M: M.X if M declares X; else
++D.X, D the one module in the imported subgraph that declares X; two declaring
++modules, or none, is a `BuildError` naming the site — reported, never
++guessed. Declarations are read as `check_error_budget` reads them, by
++`checks._ERROR_DECL` over the blanked code. `probe11_relay_lib` is the fourth
++`CALIBRATION` row, held to 7 on every run, and a support module at `none`.*
++
++*Alternatives declined:* **reading the qualification out of `REACH-003`** —
++`SAFETY.md` S-6b's whole point is that the source computation is the thing
++under test, and a bill copied from the oracle cannot disagree with it;
++**qualifying by the first declaring module found** — a guess, where two
++declarations of one name is already `check_error_budget`'s failure (TM-203);
++**the fix without a specimen** — the defect would be calibrated only on
++`span`, the code it was found under, and a later edit could re-break it
++behind a green run.
++
++### TM-218 — `Instant`'s refusals are two probes dispatched by their own headers: `probe20_instant_literal_refused.npk`, `NITPICK-TYPE-079` named twice, and `probe20b_instant_conversion_refused.npk`, `NITPICK-RESOLVE-002`
++
++**@@DATE@@, cycle 0.2.0 (the plan's PD-56). Adds the two probes and their
++rows in `tests/probe/README.md`; cycle 0.2.1's checklist gains the third.**
++
++**What was found.** A consumer's `Instant{ ns: 1000i64, clock:
++InstantClock.Monotonic }` is `NITPICK-TYPE-079`, reported once per sealed field
++it writes — two reports at the literal's one position — so under `BUILD.md`
++B-7c the header names the code twice; the compiler's DEF-165, registered open,
++would make it one. `instant_to_timestamp(a)` is `NITPICK-RESOLVE-002`, *"cannot
++find `instant_to_timestamp` in this scope"*. The stronger refusal — an `Instant`
++passed where a `Timestamp` is taken — needs `Timestamp`, cycle 0.2.1's.
++
++**The decision.** *Two probes under `tests/probe/`, each refused with exactly
++its codes at as many sites as its header names, each importing the module it
++asks about, and each with a superset `failsafe`; and 0.2.1's checklist carries
++the `Timestamp` refusal, its code measured then.*
++
++*Alternatives declined:* **`tests/rejection/` and its first `[[test]]`
++entry** — every refusal this library asserts is a probe of this shape —
++`probe15`, `probe16` … `probe16i`, `probe19` — and a `check` entry would put
++one kind of file in two directories; worth it the day a refusal is not a
++probe's kind; **one probe for both refusals** — a file refused for two reasons
++cannot say which reason went away.
+diff --git a/meta/OPEN_QUESTIONS.md b/meta/OPEN_QUESTIONS.md
+index 6feb48ceb0a05e650429a81d452293ec58c48379..2fd4e269a591ad13639e299c2e0693e6d1cf9f2f 100644
+--- a/meta/OPEN_QUESTIONS.md
++++ b/meta/OPEN_QUESTIONS.md
+@@ -620,7 +620,14 @@ by another. The estimate was low by 37% and wrong in four independent ways;
+ TM-135 has each with its number, and the spike is
+ `meta/scratch/tzdb_spike/`.
+ 
+-### O-X3 — whether `Instant` exposes its clock kind publicly
++### ~~O-X3 — whether `Instant` exposes its clock kind publicly~~ — **SETTLED @@DATE@@ (TM-216): the clock is the sealed field `i.clock`, read anywhere; there is no `instant_clock` function**
++
++> The recommendation's read-only exposure, with one public name fewer: a
++> `sealed` field is read anywhere and written only in its module (the
++> compiler's D-313), so the field already is a read-only accessor. The
++> recommendation's `HostClock` is `InstantClock`, declared in `span` beside
++> `Instant` (TM-215). The question below is left as it was asked.
++
+ TM-010.1 makes `Instant` carry which clock produced it, so that
+ `instant_since` can refuse a mismatched pair. Whether the field is *readable*
+ by a caller is a smaller question: reading it lets a program log which clock it
+diff --git a/meta/roadmap/0.2/README.md b/meta/roadmap/0.2/README.md
+index dc0b2f1a69aace9241652ab63ea0bc3485239eef..cb165bbfb81cd445149e52699848fb98ac6a8904 100644
+--- a/meta/roadmap/0.2/README.md
++++ b/meta/roadmap/0.2/README.md
+@@ -10,7 +10,8 @@ scales, no monotonic↔absolute conversion), TM-011 (`Timestamp`'s layout and
+ field order). All settled.
+ 
+ **Open questions to settle:** O-X3 — whether `Instant` exposes its clock kind
+-publicly. Recommendation on file: yes, read-only.
++publicly. Recommendation on file: yes, read-only. *(Settled at 0.2.0, TM-216:
++the clock is the sealed field, read anywhere, and there is no accessor.)*
+ 
+ **And O-X6 — which `int128` sites `SPAN_MODEL.md` N-20 counts — must be answered
+ before `check_int128_sites` goes live** (0.2.3's last item). `OPEN_QUESTIONS.md`
+@@ -65,6 +66,8 @@ file stands — make §5's table the authority and drop N-20's count. *(From cyc
+ - [ ] a property test that no sequence of operations produces a denormalised value — this is `VERIFICATION.md` P-4's obligation, standing in
+ - [ ] the range check against `NTIME_SECS_MIN`/`MAX`, returning `ETimeValue` before D-210's trap
+ - [ ] a negative-`secs` timestamp with positive `nanos` compares correctly against its neighbours — the representation's one subtlety, and the test that catches getting it backwards
++- [ ] `Timestamp`'s fields `sealed`, by TM-215's reason: a consumer builds one only through a validating constructor *(added at 0.2.0, `0.2.0.md` §7)*
++- [ ] a probe asserts an `Instant` passed where a `Timestamp` is taken is refused, with its code measured then — the conversion refusal `probe20b` could not ask without `Timestamp` *(added at 0.2.0, TM-218)*
+ 
+ ### 0.2.2 — conversion — THE GATE
+ - [ ] `timestamp_to_utc` and `civil_to_utc`, over `cal`'s algorithms
+diff --git a/meta/roadmap/0.3/README.md b/meta/roadmap/0.3/README.md
+index 3a1ba381aea83afc2e19ed5dad41932cf5ac5292..7b8e060543d0dc52f001bb456b79f598195338f3 100644
+--- a/meta/roadmap/0.3/README.md
++++ b/meta/roadmap/0.3/README.md
+@@ -33,12 +33,14 @@ settled.
+ - [ ] `host_now_utc` (CLOCK_REALTIME 0), `host_now_boot` (CLOCK_BOOTTIME 7)
+ - [ ] `host_now_instant` calls the floor's `mono_now()`, **not** `clock_gettime` (H-5) — so an `ntime` `Instant` and an executor deadline are on the same timeline by construction
+ - [ ] `host_clock_res` over `clock_getres`
++- [ ] **`BUILD.md` B-17 gains `host` → `span`, by decision, when `host` first imports it**: `host_now_instant` and `host_now_boot` return `Instant`s, and both fields of an `Instant` are sealed, so `host` builds them through `span`'s public `instant_of` (TM-215, TM-216) — B-17 draws `host` → `zone`, `cal`, `core` today *(handed on by `0.2/0.2.0.md` §7)*
+ - [ ] errnos **forwarded verbatim** (H-7), so this module declares no error and costs no arm — asserted by `check_error_budget`
+ - [ ] the returned `Timestamp` range-checked (H-8): an unset machine clock is `ETimeValue`, not a value that fails somewhere less obvious
+ - [ ] **no state in the module** (H-3): a test asserts two calls are two syscalls
+ - [ ] `// stress: 40` on every clock test
+ 
+ ### 0.3.1 — `check_purity` goes live
++*(Stale in its title, found at cycle 0.2.0's planning: `check_purity` has been live since cycle 0.0.3, TM-126. What this subcycle owes is the review of its ban list against a `src/` with a real `host/` — the last item below — and the two plants. `0.2/0.2.0.md` §7.)*
+ - [ ] the dormant check from 0.0.3 turned on and green
+ - [ ] **seen to fail**: a deliberately planted `mono_now()` in `src/cal/` fails the build, by name
+ - [ ] `check_host_isolation` likewise: a planted `host_now_utc()` call in `src/fmt/` fails
+diff --git a/meta/roadmap/ROADMAP.md b/meta/roadmap/ROADMAP.md
+index 2f2ff060ad00637d679c7d2e6d1364fb616651b4..a9107b51a4a6ee1fcb97420e735ae87fc178d666 100644
+--- a/meta/roadmap/ROADMAP.md
++++ b/meta/roadmap/ROADMAP.md
+@@ -75,7 +75,7 @@ sibling libraries.
+ |---|---|---|
+ | ~~**0.0**~~ | **Foundations** — the language probes, the harness, `src/core/` — **CLOSED 2026-09-06, archived at [`done/0.0/`](done/0.0/README.md)** | — |
+ | ~~**0.1**~~ | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **CLOSED 2026-09-26, archived at [`done/0.1/`](done/0.1/README.md)** | 0.0 ✓ |
+-| **0.2** | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **IN PROGRESS**: [`0.2/0.2.0a.md`](0.2/0.2.0a.md), the adoption of compiler `5fbaf4a`, done; [`0.2/0.2.0b.md`](0.2/0.2.0b.md), `Vec<T: Copy>`, done; [`0.2/0.2.0.md`](0.2/0.2.0.md), written at cycle 0.1's close and rehearsed over 0.2.0b, next | 0.1 ✓ |
++| **0.2** | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **IN PROGRESS**: [`0.2/0.2.0a.md`](0.2/0.2.0a.md), the adoption of compiler `5fbaf4a`, done; [`0.2/0.2.0b.md`](0.2/0.2.0b.md), `Vec<T: Copy>`, done; [`0.2/0.2.0.md`](0.2/0.2.0.md), `Instant`, done; 0.2.1, `Timestamp`, next | 0.1 ✓ |
+ | **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double | 0.2 |
+ | **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate | 0.2 |
+ | **0.5** | **The zone table** — the generator, the committed tables, the size measurement | 0.1 |
+diff --git a/meta/specs/HOST.md b/meta/specs/HOST.md
+index ae209a32f7f620c1366cdff679bb025b63a36ddd..cdc93f4394098925ef4a50bd7cd63258e31bd8df 100644
+--- a/meta/specs/HOST.md
++++ b/meta/specs/HOST.md
+@@ -65,9 +65,18 @@ does not, on Linux. An `Instant` records which clock produced it in a field, and
+ same argument as M-3, one level down.
+ 
+ ```nitpick
+-pub struct:Instant = { int64:ns; uint8:clock; };   // clock: 0 monotonic, 1 boottime
++pub enum:InstantClock = { Monotonic; Boottime; };
++pub struct:Instant = { sealed int64:ns; sealed InstantClock:clock; };
+ ```
+ 
++*(Amended at cycle 0.2.0, TM-215 and TM-216. The block read `pub
++struct:Instant = { int64:ns; uint8:clock; };   // clock: 0 monotonic, 1
++boottime` — and a `uint8` holds 254 values that are no clock (`SAFETY.md`
++S-15c), so the tag is an enum; both fields are sealed, so `host` builds its
++readings through `span`'s `instant_of`; and `instant_cmp` refuses two clocks as
++`instant_since` does. `host` importing `span` is cycle 0.3's, with a
++`BUILD.md` B-17 arrow it does not have yet.)*
++
+ **Rule H-7 — `host_now_utc` forwards the kernel's errno verbatim**
+ (`SAFETY.md` S-5), so it declares no error and costs no `failsafe` arm.
+ `clock_gettime(CLOCK_REALTIME, valid-ptr)` cannot fail on Linux, and the
+diff --git a/meta/specs/TIME_MODEL.md b/meta/specs/TIME_MODEL.md
+index 4d1601de31cd9ae659795934eb00a1b2d12ba6c2..3f4dfbf87a185f7ecf81b8830a0a178f75bb2b38 100644
+--- a/meta/specs/TIME_MODEL.md
++++ b/meta/specs/TIME_MODEL.md
+@@ -31,12 +31,22 @@ CivilDateTime ──►  Timestamp       given a zone, AND an answer for §6's e
+ ## 2. `Instant` — the monotonic scale
+ 
+ ```nitpick
+-pub struct:Instant = { int64:ns; };      // opaque; the origin is arbitrary
++#[derive(Eq, Clone, Debug, Copy)]
++pub enum:InstantClock = { Monotonic; Boottime; };
++
++#[derive(Eq, Clone, Debug, Copy)]
++pub struct:Instant = { sealed int64:ns; sealed InstantClock:clock; };   // the origin is arbitrary
+ ```
+ 
+-**Rule M-2.** An `Instant` is a reading of `CLOCK_MONOTONIC`. Its origin is
+-whatever the kernel chose at boot, it is **not** an epoch, and it is not
+-comparable across processes or across a reboot.
++**Rule M-2.** An `Instant` is a reading of `CLOCK_MONOTONIC` or of
++`CLOCK_BOOTTIME`, and records which (`HOST.md` H-6). Its origin is whatever the
++kernel chose at boot, it is **not** an epoch, and it is not comparable across
++processes, across a reboot, or across its two clocks. Both fields are sealed:
++a consumer reads them and builds an `Instant` only through `instant_of`.
++*(Amended at cycle 0.2.0, TM-215. The block read `pub struct:Instant = {
++int64:ns; };`, and this rule "An `Instant` is a reading of `CLOCK_MONOTONIC`"
++— no clock, which made TM-010.1's refusal unbuildable while `HOST.md` H-6
++already gave the type a clock field. The tag is an enum and not H-6's `uint8`.)*
+ 
+ **Rule M-3 (TM-010) — an `Instant` cannot be converted to a `Timestamp`, in
+ either direction, ever.** This is the load-bearing refusal of the whole model, and the
+@@ -46,19 +56,32 @@ compiler's own runtime makes the argument for us, in the floor's source:
+ > deadline that moves with the wall silently voids D-056's containment.*
+ > — `runtime/npkrt.ll`, the `npk_mono_now` block
+ 
++*(Cycle 0.2.0: read at compiler `5fbaf4a`, the block is headed "the monotonic
++clock (D-176, 1.1.3)" and sits above `npk_chain_reset`, not beside
++`npk_mono_now`'s definition; the words are as quoted, and unchanged since
++`c970483`. `src/span/span.npk`'s header quotes them from there.)*
++
+ A library that offers the conversion offers a caller the ability to write a
+ timeout against a clock that a network time daemon can move backwards by an
+ hour. Here that program does not compile.
+ 
+ **Rule M-4 — the only thing you can do with two `Instant`s is subtract them**,
+-and the result is a `Duration`:
++and the result is a `Duration` — or compare them; and both refuse a pair from
++two clocks:
+ 
+ ```nitpick
+-pub func:instant_since = Duration(Instant:later, Instant:earlier);   // never fails*
+-pub func:instant_add   = Instant(Instant:t, Duration:d);
+-pub func:instant_cmp   = Ordering(Instant:a, Instant:b);
++pub func:instant_of    = Instant(int64:ns, InstantClock:clock) never fails;
++pub func:instant_since = Duration(Instant:later, Instant:earlier);   // ETimeValue: two clocks*
++pub func:instant_add   = Instant(Instant:t, Duration:d) never fails;  // keeps t's clock
++pub func:instant_cmp   = Ordering(Instant:a, Instant:b);              // ETimeValue: two clocks
+ ```
+ 
++*(Amended at cycle 0.2.0, TM-216. The block read `instant_since … // never
++fails*`, which it cannot be and also refuse two clocks (TM-010.1), had no
++constructor, and said nothing of `instant_cmp` and two clocks, where the same
++argument applies. The refusal's detail is `ValueFault.ClockMismatch`; how a
++refusal hands it back is still `../OPEN_QUESTIONS.md` O-X8.)*
++
+ \* `instant_since` cannot overflow in practice — the monotonic clock's origin
+ is the boot, and `int64` nanoseconds is 292 years of uptime — but D-210 traps
+ if it somehow did, which is the correct outcome for a machine that has been up
+@@ -278,7 +301,7 @@ normative: a conversion not on it does not exist.
+ | From | To | How | Fails? |
+ |---|---|---|---|
+ | `Instant` | `Instant` | `+ Duration` | traps on overflow only |
+-| `Instant`, `Instant` | `Duration` | `instant_since` | no |
++| `Instant`, `Instant` | `Duration` | `instant_since` | `ETimeValue` for two clocks (M-4) |
+ | `Instant` | `Timestamp` | **refused** (M-3) | — |
+ | `Timestamp` | `Timestamp` | `+ Duration` | `ETimeValue` outside range |
+ | `Timestamp`, `Timestamp` | `Duration` | `timestamp_since` | `ETimeValue` past ±292 y (M-18) |
+@@ -294,6 +317,9 @@ normative: a conversion not on it does not exist.
+ | `int64` days | `CivilDate` | `days_to_date` | `ETimeValue` outside range |
+ | `Period` + `Instant`/`Timestamp` | — | **refused** (M-16) | — |
+ 
++*(Amended at cycle 0.2.0, TM-216: `instant_since`'s row read "no" — M-4's
++"never fails", which TM-010.1's refusal of two clocks makes false.)*
++
+ ---
+ 
+ ## 10. Open items
+diff --git a/nitpick.toml b/nitpick.toml
+index 12f25cc6ae0dd41f59c661f530e75670ab35bd24..d996cb838d5658098a2ac400cbc6374991a2e7d0 100644
+--- a/nitpick.toml
++++ b/nitpick.toml
+@@ -149,7 +149,10 @@ path  = "tests/probe"
+ #             and each is a probe under `tests/probe/`, dispatched by its
+ #             header as B-4c allows, so this directory is still empty. Cycle
+ #             0.2.0's refusal of a conversion between `Instant` and
+-#             `Timestamp` is the next, and its plan says where it lives.)
++#             `Timestamp` is the next, and its plan says where it lives.
++#             It lives in `tests/probe/` -- `probe20b`, and `probe20` for
++#             the struct literal, TM-218 -- so this directory is still
++#             empty.)
+ #   `golden`  IMPLEMENTED, and `tests/golden/` is empty: nothing formats
+ #             anything yet. Exercised by `selfcheck.py` case 4. Its entry
+ #             arrives with `fmt` at cycle 0.4.
+diff --git a/src/core/core.npk b/src/core/core.npk
+index 0f751e3678b5fcf62adc50a8f00a2ae52ba00b46..379bd9566a9fc43087541d91b486b5ee0f66c80c 100644
+--- a/src/core/core.npk
++++ b/src/core/core.npk
+@@ -1,7 +1,8 @@
+ // `ntime`'s storage primitives — THE LAYER NOTE. This was `src/core/`'s
+ // placeholder (0.0.1 P-7) and the directory has been filled since cycle 0.0.4;
+-// the file stays because the other placeholders -- four since cycle 0.1.0 filled
+-// `cal/`, five before -- point AT it for the explanation below, and because a
++// the file stays because the other placeholders -- three since cycle 0.2.0
++// filled `span/`, four since cycle 0.1.0 filled `cal/`, five before -- point AT
++// it for the explanation below, and because a
+ // layer note that a reader meets before the code is worth one file.
+ //
+ // WHY A PLACEHOLDER EXISTS AT ALL — the paragraph the siblings cite. An empty
+diff --git a/src/span/README.md b/src/span/README.md
+index 33de69b04d5e090d99dd79c67cafa02fda2a8160..af07f8c089968aab39fc06d7e5a1ee369d4bdb5c 100644
+--- a/src/span/README.md
++++ b/src/span/README.md
+@@ -7,3 +7,8 @@ prelude's `Duration` (`duration_mins`, `duration_hours`, `duration_days`,
+ Governed by `meta/specs/TIME_MODEL.md` and `meta/specs/SPAN_MODEL.md`. Built in
+ cycles 0.2 and 0.7 — the types first, the calendar arithmetic after zones
+ exist, because `Period` addition on a zoned value needs them.
++
++**What is here since cycle 0.2.0:** `span.npk` — `Instant` and `InstantClock`,
++`instant_of`, `instant_since`, `instant_add` and `instant_cmp` (TM-215, TM-216).
++`Timestamp` is cycle 0.2.1's, the `Duration` constructors 0.2.3's, `Period`
++0.7's.

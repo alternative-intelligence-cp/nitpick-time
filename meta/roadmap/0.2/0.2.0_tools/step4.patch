@@ -1,0 +1,227 @@
+diff --git a/tests/probe/README.md b/tests/probe/README.md
+index cca59d448fd8238a6abad3dec15dd30627738dfc..dc644fe5bd106fd6dea46890a40c5f8b87720241 100644
+--- a/tests/probe/README.md
++++ b/tests/probe/README.md
+@@ -148,6 +148,8 @@ by the harness as ordinary `program`-stage entries from cycle 0.0.2.
+ | `probe18_zero_length_owner.npk` | does a `string[0]` field cost nothing, move, drop, and leave an `int64[0]` twin copyable? | S-18g — the language fact under `Vec`'s marker |
+ | `probe18b_zero_length_owner_copy_refused.npk` | *(must not compile)* a struct whose one owning field is `string[0]`, copied | S-18g — `NITPICK-TYPE-046` |
+ | `probe19_pod_owner_refused.npk` | *(must not compile)* `Copy` claimed for `string` — until cycle 0.2.0a, `Pod` implemented as its trait declared it, `TYPE-047` (TM-211) | S-18h — `NITPICK-TYPE-087` |
++| `probe20_instant_literal_refused.npk` | *(must not compile)* an `Instant` built by a consumer's struct literal | `TIME_MODEL.md` M-2, TM-215 — `NITPICK-TYPE-079`, twice: one report per sealed field |
++| `probe20b_instant_conversion_refused.npk` | *(must not compile)* `instant_to_timestamp` called | M-3, TM-010 — `NITPICK-RESOLVE-002` |
+ 
+ *(Cycle 0.1.3b: the three `probe17` rows are new. **Probes 12 to 16 — cycles
+ 0.0.4 to 0.1.0c — are not in this table**, and the heading above says "What is
+@@ -164,6 +166,9 @@ close's.)*
+ table, each taken from its own header, so "What is here" is every file in this
+ directory.)*
+ 
++*(Cycle 0.2.0: the two `probe20` rows are new — `Instant`'s refusals, each a
++probe that imports the module it asks about (TM-218).)*
++
+ Probes 09 and 10 were planned in `0.0.0.md` §4 and **held, not merely
+ unwritten**: they are the borrow-edge probes, and the author ruled O-N9
+ BLOCKING (Q-5), so they waited for the compiler's cycle 1.5.1b rather than
+diff --git a/tests/probe/probe20_instant_literal_refused.npk b/tests/probe/probe20_instant_literal_refused.npk
+new file mode 100644
+index 0000000000000000000000000000000000000000..d643fc856e00b1616935c7ffe803c5de78eefe98
+--- /dev/null
++++ b/tests/probe/probe20_instant_literal_refused.npk
+@@ -0,0 +1,58 @@
++// expect-error: NITPICK-TYPE-079
++// expect-error: NITPICK-TYPE-079
++//
++// PROBE 20 — A CONSUMER CANNOT BUILD AN `Instant` FROM A NUMBER (cycle 0.2.0,
++// TM-215, TM-218).
++//
++// ASKS: may a consumer write `Instant{ ns: 1000i64, clock:
++// InstantClock.Monotonic }` -- a reading made of any `int64` it likes, a
++// wall-clock one included?
++//
++// MATTERS BECAUSE "a timeout cannot be written against a wall clock" is half
++// the TYPE's: if a struct literal could build an `Instant`, a
++// `CLOCK_REALTIME` nanosecond count would become one in a line, and every
++// refusal `instant_since` makes would be about a value it cannot trust.
++// `instant_of` is the one constructor, and a caller handing it a wall-clock
++// reading has opted out in writing (TM-216).
++//
++// ANSWER, measured at `5fbaf4a`: NO. Both fields are `sealed` (the compiler's
++// D-313), so the literal below is `NITPICK-TYPE-079` -- reported ONCE PER
++// SEALED FIELD it writes, two reports at the literal's one position, so this
++// header names the code twice (`BUILD.md` B-7c, one line per site). The
++// compiler's DEF-165, registered open, would make it one report; when it lands
++// this file reddens and says so. THE REFUSAL IS THE ASSERTION (B-7). A write
++// to a field of an `Instant` from `instant_of` -- `a.ns = 5i64` -- is the same
++// code, measured at planning. `probe20b` is the conversion, and cycle 0.2.1
++// adds the stronger one: an `Instant` passed where a `Timestamp` is taken.
++mod:probe20_instant_literal_refused;
++
++use "../../src/span/span.npk".*;
++
++func:main = int32(cstring[]:_~argv) {
++    Instant:a = Instant{ ns: 1000i64, clock: InstantClock.Monotonic };
++    exit 0i32;
++};
++
++// A SUPERSET of what `NITPICK-REACH-002` asks of a root importing `span`,
++// deliberately, as `probe16d` has (`SAFETY.md` S-6b, constraint 3: a superset
++// compiles): a later compiler that ran the reach analysis before the check this
++// file asserts could not add a stray `REACH-002` to the refusal.
++func:failsafe = int32(Error:e) {
++    pick (e) {
++        (cal.ETimeValue)    { exit 80i32; },
++        (HeapBadRequest)    { exit 91i32; },
++        (HeapOom)           { exit 92i32; },
++        (IntOverflow)       { exit 93i32; },
++        (OutOfBounds)       { exit 94i32; },
++        (Unreachable)       { exit 95i32; },
++        (WildLeak)          { exit 96i32; },
++        (DivByZero)         { exit 97i32; },
++        (DivOverflow)       { exit 98i32; },
++        (StackExhausted)    { exit 106i32; },
++        (MachineFault)      { exit 107i32; },
++        (DecreasesViolated) { exit 108i32; },
++        (LimitViolated)     { exit 109i32; },
++        (*)                 { exit 99i32; }
++    }
++    exit 9i32;
++};
+diff --git a/tests/probe/probe20b_instant_conversion_refused.npk b/tests/probe/probe20b_instant_conversion_refused.npk
+new file mode 100644
+index 0000000000000000000000000000000000000000..c2493b301868613dd4361046e3ba2f44814c3bef
+--- /dev/null
++++ b/tests/probe/probe20b_instant_conversion_refused.npk
+@@ -0,0 +1,50 @@
++// expect-error: NITPICK-RESOLVE-002
++//
++// PROBE 20b — THERE IS NO CONVERSION FROM AN `Instant` (cycle 0.2.0, TM-218;
++// `TIME_MODEL.md` M-3, TM-010).
++//
++// ASKS: may a consumer call `instant_to_timestamp` -- or any function that
++// turns a reading of the monotonic scale into the absolute one?
++//
++// MATTERS BECAUSE M-3 is the model's load-bearing refusal, and a refusal that
++// is merely absent is not checked: the day somebody adds the convenience, this
++// file stops being refused, and the run says so. The conversion is refused BY
++// NAME -- `NITPICK-RESOLVE-002`, "cannot find `instant_to_timestamp` in this
++// scope" -- exactly once. THE REFUSAL IS THE ASSERTION (B-7).
++//
++// WHAT IT DOES NOT ASK, AND WHO WILL: an `Instant` passed where a `Timestamp`
++// is taken needs `Timestamp`, which is cycle 0.2.1's; its checklist carries
++// that probe, with its code measured then.
++mod:probe20b_instant_conversion_refused;
++
++use "../../src/span/span.npk".*;
++
++func:main = int32(cstring[]:_~argv) {
++    Instant:a = raw instant_of(1000i64, InstantClock.Monotonic);
++    int64:t = instant_to_timestamp(a);
++    exit 0i32;
++};
++
++// A SUPERSET of what `NITPICK-REACH-002` asks of a root importing `span`,
++// deliberately, as `probe16d` has (`SAFETY.md` S-6b, constraint 3: a superset
++// compiles): a later compiler that ran the reach analysis before the check this
++// file asserts could not add a stray `REACH-002` to the refusal.
++func:failsafe = int32(Error:e) {
++    pick (e) {
++        (cal.ETimeValue)    { exit 80i32; },
++        (HeapBadRequest)    { exit 91i32; },
++        (HeapOom)           { exit 92i32; },
++        (IntOverflow)       { exit 93i32; },
++        (OutOfBounds)       { exit 94i32; },
++        (Unreachable)       { exit 95i32; },
++        (WildLeak)          { exit 96i32; },
++        (DivByZero)         { exit 97i32; },
++        (DivOverflow)       { exit 98i32; },
++        (StackExhausted)    { exit 106i32; },
++        (MachineFault)      { exit 107i32; },
++        (DecreasesViolated) { exit 108i32; },
++        (LimitViolated)     { exit 109i32; },
++        (*)                 { exit 99i32; }
++    }
++    exit 9i32;
++};
+diff --git a/tests/unit/instant_ops.npk b/tests/unit/instant_ops.npk
+new file mode 100644
+index 0000000000000000000000000000000000000000..53fda64160424af47adc50e47cfb3190a6598281
+--- /dev/null
++++ b/tests/unit/instant_ops.npk
+@@ -0,0 +1,78 @@
++// expect-exit: 0
++//
++// `Instant`'s four operations, and its two refusals (cycle 0.2.0; TM-215,
++// TM-216; `TIME_MODEL.md` M-2 and M-4, `HOST.md` H-6).
++//
++// ASKS: two readings of one clock, built by `instant_of` -- does
++// `instant_since` give their distance, does `instant_add` of that distance to
++// the earlier give back the later, does `instant_cmp` call them `Equal`, does
++// the clock read through its sealed field, does a `Vec<Instant>` hand a
++// reading back twice, and are a `Boottime` reading and a `Monotonic` one
++// refused by both `instant_since` and `instant_cmp`?
++//
++// MATTERS BECAUSE a reading of one clock less a reading of the other is a
++// number that means nothing (H-6: `Boottime` counts suspend, `Monotonic` does
++// not), and the refusal is the only thing between a caller and that number.
++// Every `Result` is read through `is_error` first, and `value` only after.
++//
++// EXIT CODES, clear of every arm code (TM-152): 10 `instant_since` refused a
++// same-clock pair; 11 its distance is not 3 500 ns; 12 `instant_cmp` refused a
++// same-clock pair; 13 the sum is not `Equal` to the later reading; 14 the
++// clock read through the field is not the one built; 15 a `Vec<Instant>` did
++// not hand the reading back twice (both types derive `Copy`, TM-215, and
++// `Vec<T: Copy>` asks it since cycle 0.2.0b); 16 `instant_since` accepted two
++// clocks; 17 `instant_cmp` accepted two clocks. Each was seen red on its
++// mutant at planning (`meta/roadmap/0.2/0.2.0.md` §3, step 4).
++//
++// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
++// `span` and `core/vec`: `span`'s eleven (`cal.ETimeValue`, the floor and
++// `cal`'s four arithmetic arms, `SAFETY.md` S-4) and `LimitViolated`, which
++// `Vec`'s `ListLen` adds -- twelve.
++mod:instant_ops;
++
++use "../../src/span/span.npk".*;
++use "../../src/core/vec.npk".*;
++
++func:main = int32(cstring[]:_~argv) {
++    Instant:a = raw instant_of(1000i64, InstantClock.Monotonic);
++    Instant:b = raw instant_of(4500i64, InstantClock.Monotonic);
++    Result<Duration>:d = instant_since(b, a);
++    if (d.is_error) { exit 10i32; }
++    if (d.value.ns != 3500i64) { exit 11i32; }
++    Instant:c = raw instant_add(a, d.value);
++    Result<Ordering>:o = instant_cmp(c, b);
++    if (o.is_error) { exit 12i32; }
++    if (o.value != Ordering.Equal) { exit 13i32; }
++    if (c.clock != InstantClock.Monotonic) { exit 14i32; }
++    Vec<Instant>:v = raw vec_init::<Instant>(2i64);
++    drop vec_push(@v, b);
++    Instant:r1 = raw vec_at(v, 0i64);
++    Instant:r2 = raw vec_at(v, 0i64);
++    drop vec_free(@v);
++    if (r1.ns != 4500i64 || r2.clock != InstantClock.Monotonic) { exit 15i32; }
++    Instant:x = raw instant_of(4500i64, InstantClock.Boottime);
++    Result<Duration>:e = instant_since(x, a);
++    if (!(e.is_error)) { exit 16i32; }
++    Result<Ordering>:f = instant_cmp(x, a);
++    if (!(f.is_error)) { exit 17i32; }
++    exit 0i32;
++};
++
++func:failsafe = int32(Error:e) {
++    pick (e) {
++        (cal.ETimeValue)    { exit 80i32; },
++        (HeapBadRequest)    { exit 91i32; },
++        (HeapOom)           { exit 92i32; },
++        (IntOverflow)       { exit 93i32; },
++        (OutOfBounds)       { exit 94i32; },
++        (Unreachable)       { exit 95i32; },
++        (WildLeak)          { exit 96i32; },
++        (DivByZero)         { exit 97i32; },
++        (DivOverflow)       { exit 98i32; },
++        (LimitViolated)     { exit 109i32; },
++        (StackExhausted)    { exit 106i32; },
++        (MachineFault)      { exit 107i32; },
++        (*)                 { exit 99i32; }
++    }
++    exit 9i32;
++};

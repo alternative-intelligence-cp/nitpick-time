@@ -40,6 +40,11 @@ cannot be written through the library any more. Its two calls read the `Vec`
 as a loan, `vec_at::<string>(v, 0i64)`, because `vec_at` takes one since the
 same cycle; its header says why, and the rest of its header is its record.
 
+*(Since cycle 0.2.0b it names SIX sites, TM-214: `Vec` is `Vec<T: Copy>` and
+every verb states the bound, so the `Vec<string>` declaration, its turbofish,
+the `vec_push` and the `vec_free` are refused beside the two calls — the type
+before the read. The two calls are refused as they were.)*
+
 | `case5`, both legs | at `c3bdae2` | at `c970483` |
 |---|---|---|
 | the text and the library before cycle 0.1.3c — the record | run 11 | run 11 |
@@ -158,6 +163,11 @@ why "restricted to a non-owning `T`" had felt like a statement about tidiness.
 > header). `vec_reserve`'s row above no longer exists in that form either: it
 > relocates with `ralloc`, a bitwise move of the whole block, because D-264
 > refused its `into[i] = from[i]`.
+>
+> **At cycle 0.2.0b the restriction became the type's** (TM-214):
+> `struct:Vec<T: Copy>`, every verb bounded, so the compiler refuses an owning
+> `T` wherever it is written and the four drops are owed at no `T` the type
+> admits. `case5` names six sites. The paragraph below is the record of why.
 
 **It keeps it, for a stronger reason than the one it had.** TM-132 restricted
 `Vec<T>` to a non-owning `T` because O-N17 blocked the element-drop path.

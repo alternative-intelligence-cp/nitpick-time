@@ -1041,7 +1041,9 @@ better style anyway (`src/core/limits.npk`).
 > was refused by the same check, so it relocates with `ralloc`; `vec_pop`'s
 > `move` is still the right spelling; and `Vec<T>` stays restricted to a
 > non-owning `T`, now on one reason — the four element drops it does not
-> perform. The record below is left standing.
+> perform. The record below is left standing. *(Since cycle 0.2.0b the
+> restriction is the type's — `Vec<T: Copy>`, TM-214 — and the four drops are
+> owed at no `T` it admits.)*
 
 **Raised** from this repository at cycle 0.0.5 while checking whether O-N17's
 fix lifted TM-132's restriction; **numbered O-N19** in the workbench registry;

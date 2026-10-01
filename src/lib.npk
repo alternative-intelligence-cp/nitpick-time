@@ -77,7 +77,9 @@ mod:lib;
 // at `c3bdae2` by the compiler's D-264, which refuses a copy of a `T` place
 // where it is written. The restriction stands on the one reason left: four of
 // the nine operations owe an element drop at an owning `T` and perform none
-// (`SAFETY.md` S-18d).
+// (`SAFETY.md` S-18d). SINCE CYCLE 0.2.0b (TM-214) THE TYPE STATES IT:
+// `Vec<T: Copy>`, every verb bounded, so an owning `T` is refused wherever it
+// is written and the four drops are owed at no `T` the type admits.
 //
 // SINCE CYCLE 0.1.0c (TM-156) its `items` is `hidden` and its `count` and `cap`
 // are `sealed` under the prelude's `ListLen`: a consumer reads the two lengths

@@ -10,7 +10,24 @@ safety-critical systems language at `../../nitpick`.
 **Status: cycle 0.1 CLOSED (2026-09-26), archived at `meta/roadmap/done/0.1/`
 — the civil calendar, with its exhaustive gate on every run — and cycle 0.2,
 instants and timestamps, is OPEN: its 0.2.0a, the adoption of compiler
-`5fbaf4a`, is done, and `meta/roadmap/0.2/0.2.0.md` is next.**
+`5fbaf4a`, and its 0.2.0b, `Vec<T: Copy>`, are done, and
+`meta/roadmap/0.2/0.2.0.md` is next.**
+
+**After cycle 0.2.0b: `Vec<T: Copy>`** — `nitpick-regex`'s answer to the
+question TM-194 left open, ported (its RX-188). The type is
+`struct:Vec<T: Copy>` and every verb states the bound, so the compiler refuses
+an owning element wherever it is written — at the type, at each turbofish and
+at each verb's call — where until now only `vec_at`'s call was refused; the
+restriction TM-132 made is the type's, and the four element drops `SAFETY.md`
+S-18d rested it on are owed at no `T` the type admits (TM-214). **Nothing
+changed at a `T` it admits**: of the tree's 128 `.npk`, the 89 that compile both
+with the bound and without it emit byte-identical IR. Three verdicts moved:
+TM-150's churn pair, which measured `vec_pop` and `vec_clear` at `T = string`,
+is refused and retired — the instrument keeps its two known leaks, `probe06b`
+and `probe12` — and `generic_owning_copy/case5` names six sites where it named
+two. No element check is added: `Copy` states this library's element rule
+whole, and a `Copy` element that holds a pointer is S-18e's and S-22's. A full
+invocation is **111 units green** at pin `5fbaf4a`.
 
 **After cycle 0.2.0a: the adoption of compiler `5fbaf4a`** — the compiler's
 last landing before its pause, carrying its landings 67 … 82. At the new pin
@@ -332,9 +349,12 @@ and cycle 0.0.6 put ~19 s back by asserting 21 more units.
 **THREE things to know before touching `src/core/`, and the third is the one
 cycle 0.0 paid most for.**
 
-- **`Vec<T>` is for a NON-OWNING `T`** (TM-132; the reason changed at 0.0.5 —
-  TM-136 — and again at 0.1.0b — TM-150). **O-N17 is FIXED** at pin `aaffb87`,
-  and **O-N19 is FIXED at `c3bdae2`**: `NITPICK-TYPE-046` did not fire inside
+- **`Vec<T>` is for a NON-OWNING `T`, and since cycle 0.2.0b the TYPE says
+  so: `Vec<T: Copy>`, every verb bounded, an owning `T` refused wherever it is
+  written** (TM-214; the restriction is TM-132's, its reason changed at 0.0.5 —
+  TM-136 — and again at 0.1.0b — TM-150). *Until 0.2.0b, as follows:*
+  **O-N17 is FIXED** at pin `aaffb87`, and **O-N19 is FIXED at `c3bdae2`**:
+  `NITPICK-TYPE-046` did not fire inside
   a generic function body, so `T:x = s[i]` at an owning `T` — a copy of an
   owner — compiled, linked, ran, and left two owners of one heap body (exit
   170 on the second read); the compiler's D-264 now refuses it where it is

@@ -414,7 +414,8 @@ pub func:bytes_take = string(Bytes->:b) never fails {
 // formatter reusing one sink across a million rows wants the capacity back
 // without a new buffer. Nothing is dropped, because the bytes are `uint8` and
 // own nothing -- unlike `Vec<T>`, where the same operation owes an element
-// drop at an owning `T` (TM-127, S-18c).
+// drop at an owning `T` (TM-127, S-18c) -- a `T` that `Vec<T: Copy>` refuses
+// since cycle 0.2.0b (TM-214).
 pub func:bytes_clear = NIL(Bytes->:b) never fails {
     b.len = 0i64;
     pass NIL;

@@ -334,6 +334,16 @@ had run `RED -- 105 unit(s) of 113`: the eight files holding the fifteen
 `cstring` copies (`meta/roadmap/0.2/0.2.0a.md` §1). No heap figure and no sweep
 count moved.
 
+**At cycle 0.2.0b, the same pin, 111 units**: two tests retired — TM-150's
+churn pair, `vec_churn_pop` and `vec_churn_clear`, whose `Vec<string>`
+`Vec<T: Copy>` refuses (TM-214). The self-check unchanged — 12 of V-14's 13
+cases, 44 tree-check violations with 44 clean controls; parse over 126 files,
+`89 + 35 + 2`; the defect corpus at 36 = 1 exempt + 35 asserted, `case5` a
+refusal at six sites; two twin pairs and the two `Bytes` tests held to their
+heap bounds, the twins under the cap; and library + repro + suite at **76**
+(**20 unit**). `111 = 35 + 76`. The library's IR is 226 493 B, as it was: the
+bound moves no emission. The churn pair's 3.4 s is off every full run.
+
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the
 run makes about 200 of them. One that does *not* compile costs ~0.03 s.

@@ -8,9 +8,10 @@ answer on every machine.
 
 > **Status: cycle 0.1, the civil calendar, CLOSED on 2026-09-26, archived at
 > [`meta/roadmap/done/0.1/`](meta/roadmap/done/0.1/README.md)** — its code, its
-> gate and its audit done — **and cycle 0.2, instants and timestamps, is next.**
-> What exists: `src/core/` (`Vec<T>`,
-> `Bytes` and the named limits) since cycle 0.0, and `src/cal/` — `CivilDate`,
+> gate and its audit done — **and cycle 0.2, instants and timestamps, is open.**
+> What exists: `src/core/` — `Vec<T>`, `Bytes` and the named limits — since
+> cycle 0.0, its `Vec` holding only `Copy` elements since cycle 0.2.0b; and
+> `src/cal/` — `CivilDate`,
 > `CivilTime`, `CivilDateTime`, `Weekday`, `Month`, the day-number algorithms,
 > the weekday, the day of the year and the ISO week date — whose gate is
 > exhaustive: every day of years −9999 … +9999 goes to its day number and back,
@@ -27,7 +28,8 @@ answer on every machine.
 > *(Until cycle 0.1.5 this block read "Status: planning. No code yet" — false
 > since cycle 0.0.4 — and "the compiler itself is at cycle 1.5"; between the
 > close's two halves, that cycle 0.1 "is in its close … and the audit that
-> closes it is next".)*
+> closes it is next"; and until cycle 0.2.0b, that cycle 0.2 "is next", which
+> 0.2.0a had opened.)*
 
 ---
 

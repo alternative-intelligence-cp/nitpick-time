@@ -122,6 +122,9 @@
 // compiler's D-264, cycle 0.1.0b, TM-150), so that reason has closed too; the
 // pair stays at the instantiation because `Vec<T>` still performs no element
 // drop at an owning `T`, which is the restriction's one remaining reason.
+// (Since cycle 0.2.0b the restriction is the TYPE's -- `Vec<T: Copy>`,
+// TM-214 -- and this pair, over a `Vec` of its own, is the measured fact it
+// rests on, and one of the instrument's two twin pairs (`TESTING.md` V-17).)
 mod:probe12_set_overwrite_leak;
 
 struct:Vec<T> = { wild T->:items; int64:count; int64:cap; };

@@ -136,7 +136,10 @@ documented exceptions and a test that counts them.
   whose payload owns nothing — claims it in one line beside its declaration,
   `impl:FmtPart:Copy = { };`: measured, a four-variant
   payload enum does, and reads back twice through `vec_at`
-  (`tests/unit/vec_at_pod.npk`). A struct holding a `Vec` is move-only by
+  (`tests/unit/vec_at_pod.npk`). *(Since cycle 0.2.0b the TYPE asks it too —
+  `Vec<T: Copy>`, TM-214 — so without it `Layout`'s `Vec<FmtPart>` field is
+  `NITPICK-TYPE-017` where it is declared, and every enum `FmtPart` holds
+  claims it as well.)* A struct holding a `Vec` is move-only by
   containment, so a `Layout` is moved or lent, never copied; a formatter that
   takes one by loan reads its parts as `vec_at(l.parts, i)` — which compiles for
   a lent struct's field and for another module's `sealed` field alike — where

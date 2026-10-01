@@ -1,0 +1,26 @@
+# 0.2.1's omission sweep, block 6b -- one extended regular expression per line, each
+# read by `sweep.py` line by line AND across line breaks, case-insensitive. Each is a
+# fact steps 1 to 6 moved: the README sentence; the umbrella's names; the counts;
+# what `span` holds and imports; the refusals and what they are; the invariant.
+only differences
+\b(64|sixty-four)\b.{0,40}(names|re-?export)
+\bsix (public )?names\b
+\b(114|122)\b.{0,30}units?
+\b(130|138)\b.{0,40}(files|\.npk|parse)
+\b(79|87)\b.{0,40}(suite|roots)
+\b(51|57)\b.{0,40}probe
+\b(23|29)\b.{0,60}(refus|expect-error|must not)
+\b(39|45)\b.{0,60}(files|refus|must not)
+\b(91|93)\b.{0,20}parse
+timestamp.{0,80}(0\.2\.1|next|placeholder|to come|not yet)
+(placeholder|to come|not yet).{0,80}timestamp
+instant`?.{0,30}\b(alone|only)\b
+(two|2) (refusals|probes)
+seen red
+span.{0,80}imports?.{0,40}\bcal\b
+(either|both|one) directions?.{0,60}(instant|timestamp|M-3|conver|refus)|(instant|timestamp|M-3|conver).{0,60}(either|both|one) directions?
+hidden.{0,60}\bns\b|\bns\b.{0,60}hidden|question 15
+TYPE-007|TYPE-032
+\bP-4\b|property test
+normalis|denormal|one spelling|second spelling
+SECS_MIN|SECS_MAX

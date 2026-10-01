@@ -1,0 +1,586 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index f293c15ce87945943ec895fb87e2e4077f33d41e..991426fa33500425e39e5770760d9b65f85e0b3c 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -123,7 +123,12 @@
+ # once per site it is reported at (B-7c); and `vec_at` takes the prelude's
+ # `Copy` (TM-209 … TM-211). AND SINCE CYCLE 0.2.0b: `Vec<T: Copy>` -- an
+ # owning element is refused at the type and at every verb, not only at
+-# `vec_at`'s call (TM-214).
++# `vec_at`'s call (TM-214). AND SINCE CYCLE 0.2.1: every `Timestamp` a
++# consumer can hold is normalised -- `timestamp_of` refuses what it would have
++# to carry, at every boundary it decides, and the seal refuses a literal and a
++# write -- and an `Instant` and a `Timestamp` convert into each other neither
++# at the type nor through `=>!`, in either direction, each refusal asserted by
++# a probe of its own (TM-219 ... TM-221).
+ #
+ # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
+ # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
+@@ -150,9 +155,10 @@
+ #
+ # WHAT IT IS STILL NOT EVIDENCE OF. Three of the six `src/` directories are
+ # still placeholders -- `zone/`, `fmt/`, `host/` -- and `span/` holds `Instant`
+-# alone since cycle 0.2.0, so nothing here converts a time to a zone, a
+-# timestamp to a date, or text to either. (It said four, `span/` among them,
+-# until cycle 0.2.0. This
++# since cycle 0.2.0 and `Timestamp` since 0.2.1, and no conversion between the
++# scales, so nothing here converts a time to a zone, a
++# timestamp to a date, or text to either. (It said `Instant` alone until cycle
++# 0.2.1, and four placeholders, `span/` among them, until cycle 0.2.0. This
+ # said five placeholders, `cal/` among them, until cycle 0.1.0b; `cal/` had had
+ # a body since 0.1.0. And until cycle 0.1.2 it said `cal/` held "the types and
+ # constructors but not yet the day-number algorithms (cycle 0.1.1), so nothing
+diff --git a/CLAUDE.md b/CLAUDE.md
+index ccb8304d4ce33acdf2288bfcdb1c7bbc650dcb32..2ff866c10b03eb1a5df57c5a0bdf71e42164ad3f 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -10,8 +10,33 @@ safety-critical systems language at `../../nitpick`.
+ **Status: cycle 0.1 CLOSED (2026-09-26), archived at `meta/roadmap/done/0.1/`
+ — the civil calendar, with its exhaustive gate on every run — and cycle 0.2,
+ instants and timestamps, is OPEN: its 0.2.0a, the adoption of compiler
+-`5fbaf4a`, its 0.2.0b, `Vec<T: Copy>`, and its 0.2.0, `Instant`, are done,
+-and 0.2.1, `Timestamp`, is next.**
++`5fbaf4a`, its 0.2.0b, `Vec<T: Copy>`, its 0.2.0, `Instant`, and its 0.2.1,
++`Timestamp`, are done, and 0.2.2, the conversions, is next.**
++
++**After cycle 0.2.1: `Timestamp`.** `src/span/` holds `Timestamp` beside
++`Instant` — `{ sealed int64:secs; sealed uint32:nanos; }`, deriving `Eq`,
++`Ord`, `Clone`, `Debug` and `Copy`, the derived `Ord` its comparison, seconds
++first (M-6) — and one constructor, `timestamp_of(secs, nanos)`, which refuses
++a `secs` outside the range (`ValueFault.YearRange`) and a `nanos` outside one
++second (`NanoRange`) rather than carry it: one spelling per instant, M-7
++(TM-219, TM-220). **`VERIFICATION.md` P-4's stand-in** is
++`tests/unit/timestamp_construct.npk` — every boundary the constructor decides,
++from both sides, 132 pairs — beside the seal's two probes, `probe21` and
++`probe21b`; `tests/unit/timestamp_order.npk` asserts the order on the type, a
++negative second with a positive remainder among its neighbours. **M-3 is
++asserted at the type in both directions** — an `Instant` where a `Timestamp`
++is taken, and the reverse, `NITPICK-TYPE-007` — **and through `=>!`**, which
++refuses both, `NITPICK-TYPE-032`: six probes, one refusal each (TM-221).
++`Instant`'s `ns` stays sealed and readable — the author's answer to the
++workbench's question 15, recorded in TM-219. **And 0.2.0's unit had a mutant it
++could not see**: exit 14 read only a `Monotonic` clock — tag 0, the vacant
++value — so an `instant_add` that hard-coded `Monotonic` passed it; a `Boottime`
++reading goes through `instant_add` and through the `Vec` now, and every exit
++of the unit has been seen red on a mutant. `span` owes **11**
++<!-- [[sweep: arms_span=11]] --> arms and the umbrella **13**
++<!-- [[sweep: arms_lib=13]] --> still — no new identity — and the umbrella
++re-exports 66 <!-- [[sweep: lib_reexports=66]] --> names. A full invocation is
++**122 units green** at pin `5fbaf4a`.
+ 
+ **After cycle 0.2.0: `Instant`.** `src/span/` has a body: `Instant`, a
+ reading of one of two clocks — `{ sealed int64:ns; sealed InstantClock:clock; }`,
+diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
+index 0e5d9d25e31d4a6a92d1d6e89562083ab1b40bf0..02ae71330074c87a9c2dc7baff9b47b76e029889 100644
+--- a/CONTRIBUTING.md
++++ b/CONTRIBUTING.md
+@@ -6,7 +6,8 @@ that would otherwise be found by writing the wrong code twice.
+ 
+ **Where it stands:** cycle 0.1, the civil calendar, is closed (2026-09-26);
+ cycle 0.2, instants and timestamps, is open. `src/core/`
+-and `src/cal/` are real, and `src/span/` holds `Instant` since cycle 0.2.0; the
++and `src/cal/` are real, and `src/span/` holds `Instant` since cycle 0.2.0
++and `Timestamp` since 0.2.1; the
+ other three `src/` directories hold one placeholder each until the cycle
+ `meta/roadmap/ROADMAP.md` names replaces it.
+ `harness/run.py` is the runner, and it proves first, on every full run, that it
+diff --git a/README.md b/README.md
+index b8e8cfd8d93584fc590810f1e7dd3679e8743b72..7e403da471adda7679c6b15bf2cc7b04403697af 100644
+--- a/README.md
++++ b/README.md
+@@ -18,7 +18,8 @@ answer on every machine.
+ > both ways, on every full run, and every date of years 1 … 9999 agrees with
+ > Python's `datetime`. Since cycle 0.2.0, `src/span/` holds `Instant`, a
+ > reading of one of two clocks that cannot be built from a number or converted
+-> to a wall-clock time. Timestamps, zones, formats and the clocks are still
++> to a wall-clock time, and since cycle 0.2.1 `Timestamp`, a point on the UTC
++> scale with one spelling per instant. Zones, formats and the clocks are still
+ > placeholders, each replaced by the cycle
+ > [`meta/roadmap/ROADMAP.md`](meta/roadmap/ROADMAP.md) names. The specification
+ > set is in [`meta/specs/`](meta/specs/) and the plan in
+@@ -30,8 +31,9 @@ answer on every machine.
+ > *(Until cycle 0.1.5 this block read "Status: planning. No code yet" — false
+ > since cycle 0.0.4 — and "the compiler itself is at cycle 1.5"; between the
+ > close's two halves, that cycle 0.1 "is in its close … and the audit that
+-> closes it is next"; and until cycle 0.2.0b, that cycle 0.2 "is next", which
+-> 0.2.0a had opened.)*
++> closes it is next"; until cycle 0.2.0b, that cycle 0.2 "is next", which
++> 0.2.0a had opened; and until cycle 0.2.1, that timestamps were placeholders
++> too.)*
+ 
+ ---
+ 
+@@ -45,10 +47,16 @@ worth stating out loud instead of discovering.
+ reading and a wall-clock reading are not the same kind of thing: NTP steps the
+ wall clock and never the monotonic one, which is why the compiler's own
+ deadline substrate refuses to use a wall clock at all (D-176). `ntime` makes
+-that structural — an `Instant` has no epoch and yields only differences, a
+-`Timestamp` is an absolute point on the UTC scale, and **there is no conversion
+-between them**. A timeout measured against the wall clock is a bug you cannot
+-write here.
++that structural — an `Instant` has no epoch, and the library measures only the
++distance between two readings of one clock; a `Timestamp` is an absolute point
++on the UTC scale; and **there is no conversion between them**, not even by the
++language's unchecked cast. A timeout measured against the wall clock is a bug
++you cannot write here. *(Until cycle 0.2.1 this said an `Instant` "yields only
++differences". Its number is readable — a sealed field — so a program can
++subtract two clocks' readings by hand, which the library refuses only in
++`instant_since` and `instant_cmp`; and the language's `mono_now()` hands any
++program the same number, so hiding it would close nothing — the workbench's
++question 15, TM-219.)*
+ 
+ **Wall time and calendar time are also different types.** A `CivilDateTime` —
+ "2026-03-29 02:30" — is not a point in time until you say where. In most of
+diff --git a/harness/README.md b/harness/README.md
+index 881e138b3d2036fa7f72485ed4483d4aa538a058..d5ec6cde63cf22bdc9b1296a330212d623f2be93 100644
+--- a/harness/README.md
++++ b/harness/README.md
+@@ -136,7 +136,8 @@ against the summary line rather than left to review.
+ - **Not that the WHOLE library works.** `src/core/` is real code since cycle
+   0.0.4 and `src/cal/` since 0.1.0 — the civil types, Hinnant's two algorithms
+   since 0.1.1, swept over the whole range since 0.1.2 — and the suite is
+-  evidence about both — and about `src/span/`'s `Instant` since cycle 0.2.0;
++  evidence about both — and about `src/span/`'s `Instant` since cycle 0.2.0
++  and its `Timestamp` since 0.2.1;
+   the other three `src/` directories are still placeholders, so nothing here
+   converts a time to a zone, a timestamp to a date, or text to either. *(It
+   said four placeholders until cycle 0.2.0. This read "there is none yet; `src/` is
+diff --git a/harness/run.py b/harness/run.py
+index d7d01f776fd4157bd073ea28ac83de2cfc053406..025d47895d8d68ff73a0bfd6df434ba3af9b796f 100644
+--- a/harness/run.py
++++ b/harness/run.py
+@@ -27,7 +27,8 @@ WHAT A GREEN RUN HERE IS, AND IS NOT.
+   since cycle 0.0.4 -- `Vec<T>`, `Bytes` and thirteen named bounds -- and
+   `src/cal/` since 0.1.0 -- the civil types, Hinnant's two algorithms since
+   0.1.1, swept over the whole range since 0.1.2 -- and the suite is evidence
+-  about both, and since 0.2.0 about `src/span/`'s `Instant`. The other three
++  about both, and since 0.2.0 about `src/span/`'s `Instant` -- and since
++  0.2.1 its `Timestamp`. The other three
+   `src/` directories are still placeholders, so nothing here converts a time
+   to a zone, a timestamp to a date, or text to either. (It said four until
+   cycle 0.2.0. Until cycle 0.1.2 this said "the other five ... so nothing here
+diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
+index ecd4a2f19223fbba60e468591ccfb59c927b1596..fef15c8916e1883684f887b2b2a67c59d41d1d7f 100644
+--- a/meta/DECISIONS.md
++++ b/meta/DECISIONS.md
+@@ -6254,6 +6254,13 @@ by a decision, the compiler's `List<T>` its shape (`vec_at`'s comment).
+ 
+ ### TM-215 — `Instant` is `{ sealed int64:ns; sealed InstantClock:clock; }`, and `InstantClock` is an enum, `{ Monotonic; Boottime; }`; each derives `Eq`, `Clone`, `Debug` and `Copy`, and neither `Ord`
+ 
++> **TM-219 (@@DATE@@) adds a declined alternative it did not weigh: `hidden`
++> for `ns`.** The author's answer to the workbench's question 15 keeps `ns`
++> sealed — hiding it would not close the hole it is proposed for, a consumer
++> subtracting two clocks' readings by hand, because the floor's `mono_now()`
++> hands any program the same raw number, and a readable reading serves
++> logging. The text below is left exactly as written.
++
+ **2026-10-01, cycle 0.2.0 (the plan's PD-53). Amends `TIME_MODEL.md` §2 and M-2
+ and `HOST.md` H-6; implements TM-010's corollary, TM-010.1.**
+ 
+@@ -6408,3 +6415,163 @@ entry** — every refusal this library asserts is a probe of this shape —
+ one kind of file in two directories; worth it the day a refusal is not a
+ probe's kind; **one probe for both refusals** — a file refused for two reasons
+ cannot say which reason went away.
++
++---
++
++# Cycle 0.2.1 — `Timestamp`, ratified @@DATE@@
++
++### TM-219 — `Timestamp` is `{ sealed int64:secs; sealed uint32:nanos; }`, declared in `span` beside `Instant`; it derives `Eq`, `Ord`, `Clone`, `Debug` and `Copy`, and the derived `Ord` is its comparison; `hidden` is declined for its fields and for `Instant`'s `ns`
++
++**@@DATE@@, cycle 0.2.1 (the plan's PD-64). Implements TM-011, `TIME_MODEL.md`
++M-6 and `SAFETY.md` S-14; amends `TIME_MODEL.md` §3's declaration; records the
++author's answer to the workbench's question 15, which TM-215's alternatives did
++not weigh.**
++
++**What was found** (`meta/roadmap/0.2/0.2.1.md` §1). Measured at compiler
++`5fbaf4a`: the type compiles with the five derives. A consumer's struct literal
++of it is `NITPICK-TYPE-079` once per sealed field it writes, and a write to
++`nanos` the same code once; a read of either field from outside `span`
++compiles, and with the fields `hidden` instead it is `NITPICK-TYPE-080` (the
++compiler's D-314). The derived `cmp` reads the seconds first — `1 s, 0 ns` is
++`Greater` than `0 s, 999 999 999 ns` — and with the two fields declared the
++other way round that verdict is the reverse: probe 01's verdict, which it
++measured at cycle 0.0.0 on a twin of this shape, holds of the type. Without
++`Copy`, a `Vec<Timestamp>` is `NITPICK-TYPE-017` at every site that names it —
++the type, its turbofish and each verb's call (TM-214's bound). With the fields
++unsealed, as TM-011 wrote them, the literal compiles.
++An `Instant` and a `Timestamp` are 16 bytes each. And the floor's `mono_now()`
++— the compiler's builtin, `() → int64`, `CLOCK_MONOTONIC` nanoseconds —
++compiles in a consumer's program.
++
++**The decision.** *`#[derive(Eq, Ord, Clone, Debug, Copy)] pub
++struct:Timestamp = { sealed int64:secs; sealed uint32:nanos; };`, declared in
++`src/span/span.npk`. The fields keep TM-011's order — the seconds, then the
++nanoseconds — so the derived `Ord` is the comparison M-6 asks for, and there is
++no `timestamp_cmp`. Both fields are sealed, by TM-215's reason: a consumer
++reads them, and builds a `Timestamp` only through `timestamp_of` (TM-220). And
++`Instant`'s `ns` stays sealed and not `hidden`: the author's answer to the
++workbench's question 15, 2026-10-01 — "your recommendation is fine for that".*
++
++*And what it moves besides:* the public `README.md` said an `Instant` "has no
++epoch and yields only differences". Its `ns` is readable, so a consumer can
++subtract two clocks' readings by hand, which only `instant_since` and
++`instant_cmp` refuse; the sentence now says what the library does, with a
++dated note.
++
++*Alternatives declined:* **TM-011's fields unsealed** —
++`Timestamp{ secs: -1i64, nanos: 1500000000u32 }` would compile: a second
++spelling of half a second after the epoch, ordered before the first because the
++derived order reads the seconds first, and M-7 broken in one line by any
++consumer; **`hidden` fields, here and for `Instant`'s `ns`** (question 15) —
++hiding would not close the hole it is proposed for, a consumer subtracting two
++clocks' readings by hand, because the floor's `mono_now()` hands any program the
++same raw number (measured, compiling in a consumer); a readable reading serves
++logging; and a hidden `Timestamp` field is unreadable outside `span`, so cycle
++0.4's formatter and cycle 0.6's zone lookup would each need an accessor — public
++names (TM-013) for what a sealed field already gives; **a hand-written
++`timestamp_cmp`** — probe 01's negative branch, and its verdict holds at
++`5fbaf4a`; the derive is what M-6 and S-14 chose, and it is one public name
++fewer; **no `Copy`** — a `Vec<Timestamp>` would not be writable (TM-214);
++**a module of its own** — it would cost every importer the same 11 arms, `cal`'s
++identity and arithmetic, and the cycle README puts both types in `src/span/`.
++
++### TM-220 — `timestamp_of(secs, nanos)` is `Timestamp`'s one constructor: it takes `int64`s, refuses a `secs` outside `[NTIME_SECS_MIN, NTIME_SECS_MAX]` (`ValueFault.YearRange`) and a `nanos` outside `[0, NTIME_NANOS_PER_SEC)` (`NanoRange`) with `ETimeValue`, and never normalises; with the seal, it is `VERIFICATION.md` P-4's stand-in until an operation yields a `Timestamp`
++
++**@@DATE@@, cycle 0.2.1 (the plan's PD-65). Implements `TIME_MODEL.md` M-7 and
++M-8 at the constructor; adds two rows to §9's lattice and dates M-7, M-8, P-4,
++`VERIFICATION.md` §6's row and `HOST.md` H-8.**
++
++**What was found.** Measured at `5fbaf4a`, on both legs: over the cross product
++of eleven `secs` and twelve `nanos` at and around every bound — `int64`'s two
++ends among them — the constructor accepts the 35 pairs inside both ranges and
++refuses the 97 others, and each value it accepts hands back exactly what it was
++given. A `nanos` checked after the narrowing instead of before accepts 2^32 and
++`int64`'s minimum, each narrowed to 0 (`SAFETY.md` S-15b); the cross product
++carries both. A negative second's remainder counted toward zero — the
++representation got backwards — passes a seconds-first comparison and fails the
++eight-value chain `tests/unit/timestamp_order.npk` walks. The bill does not
++move: a root importing `span` owes 11 identities and the umbrella 13, by
++`NITPICK-REACH-003` and by `arms.compute_bill`.
++
++**The decision.** *`pub func:timestamp_of = Timestamp(int64:secs,
++int64:nanos)`, fallible. A `secs` below `NTIME_SECS_MIN` or above
++`NTIME_SECS_MAX` fails `ETimeValue`, `ValueFault.YearRange` — `HOST.md` H-8's
++variant for the same range, and `days_to_date`'s; a `nanos` below 0 or at or
++above `NTIME_NANOS_PER_SEC` fails `ETimeValue`, `NanoRange` — `civil_time`'s.
++Every check precedes the one narrowing, `nanos =>! uint32`, and the bounds are
++imported by name from `src/core/limits.npk` (S-16). It refuses a pair that would
++need carrying rather than carry it: one spelling per instant (M-7). It is
++public because cycle 0.3's `host_now_utc` builds its reading through it — H-8's
++range check. **`VERIFICATION.md` P-4's stand-in at this cycle** (P-1b) is
++`tests/unit/timestamp_construct.npk` — every boundary the constructor decides,
++from both sides, and M-7 asserted of every value it returns — with `probe21`
++and `probe21b`, which refuse a consumer's literal and write (TM-221): a consumer
++holds a `Timestamp` only through this function. Each cycle that adds an
++operation yielding a `Timestamp` adds that operation to the stand-in — 0.2.2's
++`civil_to_utc` and 0.2.3's `timestamp_add` — and the cycle README's checklists
++carry both.*
++
++*Alternatives declined:* **a normalising constructor**, carrying `nanos` into
++`secs` — it would accept a second spelling of every instant at the door, and
++its carry is arithmetic that can leave the range at either bound, a refusal the
++caller must then decode anyway; the arithmetic that normalises is 0.2.3's
++`timestamp_add`, whose result M-7 governs; **a `uint32` `nanos`** — it pushes
++the range to the caller, `civil_time`'s reason, and a `timespec`'s nanoseconds
++are an `int64` (H-4); **a `ValueFault` variant of its own for the seconds** —
++`YearRange` already names this range's refusal (H-8, `days_to_date`), and a
++variant appended is a change to a public enum; **a `never fails` constructor
++that traps** — `SAFETY.md` S-12: a caller's input is answered, not stopped;
++**more constructors** — from a count of nanoseconds, of milliseconds, of seconds
++alone — no specification names one, a nanosecond count spans ±292 years and is
++0.2.3's `Duration` interop, and each would be a public name (TM-013).
++
++### TM-221 — `Timestamp`'s refusals are six probes, one refusal each: `probe20c` and `probe20d`, M-3 at a parameter in both directions (`NITPICK-TYPE-007`); `probe20e` and `probe20f`, M-3 through the unchecked cast in both directions (`NITPICK-TYPE-032`); and `probe21` and `probe21b`, the seal (`NITPICK-TYPE-079`)
++
++**@@DATE@@, cycle 0.2.1 (the plan's PD-66). Adds the six probes and their rows
++in `tests/probe/README.md`, and dates `TIME_MODEL.md` M-3 and §9's lattice;
++completes the item TM-218 handed to this cycle, and asks the direction it did
++not.**
++
++**What was found.** Measured at `5fbaf4a`, each in a consumer importing `span`:
++`t.cmp(a)` — an `Instant` where `Timestamp`'s comparison takes a `Timestamp` —
++is `NITPICK-TYPE-007`, *"expected `Timestamp`, found `Instant`"*;
++`instant_since(a, t)` is the same code the other way, and a binding of either
++type to the other the same. `a =>! Timestamp` and `t =>! Instant` — and the
++checked `=>` both ways — are `NITPICK-TYPE-032`, *"there is no conversion from
++`Instant` to `Timestamp`: these types have no values in common. `=>!` does not
++help — it opts out of a check, not of a meaning"*, though the two types are 16
++bytes each. `Timestamp{ secs: -1i64, nanos: 1500000000u32 }` is
++`NITPICK-TYPE-079` twice at one position, one report per sealed field (B-7c;
++the compiler's DEF-165, registered open, would make it one), and
++`t.nanos = 1500000000u32` once. What converts is `wild` storage reinterpreted
++through a POINTER cast: a `Boottime` reading of 1 000 ns, written through a
++`wild Instant->` and read through a `wild Timestamp->`, is 1 000 s and 1 ns —
++the opt-out `CALENDAR.md` C-8c states for every checked property.
++
++**The decision.** *Six probes under `tests/probe/`, each refused with exactly
++its codes at as many sites as its header names, each importing `span` and
++nothing more, each with a superset `failsafe` — TM-218's shape:
++`probe20c_instant_as_timestamp_refused.npk`,
++`probe20d_timestamp_as_instant_refused.npk`,
++`probe20e_instant_cast_to_timestamp_refused.npk`,
++`probe20f_timestamp_cast_to_instant_refused.npk`,
++`probe21_timestamp_literal_refused.npk` (the code named twice) and
++`probe21b_timestamp_field_write_refused.npk`. M-3's "in either direction,
++ever" holds against everything a consumer can write but the `wild` opt-out,
++which M-3's dated note states and no probe asserts.*
++
++*Alternatives declined:* **one probe per direction, or per code** — TM-218's
++rule: a file refused for two reasons cannot say which went away; **the casts
++unasserted** — `=>!` is the language's opt-out, and a later rule that let it
++reinterpret one 16-byte struct as another would open M-3 in one token under a
++green suite; and the two directions are two questions, because `=>!` narrows an
++integer to an enum (the compiler's D-140), which is what `Timestamp` →
++`Instant` would do to a clock tag; **the write unasserted, as `probe20` left
++`Instant`'s** — P-4 asks that no sequence of operations produce a denormalised
++value, and a field write is the one operation a consumer has that is not the
++library's; **the `wild` reinterpretation asserted** — it is the language's
++stated opt-out and not this library's property, and C-8c's precedent records it
++measured and unasserted; **a function of the probe's own as `probe20c`'s
++parameter** — `Timestamp`'s `cmp` is the library's surface, and its program the
++realistic one: a deadline compared with a wall-clock time; **`tests/rejection/`
++and a `check` entry** — TM-218's reason, unchanged.
+diff --git a/meta/roadmap/0.2/README.md b/meta/roadmap/0.2/README.md
+index 964ae41a2bfb13743c759643a8473b1e7c8d29b0..b28db1eee382fb41e4e1be50f9fed377a03efeb0 100644
+--- a/meta/roadmap/0.2/README.md
++++ b/meta/roadmap/0.2/README.md
+@@ -76,12 +76,15 @@ file stands — make §5's table the authority and drop N-20's count. *(From cyc
+ - [ ] `timestamp_to_utc` and `civil_to_utc`, over `cal`'s algorithms
+ - [ ] the round trip over **every day boundary** in the range (7 304 484 cases — 7 304 485 until cycle 0.1.1 corrected the range's first day, TM-161)
+ - [ ] the round trip over **every second of 512 randomly chosen days**, with the seed committed so the run is reproducible (~44 M cases)
++- [ ] **`VERIFICATION.md` P-4's stand-in extended to `civil_to_utc`**: every `Timestamp` it returns asserted normalised, in `tests/unit/timestamp_construct.npk`'s manner (TM-220) *(added at 0.2.1)*
+ - [ ] a `sweep`-stage test, with the wall-clock cost recorded — **measured before it lands against `BUILD.md` B-9's 30 s threshold**, which the stage stood 7.6 s under at cycle 0.1's close (22.4 s for its six members, both legs); the stage whole and B-9 amended to its cost is the default if the stage stays under 60 s (B-9's dated note, cycle 0.1.5)
+ 
+ ### 0.2.3 — `Duration` interop
+ - [ ] `duration_mins`, `duration_hours`, `duration_days`, `duration_weeks`, all `never fails`, all over the prelude's constructors
+ - [ ] `duration_days` documented as **exactly 86 400 × 10⁹ ns** and explicitly *not* a calendar day (N-2's note)
+ - [ ] `timestamp_add(t, d)` with its range check
++- [ ] **`VERIFICATION.md` P-4's stand-in extended to `timestamp_add`** — the first operation that must re-establish M-7 rather than refuse: no sequence of additions, negative durations included, yields `nanos` outside one second (TM-220) *(added at 0.2.1)*
++- [ ] `VERIFICATION.md` P-3's `timestamp_add` sample names `SECS_MIN` and `SECS_MAX`, which `src/core/limits.npk` spells `NTIME_SECS_MIN` and `NTIME_SECS_MAX` (`BUILD.md` B-15) — restated when the function is written *(found at 0.2.1's planning)*
+ - [ ] **`timestamp_since` returns `ETimeValue`/`Overflow` past ±292 years** (M-18) — and the test computes the exact boundary rather than approximating it
+ - [ ] `timestamp_until(a, b, unit)` in whole days, months or years, as the calendar-scale answer (M-19)
+ - [ ] **`check_check_registry` built FIRST, because this subcycle adds a check** (TM-201, `TESTING.md` V-14e): `TESTING.md` §2's table, `checks.LIVE`, `checks.PENDING` and the checks `run.py` drives outside step 5 diffed as one family, and seen red on a planted drift in each of the four — before the family moves
+diff --git a/meta/roadmap/0.3/README.md b/meta/roadmap/0.3/README.md
+index 7b8e060543d0dc52f001bb456b79f598195338f3..8d373685519a5f7420f25fcf2aab265d0bc3d0e8 100644
+--- a/meta/roadmap/0.3/README.md
++++ b/meta/roadmap/0.3/README.md
+@@ -33,9 +33,9 @@ settled.
+ - [ ] `host_now_utc` (CLOCK_REALTIME 0), `host_now_boot` (CLOCK_BOOTTIME 7)
+ - [ ] `host_now_instant` calls the floor's `mono_now()`, **not** `clock_gettime` (H-5) — so an `ntime` `Instant` and an executor deadline are on the same timeline by construction
+ - [ ] `host_clock_res` over `clock_getres`
+-- [ ] **`BUILD.md` B-17 gains `host` → `span`, by decision, when `host` first imports it**: `host_now_instant` and `host_now_boot` return `Instant`s, and both fields of an `Instant` are sealed, so `host` builds them through `span`'s public `instant_of` (TM-215, TM-216) — B-17 draws `host` → `zone`, `cal`, `core` today *(handed on by `0.2/0.2.0.md` §7)*
++- [ ] **`BUILD.md` B-17 gains `host` → `span`, by decision, when `host` first imports it**: `host_now_instant` and `host_now_boot` return `Instant`s, and both fields of an `Instant` are sealed, so `host` builds them through `span`'s public `instant_of` (TM-215, TM-216) — B-17 draws `host` → `zone`, `cal`, `core` today *(handed on by `0.2/0.2.0.md` §7)* — and `host_now_utc`'s `Timestamp` through `timestamp_of`, its fields sealed since cycle 0.2.1 (TM-219, TM-220)
+ - [ ] errnos **forwarded verbatim** (H-7), so this module declares no error and costs no arm — asserted by `check_error_budget`
+-- [ ] the returned `Timestamp` range-checked (H-8): an unset machine clock is `ETimeValue`, not a value that fails somewhere less obvious
++- [ ] the returned `Timestamp` range-checked (H-8): an unset machine clock is `ETimeValue`, not a value that fails somewhere less obvious — by `timestamp_of`, whose `YearRange` refusal is H-8's (TM-220)
+ - [ ] **no state in the module** (H-3): a test asserts two calls are two syscalls
+ - [ ] `// stress: 40` on every clock test
+ 
+diff --git a/meta/roadmap/ROADMAP.md b/meta/roadmap/ROADMAP.md
+index a9107b51a4a6ee1fcb97420e735ae87fc178d666..13accd02b8bc1588a17b013901b10dd12e82f6ab 100644
+--- a/meta/roadmap/ROADMAP.md
++++ b/meta/roadmap/ROADMAP.md
+@@ -75,7 +75,7 @@ sibling libraries.
+ |---|---|---|
+ | ~~**0.0**~~ | **Foundations** — the language probes, the harness, `src/core/` — **CLOSED 2026-09-06, archived at [`done/0.0/`](done/0.0/README.md)** | — |
+ | ~~**0.1**~~ | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **CLOSED 2026-09-26, archived at [`done/0.1/`](done/0.1/README.md)** | 0.0 ✓ |
+-| **0.2** | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **IN PROGRESS**: [`0.2/0.2.0a.md`](0.2/0.2.0a.md), the adoption of compiler `5fbaf4a`, done; [`0.2/0.2.0b.md`](0.2/0.2.0b.md), `Vec<T: Copy>`, done; [`0.2/0.2.0.md`](0.2/0.2.0.md), `Instant`, done; 0.2.1, `Timestamp`, next | 0.1 ✓ |
++| **0.2** | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **IN PROGRESS**: [`0.2/0.2.0a.md`](0.2/0.2.0a.md), the adoption of compiler `5fbaf4a`, done; [`0.2/0.2.0b.md`](0.2/0.2.0b.md), `Vec<T: Copy>`, done; [`0.2/0.2.0.md`](0.2/0.2.0.md), `Instant`, done; [`0.2/0.2.1.md`](0.2/0.2.1.md), `Timestamp`, done; 0.2.2, the conversions, next | 0.1 ✓ |
+ | **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double | 0.2 |
+ | **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate | 0.2 |
+ | **0.5** | **The zone table** — the generator, the committed tables, the size measurement | 0.1 |
+diff --git a/meta/specs/HOST.md b/meta/specs/HOST.md
+index cdc93f4394098925ef4a50bd7cd63258e31bd8df..ddd3bdab05fb7698ff8a502886019650b491cdc9 100644
+--- a/meta/specs/HOST.md
++++ b/meta/specs/HOST.md
+@@ -99,6 +99,11 @@ reading from a machine whose clock is unset can be anything; if it is outside
+ `CALENDAR.md` §2's range the answer is `ETimeValue`/`YearRange`, not a
+ `Timestamp` that fails later somewhere less obvious.
+ 
++*(Cycle 0.2.1, TM-219 and TM-220: `Timestamp`'s fields are sealed, so
++`host_now_utc` builds its reading through `span`'s `timestamp_of`, whose
++refusal of a `secs` outside the range is this rule's `YearRange` — the `host`
++→ `span` arrow cycle 0.3's README owes for `Instant` already.)*
++
+ ---
+ 
+ ## 3. The test double
+diff --git a/meta/specs/SAFETY.md b/meta/specs/SAFETY.md
+index 73c3eca76ae49f9d69ab1fb6cb17f51ab3ad7e4f..3152037bec167752c70038b2aa6d49f2a9b88ef2 100644
+--- a/meta/specs/SAFETY.md
++++ b/meta/specs/SAFETY.md
+@@ -405,7 +405,9 @@ Gregorian, astronomical year numbering (year 0 exists and is 1 BCE).
+ field order is semantic.** `#[derive(Ord)]` compares in declaration order (TRAITS_REFERENCE
+ §2.5), so seconds-then-nanoseconds is exactly the comparison wanted, and
+ reordering the fields would silently change what `Ord` means. A rule rather
+-than a comment because it looks like a style question and is not.
++than a comment because it looks like a style question and is not. *(Cycle
++0.2.1, TM-219: both fields are `sealed`, `Ord` is derived on the type, and
++`tests/unit/timestamp_order.npk` asserts the order on it.)*
+ 
+ **Rule S-15 — intermediate arithmetic widens explicitly.** Nanoseconds across
+ the full year range exceed `int64`: ±9999 years is about 6.3 × 10^20
+diff --git a/meta/specs/TIME_MODEL.md b/meta/specs/TIME_MODEL.md
+index 3f4dfbf87a185f7ecf81b8830a0a178f75bb2b38..e82223c864cbfb1f2fc0f12c40bde9db92ef35e6 100644
+--- a/meta/specs/TIME_MODEL.md
++++ b/meta/specs/TIME_MODEL.md
+@@ -22,10 +22,14 @@ that are *not* possible do not exist:
+ 
+ ```
+ Instant   ──✗──►  Timestamp        no epoch, and no relationship to one (M-3)
++Timestamp ──✗──►  Instant          the same refusal, the other way (M-3)
+ Timestamp ──✓──►  CivilDateTime    given a zone, or as UTC
+ CivilDateTime ──►  Timestamp       given a zone, AND an answer for §6's edge cases
+ ```
+ 
++*(Cycle 0.2.1, TM-221: the second line is new. M-3 refuses both directions,
++and the diagram drew one.)*
++
+ ---
+ 
+ ## 2. `Instant` — the monotonic scale
+@@ -65,6 +69,13 @@ A library that offers the conversion offers a caller the ability to write a
+ timeout against a clock that a network time daemon can move backwards by an
+ hour. Here that program does not compile.
+ 
++*(Cycle 0.2.1, TM-221: and it does not compile at the type, in both directions
++— an `Instant` where a `Timestamp` is taken, and the reverse, are
++`NITPICK-TYPE-007` — nor through the language's unchecked cast, `=>!`, either
++way, `NITPICK-TYPE-032`. What converts is `wild` storage reinterpreted through
++a pointer cast, the opt-out `CALENDAR.md` C-8c states for every checked
++property.)*
++
+ **Rule M-4 — the only thing you can do with two `Instant`s is subtract them**,
+ and the result is a `Duration` — or compare them; and both refuse a pair from
+ two clocks:
+@@ -96,7 +107,8 @@ prelude's `Duration` is what they produce.
+ ## 3. `Timestamp` — the absolute scale
+ 
+ ```nitpick
+-pub struct:Timestamp = { int64:secs; uint32:nanos; };   // Unix epoch, UTC
++#[derive(Eq, Ord, Clone, Debug, Copy)]
++pub struct:Timestamp = { sealed int64:secs; sealed uint32:nanos; };   // Unix epoch, UTC
+ ```
+ 
+ - `secs` — SI seconds since `1970-01-01T00:00:00Z`, **ignoring leap seconds**
+@@ -105,16 +117,29 @@ pub struct:Timestamp = { int64:secs; uint32:nanos; };   // Unix epoch, UTC
+   before the epoch has a negative `secs` and a positive `nanos` and there is
+   exactly one representation of every instant.
+ 
++*(Amended at cycle 0.2.1, TM-219. The block read `pub struct:Timestamp = {
++int64:secs; uint32:nanos; };` — the same fields in the same order. Both are
++sealed now, so a consumer reads them and builds a `Timestamp` only through
++`timestamp_of` (TM-220), and the derives are written out: `Ord` is the
++comparison M-6 names, and `Copy` lets a `Vec` hold one.)*
++
+ **Rule M-6 (TM-011) — the field order is semantic.** `#[derive(Ord)]` compares in
+ declaration order (TRAITS_REFERENCE §2.5), so seconds-then-nanoseconds is
+ exactly the comparison wanted. Reordering the fields silently changes what `<`
+ means, which is why `SAFETY.md` S-14 makes it a rule rather than a comment.
++*(Cycle 0.2.1, TM-219: asserted on the type itself by
++`tests/unit/timestamp_order.npk` — the seconds dominating, and a negative
++second with a positive remainder between its neighbours.)*
+ 
+ **Rule M-7 — the normalisation invariant.** `nanos < 1_000_000_000` always. It
+ is established by every constructor and re-established by every arithmetic
+ operation, and it is the first thing the property tests check, because a
+ denormalised `Timestamp` compares wrongly and prints wrongly and does so
+-without ever failing.
++without ever failing. *(Cycle 0.2.1, TM-220: the one constructor,
++`timestamp_of`, establishes it by refusing a `nanos` outside one second rather
++than carrying it, and the seal holds it, refusing a consumer's literal and
++write (TM-219, TM-221). No arithmetic operation exists yet; 0.2.3's
++`timestamp_add` is the first that must re-establish it.)*
+ 
+ **Rule M-8 (TM-014) — the supported range** is the civil range of `CALENDAR.md` §2,
+ expressed in seconds:
+@@ -126,7 +151,8 @@ expressed in seconds:
+ 
+ Both fit `int64` with seven orders of magnitude to spare, so the range
+ is a *policy*, not a representation limit — and it is checked at every
+-constructor rather than left to the trap.
++constructor rather than left to the trap. *(Cycle 0.2.1, TM-220:
++`timestamp_of` checks it, `ETimeValue` with `ValueFault.YearRange`.)*
+ 
+ *(Amended at cycle 0.1.1, TM-161. The minimum read `−377705203200`, which is
+ midnight on −10000-12-31 — `CALENDAR.md` §2's first day was one day early and
+@@ -302,7 +328,10 @@ normative: a conversion not on it does not exist.
+ |---|---|---|---|
+ | `Instant` | `Instant` | `+ Duration` | traps on overflow only |
+ | `Instant`, `Instant` | `Duration` | `instant_since` | `ETimeValue` for two clocks (M-4) |
++| `int64` ns + `InstantClock` | `Instant` | `instant_of` | no |
+ | `Instant` | `Timestamp` | **refused** (M-3) | — |
++| `Timestamp` | `Instant` | **refused** (M-3) | — |
++| `int64` secs + `int64` nanos | `Timestamp` | `timestamp_of` | `ETimeValue` outside range, or `nanos` outside one second |
+ | `Timestamp` | `Timestamp` | `+ Duration` | `ETimeValue` outside range |
+ | `Timestamp`, `Timestamp` | `Duration` | `timestamp_since` | `ETimeValue` past ±292 y (M-18) |
+ | `Timestamp`, `Timestamp` | `Period` | `timestamp_until` | no |
+@@ -317,6 +346,11 @@ normative: a conversion not on it does not exist.
+ | `int64` days | `CivilDate` | `days_to_date` | `ETimeValue` outside range |
+ | `Period` + `Instant`/`Timestamp` | — | **refused** (M-16) | — |
+ 
++*(Amended at cycle 0.2.1, TM-220 and TM-221: the `timestamp_of` row is new;
++`Timestamp` → `Instant` is written out, M-3 refusing both directions where the
++table named one; and `instant_of`'s row, missing since cycle 0.2.0 added the
++function — found at 0.2.1's planning.)*
++
+ *(Amended at cycle 0.2.0, TM-216: `instant_since`'s row read "no" — M-4's
+ "never fails", which TM-010.1's refusal of two clocks makes false.)*
+ 
+diff --git a/meta/specs/VERIFICATION.md b/meta/specs/VERIFICATION.md
+index b003b1092bc7ca02fe5be0b4d32bdd6e90f69855..1c826d04c784a08dc1da9b62ff7e5a930217fbde 100644
+--- a/meta/specs/VERIFICATION.md
++++ b/meta/specs/VERIFICATION.md
+@@ -169,6 +169,11 @@ pub func:timestamp_add = Timestamp(Timestamp:t, Duration:d)
+ `nanos < 1_000_000_000` on every `Timestamp` that exists. It is a precondition
+ of comparison being correct, of formatting being correct, and of every
+ arithmetic result being canonical — one fact that a dozen other proofs lean on.
++*(Cycle 0.2.1, TM-220: written as a comment at `timestamp_of`, the one
++constructor, and stood in for by `tests/unit/timestamp_construct.npk` — every
++boundary the constructor decides, from both sides — with `probe21` and
++`probe21b`, which refuse a consumer's literal and write. Cycles 0.2.2 and 0.2.3
++add the operations that yield a `Timestamp` to the stand-in.)*
+ 
+ **Rule P-5 — the `int128` sites** (`SPAN_MODEL.md` §5, N-20, N-20b) each carry
+ a `prove` that the narrowing `=>!` cannot lose, **beside** the runtime range
+@@ -262,7 +267,7 @@ the gap is written down here.
+ |---|---|
+ | after `days_to_date` | the result is in the supported range, and `date_to_days` of it returns the input — **written as comments at 0.1.1 (Q-6, TM-164)**: `prove(date_to_days(answer) == n)`, and the range half as an `ensures` comment, since the result is `civil_date`'s. **Stood in for, over the whole range, by `tests/unit/sweep/every_day_number.npk` and `every_civil_date.npk` since cycle 0.1.2** (TM-166) — P-1's property test, and the row P-11 hands over |
+ | after `date_to_days` | the result is in `[DAY_MIN, DAY_MAX]` — **written as a comment at 0.1.1 (Q-6, TM-164)**: `ensures answer >= NTIME_DAY_MIN && answer <= NTIME_DAY_MAX`. **Stood in for, over the whole range, by `tests/unit/sweep/every_day_number.npk` and `every_civil_date.npk` since cycle 0.1.2** (TM-166) — P-1's property test, and the row P-11 hands over |
+-| after every `Timestamp` construction | `nanos < 1_000_000_000` (P-4) |
++| after every `Timestamp` construction | `nanos < 1_000_000_000` (P-4) — **written as a comment at 0.2.1 (TM-220)** at `timestamp_of`: `prove((answer.nanos => int64) < NTIME_NANOS_PER_SEC)`. **Stood in for by `tests/unit/timestamp_construct.npk` since cycle 0.2.1**, with the seal's two probes, until 0.2.2 and 0.2.3 add the operations it extends to |
+ | in the transition binary search | the invariant `trans[lo].at_utc <= target < trans[hi].at_utc` holds at every step |
+ | after an offset lookup | `|offset| <= 64_800` |
+ | after the three `int128` narrowings | the value fits (P-5) |
+diff --git a/nitpick.toml b/nitpick.toml
+index f03325b78eeeb682e19f3e6e6751cb41c6684c43..c7906234cd05136587f718d6ec83cbce3a0613b5 100644
+--- a/nitpick.toml
++++ b/nitpick.toml
+@@ -153,8 +153,9 @@ path  = "tests/probe"
+ #             0.2.0's refusal of a conversion between `Instant` and
+ #             `Timestamp` is the next, and its plan says where it lives.
+ #             It lives in `tests/probe/` -- `probe20b`, and `probe20` for
+-#             the struct literal, TM-218 -- so this directory is still
+-#             empty.)
++#             the struct literal, TM-218 -- and so do cycle 0.2.1's six,
++#             `probe20c` ... `probe20f` and `probe21`/`probe21b`, TM-221 --
++#             so this directory is still empty.)
+ #   `golden`  IMPLEMENTED, and `tests/golden/` is empty: nothing formats
+ #             anything yet. Exercised by `selfcheck.py` case 4. Its entry
+ #             arrives with `fmt` at cycle 0.4.
+diff --git a/src/span/README.md b/src/span/README.md
+index af07f8c089968aab39fc06d7e5a1ee369d4bdb5c..30a0a6787d83ab4420dae487a7a895cfe87fcb3d 100644
+--- a/src/span/README.md
++++ b/src/span/README.md
+@@ -9,6 +9,7 @@ cycles 0.2 and 0.7 — the types first, the calendar arithmetic after zones
+ exist, because `Period` addition on a zoned value needs them.
+ 
+ **What is here since cycle 0.2.0:** `span.npk` — `Instant` and `InstantClock`,
+-`instant_of`, `instant_since`, `instant_add` and `instant_cmp` (TM-215, TM-216).
+-`Timestamp` is cycle 0.2.1's, the `Duration` constructors 0.2.3's, `Period`
+-0.7's.
++`instant_of`, `instant_since`, `instant_add` and `instant_cmp` (TM-215, TM-216);
++and since cycle 0.2.1 `Timestamp` and `timestamp_of` (TM-219, TM-220). The
++conversions to and from the civil scale are cycle 0.2.2's, the `Duration`
++constructors 0.2.3's, `Period` 0.7's.

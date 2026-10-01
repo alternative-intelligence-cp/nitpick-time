@@ -1,0 +1,83 @@
+diff --git a/tests/unit/instant_ops.npk b/tests/unit/instant_ops.npk
+index 80ee569571b6d3467fe341590366c8fc28f9c17c..f04dec7e6ecb3ace3e9c837bc1f400a0ff50a8c5 100644
+--- a/tests/unit/instant_ops.npk
++++ b/tests/unit/instant_ops.npk
+@@ -6,9 +6,10 @@
+ // ASKS: two readings of one clock, built by `instant_of` -- does
+ // `instant_since` give their distance, does `instant_add` of that distance to
+ // the earlier give back the later, does `instant_cmp` call them `Equal`, does
+-// the clock read through its sealed field, does a `Vec<Instant>` hand a
+-// reading back twice, and are a `Boottime` reading and a `Monotonic` one
+-// refused by both `instant_since` and `instant_cmp`?
++// `instant_add` keep the clock it was given, a `Boottime` reading's as well as
++// a `Monotonic` one's, does a `Vec<Instant>` hand a reading of each clock
++// back, and are a `Boottime` reading and a `Monotonic` one refused by both
++// `instant_since` and `instant_cmp`?
+ //
+ // MATTERS BECAUSE a reading of one clock less a reading of the other is a
+ // number that means nothing (H-6: `Boottime` counts suspend, `Monotonic` does
+@@ -17,12 +18,30 @@
+ //
+ // EXIT CODES, clear of every arm code (TM-152): 10 `instant_since` refused a
+ // same-clock pair; 11 its distance is not 3 500 ns; 12 `instant_cmp` refused a
+-// same-clock pair; 13 the sum is not `Equal` to the later reading; 14 the
+-// clock read through the field is not the one built; 15 a `Vec<Instant>` did
+-// not hand the reading back twice (both types derive `Copy`, TM-215, and
++// same-clock pair; 13 the sum is not `Equal` to the later reading; 14
++// `instant_add` did not keep the clock it was given; 15 a `Vec<Instant>` did
++// not hand a reading back (both types derive `Copy`, TM-215, and
+ // `Vec<T: Copy>` asks it since cycle 0.2.0b); 16 `instant_since` accepted two
+-// clocks; 17 `instant_cmp` accepted two clocks. Each was seen red on its
+-// mutant at planning (`meta/roadmap/0.2/0.2.0.md` §3, step 4).
++// clocks; 17 `instant_cmp` accepted two clocks. EACH WAS SEEN RED ON A MUTANT
++// AT CYCLE 0.2.1'S PLANNING, on both legs, in a copy of the tree
++// (`meta/roadmap/0.2/0.2.1.md`, step 1): 10 and 12 `instant_since`'s and
++// `instant_cmp`'s clock tests inverted; 11 `instant_since`'s operands swapped;
++// 13 `instant_add` subtracting; 14 `instant_add`'s clock hard-coded, to
++// `Boottime` (the first of its two lines) and to `Monotonic` (the second); 15
++// the `Boottime` element's read replaced by a vacant reading, and by one that
++// keeps its nanoseconds and loses its clock; 16 and 17 the two cross-clock
++// tests deleted.
++//
++// A CLOCK IS CHECKED THROUGH A `Boottime` READING, AND THAT IS THE POINT.
++// `Monotonic` is `InstantClock`'s first variant, tag 0 -- the value a vacant
++// read or a hard-coded default produces -- so a check that a clock is
++// `Monotonic` passes both (the workbench `PLAYBOOK.md` §9: a positive test
++// whose expected value is the vacant value tests nothing). Until cycle 0.2.1
++// exit 14 read the clock of a `Monotonic` reading alone, and an `instant_add`
++// that hard-coded `Monotonic` passed it at exit 0 on both legs, as 0.2.0's
++// verifier measured; exit 15 read the clock of a `Monotonic` element alone;
++// and this header said each exit "was seen red on its mutant at planning",
++// which 10, 12 and 14 never were.
+ //
+ // THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
+ // `span` and `core/vec`: `span`'s eleven (`cal.ETimeValue`, the floor and
+@@ -36,21 +55,26 @@ use "../../src/core/vec.npk".*;
+ func:main = int32(cstring[]:_~argv) {
+     Instant:a = raw instant_of(1000i64, InstantClock.Monotonic);
+     Instant:b = raw instant_of(4500i64, InstantClock.Monotonic);
++    Instant:x = raw instant_of(4500i64, InstantClock.Boottime);
+     Result<Duration>:d = instant_since(b, a);
+     if (d.is_error) { exit 10i32; }
+     if (d.value.ns != 3500i64) { exit 11i32; }
+     Instant:c = raw instant_add(a, d.value);
++    Instant:y = raw instant_add(x, d.value);
++    if (c.clock != InstantClock.Monotonic) { exit 14i32; }
++    if (y.clock != InstantClock.Boottime) { exit 14i32; }
+     Result<Ordering>:o = instant_cmp(c, b);
+     if (o.is_error) { exit 12i32; }
+     if (o.value != Ordering.Equal) { exit 13i32; }
+-    if (c.clock != InstantClock.Monotonic) { exit 14i32; }
+     Vec<Instant>:v = raw vec_init::<Instant>(2i64);
+     drop vec_push(@v, b);
++    drop vec_push(@v, x);
+     Instant:r1 = raw vec_at(v, 0i64);
+     Instant:r2 = raw vec_at(v, 0i64);
++    Instant:r3 = raw vec_at(v, 1i64);
+     drop vec_free(@v);
+     if (r1.ns != 4500i64 || r2.ns != 4500i64 || r2.clock != InstantClock.Monotonic) { exit 15i32; }
+-    Instant:x = raw instant_of(4500i64, InstantClock.Boottime);
++    if (r3.ns != 4500i64 || r3.clock != InstantClock.Boottime) { exit 15i32; }
+     Result<Duration>:e = instant_since(x, a);
+     if (!(e.is_error)) { exit 16i32; }
+     Result<Ordering>:f = instant_cmp(x, a);

@@ -1,0 +1,221 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 991426fa33500425e39e5770760d9b65f85e0b3c..3f7901fde9cc6dcdc00b3fa8f66ef113b906f590 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -45,8 +45,8 @@
+ # and `src/span/` since 0.2.0, `Instant` and its four operations, and since
+ # 0.2.1 `Timestamp` and its constructor --
+ # re-exported together as 66 public names [[sweep: lib_reexports=66]],
+-# so this IS evidence about behaviour, of the 114 units the runner reports at
+-# compiler `5fbaf4a` since cycle 0.2.0 (111 at cycle 0.2.0b, 113 at 0.2.0a and at
++# so this IS evidence about behaviour, of the 122 units the runner reports at
++# compiler `5fbaf4a` since cycle 0.2.1 (114 at cycle 0.2.0, 111 at 0.2.0b, 113 at 0.2.0a and at
+ # `c970483` at cycle 0.1.5's second half; 62 at cycle 0.0.6, 67 at 0.1.0,
+ # 70 at 0.1.0b, 75 at 0.1.0c, 78 at 0.1.1, 81 at 0.1.2, 86 at 0.1.3, 90 at
+ # 0.1.3b, 91 at 0.1.4 and 0.1.4b, all at `c3bdae2` from 0.1.0b on, 101 at
+diff --git a/harness/README.md b/harness/README.md
+index d5ec6cde63cf22bdc9b1296a330212d623f2be93..edbb0b8dbedc3f942cc37c6210cfc4aaff91b60a 100644
+--- a/harness/README.md
++++ b/harness/README.md
+@@ -358,6 +358,17 @@ reaching **6** sources and its IR **245 637 B**, `span`'s body and
+ `ClockMismatch`; and library + repro + suite at **79** (**51 probe**, **21
+ unit**). `114 = 35 + 79`.
+ 
++**At cycle 0.2.1, the same pin, 122 units**: eight tests added —
++`tests/unit/timestamp_construct.npk` and `timestamp_order.npk`, and the six
++refusals `probe20c` … `probe20f`, `probe21` and `probe21b` (TM-219 … TM-221)
++— and `instant_ops` changed in place, for 0.2.0's test gap. The self-check
++unchanged — 12 of V-14's 13 cases, 44 tree-check violations with 44 clean
++controls, 4 arm specimens and 4 verdict specimens; `exemption verdicts: 6 of
++6`; parse over 138 files, `93 + 43 + 2`; the defect corpus unchanged at 36;
++the library reaching 6 sources and its IR **258 249 B**, `Timestamp` and
++`timestamp_of`; and library + repro + suite at **87** (**57 probe**, **23
++unit**). `122 = 35 + 87`.
++
+ The floor under all of it is still TM-117's: every root re-emits the prelude,
+ so a `npkc` invocation on anything that compiles costs a fixed amount and the
+ run makes about 200 of them. One that does *not* compile costs ~0.03 s.
+diff --git a/harness/run.py b/harness/run.py
+index 025d47895d8d68ff73a0bfd6df434ba3af9b796f..8b8dcc41a37cfaf48bab82b6071843b6be8eb388 100644
+--- a/harness/run.py
++++ b/harness/run.py
+@@ -622,13 +622,14 @@ def run_parse(rep, root, bld):
+     """Every `.npk` in the tree in front of the real parser, each exactly once.
+ 
+     THE DENOMINATOR IS THE WHOLE TREE AND THAT IS WHY THE STAGE IS WORTH ITS
+-    COST. Re-measured at cycle 0.2.0: of the 130 `.npk` files
+-    here [[sweep: npk_total=130]] the library build roots 6
+-    [[sweep: lib_reach=6]], the suite roots 79 [[sweep: suite_roots=79]]
++    COST. Re-measured at cycle 0.2.1: of the 138 `.npk` files
++    here [[sweep: npk_total=138]] the library build roots 6
++    [[sweep: lib_reach=6]], the suite roots 87 [[sweep: suite_roots=87]]
+     (127 and 77 from cycle 0.1.3c until `tests/unit/civil_total_edges.npk`
+     joined; 128 and 78 from then until cycle 0.2.0b retired the churn pair,
+     TM-214; 126 and 76 until cycle 0.2.0 added `span`'s body to the
+-    library's reach and a unit and two probes to the suite), and of the 4
++    library's reach and a unit and two probes to the suite; 130 and 79 until
++    cycle 0.2.1 added two units and six probes), and of the 4
+     support modules [[sweep: support_total=4]] 3 are reached by `use` from
+     a suite root -- and since cycle 0.1.4 so is the civil cross-oracle's
+     corpus, which only its member imports -- so 41 are put in front of the
+@@ -642,13 +643,14 @@ def run_parse(rep, root, bld):
+     a support module no suite root imports, which only its part C compiles
+     (TM-217).
+ 
+-        130 = 6 (library) + 79 (suite roots) + 3 + 1 (reached by `use`) + 41
++        138 = 6 (library) + 87 (suite roots) + 3 + 1 (reached by `use`) + 41
+ 
+     (It read `116 = 5 + 66 + 3 + 1 + 41` from cycle 0.1.4c until cycle 0.1.3c
+     added eleven suite roots -- seven probes and four unit tests -- and none
+     anywhere else; and `127 = 5 + 77 + 3 + 1 + 41` until cycle 0.2.0b -- a
+     root short of the tagged sentence above from cycle 0.1.5's second half,
+-    when `civil_total_edges` joined, and found at 0.2.0b's planning.)
++    when `civil_total_edges` joined, and found at 0.2.0b's planning; and
++    `130 = 6 + 79 + 3 + 1 + 41` until cycle 0.2.1.)
+ 
+     EVERY NUMBER IN THAT SENTENCE IS TAGGED AND CHECKED (TM-142). It read
+     `50 = 1 + 27 + 3 + 19` until cycle 0.0.6, three subcycles after the tree
+@@ -751,8 +753,8 @@ def select(root, entry):
+     """The files a `[[test]]` entry selects: `<path>/*.npk`, non-recursive.
+ 
+     NOT recursive, and the omission is load-bearing (the manifest says so at
+-    length): a plain glob over `tests/probe/` is exactly the 51
+-    [[sweep: probe_dir=51]] probe programs and excludes `support/` -- four
++    length): a plain glob over `tests/probe/` is exactly the 57
++    [[sweep: probe_dir=57]] probe programs and excludes `support/` -- four
+     library modules with no `main`, three until cycle 0.2.0 -- and `defect/`, whose files are
+     reproductions rather than tests of this library and are judged by
+     `run_defect_corpus` instead (TM-141). The schema has no `recursive` key, so
+diff --git a/harness/stages.py b/harness/stages.py
+index 61659b54cb153281d7b6144fc375269fa369fda6..b0ea758da1440d677fcb918fc3df956ee7029712 100644
+--- a/harness/stages.py
++++ b/harness/stages.py
+@@ -3,9 +3,9 @@
+ THE HEADER IS THE AUTHORITY (B-5), AND FROM THIS CYCLE IT ALSO DECIDES WHAT KIND
+ OF TEST A FILE IS (O-X7, TM-119). A `[[test]]` entry selects by DIRECTORY and
+ never by file, so one `program` entry over `tests/probe/` cannot be true about
+-both the 28 files carrying `expect-exit:` [[sweep: probe_exit=28]] and the 23
+-carrying `expect-error:` [[sweep: probe_error=23]] (21 until cycle 0.2.0). It
+-dispatches per file instead:
++both the 28 files carrying `expect-exit:` [[sweep: probe_exit=28]] and the 29
++carrying `expect-error:` [[sweep: probe_error=29]] (23 until cycle 0.2.1, 21
++until 0.2.0). It dispatches per file instead:
+ 
+     expect-error:  present  ->  a REFUSAL member. `npkc` must fail, and the SET
+                                of codes it reports must EQUAL the set the header
+@@ -584,13 +584,14 @@ def parse_verdict(bld, rel, e):
+ 
+     THE RULE IS ONE LINE AND ITS CONSEQUENCE IS NOT OBVIOUS: a file must parse
+     UNLESS its own header names a parse-phase code. That is what lets the stage
+-    cover the 39 files in this tree [[sweep: tests_error=39]] that must NOT
+-    compile -- they are refused at PARSE-001, LEX-004, PARSE-002, TYPE-009,
+-    TYPE-017, TYPE-046, TYPE-079, TYPE-080, TYPE-084, TYPE-087, BORROW-001,
+-    BORROW-012, RESOLVE-001, RESOLVE-002, REACH-002 and REACH-003, and every
+-    family after the first three is a phase that only runs on something that
+-    parsed. (37, without `RESOLVE-002`, until cycle 0.2.0's two `probe20`
+-    refusals, TM-218. 30
++    cover the 45 files in this tree [[sweep: tests_error=45]] that must NOT
++    compile -- they are refused at PARSE-001, LEX-004, PARSE-002, TYPE-007,
++    TYPE-009, TYPE-017, TYPE-032, TYPE-046, TYPE-079, TYPE-080, TYPE-084,
++    TYPE-087, BORROW-001, BORROW-012, RESOLVE-001, RESOLVE-002, REACH-002 and
++    REACH-003, and every family after the first three is a phase that only
++    runs on something that parsed. (39, without `TYPE-007` and `TYPE-032`,
++    until cycle 0.2.1's six refusals, TM-221. 37, without `RESOLVE-002`, until
++    cycle 0.2.0's two `probe20` refusals, TM-218. 30
+     until cycle 0.1.3c, whose port made six new refusals -- four copies of an
+     owner at TYPE-046, one hidden field at TYPE-080 and one owning `Pod` impl at
+     TYPE-047 -- and moved `generic_owning_copy/case5` to TYPE-017. 16, with
+diff --git a/meta/specs/BUILD.md b/meta/specs/BUILD.md
+index 1d5bfa48014d03c9b552c5169d507aef5b010dab..29797abfc93bcf5d121e31797064dd84883771d1 100644
+--- a/meta/specs/BUILD.md
++++ b/meta/specs/BUILD.md
+@@ -204,7 +204,7 @@ what kind of test it is. This is a deliberate divergence from `npkg`'s `kind`.**
+ A `[[test]]` selects by **directory** and `kind` is per entry, so one entry over
+ `tests/probe/` cannot be true about both the 28 files carrying `expect-exit:`
+ <!-- [[sweep: probe_exit=28]] -->
+-and the 23 carrying `expect-error:` (O-X7; 8 until cycle 0.1.0c, 13 until 0.1.3b, 15 until 0.1.3c, 21 until 0.2.0). The runner therefore dispatches per
++and the 29 carrying `expect-error:` (O-X7; 8 until cycle 0.1.0c, 13 until 0.1.3b, 15 until 0.1.3c, 21 until 0.2.0, 23 until 0.2.1). The runner therefore dispatches per
+ file: `expect-error:` present makes it a **refusal** member — `npkc` must fail
+ and the *set* of codes must equal the set named (B-7), each code named once
+ per site it is reported at (B-7c, since cycle 0.2.0a) — and `expect-exit:`
+@@ -306,22 +306,24 @@ and names the sites when the count differs; self-check cases 12 and 13
+ `NITPICK-LEX-*` comes from the compiler's `src/frontend/diag_codes.npk` and
+ `NITPICK-PARSE-*` from `parse_codes.npk`; every other family belongs to a later
+ phase, so a file reported with one of those **necessarily parsed**. That is what
+-lets the stage cover the 39 files here that must not compile
+-<!-- [[sweep: tests_error=39]] --> — they are
+-refused at `PARSE-001`, `LEX-004`, `PARSE-002`, `TYPE-009`, `TYPE-017`,
++lets the stage cover the 45 files here that must not compile
++<!-- [[sweep: tests_error=45]] --> — they are
++refused at `PARSE-001`, `LEX-004`, `PARSE-002`, `TYPE-007` and `TYPE-032`
++(since cycle 0.2.1, `probe20c` … `probe20f`), `TYPE-009`, `TYPE-017`,
+ `TYPE-046`, `TYPE-079`, `TYPE-080`, `TYPE-084`, `TYPE-087` (`TYPE-047` until
+ cycle 0.2.0a, whose `probe19` asks `Copy` where it asked `Pod`, TM-211 — this
+ list kept the old code until cycle 0.2.0), `BORROW-001`, `BORROW-012`,
+ `RESOLVE-001`, `RESOLVE-002` (since cycle 0.2.0, `probe20b`),
+ `REACH-002` and `REACH-003`, and every family
+ after the first three runs only on something that parsed. Re-measured at pin
+-`5fbaf4a`, cycle 0.2.0: **130 files = 91 parse cleanly + 37
++`5fbaf4a`, cycle 0.2.1: **138 files = 93 parse cleanly + 43
+ parse and are refused later + 2 do not parse**
+-<!-- [[sweep: npk_total=130]] --> (`127 = 90 + 35 + 2` from cycle 0.1.3c until
++<!-- [[sweep: npk_total=138]] --> (`127 = 90 + 35 + 2` from cycle 0.1.3c until
+ `tests/unit/civil_total_edges.npk` joined, `128 = 91 + 35 + 2` from then
+-until cycle 0.2.0b retired the churn pair, TM-214, and `126 = 89 + 35 + 2`
++until cycle 0.2.0b retired the churn pair, TM-214, `126 = 89 + 35 + 2`
+ until cycle 0.2.0 added `Instant`'s unit, its two refusals and the relay
+-specimen), and the two
++specimen, and `130 = 91 + 37 + 2` until cycle 0.2.1 added `Timestamp`'s two
++units and six refusals), and the two
+ are `probe02d_wide_literal_refused.npk` (LEX-004, PARSE-002) and
+ `probe14_error_payload_refused.npk` (PARSE-001, TM-147). It read
+ `50 = 36 + 13 + 1` for three subcycles after the tree stopped being that size,
+diff --git a/meta/specs/TESTING.md b/meta/specs/TESTING.md
+index e319ae66baacd611b3899c5077c3a3e16fd8a427..f15b0e81dafb170a6ba43aa1e7b1a9c76ccd57cd 100644
+--- a/meta/specs/TESTING.md
++++ b/meta/specs/TESTING.md
+@@ -17,7 +17,7 @@ than sampled. Where that is possible it is the gate, and §3 says where.
+ 
+ | Stage | Answers |
+ |---|---|
+-| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **41 files of 130 that no other stage roots** <!-- [[sweep: npk_total=130]] --> |
++| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **41 files of 138 that no other stage roots** <!-- [[sweep: npk_total=138]] --> |
+ | `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
+ | `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
+ | `check` | every documented refusal actually refuses, with exactly its code |
+diff --git a/nitpick.toml b/nitpick.toml
+index c7906234cd05136587f718d6ec83cbce3a0613b5..8242e85d141d10325372441f47777f3ec5adc1c5 100644
+--- a/nitpick.toml
++++ b/nitpick.toml
+@@ -69,8 +69,9 @@ lld-flags     = ["-static"]
+ # AND THE OTHER HALF OF THAT RULE, LEARNED AT 0.0.1: an entry whose `kind`
+ # disagrees with the files under its path is worse than an empty one, because
+ # it fails for a reason that is not the library's. `tests/probe/` holds 28
+-# positive probes [[sweep: probe_exit=28]] and 23 that MUST NOT COMPILE
+-# [[sweep: probe_error=23]] (21 until cycle 0.2.0), and the schema selects by
++# positive probes [[sweep: probe_exit=28]] and 29 that MUST NOT COMPILE
++# [[sweep: probe_error=29]] (23 until cycle 0.2.1, 21 until 0.2.0), and the
++# schema selects by
+ # directory, never by file (the compiler's runner globs `<path>/*.npk`). That
+ # was O-X7, and it is SETTLED as TM-119: within a `program` entry the runner
+ # dispatches on each FILE'S OWN HEADER -- `expect-error:` makes it a refusal
+@@ -82,8 +83,8 @@ lld-flags     = ["-static"]
+ # and again through `opt -O2`, the same exit required both times (B-3).
+ #
+ # NOT `recursive`, and the omission is the point: a plain glob is
+-# `tests/probe/*.npk`, which is exactly the 51 probe programs
+-# [[sweep: probe_dir=51]] and EXCLUDES the two subdirectories that must never
++# `tests/probe/*.npk`, which is exactly the 57 probe programs
++# [[sweep: probe_dir=57]] and EXCLUDES the two subdirectories that must never
+ # be run as tests --
+ #   tests/probe/support/  four library modules -- three probe 11 imports, and
+ #                         since cycle 0.2.0 the self-check's relay specimen.
+@@ -131,7 +132,7 @@ path  = "tests/probe"
+ #   `parse`   HAS NO ENTRY BY DESIGN, not by omission (TM-123). It is a
+ #             WHOLE-TREE stage: `BUILD.md` §3's Directory column for it reads
+ #             "every `.npk` in the tree", and that is where its value is — of
+-#             the 130 files here [[sweep: npk_total=130]], 41 are put in front of
++#             the 138 files here [[sweep: npk_total=138]], 41 are put in front of
+ #             the compiler by nothing
+ #             else. An entry would narrow it to one directory and silently
+ #             un-cover the rest, so `stage = "parse"` is REFUSED BY NAME.

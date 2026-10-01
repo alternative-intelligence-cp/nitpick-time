@@ -27,7 +27,7 @@ file stands — make §5's table the authority and drop N-20's count. *(From cyc
 | 0.2.0a | **The adoption of compiler `5fbaf4a`** — the fifteen `cstring` copies, the target pinned and held, the per-site count, `Pod` retired into `Copy`, CI's pin and its emission asserted, and the ecosystem audit's EC3, EC6 and ED1 — **[`0.2.0a.md`](0.2.0a.md)**, planned and rehearsed 2026-09-27; it runs FIRST | the tree `GREEN` at `5fbaf4a`, locally and in CI |
 | 0.2.0b | **`Vec<T: Copy>`** — `nitpick-regex`'s answer to the question TM-194 left open (its RX-188), ported: the bound on the type and on every verb, TM-150's churn pair retired, `case5` at six sites, no element check — **[`0.2.0b.md`](0.2.0b.md)**, planned and rehearsed 2026-09-30; it runs SECOND, after 0.2.0a and before 0.2.0 | an owning element refused wherever it is written, and the IR of every program that compiles both ways unchanged |
 | 0.2.0 | **`Instant`** — the type, the clock tag, `instant_since`, and the refusals — **[`0.2.0.md`](0.2.0.md)**, written at cycle 0.1's close, its §1 re-measured at `5fbaf4a` over 0.2.0a's tree on 2026-09-27, and its steps rehearsed from their blocks over 0.2.0b's tree on 2026-09-30 | a timeout cannot be written against a wall clock |
-| 0.2.1 | **`Timestamp`** — the type, the normalisation invariant, the range check | one representation per instant |
+| 0.2.1 | **`Timestamp`** — the type, the normalisation invariant, the range check, and M-3's refusal at the type both ways — **[`0.2.1.md`](0.2.1.md)**, planned and rehearsed 2026-10-01 at `5fbaf4a`; it opens with 0.2.0's test gap | one representation per instant |
 | 0.2.2 | **Conversion** — `timestamp_to_utc`, `civil_to_utc`, and the round trip | the second gate |
 | 0.2.3 | **`Duration` interop** — the added constructors, `timestamp_add`, `timestamp_since` and its ±292-year refusal | the mismatch handled honestly |
 | 0.2.4 | **Close** | `done/0.2/`, `0.3.0.md` written |
@@ -61,13 +61,16 @@ file stands — make §5's table the authority and drop N-20's count. *(From cyc
 - [x] the S-6 generator names an identity by the module that declares it, and part C's fourth specimen was red before the fix and silent after (PD-55) — TM-217, `94f708a`: block 1, part C over 4 specimens `RED` with `HEAD`'s `arms.py` (*"generator overstates: probe11_relay_lib.EProbeZone"*) and `silent` after; `compute_bill` 11 and 7 where it read 12 and 8; `GREEN -- 114` on block 6's run and in CI run 36827751780's job log, with `compiler HEAD == 5fbaf4a40a2f6b213754cd71b6c69700f8aa2c87 (clean)`, `npkc.ll == the pin's emission, 30232291 B / 5630c2b4…` and `12 of V-14's 13`
 
 ### 0.2.1 — `Timestamp`
-- [ ] `Timestamp { int64:secs; uint32:nanos }`, field order asserted against probe 01's verdict
-- [ ] **the normalisation invariant** `nanos < 1_000_000_000` established by every constructor and re-established by every operation (M-7)
-- [ ] a property test that no sequence of operations produces a denormalised value — this is `VERIFICATION.md` P-4's obligation, standing in
-- [ ] the range check against `NTIME_SECS_MIN`/`MAX`, returning `ETimeValue` before D-210's trap
+*(Restated 2026-10-01, at 0.2.1's planning, to the plan's decisions. The first item and the last are new: 0.2.0's test gap, which 0.2.0's verifier found, and the reverse direction of M-3 with the cast both ways, from 0.2.0's record. The type's item read `Timestamp { int64:secs; uint32:nanos }`, and the sealed fields' item said nothing of `hidden`, which the author's answer to the workbench's question 15 settles.)*
+- [ ] **FIRST, 0.2.0's test gap**: `tests/unit/instant_ops.npk` reads a `Boottime` reading through `instant_add` and through the `Vec`, so no clock is checked against the vacant value alone; exits 10, 12 and 14 each seen red on a mutant; and its header's claim that each exit "was seen red on its mutant at planning" corrected — `0.2.1.md` step 1
+- [ ] `Timestamp { sealed int64:secs; sealed uint32:nanos }`, deriving `Eq`, `Ord`, `Clone`, `Debug` and `Copy`; field order asserted against probe 01's verdict, on the type itself (PD-64)
+- [ ] **the normalisation invariant** `nanos < 1_000_000_000` established by every constructor and re-established by every operation (M-7) — at 0.2.1 the one constructor, `timestamp_of`, which refuses rather than carries (PD-65)
+- [ ] a property test that no sequence of operations produces a denormalised value — this is `VERIFICATION.md` P-4's obligation, standing in (PD-65: every boundary the constructor decides, and the seal's two probes)
+- [ ] the range check against `NTIME_SECS_MIN`/`MAX`, returning `ETimeValue` before D-210's trap (PD-65)
 - [ ] a negative-`secs` timestamp with positive `nanos` compares correctly against its neighbours — the representation's one subtlety, and the test that catches getting it backwards
-- [ ] `Timestamp`'s fields `sealed`, by TM-215's reason: a consumer builds one only through a validating constructor *(added at 0.2.0, `0.2.0.md` §7)*
-- [ ] a probe asserts an `Instant` passed where a `Timestamp` is taken is refused, with its code measured then — the conversion refusal `probe20b` could not ask without `Timestamp` *(added at 0.2.0, TM-218)*
+- [ ] `Timestamp`'s fields `sealed`, by TM-215's reason: a consumer builds one only through a validating constructor *(added at 0.2.0, `0.2.0.md` §7)* — and `hidden` declined, here and for `Instant`'s `ns`, with its reason, and the public README's "yields only differences" softened (PD-64; the workbench's question 15, answered 2026-10-01)
+- [ ] a probe asserts an `Instant` passed where a `Timestamp` is taken is refused, with its code measured then — the conversion refusal `probe20b` could not ask without `Timestamp` *(added at 0.2.0, TM-218)* (PD-66)
+- [ ] **and the reverse**, a `Timestamp` where an `Instant` is taken, as a probe of its own — M-3 says "in either direction" *(from 0.2.0's record)* — and the language's unchecked cast, `=>!`, each way, each a probe of its own (PD-66)
 
 ### 0.2.2 — conversion — THE GATE
 - [ ] `timestamp_to_utc` and `civil_to_utc`, over `cal`'s algorithms

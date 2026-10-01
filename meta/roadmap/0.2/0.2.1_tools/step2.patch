@@ -1,0 +1,123 @@
+diff --git a/src/span/span.npk b/src/span/span.npk
+index 53be5628acec91dfcd1d59cd2f59d17662accc3b..f5e1045546b548b8667b18d964b631a4b18e118f 100644
+--- a/src/span/span.npk
++++ b/src/span/span.npk
+@@ -1,10 +1,16 @@
+-// Instants -- `Instant`, a reading of one of two clocks, and the four things a
+-// caller may do with readings: build one, subtract two of the same clock, add a
+-// `Duration`, compare two of the same clock (cycle 0.2.0; `TIME_MODEL.md` M-2
+-// and M-4 and `HOST.md` H-6, as TM-215 and TM-216 amend them). `Timestamp` and
+-// the `Duration` constructors `ntime` adds are cycles 0.2.1 and 0.2.3's, and the
+-// clocks themselves cycle 0.3's -- `host_now_instant` and `host_now_boot` will
+-// build their answers through `instant_of`, which is why it is public.
++// Instants and timestamps -- `Instant`, a reading of one of two clocks, and the
++// four things a caller may do with readings: build one, subtract two of the
++// same clock, add a `Duration`, compare two of the same clock (cycle 0.2.0;
++// `TIME_MODEL.md` M-2 and M-4 and `HOST.md` H-6, as TM-215 and TM-216 amend
++// them); and `Timestamp`, a point on the absolute UTC scale, with its one
++// constructor, which refuses a `secs` outside the range and a `nanos` outside
++// one second (cycle 0.2.1; `TIME_MODEL.md` §3 and M-6 ... M-8, TM-219 and
++// TM-220). The conversions to and from the civil scale are cycle 0.2.2's;
++// the `Duration` interop -- `timestamp_add`, `timestamp_since` and the
++// constructors `ntime` adds -- 0.2.3's; and the clocks themselves cycle 0.3's:
++// `host_now_instant` and `host_now_boot` will build their answers through
++// `instant_of`, and `host_now_utc` through `timestamp_of`, which is why both
++// are public.
+ //
+ // A TIMEOUT CANNOT BE WRITTEN AGAINST A WALL CLOCK, and this module is half of
+ // why: there is no conversion between an `Instant` and anything else (TM-010),
+@@ -20,6 +26,15 @@
+ //     NTP steps them, and a deadline that moves with the wall silently voids
+ //     D-056's containment.
+ //
++// AND THE REFUSAL IS THE TYPE'S, IN BOTH DIRECTIONS (TM-221). An `Instant`
++// handed where a `Timestamp` is taken, and a `Timestamp` where an `Instant` is,
++// are each `NITPICK-TYPE-007` (`probe20c`, `probe20d`); and the language's own
++// unchecked cast refuses both directions, `NITPICK-TYPE-032` -- "these types
++// have no values in common. `=>!` does not help" (`probe20e`, `probe20f`) --
++// though each type is 16 bytes. What remains is `wild` storage reinterpreted
++// through a pointer cast, the opt-out `CALENDAR.md` C-8c names for every
++// checked property.
++//
+ // TWO CLOCKS, ONE TYPE, AND THE TAG IS AN ENUM (TM-215). `Boottime` counts
+ // suspend and `Monotonic` does not (`HOST.md` H-6), so a reading of one less a
+ // reading of the other is a number that means nothing: `instant_since` and
+@@ -32,7 +47,34 @@
+ // `Vec<Instant>` holds them and reads them back (`Vec<T: Copy>` since cycle
+ // 0.2.0b). The clock is read as the field, `i.clock`: a sealed field is read
+ // anywhere and written only here, which is the read-only exposure O-X3 asked
+-// for, and there is no accessor function beside it.
++// for, and there is no accessor function beside it. `ns` is sealed and NOT
++// `hidden` -- the author's answer to the workbench's question 15, recorded in
++// TM-219: a consumer can read two clocks' numbers and subtract them by hand,
++// which only `instant_since` and `instant_cmp` refuse, and hiding `ns` would
++// not close that, because the floor's `mono_now()` hands any program the same
++// raw number; a readable reading serves logging.
++//
++// ONE REPRESENTATION PER INSTANT (TM-219, TM-220). A `Timestamp` is seconds
++// since 1970-01-01T00:00:00Z and a non-negative remainder of nanoseconds below
++// one second (M-7) -- so half a second before the epoch is `secs: -1, nanos:
++// 500_000_000`, and every instant has exactly one spelling. THE FIELD ORDER IS
++// THE COMPARISON (M-6, TM-011): `Ord` is derived, so the seconds decide and the
++// nanoseconds break a tie -- `tests/probe/probe01_derive_ord.npk` measured the
++// derive on this shape at cycle 0.0.0, and `tests/unit/timestamp_order.npk`
++// asserts it on the type itself, negative seconds included. Both fields are
++// `sealed`, by `Instant`'s reason: a consumer reads `t.secs` and `t.nanos` and
++// builds a `Timestamp` only through `timestamp_of`, so neither a literal nor a
++// write can spell a denormalised one (`probe21`, `probe21b`). `Copy` is
++// derived, so a `Vec<Timestamp>` holds them.
++//
++// `timestamp_of` VALIDATES AND NEVER NORMALISES. A `secs` outside the supported
++// range is `ETimeValue`, `ValueFault.YearRange` (M-8, `HOST.md` H-8), and a
++// `nanos` outside `[0, NTIME_NANOS_PER_SEC)` is `ValueFault.NanoRange`, each
++// checked before the one narrowing (`SAFETY.md` S-15b): a pair that would need
++// carrying is a second spelling of another instant, and it is refused at the
++// door rather than repaired. It takes `int64`s, as `civil_time` does, because
++// anything narrower pushes the range to the caller -- and a `timespec`'s
++// nanoseconds are an `int64` (H-4).
+ //
+ // `raw` BEFORE EVERY `never fails` CALL FROM A FALLIBLE BODY: `duration_ns` is
+ // the prelude's, `never fails`, and `pass duration_ns(...)` inside
+@@ -40,8 +82,11 @@
+ // `instant_add` overflows only 292 years past the clock's origin, and traps
+ // there (D-210), as `TIME_MODEL.md` §8 has said since cycle 0.0.
+ //
+-// WHAT IT MAY IMPORT: `cal` and `core` (`BUILD.md` B-17). It imports `cal`,
+-// for `ETimeValue`, and nothing else.
++// WHAT IT MAY IMPORT: `cal` and `core` (`BUILD.md` B-17). It imports `cal`, for
++// `ETimeValue`, and `core`'s `limits`, for the three bounds `timestamp_of`
++// checks -- by name, because `check_constants_named` refuses a second literal
++// copy of the number of nanoseconds in a second outside the module that owns
++// it (`SAFETY.md` S-16). (It imported `cal` alone until cycle 0.2.1.)
+ //
+ // WHAT IT MUST NOT DECLARE: a `Duration` (TM-004). The prelude's is the
+ // ecosystem's one span type; a second would immediately become the type
+@@ -51,6 +96,9 @@
+ mod:span;
+ 
+ use "../cal/cal.npk".ETimeValue;
++use "../core/limits.npk".NTIME_SECS_MIN;
++use "../core/limits.npk".NTIME_SECS_MAX;
++use "../core/limits.npk".NTIME_NANOS_PER_SEC;
+ 
+ #[derive(Eq, Clone, Debug, Copy)]
+ pub enum:InstantClock = { Monotonic; Boottime; };
+@@ -77,3 +125,18 @@ pub func:instant_cmp = Ordering(Instant:a, Instant:b) {
+     if (a.ns > b.ns) { pass Ordering.Greater; }
+     pass Ordering.Equal;
+ };
++
++#[derive(Eq, Ord, Clone, Debug, Copy)]
++pub struct:Timestamp = { sealed int64:secs; sealed uint32:nanos; };
++
++// `ensures answer.secs == secs && (answer.nanos => int64) == nanos`
++// `prove((answer.nanos => int64) < NTIME_NANOS_PER_SEC)` -- `VERIFICATION.md`
++// P-4, the invariant to prove first; a comment until the verified build (P-1b),
++// and stood in for by `tests/unit/timestamp_construct.npk`.
++pub func:timestamp_of = Timestamp(int64:secs, int64:nanos) {
++    if (secs < NTIME_SECS_MIN)        { fail ETimeValue; }   // ValueFault.YearRange
++    if (secs > NTIME_SECS_MAX)        { fail ETimeValue; }   // ValueFault.YearRange
++    if (nanos < 0i64)                 { fail ETimeValue; }   // ValueFault.NanoRange
++    if (nanos >= NTIME_NANOS_PER_SEC) { fail ETimeValue; }   // ValueFault.NanoRange
++    pass Timestamp{ secs: secs, nanos: nanos =>! uint32 };
++};

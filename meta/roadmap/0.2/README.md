@@ -43,11 +43,11 @@ file stands — make §5's table the authority and drop N-20's count. *(From cyc
 - [x] `GREEN` at `5fbaf4a` locally and in CI, read from the job log — `GREEN -- 113` on block 7's run over `23cb2da`, and in CI run 36364840105's job log with `compiler HEAD == 5fbaf4a40a2f6b213754cd71b6c69700f8aa2c87 (clean)` and `12 of V-14's 13`
 
 ### 0.2.0b — `Vec<T: Copy>` (its §5 is the acceptance list)
-- [ ] `struct:Vec<T: Copy>` and the bound on the eight verbs that lacked it; TM-150's churn pair retired; `case5` at six sites; `SAFETY.md` S-18b … S-18h, `BUILD.md` B-12 and `TESTING.md` V-17 amended (PD-63)
-- [ ] the masked IR of every program and root that compiles before and after the bound identical — the site-line table the one mask
-- [ ] no element check, by PD-63's declined alternative — measured: a `Copy` struct holding a pointer or a slice is a legal element, and drops nothing
-- [ ] the prose, and block 3's sweep read line by line
-- [ ] `GREEN` at `5fbaf4a` locally and in CI, read from the job log
+- [x] `struct:Vec<T: Copy>` and the bound on the eight verbs that lacked it; TM-150's churn pair retired; `case5` at six sites; `SAFETY.md` S-18b … S-18h, `BUILD.md` B-12 and `TESTING.md` V-17 amended (PD-63) — TM-214, `bd0212c`: the struct's bound alone refused at the eight definitions, `case5` `TYPE-017` ×6 and ×2 against `HEAD`'s `vec.npk`, an unbounded `vec_push` refused at its definition, `verdicts: 125 of 128 unchanged`, `GREEN -- 111`
+- [x] the masked IR of every program and root that compiles before and after the bound identical — the site-line table the one mask — block 0b `IR: 89 of 89 identical byte for byte`; block 1 82 of 89 byte for byte and 89 of 89 masked; block 2 79 and 89 of 89 masked
+- [x] no element check, by PD-63's declined alternative — measured: a `Copy` struct holding a pointer or a slice is a legal element, and drops nothing — block 0b: `#[derive(Copy)]` over `int64->` and over `uint8[]` each `compiles` as the element; the compiler's `check_copy_impl` refuses any `Copy` impl whose target drops, read at `5fbaf4a` (`0.2.0b.md`'s execution record)
+- [x] the prose, and block 3's sweep read line by line — `ac8ee4a`, `GREEN -- 111`, `0 unresolved`; block 3 `SAME`, its 153 lines read and a second sweep's 390 more, no omission, no patch amended (`0.2.0b.md`'s execution record)
+- [x] `GREEN` at `5fbaf4a` locally and in CI, read from the job log — `GREEN -- 111` on block 2's run over `ac8ee4a`'s tree, and in CI run 36823366390's job log with `compiler HEAD == 5fbaf4a40a2f6b213754cd71b6c69700f8aa2c87 (clean)`, `npkc.ll == the pin's emission, 30232291 B / 5630c2b4…` and `12 of V-14's 13`
 
 ### 0.2.0 — `Instant`
 *(Restated 2026-09-30, at 0.2.0's rehearsal, to the plan's decisions: the first item read `Instant { int64:ns; uint8:clock }` with the clock tag from H-6, and none named `instant_of`, `instant_cmp`'s refusal or the generator's fix.)*

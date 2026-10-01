@@ -159,11 +159,15 @@ pub error:ETimeValue;
 // (`WeekOfYear`), and an ISO weekday outside 1 ... 7 (`WeekdayRange`). A fixed
 // bound and a bound the year decides are two variants, as `DayRange` and
 // `DayOfMonth` are (`SAFETY.md` S-3). Appended, so every earlier variant keeps
-// its tag.
+// its tag. And since cycle 0.2.0 one more, raised outside this module:
+// `ClockMismatch`, `span`'s refusal of two readings from two clocks in
+// `instant_since` and `instant_cmp` (TM-216) -- `cal` declares the one
+// identity, so its fault enum carries every module's variants.
 pub enum:ValueFault = {
     YearRange; MonthRange; DayRange; HourRange; MinuteRange;
     SecondRange; NanoRange; OffsetRange; DayOfMonth; Overflow;
     DayOfYear; WeekRange; WeekOfYear; WeekdayRange;
+    ClockMismatch;
 };
 
 // ===========================================================================

@@ -17,7 +17,7 @@ than sampled. Where that is possible it is the gate, and §3 says where.
 
 | Stage | Answers |
 |---|---|
-| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **41 files of 126 that no other stage roots** <!-- [[sweep: npk_total=126]] --> |
+| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **41 files of 130 that no other stage roots** <!-- [[sweep: npk_total=130]] --> |
 | `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
 | `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
 | `check` | every documented refusal actually refuses, with exactly its code |
@@ -552,7 +552,7 @@ been driven. Cycle 0.0.6 made the sentence true rather than softening it:
 | `selfcheck.PLANTED` | the tree checks of `checks.LIVE` that fail a run — 9 of its 10 since cycle 0.1.1 (`check_literal_divisors` joined, with four rows) — at least one planted violation and one clean control each |
 | `selfcheck.part_b` directly | `check_layering`'s **node** half — the fault is a file that is NOT there, which no `PLANTED` row can express |
 | `selfcheck.part_b_specs_current` | `check_specs_current`, which reports and never fails, so it is shown REPORTING |
-| `selfcheck.part_c` (`CALIBRATION`) | `check_failsafe_arms`, against `NITPICK-REACH-003`'s own identity list on three modules with known bills |
+| `selfcheck.part_c` (`CALIBRATION`) | `check_failsafe_arms`, against `NITPICK-REACH-003`'s own identity list on four modules with known bills (three until cycle 0.2.0) |
 | `selfcheck.part_d` | `run._verdict` on four specimens — the fourth, since cycle 0.1.5, a `main` whose `func` and `:main` stand on two lines (V-1l); `check_exemptions_live` on a MOVED verdict; `run_defect_corpus` on an `expect-exit:` wrong by one; `check_expect_headers` on all three of its branches |
 | `selfcheck.part_e` (cycle 0.1.5) | `lexical.py`, the reader every check reads through (V-1k): one text of every lexical form written to a file and read back — `nitpick-regex`'s case 18, text for text — and one program of the forms `_FORMS_EXIT` names, each literal's value asserted, compiled and run by the pinned compiler, which must exit 0 while the reader sees exactly the code that ran (TM-202; it said "every form a run can observe" until the close's second half). And seventeen more `PLANTED` rows: V-1k's eight and V-1l's nine — and four since the second half: `check_error_budget`'s two module-qualified plants (TM-203), `check_raw_index`'s line end after the dot (V-1l's note) and a written arm bill for `check_denominators` (TM-205); `part_b_specs_current` plants two citations before a multi-byte character (TM-206) |
 
@@ -575,7 +575,11 @@ plus its own arithmetic). Those three are TM-107's three constraints, one each,
 and the numbers are re-measured on every run rather than remembered.
 *(Six, seven and ten since compiler `c3bdae2`, whose floor is six —
 `selfcheck.CALIBRATION`'s numbers, which are what the run measures; this rule
-said four, five and eight, `0dfddac`'s, until cycle 0.1.5.)*
+said four, five and eight, `0dfddac`'s, until cycle 0.1.5.)* *(And over FOUR
+since cycle 0.2.0: `probe11_relay_lib` raises `probe11_arms_lib`'s identity,
+which the compiler names by its declaring module — **7**, the floor and
+`probe11_arms_lib.EProbeZone`. The generator named the raising module until
+then, and the specimen is the red it was shown in.)*
 
 **Rule V-14e (TM-141) — the specification's list and the harness's list are
 one list, or they are two lists that drift.** §2's table, `checks.LIVE`,

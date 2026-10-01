@@ -204,7 +204,7 @@ what kind of test it is. This is a deliberate divergence from `npkg`'s `kind`.**
 A `[[test]]` selects by **directory** and `kind` is per entry, so one entry over
 `tests/probe/` cannot be true about both the 28 files carrying `expect-exit:`
 <!-- [[sweep: probe_exit=28]] -->
-and the 21 carrying `expect-error:` (O-X7; 8 until cycle 0.1.0c, 13 until 0.1.3b, 15 until 0.1.3c). The runner therefore dispatches per
+and the 23 carrying `expect-error:` (O-X7; 8 until cycle 0.1.0c, 13 until 0.1.3b, 15 until 0.1.3c, 21 until 0.2.0). The runner therefore dispatches per
 file: `expect-error:` present makes it a **refusal** member — `npkc` must fail
 and the *set* of codes must equal the set named (B-7), each code named once
 per site it is reported at (B-7c, since cycle 0.2.0a) — and `expect-exit:`
@@ -306,17 +306,22 @@ and names the sites when the count differs; self-check cases 12 and 13
 `NITPICK-LEX-*` comes from the compiler's `src/frontend/diag_codes.npk` and
 `NITPICK-PARSE-*` from `parse_codes.npk`; every other family belongs to a later
 phase, so a file reported with one of those **necessarily parsed**. That is what
-lets the stage cover the 37 files here that must not compile
-<!-- [[sweep: tests_error=37]] --> — they are
+lets the stage cover the 39 files here that must not compile
+<!-- [[sweep: tests_error=39]] --> — they are
 refused at `PARSE-001`, `LEX-004`, `PARSE-002`, `TYPE-009`, `TYPE-017`,
-`TYPE-046`, `TYPE-047`, `TYPE-079`, `TYPE-080`, `TYPE-084`, `BORROW-001`,
-`BORROW-012`, `RESOLVE-001`, `REACH-002` and `REACH-003`, and every family
+`TYPE-046`, `TYPE-079`, `TYPE-080`, `TYPE-084`, `TYPE-087` (`TYPE-047` until
+cycle 0.2.0a, whose `probe19` asks `Copy` where it asked `Pod`, TM-211 — this
+list kept the old code until cycle 0.2.0), `BORROW-001`, `BORROW-012`,
+`RESOLVE-001`, `RESOLVE-002` (since cycle 0.2.0, `probe20b`),
+`REACH-002` and `REACH-003`, and every family
 after the first three runs only on something that parsed. Re-measured at pin
-`5fbaf4a`, cycle 0.2.0b: **126 files = 89 parse cleanly + 35
+`5fbaf4a`, cycle 0.2.0: **130 files = 91 parse cleanly + 37
 parse and are refused later + 2 do not parse**
-<!-- [[sweep: npk_total=126]] --> (`127 = 90 + 35 + 2` from cycle 0.1.3c until
-`tests/unit/civil_total_edges.npk` joined, and `128 = 91 + 35 + 2` from then
-until cycle 0.2.0b retired the churn pair, TM-214), and the two
+<!-- [[sweep: npk_total=130]] --> (`127 = 90 + 35 + 2` from cycle 0.1.3c until
+`tests/unit/civil_total_edges.npk` joined, `128 = 91 + 35 + 2` from then
+until cycle 0.2.0b retired the churn pair, TM-214, and `126 = 89 + 35 + 2`
+until cycle 0.2.0 added `Instant`'s unit, its two refusals and the relay
+specimen), and the two
 are `probe02d_wide_literal_refused.npk` (LEX-004, PARSE-002) and
 `probe14_error_payload_refused.npk` (PARSE-001, TM-147). It read
 `50 = 36 + 13 + 1` for three subcycles after the tree stopped being that size,

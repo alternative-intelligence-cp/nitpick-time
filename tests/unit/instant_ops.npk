@@ -1,0 +1,78 @@
+// expect-exit: 0
+//
+// `Instant`'s four operations, and its two refusals (cycle 0.2.0; TM-215,
+// TM-216; `TIME_MODEL.md` M-2 and M-4, `HOST.md` H-6).
+//
+// ASKS: two readings of one clock, built by `instant_of` -- does
+// `instant_since` give their distance, does `instant_add` of that distance to
+// the earlier give back the later, does `instant_cmp` call them `Equal`, does
+// the clock read through its sealed field, does a `Vec<Instant>` hand a
+// reading back twice, and are a `Boottime` reading and a `Monotonic` one
+// refused by both `instant_since` and `instant_cmp`?
+//
+// MATTERS BECAUSE a reading of one clock less a reading of the other is a
+// number that means nothing (H-6: `Boottime` counts suspend, `Monotonic` does
+// not), and the refusal is the only thing between a caller and that number.
+// Every `Result` is read through `is_error` first, and `value` only after.
+//
+// EXIT CODES, clear of every arm code (TM-152): 10 `instant_since` refused a
+// same-clock pair; 11 its distance is not 3 500 ns; 12 `instant_cmp` refused a
+// same-clock pair; 13 the sum is not `Equal` to the later reading; 14 the
+// clock read through the field is not the one built; 15 a `Vec<Instant>` did
+// not hand the reading back twice (both types derive `Copy`, TM-215, and
+// `Vec<T: Copy>` asks it since cycle 0.2.0b); 16 `instant_since` accepted two
+// clocks; 17 `instant_cmp` accepted two clocks. Each was seen red on its
+// mutant at planning (`meta/roadmap/0.2/0.2.0.md` §3, step 4).
+//
+// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
+// `span` and `core/vec`: `span`'s eleven (`cal.ETimeValue`, the floor and
+// `cal`'s four arithmetic arms, `SAFETY.md` S-4) and `LimitViolated`, which
+// `Vec`'s `ListLen` adds -- twelve.
+mod:instant_ops;
+
+use "../../src/span/span.npk".*;
+use "../../src/core/vec.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    Instant:a = raw instant_of(1000i64, InstantClock.Monotonic);
+    Instant:b = raw instant_of(4500i64, InstantClock.Monotonic);
+    Result<Duration>:d = instant_since(b, a);
+    if (d.is_error) { exit 10i32; }
+    if (d.value.ns != 3500i64) { exit 11i32; }
+    Instant:c = raw instant_add(a, d.value);
+    Result<Ordering>:o = instant_cmp(c, b);
+    if (o.is_error) { exit 12i32; }
+    if (o.value != Ordering.Equal) { exit 13i32; }
+    if (c.clock != InstantClock.Monotonic) { exit 14i32; }
+    Vec<Instant>:v = raw vec_init::<Instant>(2i64);
+    drop vec_push(@v, b);
+    Instant:r1 = raw vec_at(v, 0i64);
+    Instant:r2 = raw vec_at(v, 0i64);
+    drop vec_free(@v);
+    if (r1.ns != 4500i64 || r2.ns != 4500i64 || r2.clock != InstantClock.Monotonic) { exit 15i32; }
+    Instant:x = raw instant_of(4500i64, InstantClock.Boottime);
+    Result<Duration>:e = instant_since(x, a);
+    if (!(e.is_error)) { exit 16i32; }
+    Result<Ordering>:f = instant_cmp(x, a);
+    if (!(f.is_error)) { exit 17i32; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (LimitViolated)     { exit 109i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

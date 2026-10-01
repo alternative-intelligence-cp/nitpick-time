@@ -1,17 +1,79 @@
-// Instants, timestamps and `Duration` interop — the PLACEHOLDER (0.0.1 P-7).
+// Instants -- `Instant`, a reading of one of two clocks, and the four things a
+// caller may do with readings: build one, subtract two of the same clock, add a
+// `Duration`, compare two of the same clock (cycle 0.2.0; `TIME_MODEL.md` M-2
+// and M-4 and `HOST.md` H-6, as TM-215 and TM-216 amend them). `Timestamp` and
+// the `Duration` constructors `ntime` adds are cycles 0.2.1 and 0.2.3's, and the
+// clocks themselves cycle 0.3's -- `host_now_instant` and `host_now_boot` will
+// build their answers through `instant_of`, which is why it is public.
 //
-// EMPTY ON PURPOSE: see `../core/core.npk` for why a placeholder exists at all.
-// It is REPLACED at the cycle below, never deleted.
+// A TIMEOUT CANNOT BE WRITTEN AGAINST A WALL CLOCK, and this module is half of
+// why: there is no conversion between an `Instant` and anything else (TM-010),
+// and a consumer can neither build an `Instant` from a number nor edit one --
+// both fields are `sealed`, so `Instant{ ns: n, clock: c }` and `a.ns = n` are
+// `NITPICK-TYPE-079` outside this module (`tests/probe/probe20_instant_literal_refused.npk`;
+// the missing conversion is `probe20b`). The compiler's runtime says the same
+// of its own deadline clock -- `runtime/npkrt.ll` at the pin, the block headed
+// "the monotonic clock (D-176, 1.1.3)", above `npk_chain_reset`:
 //
-// WHAT FILLS IT: `Instant` with its clock tag, `Timestamp` with its
-// normalisation invariant, the `Duration` constructors `ntime` adds,
-// `timestamp_since` with its ±292-year refusal, and `timestamp_until` in
-// calendar units. Governed by `meta/specs/SPAN_MODEL.md`.
-// WHEN: cycle 0.2 (`meta/roadmap/0.2/README.md`).
+//     CLOCK_MONOTONIC nanoseconds since an arbitrary epoch -- the deadline
+//     substrate's one clock. Wall clocks are excluded from the deadline path:
+//     NTP steps them, and a deadline that moves with the wall silently voids
+//     D-056's containment.
 //
-// WHAT IT MAY IMPORT: `cal` and `core` (`BUILD.md` B-17).
+// TWO CLOCKS, ONE TYPE, AND THE TAG IS AN ENUM (TM-215). `Boottime` counts
+// suspend and `Monotonic` does not (`HOST.md` H-6), so a reading of one less a
+// reading of the other is a number that means nothing: `instant_since` and
+// `instant_cmp` refuse such a pair with `cal`'s `ETimeValue` --
+// `ValueFault.ClockMismatch` -- and `instant_add` keeps the clock it was given
+// (TM-216). The tag is an enum and not H-6's `uint8`, which holds 254 values
+// that are no clock (`SAFETY.md` S-15c). Neither type derives `Ord`: a derived
+// order would compare two clocks' readings as one. Both derive `Copy` -- an
+// `int64` and a payload-free enum own nothing -- so a consumer's
+// `Vec<Instant>` holds them and reads them back (`Vec<T: Copy>` since cycle
+// 0.2.0b). The clock is read as the field, `i.clock`: a sealed field is read
+// anywhere and written only here, which is the read-only exposure O-X3 asked
+// for, and there is no accessor function beside it.
+//
+// `raw` BEFORE EVERY `never fails` CALL FROM A FALLIBLE BODY: `duration_ns` is
+// the prelude's, `never fails`, and `pass duration_ns(...)` inside
+// `instant_since` is `NITPICK-TYPE-007` without it (measured at planning).
+// `instant_add` overflows only 292 years past the clock's origin, and traps
+// there (D-210), as `TIME_MODEL.md` §8 has said since cycle 0.0.
+//
+// WHAT IT MAY IMPORT: `cal` and `core` (`BUILD.md` B-17). It imports `cal`,
+// for `ETimeValue`, and nothing else.
 //
 // WHAT IT MUST NOT DECLARE: a `Duration` (TM-004). The prelude's is the
 // ecosystem's one span type; a second would immediately become the type
-// everybody converts to and from.
+// everybody converts to and from. Nor an `error:` -- it raises `cal`'s, and a
+// second `ETimeValue` declared here would be a second identity in every
+// consumer, which `check_error_budget` refuses (TM-203).
 mod:span;
+
+use "../cal/cal.npk".ETimeValue;
+
+#[derive(Eq, Clone, Debug, Copy)]
+pub enum:InstantClock = { Monotonic; Boottime; };
+
+#[derive(Eq, Clone, Debug, Copy)]
+pub struct:Instant = { sealed int64:ns; sealed InstantClock:clock; };
+
+pub func:instant_of = Instant(int64:ns, InstantClock:clock) never fails {
+    pass Instant{ ns: ns, clock: clock };
+};
+
+pub func:instant_since = Duration(Instant:later, Instant:earlier) {
+    if (later.clock != earlier.clock) { fail ETimeValue; }   // ValueFault.ClockMismatch
+    pass raw duration_ns(later.ns - earlier.ns);
+};
+
+pub func:instant_add = Instant(Instant:t, Duration:d) never fails {
+    pass Instant{ ns: t.ns + d.ns, clock: t.clock };
+};
+
+pub func:instant_cmp = Ordering(Instant:a, Instant:b) {
+    if (a.clock != b.clock) { fail ETimeValue; }              // ValueFault.ClockMismatch
+    if (a.ns < b.ns) { pass Ordering.Less; }
+    if (a.ns > b.ns) { pass Ordering.Greater; }
+    pass Ordering.Equal;
+};

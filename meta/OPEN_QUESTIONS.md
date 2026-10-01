@@ -620,7 +620,14 @@ by another. The estimate was low by 37% and wrong in four independent ways;
 TM-135 has each with its number, and the spike is
 `meta/scratch/tzdb_spike/`.
 
-### O-X3 — whether `Instant` exposes its clock kind publicly
+### ~~O-X3 — whether `Instant` exposes its clock kind publicly~~ — **SETTLED 2026-10-01 (TM-216): the clock is the sealed field `i.clock`, read anywhere; there is no `instant_clock` function**
+
+> The recommendation's read-only exposure, with one public name fewer: a
+> `sealed` field is read anywhere and written only in its module (the
+> compiler's D-313), so the field already is a read-only accessor. The
+> recommendation's `HostClock` is `InstantClock`, declared in `span` beside
+> `Instant` (TM-215). The question below is left as it was asked.
+
 TM-010.1 makes `Instant` carry which clock produced it, so that
 `instant_since` can refuse a mismatched pair. Whether the field is *readable*
 by a caller is a smaller question: reading it lets a program log which clock it
@@ -702,8 +709,9 @@ rediscovery.
 
 *The question.* `SAFETY.md` S-3 says the caller's distinctions ride as detail
 fields rather than as errors, and `ValueFault` is that detail — ten variants
-when this was raised, fourteen since cycle 0.1.3 appended four (TM-173), one
-per refusal row. **TM-147 measured that an `error:` cannot carry a
+when this was raised, fourteen from cycle 0.1.3, which appended four (TM-173),
+and fifteen since cycle 0.2.0 appended `ClockMismatch` (TM-216), one per
+refusal row. **TM-147 measured that an `error:` cannot carry a
 payload** (`tests/probe/probe14_error_payload_refused.npk`,
 `NITPICK-PARSE-001`, exit 1, no `.ll`), and a `Result<T>` is
 `{ T value, tbb32 err }`, so the error half of every return is a code. There
@@ -730,8 +738,8 @@ pub func:civil_date_fault = ValueFault(int64:y, int64:m, int64:d) never fails;
 
 `civil_date` becomes two lines over it, so the rules live in exactly one place
 and the constructor cannot drift from the classifier. It needs a **"no fault"
-`ValueFault` variant** — the eleventh when this was raised, the fifteenth since
-cycle 0.1.3 — which amends `SAFETY.md` S-3's enum
+`ValueFault` variant** — the eleventh when this was raised, the fifteenth from
+cycle 0.1.3, the sixteenth since cycle 0.2.0 (TM-216) — which amends `SAFETY.md` S-3's enum
 and is the substantive part of the decision, not the function. It costs a
 consumer nothing: a `never fails` function arms no identity, so the arm bill
 does not move.

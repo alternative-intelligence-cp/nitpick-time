@@ -10,8 +10,28 @@ safety-critical systems language at `../../nitpick`.
 **Status: cycle 0.1 CLOSED (2026-09-26), archived at `meta/roadmap/done/0.1/`
 — the civil calendar, with its exhaustive gate on every run — and cycle 0.2,
 instants and timestamps, is OPEN: its 0.2.0a, the adoption of compiler
-`5fbaf4a`, and its 0.2.0b, `Vec<T: Copy>`, are done, and
-`meta/roadmap/0.2/0.2.0.md` is next.**
+`5fbaf4a`, its 0.2.0b, `Vec<T: Copy>`, and its 0.2.0, `Instant`, are done,
+and 0.2.1, `Timestamp`, is next.**
+
+**After cycle 0.2.0: `Instant`.** `src/span/` has a body: `Instant`, a
+reading of one of two clocks — `{ sealed int64:ns; sealed InstantClock:clock; }`,
+`InstantClock` an enum, `{ Monotonic; Boottime; }` — and four operations:
+`instant_of`, the one constructor; `instant_since` and `instant_cmp`, which
+refuse a pair from two clocks with `ETimeValue` (`ValueFault.ClockMismatch`,
+appended); and `instant_add`, which keeps its clock (TM-215, TM-216;
+`TIME_MODEL.md` M-2 and M-4 and `HOST.md` H-6 amended). **A timeout cannot be
+written against a wall clock**: a consumer can neither build an `Instant` by a
+struct literal nor edit one — `NITPICK-TYPE-079`, `probe20` — and there is no
+conversion to a `Timestamp` — `NITPICK-RESOLVE-002`, `probe20b` (TM-218). The
+clock is read as the sealed field, so O-X3 is settled without an accessor.
+**The S-6 generator was wrong, and only `span` could show it**: it named an
+identity by the module whose `fail` site raised it, where the compiler names
+it by the module that declares it, so `span` raising `cal`'s `ETimeValue` would
+have published a `span.ETimeValue` that does not exist; it names the declaring
+module now, and a fourth calibration specimen, `probe11_relay_lib`, was red
+before the fix (TM-217). `span` owes **11** arms and the umbrella **13** still
+— no new identity — and re-exports 64 names. A full invocation is **114 units
+green** at pin `5fbaf4a`.
 
 **After cycle 0.2.0b: `Vec<T: Copy>`** — `nitpick-regex`'s answer to the
 question TM-194 left open, ported (its RX-188). The type is
@@ -120,7 +140,7 @@ compiler's D-327, ratified during this cycle and in no pin of ours yet, makes
 `Copy` a prelude marker trait, and the re-pin that carries it replaces `Pod`
 with it — a confined edit, the trait's one block, one bound, one call, one
 umbrella line, three test impls *(made at cycle 0.2.0a, the adoption of
-`5fbaf4a`: TM-211)*. The umbrella re-exports 59 names *(58 since then)* —
+`5fbaf4a`: TM-211)*. The umbrella re-exports 59 names *(58 from then, and 64 since cycle 0.2.0)* —
 `Pod` and `bytes_capacity` joined — and eight files' managed memory is held to
 the runtime's count *(six since cycle 0.2.0b retired the churn pair,
 TM-214)*<!-- [[sweep: heap_bounded=6]] -->. No arm bill moved. A
@@ -405,8 +425,8 @@ cycle 0.0 paid most for.**
 V-15) and plants **twelve** of V-14's thirteen faults (eight of nine from cycle
 0.1.4b's case 9, TM-187, until cycle 0.2.0a's four, TM-209 and TM-210; seven
 of eight before it) — case 6 is `PEND` until 0.5
-and prints as pending — plus at least one violation per tree check, three
-arm-bill specimens, and (since 0.0.6) the verdict mechanisms of TM-137 and
+and prints as pending — plus at least one violation per tree check, four
+arm-bill specimens (three until cycle 0.2.0), and (since 0.0.6) the verdict mechanisms of TM-137 and
 TM-141 and the whole-tree walk's nested-repository pruning (TM-146). Each
 requires a red run that names it and a green control beside it, and the run
 prints both counts. *(The counts are derived from the code rather than typed

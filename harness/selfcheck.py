@@ -1358,23 +1358,30 @@ def part_b_specs_current(rep, base):
 
 
 # ---------------------------------------------------------------------------
-# PART C -- the S-6 arm generator, calibrated on TM-107's own specimens
+# PART C -- the S-6 arm generator, calibrated on TM-107's own specimens and,
+# since cycle 0.2.0, TM-217's
 # ---------------------------------------------------------------------------
 
 # Measured at pin `c3bdae2` from `NITPICK-REACH-003`'s own identity list (cycle
-# 0.1.0b). Each row is one of TM-107's three constraints, and the arithmetic is
+# 0.1.0b; the fourth row at `5fbaf4a`, cycle 0.2.0). Each of the first three
+# rows is one of TM-107's three constraints, and the arithmetic is
 # written out because a number embedded in prose travels with the prose:
 #
 #   floor                                    = 6
 #   silent_lib  = floor + 0 (declared, never raised)   = 6   <- constraint 1
 #   arms_lib    = floor + 1 (one raised identity)      = 7
 #   calc_lib    = floor + 4 (its own arithmetic)       = 10  <- constraint 2
+#   relay_lib   = floor + 1 (arms_lib's, relayed)      = 7   <- since cycle 0.2.0
 #
 # and 10 - 6 = 4 is `SAFETY.md` S-4b's measured "four extra arms" from a module
 # that declares no error at all. At pin `0dfddac`, where these rows were first
 # measured, the floor was FOUR and the three bills were 4 / 5 / 8; `c3bdae2`'s
 # floor adds `StackExhausted` and `MachineFault` to every row and changes
 # nothing else, which is the constraint-2 difference holding across the pins.
+# The fourth row is cycle 0.2.0's (TM-217): a module that RAISES an
+# identity it imports, which the compiler names by its DECLARING module -- the
+# generator named the raising one until then, and `span` raising `cal`'s
+# `ETimeValue` would have published an arm that does not exist.
 CALIBRATION = [
     ("tests/probe/support/probe11_silent_lib.npk", 6,
      {"Unreachable", "HeapOom", "HeapBadRequest", "WildLeak",
@@ -1392,11 +1399,16 @@ CALIBRATION = [
       "IntOverflow", "OutOfBounds"},
      "constraint 2: it declares no error at all and still costs four extra "
      "arms, from its `/`, its `%`, its `+` and its one index."),
+    ("tests/probe/support/probe11_relay_lib.npk", 7,
+     {"Unreachable", "HeapOom", "HeapBadRequest", "WildLeak",
+      "StackExhausted", "MachineFault", "probe11_arms_lib.EProbeZone"},
+     "an identity RAISED here and DECLARED in the module it imports is that "
+     "module's -- the compiler qualifies by the declaration, not the site."),
 ]
 
 
 def part_c(rep, root, bld, base):
-    """The generator against the compiler, on three modules with known bills."""
+    """The generator against the compiler, on four modules with known bills."""
     problems = []
     scratch = os.path.join(base, "arms")
     for rel, count, expected, why in CALIBRATION:
@@ -1479,7 +1491,7 @@ VERDICT_SPECIMENS = [
     ("no_main_here.npk", "mod:no_main_here;\n\npub func:f = int64() never "
      "fails { pass 1i64; };\n", "none",
      "a module with no `main` is not a program, so the question does not "
-     "arise -- this is the bucket the three `probe11` support modules are in"),
+     "arise -- this is the bucket the four `probe11` support modules are in"),
     ("main_split.npk", "mod:main_split;\n\nfunc\n:main = int32(cstring[]:_~argv) "
      "{\n    exit 0i32;\n};\n" + FAILSAFE, "run:0",
      "`func` and `:main` on two lines declare a `main` -- the compiler builds "

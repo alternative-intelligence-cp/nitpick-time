@@ -31,12 +31,22 @@ CivilDateTime ──►  Timestamp       given a zone, AND an answer for §6's e
 ## 2. `Instant` — the monotonic scale
 
 ```nitpick
-pub struct:Instant = { int64:ns; };      // opaque; the origin is arbitrary
+#[derive(Eq, Clone, Debug, Copy)]
+pub enum:InstantClock = { Monotonic; Boottime; };
+
+#[derive(Eq, Clone, Debug, Copy)]
+pub struct:Instant = { sealed int64:ns; sealed InstantClock:clock; };   // the origin is arbitrary
 ```
 
-**Rule M-2.** An `Instant` is a reading of `CLOCK_MONOTONIC`. Its origin is
-whatever the kernel chose at boot, it is **not** an epoch, and it is not
-comparable across processes or across a reboot.
+**Rule M-2.** An `Instant` is a reading of `CLOCK_MONOTONIC` or of
+`CLOCK_BOOTTIME`, and records which (`HOST.md` H-6). Its origin is whatever the
+kernel chose at boot, it is **not** an epoch, and it is not comparable across
+processes, across a reboot, or across its two clocks. Both fields are sealed:
+a consumer reads them and builds an `Instant` only through `instant_of`.
+*(Amended at cycle 0.2.0, TM-215. The block read `pub struct:Instant = {
+int64:ns; };`, and this rule "An `Instant` is a reading of `CLOCK_MONOTONIC`"
+— no clock, which made TM-010.1's refusal unbuildable while `HOST.md` H-6
+already gave the type a clock field. The tag is an enum and not H-6's `uint8`.)*
 
 **Rule M-3 (TM-010) — an `Instant` cannot be converted to a `Timestamp`, in
 either direction, ever.** This is the load-bearing refusal of the whole model, and the
@@ -46,18 +56,31 @@ compiler's own runtime makes the argument for us, in the floor's source:
 > deadline that moves with the wall silently voids D-056's containment.*
 > — `runtime/npkrt.ll`, the `npk_mono_now` block
 
+*(Cycle 0.2.0: read at compiler `5fbaf4a`, the block is headed "the monotonic
+clock (D-176, 1.1.3)" and sits above `npk_chain_reset`, not beside
+`npk_mono_now`'s definition; the words are as quoted, and unchanged since
+`c970483`. `src/span/span.npk`'s header quotes them from there.)*
+
 A library that offers the conversion offers a caller the ability to write a
 timeout against a clock that a network time daemon can move backwards by an
 hour. Here that program does not compile.
 
 **Rule M-4 — the only thing you can do with two `Instant`s is subtract them**,
-and the result is a `Duration`:
+and the result is a `Duration` — or compare them; and both refuse a pair from
+two clocks:
 
 ```nitpick
-pub func:instant_since = Duration(Instant:later, Instant:earlier);   // never fails*
-pub func:instant_add   = Instant(Instant:t, Duration:d);
-pub func:instant_cmp   = Ordering(Instant:a, Instant:b);
+pub func:instant_of    = Instant(int64:ns, InstantClock:clock) never fails;
+pub func:instant_since = Duration(Instant:later, Instant:earlier);   // ETimeValue: two clocks*
+pub func:instant_add   = Instant(Instant:t, Duration:d) never fails;  // keeps t's clock
+pub func:instant_cmp   = Ordering(Instant:a, Instant:b);              // ETimeValue: two clocks
 ```
+
+*(Amended at cycle 0.2.0, TM-216. The block read `instant_since … // never
+fails*`, which it cannot be and also refuse two clocks (TM-010.1), had no
+constructor, and said nothing of `instant_cmp` and two clocks, where the same
+argument applies. The refusal's detail is `ValueFault.ClockMismatch`; how a
+refusal hands it back is still `../OPEN_QUESTIONS.md` O-X8.)*
 
 \* `instant_since` cannot overflow in practice — the monotonic clock's origin
 is the boot, and `int64` nanoseconds is 292 years of uptime — but D-210 traps
@@ -278,7 +301,7 @@ normative: a conversion not on it does not exist.
 | From | To | How | Fails? |
 |---|---|---|---|
 | `Instant` | `Instant` | `+ Duration` | traps on overflow only |
-| `Instant`, `Instant` | `Duration` | `instant_since` | no |
+| `Instant`, `Instant` | `Duration` | `instant_since` | `ETimeValue` for two clocks (M-4) |
 | `Instant` | `Timestamp` | **refused** (M-3) | — |
 | `Timestamp` | `Timestamp` | `+ Duration` | `ETimeValue` outside range |
 | `Timestamp`, `Timestamp` | `Duration` | `timestamp_since` | `ETimeValue` past ±292 y (M-18) |
@@ -293,6 +316,9 @@ normative: a conversion not on it does not exist.
 | `CivilDate` | `int64` days | `date_to_days` | no |
 | `int64` days | `CivilDate` | `days_to_date` | `ETimeValue` outside range |
 | `Period` + `Instant`/`Timestamp` | — | **refused** (M-16) | — |
+
+*(Amended at cycle 0.2.0, TM-216: `instant_since`'s row read "no" — M-4's
+"never fails", which TM-010.1's refusal of two clocks makes false.)*
 
 ---
 

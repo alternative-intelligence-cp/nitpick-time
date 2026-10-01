@@ -10,7 +10,8 @@ scales, no monotonic↔absolute conversion), TM-011 (`Timestamp`'s layout and
 field order). All settled.
 
 **Open questions to settle:** O-X3 — whether `Instant` exposes its clock kind
-publicly. Recommendation on file: yes, read-only.
+publicly. Recommendation on file: yes, read-only. *(Settled at 0.2.0, TM-216:
+the clock is the sealed field, read anywhere, and there is no accessor.)*
 
 **And O-X6 — which `int128` sites `SPAN_MODEL.md` N-20 counts — must be answered
 before `check_int128_sites` goes live** (0.2.3's last item). `OPEN_QUESTIONS.md`
@@ -65,6 +66,8 @@ file stands — make §5's table the authority and drop N-20's count. *(From cyc
 - [ ] a property test that no sequence of operations produces a denormalised value — this is `VERIFICATION.md` P-4's obligation, standing in
 - [ ] the range check against `NTIME_SECS_MIN`/`MAX`, returning `ETimeValue` before D-210's trap
 - [ ] a negative-`secs` timestamp with positive `nanos` compares correctly against its neighbours — the representation's one subtlety, and the test that catches getting it backwards
+- [ ] `Timestamp`'s fields `sealed`, by TM-215's reason: a consumer builds one only through a validating constructor *(added at 0.2.0, `0.2.0.md` §7)*
+- [ ] a probe asserts an `Instant` passed where a `Timestamp` is taken is refused, with its code measured then — the conversion refusal `probe20b` could not ask without `Timestamp` *(added at 0.2.0, TM-218)*
 
 ### 0.2.2 — conversion — THE GATE
 - [ ] `timestamp_to_utc` and `civil_to_utc`, over `cal`'s algorithms

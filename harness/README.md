@@ -73,7 +73,8 @@ running unlisted since cycle 0.0.6)*:
   23 since cycle 0.1.3b gave `check_no_owning_fields` an owning element and an
   owner two structs down — TM-177.)*
 - **The S-6 arm generator** diffed against `NITPICK-REACH-003`'s own identity
-  list on three modules whose bills cycle 0.0.0 measured.
+  list on four modules — three whose bills cycle 0.0.0 measured, and since
+  cycle 0.2.0 one that raises an identity it imports (`probe11_relay_lib`).
 - **The verdict mechanisms** — `run._verdict` on four specimens, and
   `check_exemptions_live`, `run_defect_corpus` and `check_expect_headers` each
   driven red and silent on a control (`TESTING.md` V-14c; TM-141).
@@ -135,9 +136,10 @@ against the summary line rather than left to review.
 - **Not that the WHOLE library works.** `src/core/` is real code since cycle
   0.0.4 and `src/cal/` since 0.1.0 — the civil types, Hinnant's two algorithms
   since 0.1.1, swept over the whole range since 0.1.2 — and the suite is
-  evidence about both; the other four `src/` directories are still
-  placeholders, so nothing here converts a time to a zone, a timestamp to a
-  date, or text to either. *(This read "there is none yet; `src/` is
+  evidence about both — and about `src/span/`'s `Instant` since cycle 0.2.0;
+  the other three `src/` directories are still placeholders, so nothing here
+  converts a time to a zone, a timestamp to a date, or text to either. *(It
+  said four placeholders until cycle 0.2.0. This read "there is none yet; `src/` is
   placeholders" for two subcycles after `src/core/` landed — C6. And until
   cycle 0.1.2 it read "the other five `src/` directories are still
   placeholders, so nothing here dates anything" — false since 0.1.0 gave
@@ -343,6 +345,17 @@ refusal at six sites; two twin pairs and the two `Bytes` tests held to their
 heap bounds, the twins under the cap; and library + repro + suite at **76**
 (**20 unit**). `111 = 35 + 76`. The library's IR is 226 493 B, as it was: the
 bound moves no emission. The churn pair's 3.4 s is off every full run.
+
+**At cycle 0.2.0, the same pin, 114 units**: three tests added —
+`tests/unit/instant_ops.npk` and the two refusals `probe20` and `probe20b`
+(TM-215 … TM-218). The self-check plants 12 of V-14's 13 cases, 44 tree-check
+violations with 44 clean controls, **4** arm specimens — the fourth,
+`probe11_relay_lib`, raising an identity it imports (TM-217) — and 4 verdict
+specimens; `exemption verdicts: 6 of 6`, the relay specimen at `none`; parse
+over 130 files, `91 + 37 + 2`; the defect corpus unchanged at 36; the library
+reaching **6** sources and its IR **245 637 B**, `span`'s body and
+`ClockMismatch`; and library + repro + suite at **79** (**51 probe**, **21
+unit**). `114 = 35 + 79`.
 
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the

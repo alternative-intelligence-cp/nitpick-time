@@ -275,9 +275,11 @@ def check_layering(tree, **_):
                 "every sweep that counts files, which is why this is an "
                 "assertion and not a denominator." % layer)
 
-    # The umbrella's reach, reported rather than asserted. It is 5 since cycle
-    # 0.1.0 -- `src/lib.npk`, the three `src/core/` modules and `src/cal/cal.npk`
-    # -- and the four remaining placeholders are reached by no root at all,
+    # The umbrella's reach, reported rather than asserted. It is 6 since cycle
+    # 0.2.0 -- `src/lib.npk`, the three `src/core/` modules, `src/cal/cal.npk`
+    # and `src/span/span.npk`, 5 from cycle 0.1.0 until `span` had a body --
+    # and the three remaining placeholders, with `core.npk`'s layer note, are
+    # reached by no root at all,
     # which is exactly why the `parse` stage roots every file in the tree rather
     # than trusting the module graph. (It said "4 today" and "five remaining"
     # until cycle 0.1.5, cycle 0.0.4's numbers.)

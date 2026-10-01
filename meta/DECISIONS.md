@@ -6247,3 +6247,164 @@ for the day a cycle lifts the bound; **waiting for a consumer that needs an
 owning element** — none is planned (the zone tables hold offsets, Z-7, and
 `FmtPart` and `Instant` own nothing), and a cycle that needs one lifts the bound
 by a decision, the compiler's `List<T>` its shape (`vec_at`'s comment).
+
+---
+
+# Cycle 0.2.0 — `Instant`, ratified 2026-10-01
+
+### TM-215 — `Instant` is `{ sealed int64:ns; sealed InstantClock:clock; }`, and `InstantClock` is an enum, `{ Monotonic; Boottime; }`; each derives `Eq`, `Clone`, `Debug` and `Copy`, and neither `Ord`
+
+**2026-10-01, cycle 0.2.0 (the plan's PD-53). Amends `TIME_MODEL.md` §2 and M-2
+and `HOST.md` H-6; implements TM-010's corollary, TM-010.1.**
+
+**What was found** (`meta/roadmap/0.2/0.2.0.md` §1). The specifications
+disagreed about what an `Instant` is: `TIME_MODEL.md` §2 declared `{ int64:ns; }`,
+*"a reading of `CLOCK_MONOTONIC`"*, while `HOST.md` H-6 and TM-010.1 gave it a
+clock field and made `instant_since` refuse a pair from two clocks — and both
+cannot be built. Measured at compiler `5fbaf4a`: a derive reaches each field's
+own impl, so `#[derive(Eq, Clone, Debug)]` on `Instant` with nothing on the
+enum is `NITPICK-TYPE-019` three times, and `Copy` on `Instant` alone is
+`NITPICK-TYPE-087`; with the four derives on both, the module compiles. A
+consumer's struct literal of an `Instant` with sealed fields is
+`NITPICK-TYPE-079` once per field, and a write to one is the same code. And
+`Vec<T: Copy>` (TM-214) asks `Copy` at the type: without it, a
+`Vec<Instant>` is `NITPICK-TYPE-017` at the type, at its turbofish and at every
+verb's call.
+
+**The decision.** *`pub enum:InstantClock = { Monotonic; Boottime; };` and
+`pub struct:Instant = { sealed int64:ns; sealed InstantClock:clock; };`, both
+`#[derive(Eq, Clone, Debug, Copy)]`, declared in `src/span/span.npk`. The
+fields are sealed, so a consumer reads an `Instant` and never builds or edits
+one; `instant_of` (TM-216) is the one constructor.*
+
+*Alternatives declined:* **M-2 as written, `{ int64:ns; }`** — no clock, and
+TM-010.1 unbuildable; **H-6's `uint8:clock`** — 254 values that are no clock,
+and `SAFETY.md` S-15c is this library's measurement that a tag outside its enum
+makes an exhaustive `pick` fall through silently; **unsealed fields** —
+`Instant{ ns: wall_clock_ns, clock: InstantClock.Monotonic }` would compile,
+the type-level half of "a timeout cannot be written against a wall clock" gone;
+**`#[derive(Ord)]`** — a derived order compares two clocks' readings as one,
+and `instant_cmp` is the comparison, which refuses them; **no `Copy`** — a
+`Vec<Instant>` would not be writable at all.
+
+### TM-216 — `Instant`'s operations: `instant_of` builds one, `never fails`; `instant_since` and `instant_cmp` refuse two clocks with `ETimeValue`, `ValueFault.ClockMismatch`; `instant_add` keeps the clock and traps on overflow; the clock is read as the sealed field, and O-X3 is settled without an accessor
+
+**2026-10-01, cycle 0.2.0 (the plan's PD-54). Amends `TIME_MODEL.md` M-4 and
+`SAFETY.md` S-3, appends `ClockMismatch` to `src/cal/cal.npk`'s `ValueFault`,
+and strikes `OPEN_QUESTIONS.md` O-X3.**
+
+**What was found.** M-4 gave `instant_since` as `Duration(…)` *"never fails"*,
+which it cannot be and also refuse two clocks (TM-010.1), and said nothing of
+`instant_cmp` and two clocks, where the same argument applies. A `never fails`
+callee is called `raw` from a fallible body: `pass duration_ns(…)` inside
+`instant_since` is `NITPICK-TYPE-007`, *"expected `Duration`, found
+`Result<Duration>`"*; and `!=` on a payload-free enum compiles. A program
+importing `span` owes 11 identities — `cal.ETimeValue`, the floor of six, and
+`cal`'s four arithmetic arms — and the umbrella with `span` re-exported still
+13: no new identity.
+
+**The decision.** *`instant_of = Instant(int64:ns, InstantClock:clock) never
+fails`, public — cycle 0.3's `host` builds its readings through it, and a
+module may not write another's sealed field; a caller who hands it a
+wall-clock reading has opted out in writing, as `CALENDAR.md` C-8c says a
+caller of `=>!` has. `instant_since = Duration(Instant:later,
+Instant:earlier)` and `instant_cmp = Ordering(Instant:a, Instant:b)` are
+fallible, and each fails `ETimeValue` for a pair from two clocks — detail
+`ValueFault.ClockMismatch`, appended to `cal`'s enum so every earlier variant
+keeps its tag; how a refusal hands its detail back stays O-X8.
+`instant_add = Instant(Instant:t, Duration:d) never fails` keeps `t`'s clock
+and traps on overflow, as `TIME_MODEL.md` §8's table has said since cycle 0.0.
+The clock is read as the field, `i.clock`: a sealed field is read anywhere and
+written only in its module (the compiler's D-313), which is the read-only
+exposure O-X3 recommended, and there is no `instant_clock` function.*
+
+*And what it moves besides:* `ValueFault` holds fifteen variants since
+`ClockMismatch`, so the two places that count them — `CALENDAR.md` C-5b's
+dated note and `OPEN_QUESTIONS.md` O-X8 — move with it, and the "no fault"
+variant O-X8 recommends would be the sixteenth; TM-173 moved the same two at
+cycle 0.1.3. Found by the executing worker's second sweep
+(`meta/roadmap/0.2/0.2.0.md`'s execution record).
+
+*Alternatives declined:* **`instant_since` `never fails`, with a trap for two
+clocks** — a stop where the caller can answer; **`instant_cmp` `never fails`,
+ordering two clocks by their numbers** — the meaningless comparison TM-010.1
+exists to refuse; **an `instant_clock(i)` accessor, O-X3's recommendation as
+written** — one public name more (TM-013) beside a field that already reads;
+**`ClockMismatch` in an enum of `span`'s own** — `ETimeValue`'s detail enum IS
+`ValueFault` (`SAFETY.md` S-3), and a second enum would split one identity's
+details across two modules; **`instant_of` private, readings built only in
+`host`** — `host` is another module, and a sealed field is written only in its
+own.
+
+### TM-217 — the S-6 generator names an identity by the module that DECLARES it, never by the module whose `fail` site raises it; a fourth calibration specimen raises an identity it imports
+
+**2026-10-01, cycle 0.2.0 (the plan's PD-55). Amends `harness/arms.py`'s
+`compute_bill`, `harness/selfcheck.py`'s `CALIBRATION` and `SAFETY.md` S-6b
+(the specimens' table and a fourth constraint), adds
+`tests/probe/support/probe11_relay_lib.npk` and its `EXPECT_EXEMPT` entry, and
+restates `TESTING.md` V-14d and §2's `selfcheck.part_c` row for four
+specimens.**
+
+**What was found, at planning.** `arms.compute_bill` qualified each `fail X`
+site by the module holding the site; the compiler's `NITPICK-REACH-003`
+qualifies an identity by the module that DECLARES it. The two agree while every
+module raises only its own identity, which was true until `span` raised
+`cal`'s `ETimeValue`: over the candidate `span`, `compute_bill` gave 12 — the
+compiler's 11 and a `span.ETimeValue` that does not exist — and over the
+umbrella 14 against 13. Reproduced without `span`: `probe11_relay_lib.npk`
+imports `probe11_arms_lib`'s `EProbeZone` and fails with it; `REACH-003` lists
+7 (`probe11_arms_lib.EProbeZone` and the floor), the generator 8. **Seen red
+first**: with the fourth calibration row and the old generator, the
+self-check's part C reports the generator OVERSTATES by
+`probe11_relay_lib.EProbeZone`; with the fix, it is silent.
+
+**The decision.** *For a `fail X` site in module M: M.X if M declares X; else
+D.X, D the one module in the imported subgraph that declares X; two declaring
+modules, or none, is a `BuildError` naming the site — reported, never
+guessed. Declarations are read as `check_error_budget` reads them, by
+`checks._ERROR_DECL` over the blanked code. `probe11_relay_lib` is the fourth
+`CALIBRATION` row, held to 7 on every run, and a support module at `none`.*
+
+*And the statements of the sets it grows:* the specimens are four and the
+support modules four, so the sentences that counted three, or generalised
+over them, move too — `harness/arms.py`'s list of the generator's
+constraints, `harness/selfcheck.py`'s part C note and its `none` verdict
+specimen, `run._verdict`'s comment on the `none` bucket, `SAFETY.md` S-6b's
+note under its table, and `tests/probe/README.md` and `support/README.md` on
+the module no probe imports. Found by the executing worker's second sweep,
+whose phrasings reach across a line break (`meta/roadmap/0.2/0.2.0.md`'s
+execution record).
+
+*Alternatives declined:* **reading the qualification out of `REACH-003`** —
+`SAFETY.md` S-6b's whole point is that the source computation is the thing
+under test, and a bill copied from the oracle cannot disagree with it;
+**qualifying by the first declaring module found** — a guess, where two
+declarations of one name is already `check_error_budget`'s failure (TM-203);
+**the fix without a specimen** — the defect would be calibrated only on
+`span`, the code it was found under, and a later edit could re-break it
+behind a green run.
+
+### TM-218 — `Instant`'s refusals are two probes dispatched by their own headers: `probe20_instant_literal_refused.npk`, `NITPICK-TYPE-079` named twice, and `probe20b_instant_conversion_refused.npk`, `NITPICK-RESOLVE-002`
+
+**2026-10-01, cycle 0.2.0 (the plan's PD-56). Adds the two probes and their
+rows in `tests/probe/README.md`; cycle 0.2.1's checklist gains the third.**
+
+**What was found.** A consumer's `Instant{ ns: 1000i64, clock:
+InstantClock.Monotonic }` is `NITPICK-TYPE-079`, reported once per sealed field
+it writes — two reports at the literal's one position — so under `BUILD.md`
+B-7c the header names the code twice; the compiler's DEF-165, registered open,
+would make it one. `instant_to_timestamp(a)` is `NITPICK-RESOLVE-002`, *"cannot
+find `instant_to_timestamp` in this scope"*. The stronger refusal — an `Instant`
+passed where a `Timestamp` is taken — needs `Timestamp`, cycle 0.2.1's.
+
+**The decision.** *Two probes under `tests/probe/`, each refused with exactly
+its codes at as many sites as its header names, each importing the module it
+asks about, and each with a superset `failsafe`; and 0.2.1's checklist carries
+the `Timestamp` refusal, its code measured then.*
+
+*Alternatives declined:* **`tests/rejection/` and its first `[[test]]`
+entry** — every refusal this library asserts is a probe of this shape —
+`probe15`, `probe16` … `probe16i`, `probe19` — and a `check` entry would put
+one kind of file in two directories; worth it the day a refusal is not a
+probe's kind; **one probe for both refusals** — a file refused for two reasons
+cannot say which reason went away.

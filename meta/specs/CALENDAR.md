@@ -111,7 +111,9 @@ rediscovery, is a `never fails` companion classifier returning the fault
 directly; it needs a "no fault" variant, and that is the decision to take.
 *(Amended at cycle 0.1.3, TM-173: this read "an eleventh 'no fault'
 variant" — true of the ten `ValueFault` had until then. Cycle 0.1.3 appended
-four, so the "no fault" variant would now be the fifteenth.)*
+four, so the "no fault" variant would now be the fifteenth.)* *(And the
+sixteenth since cycle 0.2.0, which appended a fifteenth, `ClockMismatch`, for
+`span`'s refusal of two readings from two clocks — TM-216.)*
 
 This is the language behaving as specified rather than a compiler defect, so
 nothing here is raised upstream and nothing is worked around.

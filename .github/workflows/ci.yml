@@ -42,9 +42,10 @@
 # `Vec<T>`, `Bytes` and thirteen named bounds -- and `src/cal/` since 0.1.0 --
 # the civil types and their validating constructors, and since 0.1.1 Hinnant's
 # `date_to_days` and `days_to_date`, and since 0.1.3 the derived fields --
-# re-exported together as 58 public names [[sweep: lib_reexports=58]],
-# so this IS evidence about behaviour, of the 111 units the runner reports at
-# compiler `5fbaf4a` since cycle 0.2.0b (113 at cycle 0.2.0a, and at
+# and `src/span/` since 0.2.0, `Instant` and its four operations --
+# re-exported together as 64 public names [[sweep: lib_reexports=64]],
+# so this IS evidence about behaviour, of the 114 units the runner reports at
+# compiler `5fbaf4a` since cycle 0.2.0 (111 at cycle 0.2.0b, 113 at 0.2.0a and at
 # `c970483` at cycle 0.1.5's second half; 62 at cycle 0.0.6, 67 at 0.1.0,
 # 70 at 0.1.0b, 75 at 0.1.0c, 78 at 0.1.1, 81 at 0.1.2, 86 at 0.1.3, 90 at
 # 0.1.3b, 91 at 0.1.4 and 0.1.4b, all at `c3bdae2` from 0.1.0b on, 101 at
@@ -146,9 +147,11 @@
 # Until 0.0.3 that was the honest gap here, and it was written in this comment
 # for three cycles.
 #
-# WHAT IT IS STILL NOT EVIDENCE OF. Four of the six `src/` directories are
-# still placeholders -- `span/`, `zone/`, `fmt/`, `host/` -- so nothing here
-# converts a time to a zone, a timestamp to a date, or text to either. (This
+# WHAT IT IS STILL NOT EVIDENCE OF. Three of the six `src/` directories are
+# still placeholders -- `zone/`, `fmt/`, `host/` -- and `span/` holds `Instant`
+# alone since cycle 0.2.0, so nothing here converts a time to a zone, a
+# timestamp to a date, or text to either. (It said four, `span/` among them,
+# until cycle 0.2.0. This
 # said five placeholders, `cal/` among them, until cycle 0.1.0b; `cal/` had had
 # a body since 0.1.0. And until cycle 0.1.2 it said `cal/` held "the types and
 # constructors but not yet the day-number algorithms (cycle 0.1.1), so nothing

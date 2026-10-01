@@ -1,0 +1,58 @@
+// expect-error: NITPICK-TYPE-079
+// expect-error: NITPICK-TYPE-079
+//
+// PROBE 20 — A CONSUMER CANNOT BUILD AN `Instant` FROM A NUMBER (cycle 0.2.0,
+// TM-215, TM-218).
+//
+// ASKS: may a consumer write `Instant{ ns: 1000i64, clock:
+// InstantClock.Monotonic }` -- a reading made of any `int64` it likes, a
+// wall-clock one included?
+//
+// MATTERS BECAUSE "a timeout cannot be written against a wall clock" is half
+// the TYPE's: if a struct literal could build an `Instant`, a
+// `CLOCK_REALTIME` nanosecond count would become one in a line, and every
+// refusal `instant_since` makes would be about a value it cannot trust.
+// `instant_of` is the one constructor, and a caller handing it a wall-clock
+// reading has opted out in writing (TM-216).
+//
+// ANSWER, measured at `5fbaf4a`: NO. Both fields are `sealed` (the compiler's
+// D-313), so the literal below is `NITPICK-TYPE-079` -- reported ONCE PER
+// SEALED FIELD it writes, two reports at the literal's one position, so this
+// header names the code twice (`BUILD.md` B-7c, one line per site). The
+// compiler's DEF-165, registered open, would make it one report; when it lands
+// this file reddens and says so. THE REFUSAL IS THE ASSERTION (B-7). A write
+// to a field of an `Instant` from `instant_of` -- `a.ns = 5i64` -- is the same
+// code, measured at planning. `probe20b` is the conversion, and cycle 0.2.1
+// adds the stronger one: an `Instant` passed where a `Timestamp` is taken.
+mod:probe20_instant_literal_refused;
+
+use "../../src/span/span.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    Instant:a = Instant{ ns: 1000i64, clock: InstantClock.Monotonic };
+    exit 0i32;
+};
+
+// A SUPERSET of what `NITPICK-REACH-002` asks of a root importing `span`,
+// deliberately, as `probe16d` has (`SAFETY.md` S-6b, constraint 3: a superset
+// compiles): a later compiler that ran the reach analysis before the check this
+// file asserts could not add a stray `REACH-002` to the refusal.
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
+        (LimitViolated)     { exit 109i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

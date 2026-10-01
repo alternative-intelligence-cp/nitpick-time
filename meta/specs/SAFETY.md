@@ -60,6 +60,7 @@ pub enum:ValueFault = {
     YearRange; MonthRange; DayRange; HourRange; MinuteRange;
     SecondRange; NanoRange; OffsetRange; DayOfMonth; Overflow;
     DayOfYear; WeekRange; WeekOfYear; WeekdayRange;
+    ClockMismatch;
 };
 ```
 
@@ -74,7 +75,9 @@ constructors cycle 0.1.3 adds — `DayOfYear`, a day past the year's last, besid
 week-year's last; `WeekdayRange`, an ISO weekday outside 1 … 7 — and they
 follow `DayRange` and `DayOfMonth`'s split: a fixed bound and a bound the year
 decides are two variants. How a refusal hands its variant back is still
-`../OPEN_QUESTIONS.md` O-X8.)*
+`../OPEN_QUESTIONS.md` O-X8.)* *(And at cycle 0.2.0, TM-216: `ClockMismatch`,
+appended — `span`'s `instant_since` and `instant_cmp` refuse two readings of
+two clocks. `span` raises `cal`'s identity, so `cal`'s enum carries its variant.)*
 
 **Rule S-4 — module decomposition is part of the budget**, because REACH is
 import-scoped:
@@ -84,7 +87,7 @@ import-scoped:
 | `ntime/lib.npk` — **the umbrella**, the import a consumer writes | — (re-exports) | one arm today (`cal`'s) | **13** <!-- [[sweep: arms_lib=13]] --> (—) — generated since cycle 0.1.0b (TM-155): the floor of six, `cal.ETimeValue`, the four arithmetic arms, `DecreasesViolated` from `src/core/bytes.npk`'s measured loops, and — since cycle 0.1.0c (TM-156, TM-159) — `LimitViolated` from the `ListLen` on `src/core/`'s sealed lengths. It was **12** until then |
 | `ntime/core.npk` | — | nothing | **6** <!-- [[sweep: arms_core=6]] --> (4) — the floor; `core` is not yet reachable as its own public module, and its code is billed through the umbrella's row |
 | `ntime/cal.npk` | `ETimeValue` | one arm | **11** <!-- [[sweep: arms_cal=11]] --> (9) — measured 2026-09-06 and 2026-09-25 |
-| `ntime/span.npk` | — (raises `cal`'s) | one arm | placeholder; **6** <!-- [[sweep: arms_span=6]] --> (4) today, and the number is meaningless until cycle 0.2 gives the module a body |
+| `ntime/span.npk` | — (raises `cal`'s) | one arm | **11** <!-- [[sweep: arms_span=11]] --> (—) — since cycle 0.2.0, measured: `cal.ETimeValue`, which `span` raises for two clocks' readings (TM-216), the floor of six, and `cal`'s four arithmetic arms, which reach every importer of `span` because `span` imports `cal`. **No new identity**: the umbrella's row stays 13. *(A placeholder until cycle 0.2.0, the row read **6** (4), the floor, "meaningless until cycle 0.2 gives the module a body".)* |
 | `ntime/zone.npk` | `ETimeZone` | two arms | placeholder; **6** <!-- [[sweep: arms_zone=6]] --> (4) today (cycle 0.3) |
 | `ntime/fmt.npk` | `ETimeParse` | three arms | placeholder; **6** <!-- [[sweep: arms_fmt=6]] --> (4) today (cycle 0.4) |
 | `ntime/host.npk` | — (forwards errnos) | one arm | placeholder; **6** <!-- [[sweep: arms_host=6]] --> (4) today |
@@ -262,14 +265,16 @@ with the prose:
 | `probe11_silent_lib` | **6** (4) | + 0 | **1** — it declares `pub error:EProbeSilent` and never raises it, and the identity is **absent** from the list |
 | `probe11_arms_lib` | **7** (5) | + 1 | a `fail` SITE puts it in, module-qualified: `probe11_arms_lib.EProbeZone` |
 | `probe11_calc_lib` | **10** (8) | + 4 | **2** — it declares no error at all; `DivByZero`, `DivOverflow` from its `/` and `%`, `IntOverflow` from its `+`, `OutOfBounds` from its one index |
+| `probe11_relay_lib` *(since cycle 0.2.0)* | **7** (—) | + 1 | **4** — it RAISES `probe11_arms_lib`'s `EProbeZone`, which it imports, and the arm is `probe11_arms_lib.EProbeZone`: named by the module that declares it, not the one that raises it |
 
 10 − 6 = 4 (and 8 − 4 = 4 at `0dfddac`) is S-4b's measured *"four extra
-arms"*: the floor moved and the difference did not. None of the three
-functions is ever called by the generated program — S-4c, the arm is owed by the
-**import**.
+arms"*: the floor moved and the difference did not. None of the four
+functions (three until cycle 0.2.0) is ever called by the generated program —
+S-4c, the arm is owed by the **import**.
 
 **Three constraints on that generator, all measured at cycle 0.0.0 (TM-107) and
-each of which the obvious implementation gets wrong:**
+each of which the obvious implementation gets wrong** — *and a fourth since
+cycle 0.2.0, found at its planning:*
 
 1. **It counts `fail`, `?!` and `!!!` sites, never `error:` declarations.** A
    declared, unraised identity costs a consumer nothing, so counting
@@ -282,6 +287,13 @@ each of which the obvious implementation gets wrong:**
    `(OutOfBounds)`, contains no index expression, and exits 0. So a published
    table that *over*states would never be caught by a build, which is precisely
    why this rule exists.
+4. **It names an identity by the module that DECLARES it, not the module whose
+   `fail` site raises it** *(cycle 0.2.0, TM-217)*. The two are one
+   module while every module raises only its own; `span` raises `cal`'s
+   `ETimeValue`, and the compiler lists `cal.ETimeValue` where the generator,
+   until then, added a `span.ETimeValue` that does not exist — an
+   overstatement, constraint 3's direction. Two modules declaring the name, or
+   none, is a problem the generator reports, never a guess.
 
 **And the check must not stop at `npkc`.** A program with `main` and **no**
 `failsafe` was accepted by `npkc` at exit 0 and refused only by `llc`

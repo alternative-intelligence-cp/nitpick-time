@@ -19,8 +19,9 @@
 // deliberate. Adding a line here is the moment a name becomes public and, by
 // TM-013, a thing a MAJOR version is needed to take away.
 //
-// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 58
-// names now [[sweep: lib_reexports=58]], below -- 59 until cycle 0.2.0a retired
+// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 64
+// names now [[sweep: lib_reexports=64]], below -- 58 until cycle 0.2.0 added
+// `span`'s six, 59 until cycle 0.2.0a retired
 // `Pod` into the prelude's `Copy` (TM-211), 57 until cycle 0.1.3c added
 // `Pod` and `bytes_capacity`, 50 until cycle 0.1.3 added
 // the seven derived fields, 48 until cycle 0.1.1 added `date_to_days` and
@@ -242,3 +243,23 @@ pub use "./cal/cal.npk".iso_week_year;
 pub use "./cal/cal.npk".iso_week_number;
 pub use "./cal/cal.npk".iso_weekday;
 pub use "./cal/cal.npk".iso_week_to_date;
+
+// ===========================================================================
+// span -- instants (cycle 0.2.0). NO NEW IDENTITY, AND NO NEW ARM.
+// ===========================================================================
+//
+// `Instant` and its clock tag, and the four operations (TM-215, TM-216). `span`
+// raises `cal`'s `ETimeValue` -- a pair from two clocks, `ClockMismatch` -- and
+// declares none of its own, so importing it costs what importing `cal` costs:
+// 11 arms for `span` alone, 13 still here, measured from `NITPICK-REACH-003`'s
+// own list (`SAFETY.md` S-4). Both fields of `Instant` are `sealed`: a consumer
+// reads `i.ns` and `i.clock` and builds one only through `instant_of`, so a
+// wall-clock reading cannot become an `Instant` by a struct literal, and there
+// is no conversion to or from a `Timestamp` at all (TM-010). SIX NAMES, each a
+// MAJOR version to take away (TM-013).
+pub use "./span/span.npk".InstantClock;
+pub use "./span/span.npk".Instant;
+pub use "./span/span.npk".instant_of;
+pub use "./span/span.npk".instant_since;
+pub use "./span/span.npk".instant_add;
+pub use "./span/span.npk".instant_cmp;

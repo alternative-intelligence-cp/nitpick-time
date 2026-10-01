@@ -1,7 +1,8 @@
 // `ntime`'s storage primitives — THE LAYER NOTE. This was `src/core/`'s
 // placeholder (0.0.1 P-7) and the directory has been filled since cycle 0.0.4;
-// the file stays because the other placeholders -- four since cycle 0.1.0 filled
-// `cal/`, five before -- point AT it for the explanation below, and because a
+// the file stays because the other placeholders -- three since cycle 0.2.0
+// filled `span/`, four since cycle 0.1.0 filled `cal/`, five before -- point AT
+// it for the explanation below, and because a
 // layer note that a reader meets before the code is worth one file.
 //
 // WHY A PLACEHOLDER EXISTS AT ALL — the paragraph the siblings cite. An empty

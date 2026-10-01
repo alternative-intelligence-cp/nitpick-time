@@ -1,6 +1,8 @@
 # `tests/probe/support/`
 
-**Modules that probes import. Not probes, and not library code.**
+**Modules that probes import. Not probes, and not library code.** *(One, since
+cycle 0.2.0, no probe imports: the relay specimen, the self-check's — its row
+below.)*
 
 A probe is a program: it has its own `main` and `failsafe` and imports nothing
 from `src/` (cycle 0.0.0 P-1). Probe 11 is the one probe whose *question* is
@@ -17,8 +19,10 @@ exclusion `defect/` already needs, for the same reason.
 | `probe11_arms_lib.npk` | `SAFETY.md` S-4's `ntime/zone.npk` in miniature: one `pub error:`, and two `fail` sites that raise it | No division, no remainder, no indexing, no plain-integer `+ - *`. Importing it can therefore add **exactly one** thing to a consumer's arm set, and probe 11e's refusal names that one thing. |
 | `probe11_calc_lib.npk` | `ntime/cal.npk` in miniature: three `%`, one `/`, an indexed `fixed` table, and `+ - *` | Declares **no** error identity at all, so every arm it costs a consumer is a *system* arm. That is probe 11c's whole measurement. |
 | `probe11_silent_lib.npk` | one `pub error:` that is **declared and never raised**, and nothing else | The other end of the same question. Probe 11f imports it with a floor-only `failsafe` and compiles, which is how "a declaration arms nothing; a `fail` site does" stopped being an assertion. |
+| `probe11_relay_lib.npk` *(cycle 0.2.0)* | a `fail` of `probe11_arms_lib`'s `EProbeZone`, which it **imports** and does not declare | No probe imports it: it is the self-check's fourth arm-bill specimen (`harness/selfcheck.py`'s `CALIBRATION`). The compiler names the arm by its DECLARING module, `probe11_arms_lib.EProbeZone`; the generator named the raising one until cycle 0.2.0 (`SAFETY.md` S-6b, constraint 4). |
 
-**The three are kept apart on purpose.** A single support module carrying an
+**The three are kept apart on purpose** *(the fourth, the relay, is the self-check's and imports
+`probe11_arms_lib` by design)*. A single support module carrying an
 error identity *and* arithmetic would make every refusal a mixture, and the
 point of the 11 family is that each file changes one variable against a control
 that compiles. `probe11d_floor_only.npk` is that control and it imports nothing

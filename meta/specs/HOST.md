@@ -65,8 +65,17 @@ does not, on Linux. An `Instant` records which clock produced it in a field, and
 same argument as M-3, one level down.
 
 ```nitpick
-pub struct:Instant = { int64:ns; uint8:clock; };   // clock: 0 monotonic, 1 boottime
+pub enum:InstantClock = { Monotonic; Boottime; };
+pub struct:Instant = { sealed int64:ns; sealed InstantClock:clock; };
 ```
+
+*(Amended at cycle 0.2.0, TM-215 and TM-216. The block read `pub
+struct:Instant = { int64:ns; uint8:clock; };   // clock: 0 monotonic, 1
+boottime` — and a `uint8` holds 254 values that are no clock (`SAFETY.md`
+S-15c), so the tag is an enum; both fields are sealed, so `host` builds its
+readings through `span`'s `instant_of`; and `instant_cmp` refuses two clocks as
+`instant_since` does. `host` importing `span` is cycle 0.3's, with a
+`BUILD.md` B-17 arrow it does not have yet.)*
 
 **Rule H-7 — `host_now_utc` forwards the kernel's errno verbatim**
 (`SAFETY.md` S-5), so it declares no error and costs no `failsafe` arm.

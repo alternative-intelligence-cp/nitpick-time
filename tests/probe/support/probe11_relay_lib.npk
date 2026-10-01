@@ -1,0 +1,22 @@
+// NOT A PROBE. A support module -- no `main`, no `failsafe`, never a root of the
+// suite. See `README.md` beside it.
+//
+// THE SELF-CHECK'S FOURTH ARM-BILL SPECIMEN (cycle 0.2.0, TM-217).
+// It RAISES an identity it does not declare: `EProbeZone` is
+// `probe11_arms_lib`'s, imported by name, and the one `fail` below is the only
+// thing this module adds to a consumer's bill. `NITPICK-REACH-003` names it
+// `probe11_arms_lib.EProbeZone` -- the compiler qualifies an identity by the
+// module that DECLARES it -- and `harness/arms.py`'s generator, which qualified
+// it by the module whose `fail` site raised it, added a
+// `probe11_relay_lib.EProbeZone` that does not exist. `src/span/` raises `cal`'s
+// `ETimeValue` the same way, which is how the generator's defect was found;
+// `selfcheck.CALIBRATION` holds this module to 7 identities on every run.
+// Comparisons only, as `probe11_arms_lib.npk` is, so the `fail` is the one
+// variable.
+mod:probe11_relay_lib;
+use "./probe11_arms_lib.npk".EProbeZone;
+
+pub func:relay_zone = int64(int64:x) {
+    if (x < 0i64) { fail EProbeZone; }
+    pass x;
+};

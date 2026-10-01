@@ -16,7 +16,9 @@ answer on every machine.
 > the weekday, the day of the year and the ISO week date — whose gate is
 > exhaustive: every day of years −9999 … +9999 goes to its day number and back,
 > both ways, on every full run, and every date of years 1 … 9999 agrees with
-> Python's `datetime`. Instants, zones, formats and the clocks are still
+> Python's `datetime`. Since cycle 0.2.0, `src/span/` holds `Instant`, a
+> reading of one of two clocks that cannot be built from a number or converted
+> to a wall-clock time. Timestamps, zones, formats and the clocks are still
 > placeholders, each replaced by the cycle
 > [`meta/roadmap/ROADMAP.md`](meta/roadmap/ROADMAP.md) names. The specification
 > set is in [`meta/specs/`](meta/specs/) and the plan in

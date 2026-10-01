@@ -8,7 +8,7 @@ that goes stale silently, so it is derived, not written.
 
 THE THREE CONSTRAINTS TM-107 MEASURED, EACH OF WHICH THE OBVIOUS IMPLEMENTATION
 GETS WRONG -- and each of which has a specimen in this tree, so none of them is
-taken on trust:
+taken on trust (and a fourth since cycle 0.2.0, `SAFETY.md` S-6b's, below):
 
   1. IT COUNTS `fail`, `?!` AND `!!!` SITES, NEVER `error:` DECLARATIONS.
      `tests/probe/support/probe11_silent_lib.npk` declares `pub
@@ -37,6 +37,16 @@ taken on trust:
      computes a bill from source instead of reading one out of the compiler
      and reprinting it.
 
+  4. IT NAMES AN IDENTITY BY THE MODULE THAT DECLARES IT, never by the module
+     whose `fail` site raises it (cycle 0.2.0, TM-217). The two are one module
+     while every module raises only its own; `probe11_relay_lib.npk` raises
+     `probe11_arms_lib`'s `EProbeZone`, which it imports, and the compiler
+     lists `probe11_arms_lib.EProbeZone`, 7 identities -- where this file,
+     until then, added a relay-qualified arm that does not exist, an
+     overstatement in constraint 3's direction. Not one of TM-107's three:
+     found at cycle 0.2.0's planning, when `span` was about to raise `cal`'s
+     `ETimeValue`, and given a specimen of its own all the same.
+
 THE ORACLE, AND WHY IT IS NOT CIRCULAR. `npkc` refuses a root with `main` and no
 `failsafe` (`NITPICK-REACH-003`, the compiler's DEF-5, TM-112) and the
 diagnostic LISTS THE IDENTITIES OWED. That list is the truth: it is what the
@@ -59,7 +69,7 @@ import re
 import build as build_mod
 import lexical
 from build import BuildError
-from checks import Result, blank_code
+from checks import Result, blank_code, _ERROR_DECL
 
 
 # The unconditional floor, measured rather than read: a program with `main`, no
@@ -161,9 +171,21 @@ def compute_bill(tree, module_rel):
     evidence = {a: "the unconditional floor (S-4b)" for a in FLOOR}
     fail_sites, propagate_sites = 0, 0
 
+    # WHO DECLARES EACH IDENTITY, over the whole subgraph (cycle 0.2.0). The
+    # compiler qualifies an identity by the module that DECLARES it, and this
+    # qualified it by the module whose `fail` site raised it -- the same answer
+    # while every module raised only its own, and an arm that does not exist
+    # the moment `span` raised `cal`'s `ETimeValue` (`probe11_relay_lib.npk` is
+    # the specimen). Matched as `check_error_budget` matches a declaration.
+    texts, declared = [], {}
     for path in subgraph:
         text = code_only(path)
         mod = os.path.basename(path)[:-4]
+        texts.append((path, mod, text))
+        for m in _ERROR_DECL.finditer(text):
+            declared.setdefault(m.group(2), []).append(mod)
+
+    for path, mod, text in texts:
         for arm in _arith_arms(text):
             if arm not in arms:
                 arms.add(arm)
@@ -172,10 +194,30 @@ def compute_bill(tree, module_rel):
         # arms nothing -- `probe11f_declared_unraised.npk` measured that, and
         # `probe11_silent_lib.npk` is the specimen this check is calibrated on.
         for identity in _FAIL_SITE.findall(text):
-            qualified = "%s.%s" % (mod, identity)
+            # The site's own module if it declares the name; else the ONE
+            # module in the subgraph that does; two or none is a problem this
+            # reports, never a guess.
+            owners = declared.get(identity, [])
+            if mod in owners:
+                owner = mod
+            elif len(owners) == 1:
+                owner = owners[0]
+            else:
+                raise BuildError(
+                    "arms", "%s raises `%s`, which %s in its `use` subgraph -- "
+                    "the compiler qualifies an identity by the module that "
+                    "declares it, so this bill cannot name it"
+                    % (os.path.relpath(path, tree), identity,
+                       "no module declares" if not owners else
+                       "%d modules declare (%s)" % (len(owners),
+                                                    ", ".join(sorted(owners)))))
+            qualified = "%s.%s" % (owner, identity)
             if qualified not in arms:
                 arms.add(qualified)
-                evidence[qualified] = "a `fail` site in %s (S-4c)" % mod
+                evidence[qualified] = ("a `fail` site in %s (S-4c)" % mod
+                                       if owner == mod else
+                                       "a `fail` site in %s, declared in %s "
+                                       "(S-4c)" % (mod, owner))
             fail_sites += 1
         propagate_sites += len(_PROPAGATE.findall(text))
 
@@ -297,8 +339,9 @@ def check_failsafe_arms(tree, bld=None, scratch_dir=None, **_):
     nothing was re-exported. `cal` has had a body and a `fail` site since
     cycle 0.1.0, and the umbrella has re-exported names since 0.0.4, so at
     cycle 0.1.0b there are seven rows (`SAFETY.md` S-4 publishes them). The
-    check reports its denominator and is CALIBRATED against three modules
-    whose bills were measured at cycle 0.0.0 -- see `selfcheck.py` §C, which is
+    check reports its denominator and is CALIBRATED against four modules --
+    three whose bills were measured at cycle 0.0.0, and since cycle 0.2.0 one
+    that raises an identity it imports -- see `selfcheck.py` §C, which is
     where it is shown able to fail.
     """
     modules = public_modules(tree)

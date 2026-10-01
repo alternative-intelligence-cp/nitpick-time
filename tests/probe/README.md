@@ -89,9 +89,10 @@ by the harness as ordinary `program`-stage entries from cycle 0.0.2.
   `TZ=Europe/Kiev`, the old IANA spelling, used to pass **both** probes at exit
   0, because every byte either one checks is equally true of `Kiev` and `Kyiv`.
 - **Every `.npk` under `tests/` carries an `expect-` marker or is named as an
-  exemption with its reason** (TM-115, `TESTING.md` V-1b/V-1c). The three
-  modules in `support/` are the exemptions — no `main`, no `failsafe`, nothing
-  to expect. `harness/run.py` sweeps this and **prints its denominator**,
+  exemption with its reason** (TM-115, `TESTING.md` V-1b/V-1c). The four
+  modules in `support/` (three until cycle 0.2.0's relay specimen) are the
+  exemptions — no `main`, no `failsafe`, nothing to expect. `harness/run.py`
+  sweeps this and **prints its denominator**,
   because the three `defect/missing_failsafe/` cases went two days with no
   marker at all and the silence looked exactly like a pass.
 
@@ -148,6 +149,8 @@ by the harness as ordinary `program`-stage entries from cycle 0.0.2.
 | `probe18_zero_length_owner.npk` | does a `string[0]` field cost nothing, move, drop, and leave an `int64[0]` twin copyable? | S-18g — the language fact under `Vec`'s marker |
 | `probe18b_zero_length_owner_copy_refused.npk` | *(must not compile)* a struct whose one owning field is `string[0]`, copied | S-18g — `NITPICK-TYPE-046` |
 | `probe19_pod_owner_refused.npk` | *(must not compile)* `Copy` claimed for `string` — until cycle 0.2.0a, `Pod` implemented as its trait declared it, `TYPE-047` (TM-211) | S-18h — `NITPICK-TYPE-087` |
+| `probe20_instant_literal_refused.npk` | *(must not compile)* an `Instant` built by a consumer's struct literal | `TIME_MODEL.md` M-2, TM-215 — `NITPICK-TYPE-079`, twice: one report per sealed field |
+| `probe20b_instant_conversion_refused.npk` | *(must not compile)* `instant_to_timestamp` called | M-3, TM-010 — `NITPICK-RESOLVE-002` |
 
 *(Cycle 0.1.3b: the three `probe17` rows are new. **Probes 12 to 16 — cycles
 0.0.4 to 0.1.0c — are not in this table**, and the heading above says "What is
@@ -163,6 +166,9 @@ close's.)*
 *(Cycle 0.1.5, the close: the thirteen rows for probes 12 to 16e are in the
 table, each taken from its own header, so "What is here" is every file in this
 directory.)*
+
+*(Cycle 0.2.0: the two `probe20` rows are new — `Instant`'s refusals, each a
+probe that imports the module it asks about (TM-218).)*
 
 Probes 09 and 10 were planned in `0.0.0.md` §4 and **held, not merely
 unwritten**: they are the borrow-edge probes, and the author ruled O-N9
@@ -268,7 +274,9 @@ every command and every exit code verbatim, on the same principle as `04b`'s.
 Modules that probes **import**. Not probes: no `main`, no `failsafe`, and
 `tests/probe/*.npk` does not glob them. See
 [`support/README.md`](support/README.md). Only probe 11 uses them, because it is
-the only probe whose question is about importing.
+the only probe whose question is about importing. *(And since cycle 0.2.0 one
+no probe imports: `probe11_relay_lib.npk`, the self-check's fourth arm-bill
+specimen, which only its part C compiles — TM-217.)*
 
 ## `defect/`
 

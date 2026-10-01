@@ -143,7 +143,7 @@ index 0000000000000000000000000000000000000000..c2493b301868613dd4361046e3ba2f44
 +};
 diff --git a/tests/unit/instant_ops.npk b/tests/unit/instant_ops.npk
 new file mode 100644
-index 0000000000000000000000000000000000000000..53fda64160424af47adc50e47cfb3190a6598281
+index 0000000000000000000000000000000000000000..80ee569571b6d3467fe341590366c8fc28f9c17c
 --- /dev/null
 +++ b/tests/unit/instant_ops.npk
 @@ -0,0 +1,78 @@
@@ -198,7 +198,7 @@ index 0000000000000000000000000000000000000000..53fda64160424af47adc50e47cfb3190
 +    Instant:r1 = raw vec_at(v, 0i64);
 +    Instant:r2 = raw vec_at(v, 0i64);
 +    drop vec_free(@v);
-+    if (r1.ns != 4500i64 || r2.clock != InstantClock.Monotonic) { exit 15i32; }
++    if (r1.ns != 4500i64 || r2.ns != 4500i64 || r2.clock != InstantClock.Monotonic) { exit 15i32; }
 +    Instant:x = raw instant_of(4500i64, InstantClock.Boottime);
 +    Result<Duration>:e = instant_since(x, a);
 +    if (!(e.is_error)) { exit 16i32; }

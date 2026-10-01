@@ -63,7 +63,7 @@ func:main = int32(cstring[]:_~argv) {
     Instant:r1 = raw vec_at(v, 0i64);
     Instant:r2 = raw vec_at(v, 0i64);
     drop vec_free(@v);
-    if (r1.ns != 4500i64 || r2.clock != InstantClock.Monotonic) { exit 15i32; }
+    if (r1.ns != 4500i64 || r2.ns != 4500i64 || r2.clock != InstantClock.Monotonic) { exit 15i32; }
     Instant:x = raw instant_of(4500i64, InstantClock.Boottime);
     Result<Duration>:e = instant_since(x, a);
     if (!(e.is_error)) { exit 16i32; }

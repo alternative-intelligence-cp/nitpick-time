@@ -18,7 +18,7 @@ index 625fe84c163e05bbfdd245d33607c28f9139fdf3..dbab041feea0ac8aa97650be3fbc141c
  # a body since 0.1.0. And until cycle 0.1.2 it said `cal/` held "the types and
  # constructors but not yet the day-number algorithms (cycle 0.1.1), so nothing
 diff --git a/CLAUDE.md b/CLAUDE.md
-index 7ebac42c5bffea1003be209601132113cdfa886b..f0310596af1249e8635bd8fb1f1f54a5c18b9ed5 100644
+index 7ebac42c5bffea1003be209601132113cdfa886b..ccb8304d4ce33acdf2288bfcdb1c7bbc650dcb32 100644
 --- a/CLAUDE.md
 +++ b/CLAUDE.md
 @@ -10,8 +10,28 @@ safety-critical systems language at `../../nitpick`.
@@ -52,6 +52,15 @@ index 7ebac42c5bffea1003be209601132113cdfa886b..f0310596af1249e8635bd8fb1f1f54a5
  
  **After cycle 0.2.0b: `Vec<T: Copy>`** — `nitpick-regex`'s answer to the
  question TM-194 left open, ported (its RX-188). The type is
+@@ -120,7 +140,7 @@ compiler's D-327, ratified during this cycle and in no pin of ours yet, makes
+ `Copy` a prelude marker trait, and the re-pin that carries it replaces `Pod`
+ with it — a confined edit, the trait's one block, one bound, one call, one
+ umbrella line, three test impls *(made at cycle 0.2.0a, the adoption of
+-`5fbaf4a`: TM-211)*. The umbrella re-exports 59 names *(58 since then)* —
++`5fbaf4a`: TM-211)*. The umbrella re-exports 59 names *(58 from then, and 64 since cycle 0.2.0)* —
+ `Pod` and `bytes_capacity` joined — and eight files' managed memory is held to
+ the runtime's count *(six since cycle 0.2.0b retired the churn pair,
+ TM-214)*<!-- [[sweep: heap_bounded=6]] -->. No arm bill moved. A
 diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
 index 378e0a40644d060e39e815b48777be59c1974f71..0e5d9d25e31d4a6a92d1d6e89562083ab1b40bf0 100644
 --- a/CONTRIBUTING.md
@@ -103,8 +112,38 @@ index 2a151ef60154e8d47e4639b403b30aa55095c388..e8fe1f6bd4369f447fc6e07294dcd027
    placeholders" for two subcycles after `src/core/` landed — C6. And until
    cycle 0.1.2 it read "the other five `src/` directories are still
    placeholders, so nothing here dates anything" — false since 0.1.0 gave
+diff --git a/harness/arms.py b/harness/arms.py
+index af9dc679245da1decdbe9c71233d4740f7cd0921..6c7d7192acc3fad658e921082cab621f0ac39890 100644
+--- a/harness/arms.py
++++ b/harness/arms.py
+@@ -8,7 +8,7 @@ that goes stale silently, so it is derived, not written.
+ 
+ THE THREE CONSTRAINTS TM-107 MEASURED, EACH OF WHICH THE OBVIOUS IMPLEMENTATION
+ GETS WRONG -- and each of which has a specimen in this tree, so none of them is
+-taken on trust:
++taken on trust (and a fourth since cycle 0.2.0, `SAFETY.md` S-6b's, below):
+ 
+   1. IT COUNTS `fail`, `?!` AND `!!!` SITES, NEVER `error:` DECLARATIONS.
+      `tests/probe/support/probe11_silent_lib.npk` declares `pub
+@@ -37,6 +37,16 @@ taken on trust:
+      computes a bill from source instead of reading one out of the compiler
+      and reprinting it.
+ 
++  4. IT NAMES AN IDENTITY BY THE MODULE THAT DECLARES IT, never by the module
++     whose `fail` site raises it (cycle 0.2.0, TM-217). The two are one module
++     while every module raises only its own; `probe11_relay_lib.npk` raises
++     `probe11_arms_lib`'s `EProbeZone`, which it imports, and the compiler
++     lists `probe11_arms_lib.EProbeZone`, 7 identities -- where this file,
++     until then, added a relay-qualified arm that does not exist, an
++     overstatement in constraint 3's direction. Not one of TM-107's three:
++     found at cycle 0.2.0's planning, when `span` was about to raise `cal`'s
++     `ETimeValue`, and given a specimen of its own all the same.
++
+ THE ORACLE, AND WHY IT IS NOT CIRCULAR. `npkc` refuses a root with `main` and no
+ `failsafe` (`NITPICK-REACH-003`, the compiler's DEF-5, TM-112) and the
+ diagnostic LISTS THE IDENTITIES OWED. That list is the truth: it is what the
 diff --git a/harness/run.py b/harness/run.py
-index 41323c344824590b08192e67929fd9ad0edf50f0..89be7465b070365166fef0e844b1eff3f981b0cb 100644
+index 41323c344824590b08192e67929fd9ad0edf50f0..28dd5120979f8db174d50a3fe1ba1900a2fa1c58 100644
 --- a/harness/run.py
 +++ b/harness/run.py
 @@ -27,9 +27,10 @@ WHAT A GREEN RUN HERE IS, AND IS NOT.
@@ -130,11 +169,51 @@ index 41323c344824590b08192e67929fd9ad0edf50f0..89be7465b070365166fef0e844b1eff3
      # modules above. Its `none` is re-derived on every run like every verdict
      # here (TM-137), so the day it grows a `main`, the harness says so.
      "tests/fixtures/civil/civil_oracle.npk": ("none",
+@@ -383,7 +384,9 @@ def _verdict(bld, root, rel, out_dir):
+     # and the question does not arise.  This is the `none` bucket: the modules
+     # a root imports -- the probe support modules, since cycle 0.1.4 the civil
+     # cross-oracle's corpus, and since cycle 0.1.4c O-N23's declaring module,
+-    # `tests/probe/defect/fixed_import_scope/rows.npk` (TM-192).
++    # `tests/probe/defect/fixed_import_scope/rows.npk` (TM-192) -- and since
++    # cycle 0.2.0 one no root imports, the self-check's relay specimen
++    # `tests/probe/support/probe11_relay_lib.npk` (TM-217).
+     if not _MAIN.search(text):
+         return "none"
+     stem = os.path.splitext(os.path.basename(rel))[0]
+diff --git a/harness/selfcheck.py b/harness/selfcheck.py
+index dff344133044a6a2afa85cb1d75791a911799adb..65c9ddb66969667cd659ae0a64427d5ea537d62f 100644
+--- a/harness/selfcheck.py
++++ b/harness/selfcheck.py
+@@ -1358,11 +1358,13 @@ def part_b_specs_current(rep, base):
+ 
+ 
+ # ---------------------------------------------------------------------------
+-# PART C -- the S-6 arm generator, calibrated on TM-107's own specimens
++# PART C -- the S-6 arm generator, calibrated on TM-107's own specimens and,
++# since cycle 0.2.0, TM-217's
+ # ---------------------------------------------------------------------------
+ 
+ # Measured at pin `c3bdae2` from `NITPICK-REACH-003`'s own identity list (cycle
+-# 0.1.0b). Each row is one of TM-107's three constraints, and the arithmetic is
++# 0.1.0b; the fourth row at `5fbaf4a`, cycle 0.2.0). Each of the first three
++# rows is one of TM-107's three constraints, and the arithmetic is
+ # written out because a number embedded in prose travels with the prose:
+ #
+ #   floor                                    = 6
+@@ -1489,7 +1491,7 @@ VERDICT_SPECIMENS = [
+     ("no_main_here.npk", "mod:no_main_here;\n\npub func:f = int64() never "
+      "fails { pass 1i64; };\n", "none",
+      "a module with no `main` is not a program, so the question does not "
+-     "arise -- this is the bucket the three `probe11` support modules are in"),
++     "arise -- this is the bucket the four `probe11` support modules are in"),
+     ("main_split.npk", "mod:main_split;\n\nfunc\n:main = int32(cstring[]:_~argv) "
+      "{\n    exit 0i32;\n};\n" + FAILSAFE, "run:0",
+      "`func` and `:main` on two lines declare a `main` -- the compiler builds "
 diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
-index f92abfca21dbb9822c21fe605ba8cc45cce5f81c..48fdfbb605415dbf9e060be56ecceac136523ee1 100644
+index e11e297a241efce880eaebad8bc4eeeb8ef7b896..ecd4a2f19223fbba60e468591ccfb59c927b1596 100644
 --- a/meta/DECISIONS.md
 +++ b/meta/DECISIONS.md
-@@ -6247,3 +6247,147 @@ for the day a cycle lifts the bound; **waiting for a consumer that needs an
+@@ -6247,3 +6247,164 @@ for the day a cycle lifts the bound; **waiting for a consumer that needs an
  owning element** — none is planned (the zone tables hold offsets, Z-7, and
  `FmtPart` and `Instant` own nothing), and a cycle that needs one lifts the bound
  by a decision, the compiler's `List<T>` its shape (`vec_at`'s comment).
@@ -197,7 +276,7 @@ index f92abfca21dbb9822c21fe605ba8cc45cce5f81c..48fdfbb605415dbf9e060be56ecceac1
 +**The decision.** *`instant_of = Instant(int64:ns, InstantClock:clock) never
 +fails`, public — cycle 0.3's `host` builds its readings through it, and a
 +module may not write another's sealed field; a caller who hands it a
-+wall-clock reading has opted out in writing, as `CALENDAR.md` C-8b says a
++wall-clock reading has opted out in writing, as `CALENDAR.md` C-8c says a
 +caller of `=>!` has. `instant_since = Duration(Instant:later,
 +Instant:earlier)` and `instant_cmp = Ordering(Instant:a, Instant:b)` are
 +fallible, and each fails `ETimeValue` for a pair from two clocks — detail
@@ -208,6 +287,13 @@ index f92abfca21dbb9822c21fe605ba8cc45cce5f81c..48fdfbb605415dbf9e060be56ecceac1
 +The clock is read as the field, `i.clock`: a sealed field is read anywhere and
 +written only in its module (the compiler's D-313), which is the read-only
 +exposure O-X3 recommended, and there is no `instant_clock` function.*
++
++*And what it moves besides:* `ValueFault` holds fifteen variants since
++`ClockMismatch`, so the two places that count them — `CALENDAR.md` C-5b's
++dated note and `OPEN_QUESTIONS.md` O-X8 — move with it, and the "no fault"
++variant O-X8 recommends would be the sixteenth; TM-173 moved the same two at
++cycle 0.1.3. Found by the executing worker's second sweep
++(`meta/roadmap/0.2/0.2.0.md`'s execution record).
 +
 +*Alternatives declined:* **`instant_since` `never fails`, with a trap for two
 +clocks** — a stop where the caller can answer; **`instant_cmp` `never fails`,
@@ -249,6 +335,16 @@ index f92abfca21dbb9822c21fe605ba8cc45cce5f81c..48fdfbb605415dbf9e060be56ecceac1
 +`checks._ERROR_DECL` over the blanked code. `probe11_relay_lib` is the fourth
 +`CALIBRATION` row, held to 7 on every run, and a support module at `none`.*
 +
++*And the statements of the sets it grows:* the specimens are four and the
++support modules four, so the sentences that counted three, or generalised
++over them, move too — `harness/arms.py`'s list of the generator's
++constraints, `harness/selfcheck.py`'s part C note and its `none` verdict
++specimen, `run._verdict`'s comment on the `none` bucket, `SAFETY.md` S-6b's
++note under its table, and `tests/probe/README.md` and `support/README.md` on
++the module no probe imports. Found by the executing worker's second sweep,
++whose phrasings reach across a line break (`meta/roadmap/0.2/0.2.0.md`'s
++execution record).
++
 +*Alternatives declined:* **reading the qualification out of `REACH-003`** —
 +`SAFETY.md` S-6b's whole point is that the source computation is the thing
 +under test, and a bill copied from the oracle cannot disagree with it;
@@ -283,7 +379,7 @@ index f92abfca21dbb9822c21fe605ba8cc45cce5f81c..48fdfbb605415dbf9e060be56ecceac1
 +probe's kind; **one probe for both refusals** — a file refused for two reasons
 +cannot say which reason went away.
 diff --git a/meta/OPEN_QUESTIONS.md b/meta/OPEN_QUESTIONS.md
-index 6feb48ceb0a05e650429a81d452293ec58c48379..2fd4e269a591ad13639e299c2e0693e6d1cf9f2f 100644
+index 6feb48ceb0a05e650429a81d452293ec58c48379..0911326bf13d582636a57642f5eccd6d8d6fce5a 100644
 --- a/meta/OPEN_QUESTIONS.md
 +++ b/meta/OPEN_QUESTIONS.md
 @@ -620,7 +620,14 @@ by another. The estimate was low by 37% and wrong in four independent ways;
@@ -302,8 +398,31 @@ index 6feb48ceb0a05e650429a81d452293ec58c48379..2fd4e269a591ad13639e299c2e0693e6
  TM-010.1 makes `Instant` carry which clock produced it, so that
  `instant_since` can refuse a mismatched pair. Whether the field is *readable*
  by a caller is a smaller question: reading it lets a program log which clock it
+@@ -702,8 +709,9 @@ rediscovery.
+ 
+ *The question.* `SAFETY.md` S-3 says the caller's distinctions ride as detail
+ fields rather than as errors, and `ValueFault` is that detail — ten variants
+-when this was raised, fourteen since cycle 0.1.3 appended four (TM-173), one
+-per refusal row. **TM-147 measured that an `error:` cannot carry a
++when this was raised, fourteen from cycle 0.1.3, which appended four (TM-173),
++and fifteen since cycle 0.2.0 appended `ClockMismatch` (TM-216), one per
++refusal row. **TM-147 measured that an `error:` cannot carry a
+ payload** (`tests/probe/probe14_error_payload_refused.npk`,
+ `NITPICK-PARSE-001`, exit 1, no `.ll`), and a `Result<T>` is
+ `{ T value, tbb32 err }`, so the error half of every return is a code. There
+@@ -730,8 +738,8 @@ pub func:civil_date_fault = ValueFault(int64:y, int64:m, int64:d) never fails;
+ 
+ `civil_date` becomes two lines over it, so the rules live in exactly one place
+ and the constructor cannot drift from the classifier. It needs a **"no fault"
+-`ValueFault` variant** — the eleventh when this was raised, the fifteenth since
+-cycle 0.1.3 — which amends `SAFETY.md` S-3's enum
++`ValueFault` variant** — the eleventh when this was raised, the fifteenth from
++cycle 0.1.3, the sixteenth since cycle 0.2.0 (TM-216) — which amends `SAFETY.md` S-3's enum
+ and is the substantive part of the decision, not the function. It costs a
+ consumer nothing: a `never fails` function arms no identity, so the arm bill
+ does not move.
 diff --git a/meta/roadmap/0.2/README.md b/meta/roadmap/0.2/README.md
-index 89602aa46c5dd3c33afb0e082fe37446167910f1..7cdb23d9d8868703be810b6b876b123636932235 100644
+index 27a07ec13f75fa1f9503635c760224232db59420..77944b100b2fcf8084687e31e7bb85a473d0d9a0 100644
 --- a/meta/roadmap/0.2/README.md
 +++ b/meta/roadmap/0.2/README.md
 @@ -10,7 +10,8 @@ scales, no monotonic↔absolute conversion), TM-011 (`Timestamp`'s layout and
@@ -357,6 +476,21 @@ index 2f2ff060ad00637d679c7d2e6d1364fb616651b4..a9107b51a4a6ee1fcb97420e735ae87f
  | **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double | 0.2 |
  | **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate | 0.2 |
  | **0.5** | **The zone table** — the generator, the committed tables, the size measurement | 0.1 |
+diff --git a/meta/specs/CALENDAR.md b/meta/specs/CALENDAR.md
+index c6e9434111b4fc5c61af7b1637a4bb6e70382d1b..ceab689e37eff7ebe2f7e314270015c2e7611224 100644
+--- a/meta/specs/CALENDAR.md
++++ b/meta/specs/CALENDAR.md
+@@ -111,7 +111,9 @@ rediscovery, is a `never fails` companion classifier returning the fault
+ directly; it needs a "no fault" variant, and that is the decision to take.
+ *(Amended at cycle 0.1.3, TM-173: this read "an eleventh 'no fault'
+ variant" — true of the ten `ValueFault` had until then. Cycle 0.1.3 appended
+-four, so the "no fault" variant would now be the fifteenth.)*
++four, so the "no fault" variant would now be the fifteenth.)* *(And the
++sixteenth since cycle 0.2.0, which appended a fifteenth, `ClockMismatch`, for
++`span`'s refusal of two readings from two clocks — TM-216.)*
+ 
+ This is the language behaving as specified rather than a compiler defect, so
+ nothing here is raised upstream and nothing is worked around.
 diff --git a/meta/specs/HOST.md b/meta/specs/HOST.md
 index ae209a32f7f620c1366cdff679bb025b63a36ddd..cdc93f4394098925ef4a50bd7cd63258e31bd8df 100644
 --- a/meta/specs/HOST.md
@@ -381,6 +515,23 @@ index ae209a32f7f620c1366cdff679bb025b63a36ddd..cdc93f4394098925ef4a50bd7cd63258
  **Rule H-7 — `host_now_utc` forwards the kernel's errno verbatim**
  (`SAFETY.md` S-5), so it declares no error and costs no `failsafe` arm.
  `clock_gettime(CLOCK_REALTIME, valid-ptr)` cannot fail on Linux, and the
+diff --git a/meta/specs/SAFETY.md b/meta/specs/SAFETY.md
+index 664700dae064f8cd287587f58902885b401c10bb..e07392c983af712c2e3373b5404f5fc7a3b3c028 100644
+--- a/meta/specs/SAFETY.md
++++ b/meta/specs/SAFETY.md
+@@ -268,9 +268,9 @@ with the prose:
+ | `probe11_relay_lib` *(since cycle 0.2.0)* | **7** (—) | + 1 | **4** — it RAISES `probe11_arms_lib`'s `EProbeZone`, which it imports, and the arm is `probe11_arms_lib.EProbeZone`: named by the module that declares it, not the one that raises it |
+ 
+ 10 − 6 = 4 (and 8 − 4 = 4 at `0dfddac`) is S-4b's measured *"four extra
+-arms"*: the floor moved and the difference did not. None of the three
+-functions is ever called by the generated program — S-4c, the arm is owed by the
+-**import**.
++arms"*: the floor moved and the difference did not. None of the four
++functions (three until cycle 0.2.0) is ever called by the generated program —
++S-4c, the arm is owed by the **import**.
+ 
+ **Three constraints on that generator, all measured at cycle 0.0.0 (TM-107) and
+ each of which the obvious implementation gets wrong** — *and a fourth since
 diff --git a/meta/specs/TIME_MODEL.md b/meta/specs/TIME_MODEL.md
 index 4d1601de31cd9ae659795934eb00a1b2d12ba6c2..3f4dfbf87a185f7ecf81b8830a0a178f75bb2b38 100644
 --- a/meta/specs/TIME_MODEL.md
@@ -512,3 +663,46 @@ index 33de69b04d5e090d99dd79c67cafa02fda2a8160..af07f8c089968aab39fc06d7e5a1ee36
 +`instant_of`, `instant_since`, `instant_add` and `instant_cmp` (TM-215, TM-216).
 +`Timestamp` is cycle 0.2.1's, the `Duration` constructors 0.2.3's, `Period`
 +0.7's.
+diff --git a/tests/probe/README.md b/tests/probe/README.md
+index dc644fe5bd106fd6dea46890a40c5f8b87720241..c7afb28caa94657ac2384123b4a1771a49482724 100644
+--- a/tests/probe/README.md
++++ b/tests/probe/README.md
+@@ -89,9 +89,10 @@ by the harness as ordinary `program`-stage entries from cycle 0.0.2.
+   `TZ=Europe/Kiev`, the old IANA spelling, used to pass **both** probes at exit
+   0, because every byte either one checks is equally true of `Kiev` and `Kyiv`.
+ - **Every `.npk` under `tests/` carries an `expect-` marker or is named as an
+-  exemption with its reason** (TM-115, `TESTING.md` V-1b/V-1c). The three
+-  modules in `support/` are the exemptions — no `main`, no `failsafe`, nothing
+-  to expect. `harness/run.py` sweeps this and **prints its denominator**,
++  exemption with its reason** (TM-115, `TESTING.md` V-1b/V-1c). The four
++  modules in `support/` (three until cycle 0.2.0's relay specimen) are the
++  exemptions — no `main`, no `failsafe`, nothing to expect. `harness/run.py`
++  sweeps this and **prints its denominator**,
+   because the three `defect/missing_failsafe/` cases went two days with no
+   marker at all and the silence looked exactly like a pass.
+ 
+@@ -273,7 +274,9 @@ every command and every exit code verbatim, on the same principle as `04b`'s.
+ Modules that probes **import**. Not probes: no `main`, no `failsafe`, and
+ `tests/probe/*.npk` does not glob them. See
+ [`support/README.md`](support/README.md). Only probe 11 uses them, because it is
+-the only probe whose question is about importing.
++the only probe whose question is about importing. *(And since cycle 0.2.0 one
++no probe imports: `probe11_relay_lib.npk`, the self-check's fourth arm-bill
++specimen, which only its part C compiles — TM-217.)*
+ 
+ ## `defect/`
+ 
+diff --git a/tests/probe/support/README.md b/tests/probe/support/README.md
+index 2f1c5800e6d6c91ae314b07f3fc02820c4591304..d09266bb92c672bfea3c955e43fd8b2b453964e8 100644
+--- a/tests/probe/support/README.md
++++ b/tests/probe/support/README.md
+@@ -1,6 +1,8 @@
+ # `tests/probe/support/`
+ 
+-**Modules that probes import. Not probes, and not library code.**
++**Modules that probes import. Not probes, and not library code.** *(One, since
++cycle 0.2.0, no probe imports: the relay specimen, the self-check's — its row
++below.)*
+ 
+ A probe is a program: it has its own `main` and `failsafe` and imports nothing
+ from `src/` (cycle 0.0.0 P-1). Probe 11 is the one probe whose *question* is

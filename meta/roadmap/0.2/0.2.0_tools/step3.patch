@@ -13,7 +13,7 @@ index 4369456f0ebdb88ae19f3d9073e86590162ee220..625fe84c163e05bbfdd245d33607c28f
  # compiler `5fbaf4a` since cycle 0.2.0b (113 at cycle 0.2.0a, and at
  # `c970483` at cycle 0.1.5's second half; 62 at cycle 0.0.6, 67 at 0.1.0,
 diff --git a/meta/specs/SAFETY.md b/meta/specs/SAFETY.md
-index 5692ac616fcfdbf728bc48d9b900e097517c96be..4821f2cf483e4b9807cce3fbdfabc1973637aed2 100644
+index cede484cd195bf893ee72436f4e564306faeb1e7..664700dae064f8cd287587f58902885b401c10bb 100644
 --- a/meta/specs/SAFETY.md
 +++ b/meta/specs/SAFETY.md
 @@ -87,7 +87,7 @@ import-scoped:

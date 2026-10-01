@@ -1,5 +1,5 @@
 diff --git a/CLAUDE.md b/CLAUDE.md
-index 4e7b3ab23f6dab03478e640a6d9b193bde8ee163..006a09297462cf339f7175eb95f8b88f0bffde85 100644
+index 11dc401e7589eb0d8bd23e259c6e2526c3711392..7ebac42c5bffea1003be209601132113cdfa886b 100644
 --- a/CLAUDE.md
 +++ b/CLAUDE.md
 @@ -405,8 +405,8 @@ cycle 0.0 paid most for.**
@@ -163,7 +163,7 @@ index e5a668ed28960fddf770cc91ea7fb1fe96a61ed3..dff344133044a6a2afa85cb1d75791a9
      scratch = os.path.join(base, "arms")
      for rel, count, expected, why in CALIBRATION:
 diff --git a/meta/specs/SAFETY.md b/meta/specs/SAFETY.md
-index 70c0099f127181b7907cb99c1c0636d6dab4417a..8e79012249e8524a8af0e21a29714a72b709d97d 100644
+index 8ab0b37e0c773dcce691e2baf6949c485a472618..f2029a1418fd0cf8f9bed967a0670876199a9a51 100644
 --- a/meta/specs/SAFETY.md
 +++ b/meta/specs/SAFETY.md
 @@ -262,6 +262,7 @@ with the prose:

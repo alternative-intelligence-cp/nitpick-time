@@ -18,7 +18,7 @@ index 625fe84c163e05bbfdd245d33607c28f9139fdf3..dbab041feea0ac8aa97650be3fbc141c
  # a body since 0.1.0. And until cycle 0.1.2 it said `cal/` held "the types and
  # constructors but not yet the day-number algorithms (cycle 0.1.1), so nothing
 diff --git a/CLAUDE.md b/CLAUDE.md
-index 006a09297462cf339f7175eb95f8b88f0bffde85..5b1844b82ff8e15e80168ce70abb3bbbd8f715b6 100644
+index 7ebac42c5bffea1003be209601132113cdfa886b..f0310596af1249e8635bd8fb1f1f54a5c18b9ed5 100644
 --- a/CLAUDE.md
 +++ b/CLAUDE.md
 @@ -10,8 +10,28 @@ safety-critical systems language at `../../nitpick`.
@@ -131,10 +131,10 @@ index 41323c344824590b08192e67929fd9ad0edf50f0..89be7465b070365166fef0e844b1eff3
      # here (TM-137), so the day it grows a `main`, the harness says so.
      "tests/fixtures/civil/civil_oracle.npk": ("none",
 diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
-index 19d39199b38b83c86a266941afba1deb0739d932..b5eb6ea86bf65a18228a4c2d8f8b03042ee652cf 100644
+index f92abfca21dbb9822c21fe605ba8cc45cce5f81c..48fdfbb605415dbf9e060be56ecceac136523ee1 100644
 --- a/meta/DECISIONS.md
 +++ b/meta/DECISIONS.md
-@@ -6242,3 +6242,147 @@ for the day a cycle lifts the bound; **waiting for a consumer that needs an
+@@ -6247,3 +6247,147 @@ for the day a cycle lifts the bound; **waiting for a consumer that needs an
  owning element** — none is planned (the zone tables hold offsets, Z-7, and
  `FmtPart` and `Instant` own nothing), and a cycle that needs one lifts the bound
  by a decision, the compiler's `List<T>` its shape (`vec_at`'s comment).
@@ -303,7 +303,7 @@ index 6feb48ceb0a05e650429a81d452293ec58c48379..2fd4e269a591ad13639e299c2e0693e6
  `instant_since` can refuse a mismatched pair. Whether the field is *readable*
  by a caller is a smaller question: reading it lets a program log which clock it
 diff --git a/meta/roadmap/0.2/README.md b/meta/roadmap/0.2/README.md
-index dc0b2f1a69aace9241652ab63ea0bc3485239eef..cb165bbfb81cd445149e52699848fb98ac6a8904 100644
+index 89602aa46c5dd3c33afb0e082fe37446167910f1..7cdb23d9d8868703be810b6b876b123636932235 100644
 --- a/meta/roadmap/0.2/README.md
 +++ b/meta/roadmap/0.2/README.md
 @@ -10,7 +10,8 @@ scales, no monotonic↔absolute conversion), TM-011 (`Timestamp`'s layout and

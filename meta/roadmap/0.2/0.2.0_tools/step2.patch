@@ -1,5 +1,5 @@
 diff --git a/meta/specs/SAFETY.md b/meta/specs/SAFETY.md
-index 8e79012249e8524a8af0e21a29714a72b709d97d..5692ac616fcfdbf728bc48d9b900e097517c96be 100644
+index f2029a1418fd0cf8f9bed967a0670876199a9a51..cede484cd195bf893ee72436f4e564306faeb1e7 100644
 --- a/meta/specs/SAFETY.md
 +++ b/meta/specs/SAFETY.md
 @@ -60,6 +60,7 @@ pub enum:ValueFault = {

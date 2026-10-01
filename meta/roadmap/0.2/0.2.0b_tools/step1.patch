@@ -19,7 +19,7 @@ index a6a0375838ac776ed2fd4e354ae22e420a9455e3..aa348e459bd1ffb48c0dd63635c7d739
  # NOT PINNED, AND KNOWN: `actions/checkout@v4` and `actions/cache@v4` are moving
  # tags -- the only inputs in this file that are not immutable. A workflow this
 diff --git a/CLAUDE.md b/CLAUDE.md
-index 6a198deb2ef4095a353e358eadeffee575cca149..74beeebfe47e1c328dd17166894955ddc62257b7 100644
+index 6a198deb2ef4095a353e358eadeffee575cca149..b6c0c644cd0dad637953ff7169eca89f26581a3f 100644
 --- a/CLAUDE.md
 +++ b/CLAUDE.md
 @@ -105,7 +105,8 @@ with it — a confined edit, the trait's one block, one bound, one call, one
@@ -27,8 +27,8 @@ index 6a198deb2ef4095a353e358eadeffee575cca149..74beeebfe47e1c328dd17166894955dd
  `5fbaf4a`: TM-211)*. The umbrella re-exports 59 names *(58 since then)* —
  `Pod` and `bytes_capacity` joined — and eight files' managed memory is held to
 -the runtime's count <!-- [[sweep: heap_bounded=8]] -->. No arm bill moved. A
-+the runtime's count *(six since cycle 0.2.0b retired the churn pair
-+<!-- [[sweep: heap_bounded=6]] -->, TM-214)*. No arm bill moved. A
++the runtime's count *(six since cycle 0.2.0b retired the churn pair,
++TM-214)*<!-- [[sweep: heap_bounded=6]] -->. No arm bill moved. A
  full invocation is **112 units green** at pin `c970483`.
  
  **After cycle 0.1.4c: the adoption to compiler `c970483`** — the end
@@ -108,7 +108,7 @@ index f3d6f30999637b9557685d72a159d9b1097ad673..6c283fd7f05750557b9e1b90d9ef9b51
      EVERY NUMBER IN THAT SENTENCE IS TAGGED AND CHECKED (TM-142). It read
      `50 = 1 + 27 + 3 + 19` until cycle 0.0.6, three subcycles after the tree
 diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
-index 406765c9e5978e3a2bade214e556b4288496a482..19d39199b38b83c86a266941afba1deb0739d932 100644
+index 406765c9e5978e3a2bade214e556b4288496a482..f92abfca21dbb9822c21fe605ba8cc45cce5f81c 100644
 --- a/meta/DECISIONS.md
 +++ b/meta/DECISIONS.md
 @@ -2420,6 +2420,10 @@ happens when it is run at every point rather than at the ends.
@@ -175,7 +175,7 @@ index 406765c9e5978e3a2bade214e556b4288496a482..19d39199b38b83c86a266941afba1deb
  **2026-09-26, cycle 0.1.3c (PD-47), carried here by `0.1.4b.md` §15.** TM-150
  measured the pair at cycle 0.1.0b in a scratch directory — `peak_live` 120 for
  the pop and 48 000 096 for the clear — and `SAFETY.md` S-18d,
-@@ -6148,3 +6177,68 @@ copy per entry, where the probes' question is the view (and at `5fbaf4a`
+@@ -6148,3 +6177,73 @@ copy per entry, where the probes' question is the view (and at `5fbaf4a`
  the element** — it would leave the environment block holding a vacancy;
  **`lexical.py` changed to type a character literal's width** — the reader
  blanks literals and never types them, so no answer of its moves.
@@ -206,18 +206,21 @@ index 406765c9e5978e3a2bade214e556b4288496a482..19d39199b38b83c86a266941afba1deb
 +halves, from compiling to `NITPICK-TYPE-017` at five sites each, and
 +`generic_owning_copy/case5`, from two sites to six. An owning element is refused
 +at the type, at the turbofish and at each verb's call — `string`, `Bytes`,
-+`Vec<int64>`, `cstring`, a pointer, a slice, an optional and a fixed array as
-+`T`, and a consumer's struct field, generic wrapper and parameter. A struct of
-+scalars that does not claim `Copy` is refused the same way. **And a
-+`#[derive(Copy)]` struct holding a pointer or a slice is a legal element**:
-+`Copy` asks that an element own nothing, and a pointer owns nothing.
++`Vec<int64>` and `cstring` as `T`, and a consumer's struct field, generic
++wrapper and parameter. **So is a `T` that owns nothing but is not `Copy`**: a
++pointer, a slice, an optional and a fixed array, none of which the prelude
++implements `Copy` for, and a struct of scalars that does not claim it. **And a
++`#[derive(Copy)]` struct holding a pointer or a slice is a legal element**: the
++derive accepts both members, since neither owns.
 +
 +**The decision.** *`pub struct:Vec<T: Copy>`, and `<T: Copy>` on `vec_init`,
 +`vec_reserve`, `vec_push`, `vec_set`, `vec_pop`, `vec_truncate`, `vec_clear` and
 +`vec_free`, beside `vec_at`'s; no field, body or signature otherwise changes.
 +The restriction TM-132 made — `Vec<T>` is for a non-owning `T` — is the type's:
 +the four drops S-18d rests it on are owed at no `T` the type admits, and the
-+compiler says so where an owning `T` is written. The churn pair is retired with
++compiler says so where an owning `T` is written. The bound is wider than the
++restriction, and that is accepted: a `T` that owns nothing without being
++`Copy` is held in a struct that claims it. The churn pair is retired with
 +the `T` it measured; its text is at `db05d8d` and its numbers are TM-150's.
 +`case5` keeps its name and its record and names six sites. No check is added:
 +the rule this library states for an element is S-18d's — it drops nothing —
@@ -226,8 +229,10 @@ index 406765c9e5978e3a2bade214e556b4288496a482..19d39199b38b83c86a266941afba1deb
 +
 +*Alternatives declined:* **the bound on `vec_at` alone, as since TM-194** —
 +eight verbs then compile at `Vec<string>`, four of them orphaning what they
-+discard, behind a rule only a reader enforces; **the churn pair kept as
-+refusals** — two more copies of the refusal `case5` asserts; **the churn pair
++discard, behind a rule only a reader enforces; **a marker of this library's
++own that admits more than `Copy` does** — two markers for one property, which
++TM-211 declined, and the checker judges the prelude's alone; **the churn pair
++kept as refusals** — two more copies of the refusal `case5` asserts; **the churn pair
 +re-homed in `tests/probe/` over a `Vec` of its own** — a third copy of the leak
 +and remedy `probe06b`/`probe06c` and `probe12`/`probe12b` already are, over a
 +type that no longer ships, where TM-196 put it in `tests/unit/` because it
@@ -276,7 +281,7 @@ index 4e7481ec87579d95a71cc0659448cb8dd2867ece..e325c58bf0efcf63c3426137de9b1f36
    since cycle 0.1.3c (TM-195; from 0.1.0c, TM-156, `body` was sealed and not
    hidden, because its `cap` was read across modules — `bytes_capacity` reads
 diff --git a/meta/specs/SAFETY.md b/meta/specs/SAFETY.md
-index 29ac35bb017ad0251422e428a9270969f23589b6..70c0099f127181b7907cb99c1c0636d6dab4417a 100644
+index 29ac35bb017ad0251422e428a9270969f23589b6..8ab0b37e0c773dcce691e2baf6949c485a472618 100644
 --- a/meta/specs/SAFETY.md
 +++ b/meta/specs/SAFETY.md
 @@ -697,6 +697,10 @@ holds no element and `items` is a bare pointer the walk does not follow
@@ -306,7 +311,7 @@ index 29ac35bb017ad0251422e428a9270969f23589b6..70c0099f127181b7907cb99c1c0636d6
  **Rule S-18c (TM-127) — OVERWRITING an element discards one too, so the
  obligation covers `vec_set` and not only the three that sound like it does.**
  S-18b and `0.0.4.md` §2 both name three entries that discard elements —
-@@ -830,10 +843,38 @@ by construction, so there is nothing there to discard.
+@@ -830,10 +843,41 @@ by construction, so there is nothing there to discard.
  > written at the instantiation, which is where this rule already puts element
  > lifetime. `tests/probe/defect/generic_element_move/`.
  
@@ -325,12 +330,15 @@ index 29ac35bb017ad0251422e428a9270969f23589b6..70c0099f127181b7907cb99c1c0636d6
 +> with the struct bounded a verb without the bound is `NITPICK-TYPE-017` at its
 +> own definition (measured, all eight that lacked it). An owning `T` is refused
 +> wherever it is written — the type, each turbofish, each verb's call;
-+> `Vec<string>`, `Vec<Bytes>`, `Vec<Vec<int64>>`, `Vec<cstring>`, a pointer, a
-+> slice, an optional and a fixed array as the element each `NITPICK-TYPE-017`
-+> at all three — and `generic_owning_copy/case5` asserts six such sites. So the
-+> four drops below are owed at no `T` the type admits, which is the
-+> restriction, stated where the compiler reads it; this rule's title and the
-+> amendments under it are the record of how it was reached. **At every `T` the
++> `Vec<string>`, `Vec<Bytes>`, `Vec<Vec<int64>>` and `Vec<cstring>` each
++> `NITPICK-TYPE-017` at all three — and `generic_owning_copy/case5` asserts six
++> such sites. So the four drops below are owed at no `T` the type admits, which
++> is the restriction, stated where the compiler reads it; this rule's title and
++> the amendments under it are the record of how it was reached. **The bound is
++> a little wider than the restriction**: a pointer, a slice, an optional and a
++> fixed array own nothing, and each is refused as the element too, not being
++> `Copy` — as is a struct of scalars until it claims `Copy`; a struct that
++> claims it may hold any of the four. **At every `T` the
 +> type admits, no code changed**: of the tree's 128 `.npk`, the 89 that compile
 +> both without the bound and with it emit byte-identical IR, and three verdicts
 +> moved — the two halves of TM-150's churn pair, from compiling to refused, and
@@ -345,7 +353,7 @@ index 29ac35bb017ad0251422e428a9270969f23589b6..70c0099f127181b7907cb99c1c0636d6
  > **Amended at cycle 0.1.0b (TM-150).** This rule's title read *"THE
  > RESTRICTION IS NOT ENFORCEABLE BY THE COMPILER"*, and its reason — below, as
  > written — was that `NITPICK-TYPE-046` does not fire inside a generic function
-@@ -991,7 +1032,9 @@ walks the empty array and frees nothing, so the block is still `wild`,
+@@ -991,7 +1035,9 @@ walks the empty array and frees nothing, so the block is still `wild`,
  `WildLeak` at `exit 0` — S-18's guarantee is unchanged. `probe18` and
  `probe18b` pin the language fact under the marker with no library code, and
  redden first if a compiler changes it. **Not closed by it**: the four element
@@ -356,7 +364,7 @@ index 29ac35bb017ad0251422e428a9270969f23589b6..70c0099f127181b7907cb99c1c0636d6
  
  **Rule S-18h (TM-194, cycle 0.1.3c; restated for `Copy` by TM-211, cycle
  0.2.0a) — the one verb that hands an element back
-@@ -1007,6 +1050,10 @@ type that owns nothing claims it in one line, `impl:X:Copy = { };`
+@@ -1007,6 +1053,10 @@ type that owns nothing claims it in one line, `impl:X:Copy = { };`
  library re-exports nothing for it. The guard is S-17c's slice, unchanged, and
  the hole below is closed: an impl's `move` on a lent parameter is
  `NITPICK-TYPE-014` since the compiler's DEF-116, and `Copy` has no method.
@@ -413,7 +421,7 @@ index 8c13e7c9bce82aa5045c6d94bf0903e082b7124a..12f25cc6ae0dd41f59c661f530e75670
  #             else. An entry would narrow it to one directory and silently
  #             un-cover the rest, so `stage = "parse"` is REFUSED BY NAME.
 diff --git a/src/core/vec.npk b/src/core/vec.npk
-index ff39fef3d1540798508f5a050870fa086d3391b0..6a70e09d198ee6a38546a508a04c94a5613a0db1 100644
+index ff39fef3d1540798508f5a050870fa086d3391b0..e86b4cd1925a562c1992a296b745e301a367f43f 100644
 --- a/src/core/vec.npk
 +++ b/src/core/vec.npk
 @@ -8,7 +8,8 @@
@@ -456,9 +464,9 @@ index ff39fef3d1540798508f5a050870fa086d3391b0..6a70e09d198ee6a38546a508a04c94a5
 -pub struct:Vec<T> = { hidden wild T->:items; sealed limit<ListLen> int64:count; sealed limit<ListLen> int64:cap; hidden string[0]:move_only; };
 +//
 +// `<T: Copy>`, SINCE CYCLE 0.2.0b (TM-214): the element type owns nothing,
-+// stated to the compiler -- the header's restriction, where it is checked. It
-+// changes no field and no byte: the bound is a fact about `T`, and a `Copy`
-+// `T` was the only one this file was ever correct at.
++// stated to the compiler -- the header's restriction, where it is checked, and
++// a little wider: a `T` that owns nothing but is not `Copy` is refused too. It
++// changes no field and no byte: the bound is a fact about `T`.
 +pub struct:Vec<T: Copy> = { hidden wild T->:items; sealed limit<ListLen> int64:count; sealed limit<ListLen> int64:cap; hidden string[0]:move_only; };
  
  // `ensures answer.count == 0 && answer.cap >= 1`

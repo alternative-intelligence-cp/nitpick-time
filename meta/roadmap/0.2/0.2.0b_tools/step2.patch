@@ -34,7 +34,7 @@ index aa348e459bd1ffb48c0dd63635c7d73953561cc1..4369456f0ebdb88ae19f3d9073e86590
  # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
  # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
 diff --git a/CLAUDE.md b/CLAUDE.md
-index 74beeebfe47e1c328dd17166894955ddc62257b7..4e7b3ab23f6dab03478e640a6d9b193bde8ee163 100644
+index b6c0c644cd0dad637953ff7169eca89f26581a3f..11dc401e7589eb0d8bd23e259c6e2526c3711392 100644
 --- a/CLAUDE.md
 +++ b/CLAUDE.md
 @@ -10,7 +10,24 @@ safety-critical systems language at `../../nitpick`.

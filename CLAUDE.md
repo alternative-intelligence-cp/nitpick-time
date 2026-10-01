@@ -105,7 +105,8 @@ with it — a confined edit, the trait's one block, one bound, one call, one
 umbrella line, three test impls *(made at cycle 0.2.0a, the adoption of
 `5fbaf4a`: TM-211)*. The umbrella re-exports 59 names *(58 since then)* —
 `Pod` and `bytes_capacity` joined — and eight files' managed memory is held to
-the runtime's count <!-- [[sweep: heap_bounded=8]] -->. No arm bill moved. A
+the runtime's count *(six since cycle 0.2.0b retired the churn pair,
+TM-214)*<!-- [[sweep: heap_bounded=6]] -->. No arm bill moved. A
 full invocation is **112 units green** at pin `c970483`.
 
 **After cycle 0.1.4c: the adoption to compiler `c970483`** — the end

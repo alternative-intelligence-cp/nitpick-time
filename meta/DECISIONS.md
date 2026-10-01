@@ -2420,6 +2420,10 @@ happens when it is run at every point rather than at the ends.
 > **And at cycle 0.1.0b, read TM-150.** O-N19 is fixed at compiler `c3bdae2`,
 > so the restriction no longer rests on it; it stands on the four element drops
 > `Vec<T>` does not perform at an owning `T`.
+>
+> **And at cycle 0.2.0b, read TM-214.** The restriction is the type's —
+> `Vec<T: Copy>` — so the compiler refuses an owning `T` wherever it is
+> written, and the four drops are owed at no `T` the type admits.
 
 **2026-09-05, cycle 0.0.4. Establishes the extent of O-N17, amends `SAFETY.md`
 S-18c and `0.0.4.md` §2's API table, and settles what `src/core/vec.npk` ships.**
@@ -2727,6 +2731,10 @@ line at all.
 > (`T: Copy` since TM-211, 2026-09-27),
 > that read is refused at the call, `NITPICK-TYPE-017`, and `case5` asserts
 > the refusal. The restriction stands, on the four element drops.
+>
+> **SUPERSEDED IN PART by TM-214 as well (2026-10-01).** The restriction is
+> stated at the type since `Vec<T: Copy>`: an owning `T` is refused wherever
+> it is written, and the four drops are owed at no `T` the type admits.
 
 **2026-09-05, cycle 0.0.5. Amends `SAFETY.md` S-18, `src/core/vec.npk`,
 `src/lib.npk` and `0.0.4.md` §2's API table. Does not supersede TM-132: that
@@ -3651,6 +3659,13 @@ verify; `0u64 -% 1u64` — a wrapping operator where nothing wraps by design hid
 what the constant is.
 
 ### TM-150 — `vec_reserve<T>` relocates with `ralloc`, and TM-132's restriction now stands on the element drops alone
+
+> **SUPERSEDED IN PART by TM-214 (2026-10-01).** The restriction it left
+> resting on the four element drops is stated at the type, `Vec<T: Copy>`,
+> and the compiler refuses an owning `T` wherever it is written. Its
+> `ralloc` row stands, and so do its measurements — the churn pair TM-196
+> committed for them retires with the `T` it measured. The text below is
+> left exactly as written.
 
 **2026-09-25, cycle 0.1.0b (PD-2). Supersedes TM-136 in part.** The compiler's
 D-264 makes a bare type parameter move-only in the body that names it, because
@@ -5310,6 +5325,13 @@ the author on question 9.
 > prelude's `Copy` since the adoption of `5fbaf4a` (the compiler's D-327), and
 > `Pod` and its nine impls are deleted. The loan, the refusal at an owning `T`
 > and `case5`'s assertion stand. The text below is left exactly as written.
+>
+> **SUPERSEDED IN PART by TM-214 (2026-10-01).** Its declined `struct:Vec<T:
+> Pod>` is taken, as `struct:Vec<T: Copy>`: both reasons it gave are gone —
+> DEF-116 is `NITPICK-TYPE-014` since the compiler's landing 69, and
+> `nitpick-regex` answered its open question with the bound (its RX-188) —
+> and the churn pair it would refuse is retired. The loan stands, and
+> `case5` asserts six sites.
 
 **2026-09-26, cycle 0.1.3c (PD-45). Replaces TM-136 in part — its "`vec_at<T>`
 is destructive" — adds `SAFETY.md` S-18h, and puts `Pod` on the umbrella.**
@@ -5404,6 +5426,13 @@ whether they should read loans is cycle 0.4's to shape with a caller in hand
 (TM-013).
 
 ### TM-196 — TM-150's churn pair is committed: `tests/unit/vec_churn_pop.npk` and `vec_churn_clear.npk`, two million push-then-pop cycles at `T = string` against the same with `vec_clear`, held to the runtime's count by TM-185's rule and under TM-186's cap
+
+> **SUPERSEDED by TM-214 (2026-10-01).** The pair is retired: under
+> `Vec<T: Copy>` each half is `NITPICK-TYPE-017` at five sites, because the
+> `Vec<string>` it measures cannot be written. Its text is at `db05d8d`, its
+> numbers are TM-150's, and the instrument keeps its two known leaks,
+> `probe06b` and `probe12` (`TESTING.md` V-17). The text below is left
+> exactly as written.
 
 **2026-09-26, cycle 0.1.3c (PD-47), carried here by `0.1.4b.md` §15.** TM-150
 measured the pair at cycle 0.1.0b in a scratch directory — `peak_live` 120 for
@@ -6148,3 +6177,73 @@ copy per entry, where the probes' question is the view (and at `5fbaf4a`
 the element** — it would leave the environment block holding a vacancy;
 **`lexical.py` changed to type a character literal's width** — the reader
 blanks literals and never types them, so no answer of its moves.
+
+---
+
+# Cycle 0.2.0b — `Vec<T: Copy>`, ratified 2026-10-01
+
+### TM-214 — `Vec` is `Vec<T: Copy>`: the bound on the type and on every verb, so the compiler refuses an owning element wherever it is written; TM-150's churn pair retires, `case5` asserts six sites, and no element check is added
+
+**2026-10-01, cycle 0.2.0b (the plan's PD-63) — `nitpick-regex`'s answer to the
+same question (its RX-188), which TM-194 said this library would follow.
+Amends `src/core/vec.npk`, `tests/probe/defect/generic_owning_copy/case5_vec_at_destructive.npk`,
+`SAFETY.md` S-18b, S-18c, S-18d, S-18g, S-18h and §4's note on `List<T>`,
+`BUILD.md` B-12 and `TESTING.md` V-17, and retires `tests/unit/vec_churn_pop.npk`
+and `vec_churn_clear.npk`. It supersedes TM-196, and TM-194 in part — its
+declined `struct:Vec<T: Pod>` — and marks TM-132, TM-136 and TM-150, whose
+restriction it states at the type.**
+
+**What was found**, measured at compiler `5fbaf4a` over the tree at `db05d8d`
+(`meta/roadmap/0.2/0.2.0b.md` §1). With `pub struct:Vec<T: Copy>` and nothing
+else, each of the eight verbs that did not state the bound is
+`NITPICK-TYPE-017` at its own definition — *"`T` does not implement `Copy`,
+which `Vec`'s parameter `T` requires"* — because a generic body is checked once,
+against the bounds it declares; `vec_at` stated it already (TM-211). With every
+verb bounded, all 128 `.npk` were compiled before and after: the 89 that compile
+both ways emit byte-identical IR, and three verdicts move — the churn pair's two
+halves, from compiling to `NITPICK-TYPE-017` at five sites each, and
+`generic_owning_copy/case5`, from two sites to six. An owning element is refused
+at the type, at the turbofish and at each verb's call — `string`, `Bytes`,
+`Vec<int64>` and `cstring` as `T`, and a consumer's struct field, generic
+wrapper and parameter. **So is a `T` that owns nothing but is not `Copy`**: a
+pointer, a slice, an optional and a fixed array, none of which the prelude
+implements `Copy` for, and a struct of scalars that does not claim it. **And a
+`#[derive(Copy)]` struct holding a pointer or a slice is a legal element**: the
+derive accepts both members, since neither owns.
+
+**The decision.** *`pub struct:Vec<T: Copy>`, and `<T: Copy>` on `vec_init`,
+`vec_reserve`, `vec_push`, `vec_set`, `vec_pop`, `vec_truncate`, `vec_clear` and
+`vec_free`, beside `vec_at`'s; no field, body or signature otherwise changes.
+The restriction TM-132 made — `Vec<T>` is for a non-owning `T` — is the type's:
+the four drops S-18d rests it on are owed at no `T` the type admits, and the
+compiler says so where an owning `T` is written. The bound is wider than the
+restriction, and that is accepted: a `T` that owns nothing without being
+`Copy` is held in a struct that claims it. The churn pair is retired with
+the `T` it measured; its text is at `db05d8d` and its numbers are TM-150's.
+`case5` keeps its name and its record and names six sites. No check is added:
+the rule this library states for an element is S-18d's — it drops nothing —
+and `Copy` states it whole; a `Copy` element that holds a pointer or a slice
+is a view, and S-18e and S-22 govern a view wherever it is held.*
+
+*Alternatives declined:* **the bound on `vec_at` alone, as since TM-194** —
+eight verbs then compile at `Vec<string>`, four of them orphaning what they
+discard, behind a rule only a reader enforces; **a marker of this library's
+own that admits more than `Copy` does** — two markers for one property, which
+TM-211 declined, and the checker judges the prelude's alone; **the churn pair
+kept as refusals** — two more copies of the refusal `case5` asserts; **the churn pair
+re-homed in `tests/probe/` over a `Vec` of its own** — a third copy of the leak
+and remedy `probe06b`/`probe06c` and `probe12`/`probe12b` already are, over a
+type that no longer ships, where TM-196 put it in `tests/unit/` because it
+asserted this library's own verbs, which it no longer can; **a probe calling
+every verb at `Vec<string>`** — `case5`'s type site reddens if the struct's
+bound goes, and a verb without the bound does not compile while the struct
+has it (measured), so every verb is pinned already; **a check that an element
+holds no block, as `nitpick-regex` keeps** (its RX-190, for the second half
+of its element rule) — this library has no such rule to enforce, and no `Vec` in `src/` to
+read yet (the first is cycle 0.4's `Vec<FmtPart>`), so it would examine nothing and
+assert a rule nothing states; **`move` dropped from `vec_push`'s and `vec_set`'s
+`T`** — at a `Copy` `T` it is a copy either way, and the spelling stays right
+for the day a cycle lifts the bound; **waiting for a consumer that needs an
+owning element** — none is planned (the zone tables hold offsets, Z-7, and
+`FmtPart` and `Instant` own nothing), and a cycle that needs one lifts the bound
+by a decision, the compiler's `List<T>` its shape (`vec_at`'s comment).

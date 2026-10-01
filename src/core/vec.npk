@@ -8,7 +8,8 @@
 // of it is this file's job.
 //
 // ===========================================================================
-// THE RESTRICTION, WHICH IS THE FIRST THING TO READ (TM-132, TM-136, TM-150)
+// THE RESTRICTION, WHICH IS THE FIRST THING TO READ (TM-132, TM-136, TM-150,
+// TM-214)
 // ===========================================================================
 //
 // `Vec<T>` IS FOR A NON-OWNING `T`. Every function below is correct at a `T`
@@ -83,6 +84,22 @@
 // And the pair TM-150 measured in a scratch directory is committed:
 // `../../tests/unit/vec_churn_pop.npk` and `vec_churn_clear.npk` hold 120 and
 // 48 000 096 to the runtime's own count on every run.
+//
+// AT CYCLE 0.2.0b (TM-214) THE BOUND THE PARAGRAPH ABOVE DECLINES IS TAKEN:
+// `struct:Vec<T: Copy>`, and every verb below repeats it -- a generic body is
+// checked once, against the bounds it declares, so a verb without it is
+// `NITPICK-TYPE-017` at its own definition. So the compiler refuses an owning
+// `T` wherever one is written: at the type, at each turbofish, at each verb's
+// call (`generic_owning_copy/case5` asserts six such sites). The four drops
+// above are owed at no `T` the type admits, which is the whole restriction,
+// stated where the compiler reads it; and the churn pair is retired, because
+// the `T` it measured cannot be written. At every `T` the type does admit
+// nothing changed: the IR of every program here that compiles before the bound
+// and after it is byte for byte the same (`meta/roadmap/0.2/0.2.0b.md` §1).
+// It is `nitpick-regex`'s answer to the same question (its RX-188), which
+// TM-194 said this library would follow. What `Copy` does not ask -- that an
+// element hold no pointer or slice -- this library has no rule for: `SAFETY.md`
+// S-18e and S-22 govern a view wherever it is held.
 //
 // WHY THAT IS NOT A WORKAROUND (W-11). No function here is bent around the
 // bug; each is the one that would have been written anyway. `0.0.4.md` §2
@@ -240,7 +257,12 @@ mod:vec;
 // The same field over `int64[0]`, whose element owns nothing, changes nothing
 // at all (measured): the element's ownership is what does it. `hidden`, so no
 // module but this one can name it, and `vec_init` fills it with `[]`.
-pub struct:Vec<T> = { hidden wild T->:items; sealed limit<ListLen> int64:count; sealed limit<ListLen> int64:cap; hidden string[0]:move_only; };
+//
+// `<T: Copy>`, SINCE CYCLE 0.2.0b (TM-214): the element type owns nothing,
+// stated to the compiler -- the header's restriction, where it is checked, and
+// a little wider: a `T` that owns nothing but is not `Copy` is refused too. It
+// changes no field and no byte: the bound is a fact about `T`.
+pub struct:Vec<T: Copy> = { hidden wild T->:items; sealed limit<ListLen> int64:count; sealed limit<ListLen> int64:cap; hidden string[0]:move_only; };
 
 // `ensures answer.count == 0 && answer.cap >= 1`
 //
@@ -253,7 +275,7 @@ pub struct:Vec<T> = { hidden wild T->:items; sealed limit<ListLen> int64:count; 
 // `alloc(0)` would give a block no element can be written to while `cap` said
 // otherwise, and this type has no error identity to raise (`SAFETY.md` S-4:
 // `core` declares none, and the budget is three with a ceiling).
-pub func:vec_init<T> = Vec<T>(int64:cap) never fails {
+pub func:vec_init<T: Copy> = Vec<T>(int64:cap) never fails {
     int64:n = cap;
     if (n < 1i64) { n = 1i64; }
     // `n * #size_of<T>()` is where this module's `IntOverflow` arm comes from,
@@ -269,7 +291,7 @@ pub func:vec_init<T> = Vec<T>(int64:cap) never fails {
 // The new capacity is at least `count + need` and at least twice the old, which
 // makes `vec_push`'s loop O(1) amortised without a special case for the first
 // element.
-pub func:vec_reserve<T> = NIL(Vec<T>->:v, int64:need) never fails {
+pub func:vec_reserve<T: Copy> = NIL(Vec<T>->:v, int64:need) never fails {
     int64:want = v.count + need;
     if (v.cap >= want) { pass NIL; }
     int64:n = v.cap * 2i64;
@@ -303,7 +325,7 @@ pub func:vec_reserve<T> = NIL(Vec<T>->:v, int64:need) never fails {
 // reason must be stated because the line of code is identical to `vec_set`'s
 // (TM-127, `SAFETY.md` S-18c): it writes AT `count`, which is past the last
 // live element by construction, so there is nothing there to discard.
-pub func:vec_push<T> = NIL(Vec<T>->:v, move T:x) never fails {
+pub func:vec_push<T: Copy> = NIL(Vec<T>->:v, move T:x) never fails {
     drop vec_reserve(v, 1i64);
     // OVER `cap`, uniquely in this file: the valid index here is `count`
     // itself, which a slice over `count` would reject. `vec_reserve` above has
@@ -326,7 +348,8 @@ pub func:vec_push<T> = NIL(Vec<T>->:v, move T:x) never fails {
 // struct holding a `string`, whose derive is `NITPICK-DERIVE-006`
 // (`../../tests/probe/probe19_pod_owner_refused.npk` asserts the first) -- so
 // `T: Copy` on `vec_at` states TM-132's restriction TO THE COMPILER for the one
-// verb that hands an element back, at every consumer's call. A consumer's type
+// verb that hands an element back, at every consumer's call -- and since cycle
+// 0.2.0b for the type and every verb (TM-214, the header). A consumer's type
 // that owns nothing claims it in one line where it is declared --
 // `impl:Pt:Copy = { };` for a struct of integers or a payload enum such as
 // `FORMAT_MODEL.md`'s parts (`../../tests/unit/vec_at_pod.npk`) -- and needs
@@ -391,8 +414,10 @@ pub func:vec_at<T: Copy> = T(Vec<T>:v, int64:i) never fails {
 // and written generically over this function's one slice it is refused
 // `NITPICK-MOVE-001` instead -- the header's reason 1, measured again at
 // compiler `c3bdae2` at cycle 0.1.0b. At a non-owning `T`, the type this file
-// is for, there is nothing to drop and this is complete.
-pub func:vec_set<T> = NIL(Vec<T>->:v, int64:i, move T:x) never fails {
+// is for, there is nothing to drop and this is complete. (Since cycle 0.2.0b
+// that is the only `T` there is: `T: Copy`, TM-214. The paragraph is the record
+// of why the bound was needed.)
+pub func:vec_set<T: Copy> = NIL(Vec<T>->:v, int64:i, move T:x) never fails {
     T[]:s = #wild_slice<T>(v.items, v.count);
     s[i] = move(x);
     pass NIL;
@@ -421,8 +446,12 @@ pub func:vec_set<T> = NIL(Vec<T>->:v, int64:i, move T:x) never fails {
 // drops at the caller's binding. `../../tests/unit/vec_churn_pop.npk` holds two
 // million push-then-pop cycles of `string`s to `peak_live <= 75000` -- it
 // measures 120 -- where `vec_churn_clear.npk`, `vec_clear` in the pop's place,
-// holds all 48 000 096 bytes (TM-196).
-pub func:vec_pop<T> = T(Vec<T>->:v) never fails {
+// holds all 48 000 096 bytes (TM-196). (Both retired at cycle 0.2.0b, when
+// `T: Copy` made `Vec<string>` unwritable -- TM-214; their text is
+// `git show db05d8d:tests/unit/vec_churn_pop.npk` and its twin, and the
+// numbers are TM-150's. At a `Copy` `T` the `move` is a copy, and the body's
+// IR is what it was.)
+pub func:vec_pop<T: Copy> = T(Vec<T>->:v) never fails {
     T[]:s = #wild_slice<T>(v.items, v.count);
     T:answer = move(s[v.count - 1i64]);
     v.count = v.count - 1i64;
@@ -433,15 +462,16 @@ pub func:vec_pop<T> = T(Vec<T>->:v) never fails {
 //
 // At a non-owning `T` dropping the tail is exactly lowering `count`. At an
 // owning `T` it would additionally owe a drop per discarded element (S-18c),
-// which is the blocked path above.
-pub func:vec_truncate<T> = NIL(Vec<T>->:v, int64:n) never fails {
+// which is the blocked path above -- and since cycle 0.2.0b an owning `T` is
+// refused at the type (TM-214).
+pub func:vec_truncate<T: Copy> = NIL(Vec<T>->:v, int64:n) never fails {
     if (n < 0i64) { v.count = 0i64; pass NIL; }
     if (n < v.count) { v.count = n; }
     pass NIL;
 };
 
 // `ensures v.count == 0`
-pub func:vec_clear<T> = NIL(Vec<T>->:v) never fails {
+pub func:vec_clear<T: Copy> = NIL(Vec<T>->:v) never fails {
     v.count = 0i64;
     pass NIL;
 };
@@ -473,12 +503,14 @@ pub func:vec_clear<T> = NIL(Vec<T>->:v) never fails {
 // which watches `wild` allocations, and this block is one. THAT GUARANTEE IS
 // ABOUT THE BLOCK ALONE (TM-106, S-18b): D-151 cannot see a managed body, so an
 // unemptied `Vec<string>` would pass `exit 0` and still leak. It is the reason
-// this type is restricted to a non-owning `T` rather than trusted at any `T`.
+// this type is restricted to a non-owning `T` rather than trusted at any `T`
+// -- the restriction the type states since cycle 0.2.0b, `Vec<T: Copy>`, under
+// which a `Vec<string>` is not written at all (TM-214).
 // (Since cycle 0.1.3c a `Vec` owns, so the compiler generates a drop for one:
 // it walks `move_only`'s empty array and frees nothing, and this is still the
 // only release of the block -- a `Vec` never freed still exits 96, measured,
 // TM-193.)
-pub func:vec_free<T> = NIL(Vec<T>->:v) never fails {
+pub func:vec_free<T: Copy> = NIL(Vec<T>->:v) never fails {
     dalloc(v.items =>! wild int8->);
     v.count = 0i64;
     v.cap = 0i64;

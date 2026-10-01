@@ -312,10 +312,11 @@ refused at `PARSE-001`, `LEX-004`, `PARSE-002`, `TYPE-009`, `TYPE-017`,
 `TYPE-046`, `TYPE-047`, `TYPE-079`, `TYPE-080`, `TYPE-084`, `BORROW-001`,
 `BORROW-012`, `RESOLVE-001`, `REACH-002` and `REACH-003`, and every family
 after the first three runs only on something that parsed. Re-measured at pin
-`c970483`, cycle 0.1.5's second half: **128 files = 91 parse cleanly + 35
+`5fbaf4a`, cycle 0.2.0b: **126 files = 89 parse cleanly + 35
 parse and are refused later + 2 do not parse**
-<!-- [[sweep: npk_total=128]] --> (`127 = 90 + 35 + 2` from cycle 0.1.3c until
-`tests/unit/civil_total_edges.npk` joined), and the two
+<!-- [[sweep: npk_total=126]] --> (`127 = 90 + 35 + 2` from cycle 0.1.3c until
+`tests/unit/civil_total_edges.npk` joined, and `128 = 91 + 35 + 2` from then
+until cycle 0.2.0b retired the churn pair, TM-214), and the two
 are `probe02d_wide_literal_refused.npk` (LEX-004, PARSE-002) and
 `probe14_error_payload_refused.npk` (PARSE-001, TM-147). It read
 `50 = 36 + 13 + 1` for three subcycles after the tree stopped being that size,
@@ -460,7 +461,10 @@ and the trap error identities. Every module has it bound with no import.
   touched by nothing outside `vec`, the two lengths are read anywhere and
   written only there, and each length is checked against the prelude's
   `ListLen` after every write. Until then the shape read `{ wild T->:items;
-  int64:count; int64:cap; }`.)*
+  int64:count; int64:cap; }`.)* *(Since cycle 0.2.0b the type is `Vec<T:
+  Copy>` and every function over it states the bound — an owning element is
+  refused where it is written (TM-214, `SAFETY.md` S-18d). The fields are
+  unchanged.)*
 - **`Bytes`** — `{ hidden buffer:body; sealed limit<ListLen> int64:len; }`
   since cycle 0.1.3c (TM-195; from 0.1.0c, TM-156, `body` was sealed and not
   hidden, because its `cap` was read across modules — `bytes_capacity` reads

@@ -697,6 +697,10 @@ holds no element and `items` is a bare pointer the walk does not follow
 (`tests/probe/probe18_zero_length_owner.npk`). The conclusion stands: the
 element-lifetime obligation is `ntime`'s.)*
 
+*(Cycle 0.2.0b, TM-214: it is `ntime`'s, and the type discharges it —
+`Vec<T: Copy>` admits no element with anything to drop, which the compiler
+checks where the `Vec` is written (S-18d's amendment).)*
+
 ---
 
 ## 5. Resources
@@ -778,6 +782,15 @@ a generic function has no scope in which a bare `T` may simply die. S-18's "so
 `exit 0` never trips D-151" is therefore a statement about the block alone —
 correct, and not the whole obligation.
 
+*(Cycle 0.2.0b, TM-214: since `Vec<T: Copy>`, the library's `Vec` holds no
+owning `T` — a `Vec<string>` is `NITPICK-TYPE-017` where it is written — so
+this rule's obligation arises for no `Vec` of this library's, and S-18's
+statement about the block is the whole of it. The rule stands as the measured
+fact under the bound: a container of owning elements in `wild` storage leaks
+what it does not drop, and `exit 0` cannot see it — `probe06b` and `probe06c`
+pin it with a `Vec` of their own, and remain the instrument's leak and remedy
+(`TESTING.md` V-17).)*
+
 **Rule S-18c (TM-127) — OVERWRITING an element discards one too, so the
 obligation covers `vec_set` and not only the three that sound like it does.**
 S-18b and `0.0.4.md` §2 both name three entries that discard elements —
@@ -830,9 +843,40 @@ by construction, so there is nothing there to discard.
 > written at the instantiation, which is where this rule already puts element
 > lifetime. `tests/probe/defect/generic_element_move/`.
 
+*(Cycle 0.2.0b, TM-214: `vec_set` is `vec_set<T: Copy>`, so the element it
+overwrites has nothing to drop, and at an owning `T` it is not written —
+`NITPICK-TYPE-017`. The pair above keeps its own `Vec` and is the measured fact
+the bound rests on, and the instrument's second known leak.)*
+
 **Rule S-18d (TM-136, amended by TM-150) — THE RESTRICTION STAYS, AND WHAT IT
 RESTS ON NOW IS THE ELEMENT DROPS, WHICH NO COMPILER CHECK AND NO LEAK GATE
 SEES.**
+
+> **Amended at cycle 0.2.0b (TM-214) — THE COMPILER CHECKS IT NOW, AT THE
+> TYPE.** `Vec` is `struct:Vec<T: Copy>`, and every one of its nine verbs states
+> `T: Copy`: a generic body is checked once, against the bounds it declares, so
+> with the struct bounded a verb without the bound is `NITPICK-TYPE-017` at its
+> own definition (measured, all eight that lacked it). An owning `T` is refused
+> wherever it is written — the type, each turbofish, each verb's call;
+> `Vec<string>`, `Vec<Bytes>`, `Vec<Vec<int64>>` and `Vec<cstring>` each
+> `NITPICK-TYPE-017` at all three — and `generic_owning_copy/case5` asserts six
+> such sites. So the four drops below are owed at no `T` the type admits, which
+> is the restriction, stated where the compiler reads it; this rule's title and
+> the amendments under it are the record of how it was reached. **The bound is
+> a little wider than the restriction**: a pointer, a slice, an optional and a
+> fixed array own nothing, and each is refused as the element too, not being
+> `Copy` — as is a struct of scalars until it claims `Copy`; a struct that
+> claims it may hold any of the four. **At every `T` the
+> type admits, no code changed**: of the tree's 128 `.npk`, the 89 that compile
+> both without the bound and with it emit byte-identical IR, and three verdicts
+> moved — the two halves of TM-150's churn pair, from compiling to refused, and
+> `case5`, from two sites to six. **The churn pair is retired** (TM-196's two files):
+> the `T` it measured cannot be written over this `Vec`, and the language fact
+> it stood for is `probe06b`/`probe06c`'s and `probe12`/`probe12b`'s, each over
+> a `Vec` of its own. **What `Copy` does not ask**: a `#[derive(Copy)]` struct
+> holding a pointer or a slice is a legal element (measured) — it drops
+> nothing, which is all this rule asks; where its view points is S-18e's rule
+> and S-22's, wherever the view is held.
 
 > **Amended at cycle 0.1.0b (TM-150).** This rule's title read *"THE
 > RESTRICTION IS NOT ENFORCEABLE BY THE COMPILER"*, and its reason — below, as
@@ -991,7 +1035,9 @@ walks the empty array and frees nothing, so the block is still `wild`,
 `WildLeak` at `exit 0` — S-18's guarantee is unchanged. `probe18` and
 `probe18b` pin the language fact under the marker with no library code, and
 redden first if a compiler changes it. **Not closed by it**: the four element
-drops of S-18d, which no type here states.
+drops of S-18d, which no type here states. *(Closed since cycle 0.2.0b by the
+type: `Vec<T: Copy>`, S-18d's amendment, TM-214. The marker is unchanged — a
+`Vec` of `Copy` elements is still an owner, by its fourth field.)*
 
 **Rule S-18h (TM-194, cycle 0.1.3c; restated for `Copy` by TM-211, cycle
 0.2.0a) — the one verb that hands an element back
@@ -1007,6 +1053,10 @@ type that owns nothing claims it in one line, `impl:X:Copy = { };`
 library re-exports nothing for it. The guard is S-17c's slice, unchanged, and
 the hole below is closed: an impl's `move` on a lent parameter is
 `NITPICK-TYPE-014` since the compiler's DEF-116, and `Copy` has no method.
+*Since cycle 0.2.0b (TM-214):* the bound is the type's and every verb's, not
+`vec_at`'s alone — `struct:Vec<T: Copy>` (S-18d's amendment) — so at an owning
+`T` the refusal comes first where the `Vec` is written, and `case5` names six
+sites, its two `vec_at` calls among them.
 *What the rule read until then, kept as its record:* `vec_at<T: Pod>` reads
 through `Pod`'s `pod_copy`, a `never fails` method whose `self` is LENT. For an owning type the body the
 trait admits, `pass self`, is `NITPICK-TYPE-047` — a lent owner cannot be

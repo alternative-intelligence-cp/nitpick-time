@@ -1,8 +1,18 @@
 // expect-error: NITPICK-TYPE-017
 // expect-error: NITPICK-TYPE-017
+// expect-error: NITPICK-TYPE-017
+// expect-error: NITPICK-TYPE-017
+// expect-error: NITPICK-TYPE-017
+// expect-error: NITPICK-TYPE-017
 // ONE `expect-error` LINE PER REPORTED SITE since cycle 0.2.0a (the
 // compiler's D-332, its landing 82; `BUILD.md` B-7c, TM-210): the two calls
 // below, each refused where it is written.
+//
+// SIX SITES SINCE CYCLE 0.2.0b (TM-214): the TYPE is `Vec<T: Copy>`, and every
+// verb states the bound, so `Vec<string>` is refused where it is written as
+// well as where `vec_at` is called -- the declaration and its turbofish, the
+// `vec_push`, the two `vec_at` calls and the `vec_free`, one line each. The
+// two calls are still among them, refused as they were.
 //
 // CASE 5, SINCE CYCLE 0.1.3c: THE CALL IS REFUSED (TM-194). `vec_at` takes
 // `T: Copy` -- the prelude's marker since cycle 0.2.0a, `Pod` until then

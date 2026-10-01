@@ -148,9 +148,10 @@ against the summary line rather than left to review.
   headers bound it.** D-151's exit-0 trap counts `wild` allocations and a
   `buffer` is managed (TM-106), so exit 0 says nothing about `Bytes`
   (`SAFETY.md` S-18b). Since cycle 0.1.4b the files whose headers bound it are
-  held to the runtime's own `NPK_HEAP_STATS` count on both legs — eight
-  <!-- [[sweep: heap_bounded=8]] --> since cycle 0.1.3c, six until then — and
-  six of them <!-- [[sweep: cap_belted=6]] --> again under a 64 MiB cap
+  held to the runtime's own `NPK_HEAP_STATS` count on both legs — six
+  <!-- [[sweep: heap_bounded=6]] --> since cycle 0.2.0b, eight from cycle
+  0.1.3c until it retired the churn pair (TM-214), six before — and four of
+  them <!-- [[sweep: cap_belted=4]] --> again under a 64 MiB cap
   (`TESTING.md` V-17); every other file's managed memory is asserted by
   nothing.
 - **Not that a view into a `Bytes` is used correctly.** Every gate here is a

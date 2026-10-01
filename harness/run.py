@@ -35,12 +35,13 @@ WHAT A GREEN RUN HERE IS, AND IS NOT.
   ONLY WHERE A HEADER SAYS SO: D-151's exit-0 trap counts `wild` allocations
   and a `buffer` is managed (TM-106), so exit 0 says nothing about `Bytes`
   (S-18b, S-18e). Since cycle 0.1.4b the files whose headers carry `heap:`
-  -- eight [[sweep: heap_bounded=8]], the three leak/remedy twin pairs and
-  the two `Bytes` tests (six, and two pairs, until cycle 0.1.3c committed
-  TM-150's churn pair) -- are held on both legs to the runtime's own
-  `NPK_HEAP_STATS` line, and the six twins [[sweep: cap_belted=6]] again
-  under a 64 MiB address-space cap (TM-184 ... TM-186). Every other file's
-  managed memory is asserted by nothing.
+  -- six [[sweep: heap_bounded=6]], the two leak/remedy twin pairs and the
+  two `Bytes` tests (eight, and three pairs, from cycle 0.1.3c, which
+  committed TM-150's churn pair, until cycle 0.2.0b retired it: TM-214) --
+  are held on both legs to the runtime's own `NPK_HEAP_STATS` line, and the
+  four twins [[sweep: cap_belted=4]] again under a 64 MiB address-space cap
+  (TM-184 ... TM-186). Every other file's managed memory is asserted by
+  nothing.
 
   IT IS NOT a `--quick` or `--only` run. Both say so twice, at the top and at
   the bottom, and both refuse to print the word GREEN on its own.
@@ -613,11 +614,12 @@ def run_parse(rep, root, bld):
     """Every `.npk` in the tree in front of the real parser, each exactly once.
 
     THE DENOMINATOR IS THE WHOLE TREE AND THAT IS WHY THE STAGE IS WORTH ITS
-    COST. Re-measured at cycle 0.1.5's second half: of the 128 `.npk` files
-    here [[sweep: npk_total=128]] the library build roots 5
-    [[sweep: lib_reach=5]], the suite roots 78 [[sweep: suite_roots=78]]
+    COST. Re-measured at cycle 0.2.0b: of the 126 `.npk` files
+    here [[sweep: npk_total=126]] the library build roots 5
+    [[sweep: lib_reach=5]], the suite roots 76 [[sweep: suite_roots=76]]
     (127 and 77 from cycle 0.1.3c until `tests/unit/civil_total_edges.npk`
-    joined), and 3 more are reached by
+    joined; 128 and 78 from then until cycle 0.2.0b retired the churn pair,
+    TM-214), and 3 more are reached by
     `use` from a suite root [[sweep: support_total=3]] -- and since cycle
     0.1.4 so is the civil cross-oracle's corpus, which only its member
     imports -- so 41 are put in front of the compiler by NOTHING ELSE. Five
@@ -628,11 +630,13 @@ def run_parse(rep, root, bld):
     then went three cycles asserted by nothing (TM-141), for exactly this
     reason.
 
-        127 = 5 (library) + 77 (suite roots) + 3 + 1 (reached by `use`) + 41
+        126 = 5 (library) + 76 (suite roots) + 3 + 1 (reached by `use`) + 41
 
     (It read `116 = 5 + 66 + 3 + 1 + 41` from cycle 0.1.4c until cycle 0.1.3c
     added eleven suite roots -- seven probes and four unit tests -- and none
-    anywhere else.)
+    anywhere else; and `127 = 5 + 77 + 3 + 1 + 41` until cycle 0.2.0b -- a
+    root short of the tagged sentence above from cycle 0.1.5's second half,
+    when `civil_total_edges` joined, and found at 0.2.0b's planning.)
 
     EVERY NUMBER IN THAT SENTENCE IS TAGGED AND CHECKED (TM-142). It read
     `50 = 1 + 27 + 3 + 19` until cycle 0.0.6, three subcycles after the tree

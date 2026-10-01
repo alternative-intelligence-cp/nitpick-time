@@ -153,10 +153,11 @@
 # a green run is not a MEMORY result for the managed
 # half: D-151's exit-0 trap counts `wild` allocations and a `buffer` is managed
 # (TM-106), so `exit 0` says nothing about `Bytes` (S-18b, S-18e) -- except
-# that, since cycle 0.1.4b, the files whose headers bound it -- eight since
-# cycle 0.1.3c [[sweep: heap_bounded=8]] -- are held on both legs to the
-# runtime's own NPK_HEAP_STATS count, and six of them
-# [[sweep: cap_belted=6]] again under a 64 MiB cap (`TESTING.md` V-17).
+# that, since cycle 0.1.4b, the files whose headers bound it -- six since
+# cycle 0.2.0b [[sweep: heap_bounded=6]], eight from cycle 0.1.3c until it
+# retired the churn pair (TM-214) -- are held on both legs to the runtime's
+# own NPK_HEAP_STATS count, and four of them
+# [[sweep: cap_belted=4]] again under a 64 MiB cap (`TESTING.md` V-17).
 #
 # NOT PINNED, AND KNOWN: `actions/checkout@v4` and `actions/cache@v4` are moving
 # tags -- the only inputs in this file that are not immutable. A workflow this

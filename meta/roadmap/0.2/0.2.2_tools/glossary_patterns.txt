@@ -1,0 +1,6 @@
+# 0.2.2's glossary sweep, block 7b -- read by `sweep.py` line by line and across line
+# breaks, case-insensitive: every use of "wall" in the live tree, and the phrases that
+# call a point on the UTC scale a wall-clock reading. `meta/DECISIONS.md` is outside
+# `sweep.py`'s pathspec; block 7b reads it apart.
+wall
+wall-clock (reading|time|one)|wall_clock_ns|steps the absolute scale

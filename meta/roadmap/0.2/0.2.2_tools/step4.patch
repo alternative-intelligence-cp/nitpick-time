@@ -1,0 +1,84 @@
+diff --git a/harness/checks.py b/harness/checks.py
+index acbf2ba1e7eb0e9df285fae47a8209ba0dc3c803..80c711c1b0f50b137406bfb9cc38ffbb3b031bf3 100644
+--- a/harness/checks.py
++++ b/harness/checks.py
+@@ -487,17 +487,23 @@ def check_error_budget(tree, **_):
+ # ---------------------------------------------------------------------------
+ 
+ # THE OWNER MAP IS THE SPECIFICATIONS' AND NOT THIS FILE'S OPINION. `SAFETY.md`
+-# S-16 says in as many words that *the calendar algorithms* divide by 4, 100,
+-# 400, 146097, 86400 and 1000000000, and `CALENDAR.md` §4 is where 146097 and
+-# 719468 appear in Hinnant's civil-from-days. So all four belong to `cal` as the
+-# documents stand TODAY. When 0.2 gives `span` its own nanosecond arithmetic the
+-# right move is to amend S-16 and this map together, in one commit -- which is
+-# the whole contract of this check family: it fails when the tree and the
+-# document disagree, and the fix is whichever of the two is wrong.
++# S-16 names the numbers the calendar algorithms divide by, and `CALENDAR.md` §4
++# is where 146097 and 719468 appear in Hinnant's civil-from-days, so those two
++# are `cal`'s, and so is 1000000000 until cycle 0.2.3's nanosecond arithmetic
++# decides where it lives. 86400 IS `core`'S ALONE SINCE CYCLE 0.2.2 (TM-223):
++# `cal` works in days and never spelled it, and the first code to divide by it,
++# `span`'s conversions between a `Timestamp` and a civil reading, reads it by
++# name, `NTIME_SECS_PER_DAY` -- so the one copy is `src/core/limits.npk`'s, and
++# a literal anywhere else in `src/` is a second. S-16 and this map moved
++# together, in one commit, as this comment said they must when a second module
++# wanted the number: the whole contract of this check family is that it fails
++# when the tree and the document disagree, and the fix is whichever of the two
++# is wrong. (Until cycle 0.2.2 all four were `cal`'s, "as the documents stand
++# TODAY".)
+ CONSTANT_OWNER = {
+     "146097": "cal",        # days in 400 Gregorian years -- CALENDAR.md §4
+     "719468": "cal",        # the 0000-03-01 era shift  -- CALENDAR.md §4
+-    "86400": "cal",         # seconds per day           -- SAFETY.md S-16
++    "86400": "core",        # seconds per day, read by name -- S-16, TM-223
+     "1000000000": "cal",    # nanoseconds per second    -- SAFETY.md S-16
+ }
+ 
+diff --git a/harness/selfcheck.py b/harness/selfcheck.py
+index 65c9ddb66969667cd659ae0a64427d5ea537d62f..9712fbfb6cbc51dfb65f252c8fda8dc2f7185f53 100644
+--- a/harness/selfcheck.py
++++ b/harness/selfcheck.py
+@@ -901,12 +901,17 @@ PLANTED = [
+      ("src/cal/cal.npk", "mod:cal;\npub error:ETimeOops;\n"),
+      ("src/cal/cal.npk", "mod:cal;\npub error:ETimeValue;\n"),
+      "three is a ceiling"),
++    # 86400 IS `core`'S ALONE SINCE CYCLE 0.2.2 (TM-223): the plant is the
++    # conversion's own module spelling it, the slip the map now refuses, and
++    # the control is the one copy, declared where `src/core/limits.npk`
++    # declares it. (The plant was `zone`'s and the control `cal`'s, the owner
++    # then, until cycle 0.2.2.)
+     (checks_mod.check_constants_named,
+-     ("src/zone/zone.npk", "mod:zone;\nfunc:f = int64() never fails "
+-                           "{ pass 86400i64; };\n"),
+-     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() never fails "
+-                         "{ pass 86400i64; };\n"),
+-     "belongs to module `cal`"),
++     ("src/span/span.npk", "mod:span;\nfunc:f = int64(int64:s) never fails "
++                           "{ pass s / 86400i64; };\n"),
++     ("src/core/limits.npk",
++      "mod:limits;\npub fixed int64:NTIME_SECS_PER_DAY = 86400i64;\n"),
++     "belongs to module `core`"),
+     (checks_mod.check_constants_named,
+      ("src/cal/cal.npk", "mod:cal;\nfixed int64:YEAR_MAX = 9999i64;\n"),
+      ("src/core/limits.npk", "mod:limits;\nfixed int64:YEAR_MAX = 9999i64;\n"),
+diff --git a/src/core/limits.npk b/src/core/limits.npk
+index f6e911f9ea5591e18c7c6f29c1eaf6135e7a8389..11c026d173a3bfd487e74d078ca39bb0bb99de9b 100644
+--- a/src/core/limits.npk
++++ b/src/core/limits.npk
+@@ -107,9 +107,13 @@ pub fixed int64:NTIME_OFFSET_MAX = 64800i64;
+ // rather than bounds, and `check_constants_named`'s `_BOUND_DECL` pattern
+ // matches only the bound suffixes. They live here anyway because S-16 names
+ // 86400 and 1000000000 as numbers a date library gets wrong by copying, and
+-// `CONSTANT_OWNER` maps both to `cal` -- with module `core` permitted, which is
+-// what lets this file hold them. A SECOND literal copy in `cal` or `span` is a
+-// finding, and that is the point.
++// `CONSTANT_OWNER` maps 86400 to `core` alone and 1000000000 to `cal` -- with
++// module `core` permitted for both, which is what lets this file hold them. So
++// a literal 86400 anywhere else in `src/` is a finding: `span`'s conversions
++// divide by `NTIME_SECS_PER_DAY` and spell no copy (TM-223). (Until cycle 0.2.2
++// the map gave both numbers to `cal`, and this said "A SECOND literal copy in
++// `cal` or `span` is a finding" -- which the map made false of `cal`, whose
++// copy it permitted; the self-check's control planted one in `cal`, silent.)
+ //
+ // 86400 IS NOT ALWAYS A DAY to a caller who has heard of leap seconds; it is
+ // the number of SI seconds in a day in this library's model, which does not

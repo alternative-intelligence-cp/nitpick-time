@@ -1,0 +1,75 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 3f7901fde9cc6dcdc00b3fa8f66ef113b906f590..10b052ebea82c2f4a2f7fb39a0a6ec7e7da3b1aa 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -43,8 +43,9 @@
+ # the civil types and their validating constructors, and since 0.1.1 Hinnant's
+ # `date_to_days` and `days_to_date`, and since 0.1.3 the derived fields --
+ # and `src/span/` since 0.2.0, `Instant` and its four operations, and since
+-# 0.2.1 `Timestamp` and its constructor --
+-# re-exported together as 66 public names [[sweep: lib_reexports=66]],
++# 0.2.1 `Timestamp` and its constructor, and since 0.2.2 the two conversions
++# between a `Timestamp` and its civil reading --
++# re-exported together as 68 public names [[sweep: lib_reexports=68]],
+ # so this IS evidence about behaviour, of the 122 units the runner reports at
+ # compiler `5fbaf4a` since cycle 0.2.1 (114 at cycle 0.2.0, 111 at 0.2.0b, 113 at 0.2.0a and at
+ # `c970483` at cycle 0.1.5's second half; 62 at cycle 0.0.6, 67 at 0.1.0,
+diff --git a/meta/specs/SAFETY.md b/meta/specs/SAFETY.md
+index 3152037bec167752c70038b2aa6d49f2a9b88ef2..a38a8117bbe3860653c0f211e2cc47defac3ec39 100644
+--- a/meta/specs/SAFETY.md
++++ b/meta/specs/SAFETY.md
+@@ -87,7 +87,7 @@ import-scoped:
+ | `ntime/lib.npk` — **the umbrella**, the import a consumer writes | — (re-exports) | one arm today (`cal`'s) | **13** <!-- [[sweep: arms_lib=13]] --> (—) — generated since cycle 0.1.0b (TM-155): the floor of six, `cal.ETimeValue`, the four arithmetic arms, `DecreasesViolated` from `src/core/bytes.npk`'s measured loops, and — since cycle 0.1.0c (TM-156, TM-159) — `LimitViolated` from the `ListLen` on `src/core/`'s sealed lengths. It was **12** until then |
+ | `ntime/core.npk` | — | nothing | **6** <!-- [[sweep: arms_core=6]] --> (4) — the floor; `core` is not yet reachable as its own public module, and its code is billed through the umbrella's row |
+ | `ntime/cal.npk` | `ETimeValue` | one arm | **11** <!-- [[sweep: arms_cal=11]] --> (9) — measured 2026-09-06 and 2026-09-25 |
+-| `ntime/span.npk` | — (raises `cal`'s) | one arm | **11** <!-- [[sweep: arms_span=11]] --> (—) — since cycle 0.2.0, measured: `cal.ETimeValue`, which `span` raises for two clocks' readings (TM-216) and, since cycle 0.2.1, for a `secs` outside the range or a `nanos` outside one second handed to `timestamp_of` (TM-220), the floor of six, and `cal`'s four arithmetic arms, which reach every importer of `span` because `span` imports `cal`. **No new identity**: the umbrella's row stays 13. *(A placeholder until cycle 0.2.0, the row read **6** (4), the floor, "meaningless until cycle 0.2 gives the module a body".)* |
++| `ntime/span.npk` | — (raises `cal`'s) | one arm | **11** <!-- [[sweep: arms_span=11]] --> (—) — since cycle 0.2.0, measured: `cal.ETimeValue`, which `span` raises for two clocks' readings (TM-216), since cycle 0.2.1 for a `secs` outside the range or a `nanos` outside one second handed to `timestamp_of` (TM-220), and since cycle 0.2.2 for a civil reading `civil_to_utc` cannot convert, `timestamp_of`'s refusal relayed (TM-222), the floor of six, and `cal`'s four arithmetic arms, which reach every importer of `span` because `span` imports `cal`. **No new identity**: the umbrella's row stays 13. *(A placeholder until cycle 0.2.0, the row read **6** (4), the floor, "meaningless until cycle 0.2 gives the module a body".)* |
+ | `ntime/zone.npk` | `ETimeZone` | two arms | placeholder; **6** <!-- [[sweep: arms_zone=6]] --> (4) today (cycle 0.3) |
+ | `ntime/fmt.npk` | `ETimeParse` | three arms | placeholder; **6** <!-- [[sweep: arms_fmt=6]] --> (4) today (cycle 0.4) |
+ | `ntime/host.npk` | — (forwards errnos) | one arm | placeholder; **6** <!-- [[sweep: arms_host=6]] --> (4) today |
+diff --git a/src/lib.npk b/src/lib.npk
+index 9e7b2520c336afb89a9541198fe8f2c4a99236fb..54219a96fcec35b72e8d7ffbe429f168f7eb5aae 100644
+--- a/src/lib.npk
++++ b/src/lib.npk
+@@ -19,8 +19,9 @@
+ // deliberate. Adding a line here is the moment a name becomes public and, by
+ // TM-013, a thing a MAJOR version is needed to take away.
+ //
+-// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 66
+-// names now [[sweep: lib_reexports=66]], below -- 64 until cycle 0.2.1 added
++// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 68
++// names now [[sweep: lib_reexports=68]], below -- 66 until cycle 0.2.2 added
++// `timestamp_to_utc` and `civil_to_utc`, 64 until cycle 0.2.1 added
+ // `Timestamp` and `timestamp_of`, 58 until cycle 0.2.0 added
+ // `span`'s six, 59 until cycle 0.2.0a retired
+ // `Pod` into the prelude's `Copy` (TM-211), 57 until cycle 0.1.3c added
+@@ -246,8 +247,9 @@ pub use "./cal/cal.npk".iso_weekday;
+ pub use "./cal/cal.npk".iso_week_to_date;
+ 
+ // ===========================================================================
+-// span -- instants (cycle 0.2.0) and timestamps (0.2.1). NO NEW IDENTITY, AND
+-// NO NEW ARM.
++// span -- instants (cycle 0.2.0), timestamps (0.2.1) and the conversions
++// between a timestamp and a civil reading (0.2.2). NO NEW IDENTITY, AND NO NEW
++// ARM.
+ // ===========================================================================
+ //
+ // `Instant` and its clock tag, and the four operations (TM-215, TM-216). `span`
+@@ -278,3 +280,17 @@ pub use "./span/span.npk".instant_cmp;
+ // measured. TWO NAMES, each a MAJOR version to take away (TM-013).
+ pub use "./span/span.npk".Timestamp;
+ pub use "./span/span.npk".timestamp_of;
++
++// The two conversions between the absolute scale and the civil one (cycle
++// 0.2.2; TM-222; `TIME_MODEL.md` M-11 and §9), each over `cal`'s algorithms and
++// each read as UTC -- every day 86 400 seconds, no leap second, so the mapping
++// is a bijection and the round trip is the gate. `timestamp_to_utc` gives a
++// `Timestamp`'s civil reading and never fails: a `Timestamp` is in the range by
++// construction. `civil_to_utc` gives the `Timestamp` a civil reading names
++// through `timestamp_of`, so it fails `cal`'s `ETimeValue` -- and only for a
++// reading forged through the language's opt-out, since one from the
++// constructors always converts. Neither moves the bill: 11 for `span` alone
++// [[sweep: arms_span=11]] and 13 here [[sweep: arms_lib=13]], measured. TWO
++// NAMES, each a MAJOR version to take away (TM-013).
++pub use "./span/span.npk".timestamp_to_utc;
++pub use "./span/span.npk".civil_to_utc;

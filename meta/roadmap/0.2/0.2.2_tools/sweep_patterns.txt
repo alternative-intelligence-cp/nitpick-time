@@ -1,0 +1,24 @@
+# 0.2.2's omission sweep, block 6b -- one extended regular expression per line, each
+# read by `sweep.py` line by line AND across line breaks, case-insensitive. Each is a
+# fact steps 1 to 6 moved: the conversions' arrival; the umbrella's names; the counts;
+# the sweep stage's members and cost; the owner of 86 400; S-15c's sites; P-4's
+# stand-in; and the round trip's statement.
+(conversions?|timestamp_to_utc|civil_to_utc).{0,80}(0\.2\.2|next|to come|not yet|placeholder)
+(0\.2\.2|to come|not yet|placeholder).{0,80}(conversions?|timestamp_to_utc|civil_to_utc)
+nothing (here )?converts|no conversion between the scales|timestamp to a date
+\b(66|sixty-six)\b.{0,40}(names|re-?export)
+\b(122|126)\b.{0,30}units?
+\b(138|142)\b.{0,40}(files|\.npk|parse)
+\b(87|91)\b.{0,40}(suite|roots)
+\b(93|97)\b.{0,20}parse
+\b(six|eight|6|8) (sweeps|members|sweep)\b
+\b(22\.[0-9]|43\.[0-9]|30|60) s\b
+owner map|CONSTANT_OWNER|(calendar algorithms?|\bcal\b).{0,60}86 ?400|86 ?400.{0,60}\bcal\b
+one site|#unreachable
+\bP-4\b
+(timestamp|civil).{0,40}round trip|round trip.{0,60}(timestamp|second gate|every second|day boundar)
+44 ?236 ?800|\b44 M\b|44 million|\b7\.3 M\b|512 (randomly|days|seeded)
+day boundar
+bijection
+floor(ed)? division|floored|truncating (split|division|conversion)
+span.{0,80}\b(imports?|holds|declares)\b

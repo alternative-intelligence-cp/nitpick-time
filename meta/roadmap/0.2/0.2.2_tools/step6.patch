@@ -1,0 +1,134 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 7a0c50fda241f2ab481a6995e7b27e9537fad6e6..7a83054a17c0f78dd884b5b6bed4147932f4adf8 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -46,8 +46,8 @@
+ # 0.2.1 `Timestamp` and its constructor, and since 0.2.2 the two conversions
+ # between a `Timestamp` and its civil reading --
+ # re-exported together as 68 public names [[sweep: lib_reexports=68]],
+-# so this IS evidence about behaviour, of the 122 units the runner reports at
+-# compiler `5fbaf4a` since cycle 0.2.1 (114 at cycle 0.2.0, 111 at 0.2.0b, 113 at 0.2.0a and at
++# so this IS evidence about behaviour, of the 126 units the runner reports at
++# compiler `5fbaf4a` since cycle 0.2.2 (122 at cycle 0.2.1, 114 at cycle 0.2.0, 111 at 0.2.0b, 113 at 0.2.0a and at
+ # `c970483` at cycle 0.1.5's second half; 62 at cycle 0.0.6, 67 at 0.1.0,
+ # 70 at 0.1.0b, 75 at 0.1.0c, 78 at 0.1.1, 81 at 0.1.2, 86 at 0.1.3, 90 at
+ # 0.1.3b, 91 at 0.1.4 and 0.1.4b, all at `c3bdae2` from 0.1.0b on, 101 at
+diff --git a/harness/README.md b/harness/README.md
+index 926ff9c43530be4bed0b7552c7f8c5d333c8055f..641ee601aa31f558edcc0edff0d95e400ab78098 100644
+--- a/harness/README.md
++++ b/harness/README.md
+@@ -371,6 +371,21 @@ the library reaching 6 sources and its IR **258 249 B**, `Timestamp` and
+ `timestamp_of`; and library + repro + suite at **87** (**57 probe**, **23
+ unit**). `122 = 35 + 87`.
+ 
++**At cycle 0.2.2, the same pin, 126 units**: four tests added —
++`tests/unit/utc_vectors.npk` and `civil_to_utc_edges.npk`, and the two members
++of cycle 0.2's gate, `tests/unit/sweep/every_day_boundary.npk` and
++`every_sampled_second.npk` (TM-222 … TM-225). The self-check's counts
++unchanged — 12 of V-14's 13 cases, 44 tree-check violations with 44 clean
++controls, `check_constants_named`'s 86 400 row planting in `span` beside the
++one copy in `core` since TM-223, 4 arm specimens and 4 verdict specimens;
++`exemption verdicts: 6 of 6`; parse over 142 files, `97 + 43 + 2`; the defect
++corpus unchanged at 36; the library reaching 6 sources and its IR **270 070
++B**, the two conversions; and library + repro + suite at **91** (**57 probe**,
++**25 unit**, **8 sweep**). `126 = 35 + 91`. At planning the eight sweeps took
++2.9 + 5.3 + 2.1 + 8.1 + 0.6 + 5.6 + 3.6 + 15.1 = 43.3 s — over B-9's 30 s,
++under its 60 s, and B-9 is amended to that cost (TM-224) — and a full
++invocation about 200 s, some 24 s more than at cycle 0.2.1.
++
+ The floor under all of it is still TM-117's: every root re-emits the prelude,
+ so a `npkc` invocation on anything that compiles costs a fixed amount and the
+ run makes about 200 of them. One that does *not* compile costs ~0.03 s.
+diff --git a/harness/run.py b/harness/run.py
+index 1abe85327c98e9e4adb413d8b42f9a5e3571a3ba..056aa367ed52ebcafa2d77fca39b960aa3f5ae40 100644
+--- a/harness/run.py
++++ b/harness/run.py
+@@ -624,14 +624,15 @@ def run_parse(rep, root, bld):
+     """Every `.npk` in the tree in front of the real parser, each exactly once.
+ 
+     THE DENOMINATOR IS THE WHOLE TREE AND THAT IS WHY THE STAGE IS WORTH ITS
+-    COST. Re-measured at cycle 0.2.1: of the 138 `.npk` files
+-    here [[sweep: npk_total=138]] the library build roots 6
+-    [[sweep: lib_reach=6]], the suite roots 87 [[sweep: suite_roots=87]]
++    COST. Re-measured at cycle 0.2.2: of the 142 `.npk` files
++    here [[sweep: npk_total=142]] the library build roots 6
++    [[sweep: lib_reach=6]], the suite roots 91 [[sweep: suite_roots=91]]
+     (127 and 77 from cycle 0.1.3c until `tests/unit/civil_total_edges.npk`
+     joined; 128 and 78 from then until cycle 0.2.0b retired the churn pair,
+     TM-214; 126 and 76 until cycle 0.2.0 added `span`'s body to the
+     library's reach and a unit and two probes to the suite; 130 and 79 until
+-    cycle 0.2.1 added two units and six probes), and of the 4
++    cycle 0.2.1 added two units and six probes; 138 and 87 until cycle 0.2.2
++    added two units and two sweeps), and of the 4
+     support modules [[sweep: support_total=4]] 3 are reached by `use` from
+     a suite root -- and since cycle 0.1.4 so is the civil cross-oracle's
+     corpus, which only its member imports -- so 41 are put in front of the
+@@ -645,14 +646,15 @@ def run_parse(rep, root, bld):
+     a support module no suite root imports, which only its part C compiles
+     (TM-217).
+ 
+-        138 = 6 (library) + 87 (suite roots) + 3 + 1 (reached by `use`) + 41
++        142 = 6 (library) + 91 (suite roots) + 3 + 1 (reached by `use`) + 41
+ 
+     (It read `116 = 5 + 66 + 3 + 1 + 41` from cycle 0.1.4c until cycle 0.1.3c
+     added eleven suite roots -- seven probes and four unit tests -- and none
+     anywhere else; and `127 = 5 + 77 + 3 + 1 + 41` until cycle 0.2.0b -- a
+     root short of the tagged sentence above from cycle 0.1.5's second half,
+-    when `civil_total_edges` joined, and found at 0.2.0b's planning; and
+-    `130 = 6 + 79 + 3 + 1 + 41` until cycle 0.2.1.)
++    when `civil_total_edges` joined, and found at 0.2.0b's planning;
++    `130 = 6 + 79 + 3 + 1 + 41` until cycle 0.2.1; and
++    `138 = 6 + 87 + 3 + 1 + 41` until cycle 0.2.2.)
+ 
+     EVERY NUMBER IN THAT SENTENCE IS TAGGED AND CHECKED (TM-142). It read
+     `50 = 1 + 27 + 3 + 19` until cycle 0.0.6, three subcycles after the tree
+diff --git a/meta/specs/BUILD.md b/meta/specs/BUILD.md
+index 964db6402d4f5fafee5b75b92c22eb3845b41ff8..6fded293b2682decb2ee18b55158cdcb99c440af 100644
+--- a/meta/specs/BUILD.md
++++ b/meta/specs/BUILD.md
+@@ -316,14 +316,15 @@ list kept the old code until cycle 0.2.0), `BORROW-001`, `BORROW-012`,
+ `RESOLVE-001`, `RESOLVE-002` (since cycle 0.2.0, `probe20b`),
+ `REACH-002` and `REACH-003`, and every family
+ after the first three runs only on something that parsed. Re-measured at pin
+-`5fbaf4a`, cycle 0.2.1: **138 files = 93 parse cleanly + 43
++`5fbaf4a`, cycle 0.2.2: **142 files = 97 parse cleanly + 43
+ parse and are refused later + 2 do not parse**
+-<!-- [[sweep: npk_total=138]] --> (`127 = 90 + 35 + 2` from cycle 0.1.3c until
++<!-- [[sweep: npk_total=142]] --> (`127 = 90 + 35 + 2` from cycle 0.1.3c until
+ `tests/unit/civil_total_edges.npk` joined, `128 = 91 + 35 + 2` from then
+ until cycle 0.2.0b retired the churn pair, TM-214, `126 = 89 + 35 + 2`
+ until cycle 0.2.0 added `Instant`'s unit, its two refusals and the relay
+-specimen, and `130 = 91 + 37 + 2` until cycle 0.2.1 added `Timestamp`'s two
+-units and six refusals), and the two
++specimen, `130 = 91 + 37 + 2` until cycle 0.2.1 added `Timestamp`'s two
++units and six refusals, and `138 = 93 + 43 + 2` until cycle 0.2.2 added the
++conversions' two units and two sweeps), and the two
+ are `probe02d_wide_literal_refused.npk` (LEX-004, PARSE-002) and
+ `probe14_error_payload_refused.npk` (PARSE-001, TM-147). It read
+ `50 = 36 + 13 + 1` for three subcycles after the tree stopped being that size,
+diff --git a/meta/specs/TESTING.md b/meta/specs/TESTING.md
+index c05ca2deb0a185a2ba259823f9dd4509a5d9b2db..680c99791f462dd8d8bb653948f84911de74a969 100644
+--- a/meta/specs/TESTING.md
++++ b/meta/specs/TESTING.md
+@@ -17,7 +17,7 @@ than sampled. Where that is possible it is the gate, and §3 says where.
+ 
+ | Stage | Answers |
+ |---|---|
+-| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **41 files of 138 that no other stage roots** <!-- [[sweep: npk_total=138]] --> |
++| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **41 files of 142 that no other stage roots** <!-- [[sweep: npk_total=142]] --> |
+ | `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
+ | `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
+ | `check` | every documented refusal actually refuses, with exactly its code |
+diff --git a/nitpick.toml b/nitpick.toml
+index a796f761ea4f7f0d9f96d13853a7882e9fdef4b9..c3a4dcf01965383f5e7331fa8203bf2c26b227e5 100644
+--- a/nitpick.toml
++++ b/nitpick.toml
+@@ -132,7 +132,7 @@ path  = "tests/probe"
+ #   `parse`   HAS NO ENTRY BY DESIGN, not by omission (TM-123). It is a
+ #             WHOLE-TREE stage: `BUILD.md` §3's Directory column for it reads
+ #             "every `.npk` in the tree", and that is where its value is — of
+-#             the 138 files here [[sweep: npk_total=138]], 41 are put in front of
++#             the 142 files here [[sweep: npk_total=142]], 41 are put in front of
+ #             the compiler by nothing
+ #             else. An entry would narrow it to one directory and silently
+ #             un-cover the rest, so `stage = "parse"` is REFUSED BY NAME.

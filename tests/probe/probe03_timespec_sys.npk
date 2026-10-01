@@ -125,7 +125,7 @@ func:main = int32(cstring[]:_~argv) {
     if (bsecs < 0i64)                                   { exit 41i32; }
     if (bnanos < 0i64)                                  { exit 42i32; }
     if (bnanos >= NS_PER_SEC)                           { exit 43i32; }
-    // Uptime is not wall-clock time. A machine up since 1970 is not a thing.
+    // Uptime is not time since the epoch: no machine has been up since 1970.
     if (bsecs >= SECS_FLOOR)                            { exit 44i32; }
 
     // ---- H-7 and SAFETY.md S-5: a bad clock id is an ERRNO ------------

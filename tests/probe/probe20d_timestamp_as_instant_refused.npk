@@ -7,8 +7,8 @@
 // point on the absolute scale -- `instant_since(a, t)`, `t` a `Timestamp`?
 //
 // MATTERS BECAUSE that is the timeout written against a wall clock, from the
-// other side: NTP steps the absolute scale and never the monotonic one, so a
-// distance between the two is a number that means nothing. `probe20c` asks
+// other side: NTP steps the realtime clock a `Timestamp` is read from, never
+// the monotonic one, so their distance means nothing. `probe20c` asks
 // the direction the cycle README asked first; M-3 refuses both. ANSWER,
 // measured at `5fbaf4a`: NO -- `NITPICK-TYPE-007`, "expected `Instant`,
 // found `Timestamp`", exactly once, at the argument. THE REFUSAL IS THE

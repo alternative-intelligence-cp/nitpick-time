@@ -18,8 +18,8 @@ answer on every machine.
 > both ways, on every full run, and every date of years 1 … 9999 agrees with
 > Python's `datetime`. Since cycle 0.2.0, `src/span/` holds `Instant`, a
 > reading of one of two clocks that cannot be built from a number or converted
-> to a wall-clock time, and since cycle 0.2.1 `Timestamp`, a point on the UTC
-> scale with one spelling per instant. Since cycle 0.2.2 a `Timestamp` converts
+> to a point on the UTC scale, and since cycle 0.2.1 `Timestamp`, such a point,
+> with one spelling per instant. Since cycle 0.2.2 a `Timestamp` converts
 > to its civil reading in UTC and back, and both directions are checked on
 > every full run, over both sides of every day boundary in the range and every
 > second of 512 days chosen at random. Zones, formats and the clocks are still
@@ -35,8 +35,10 @@ answer on every machine.
 > since cycle 0.0.4 — and "the compiler itself is at cycle 1.5"; between the
 > close's two halves, that cycle 0.1 "is in its close … and the audit that
 > closes it is next"; until cycle 0.2.0b, that cycle 0.2 "is next", which
-> 0.2.0a had opened; and until cycle 0.2.1, that timestamps were placeholders
-> too.)*
+> 0.2.0a had opened; until cycle 0.2.1, that timestamps were placeholders
+> too; and until cycle 0.2.2, that an `Instant` could not be "converted to a
+> wall-clock time" — a civil reading, in `meta/specs/GLOSSARY.md`'s words,
+> where the conversion refused is to a point on the UTC scale, TM-226.)*
 
 ---
 
@@ -46,15 +48,20 @@ Because the mistakes date libraries make are the mistakes this language is
 built to make unspellable, and because the ones it cannot make unspellable are
 worth stating out loud instead of discovering.
 
-**The clocks are different types, so you cannot confuse them.** A monotonic
-reading and a wall-clock reading are not the same kind of thing: NTP steps the
-wall clock and never the monotonic one, which is why the compiler's own
-deadline substrate refuses to use a wall clock at all (D-176). `ntime` makes
-that structural — an `Instant` has no epoch, and the library measures only the
-distance between two readings of one clock; a `Timestamp` is an absolute point
-on the UTC scale; and **there is no conversion between them**, not even by the
-language's unchecked cast. A timeout measured against the wall clock is a bug
-you cannot write here. *(Until cycle 0.2.1 this said an `Instant` "yields only
+**The clocks are different types, so you cannot confuse them.** A reading of
+the monotonic clock and a reading of the system's realtime clock are not the
+same kind of thing: NTP steps the realtime clock and never the monotonic one,
+which is why the compiler's own deadline substrate will not use it at all — its
+runtime calls it a wall clock (D-176). `ntime` makes that structural — an
+`Instant` has no epoch, and the library measures only the distance between two
+readings of one clock; a `Timestamp`, what the realtime clock reads, is an
+absolute point on the UTC scale; and **there is no conversion between them**,
+not even by the language's unchecked cast. A timeout measured against the
+realtime clock is a bug you cannot write here. *(Until cycle 0.2.2 this
+paragraph called the realtime clock's reading "a wall-clock reading" — the
+words `meta/specs/GLOSSARY.md` keeps for a civil reading, which a `Timestamp`
+is not — and the clock itself "the wall clock" twice, TM-226.)* *(Until cycle
+0.2.1 this said an `Instant` "yields only
 differences". Its number is readable — a sealed field — so a program can
 subtract two clocks' readings by hand, which the library refuses only in
 `instant_since` and `instant_cmp`; and the language's `mono_now()` hands any

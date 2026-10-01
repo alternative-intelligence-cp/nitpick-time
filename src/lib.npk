@@ -259,9 +259,11 @@ pub use "./cal/cal.npk".iso_week_to_date;
 // [[sweep: arms_lib=13]], measured from `NITPICK-REACH-003`'s
 // own list (`SAFETY.md` S-4). Both fields of `Instant` are `sealed`: a consumer
 // reads `i.ns` and `i.clock` and builds one only through `instant_of`, so a
-// wall-clock reading cannot become an `Instant` by a struct literal, and there
-// is no conversion to or from a `Timestamp` at all (TM-010). SIX NAMES, each a
-// MAJOR version to take away (TM-013).
+// reading of the realtime clock cannot become an `Instant` by a struct
+// literal, and there is no conversion to or from a `Timestamp` at all
+// (TM-010). SIX NAMES, each a MAJOR version to take away (TM-013). (Until
+// cycle 0.2.2 this called that reading "a wall-clock reading", the glossary's
+// words for a civil one: TM-226.)
 pub use "./span/span.npk".InstantClock;
 pub use "./span/span.npk".Instant;
 pub use "./span/span.npk".instant_of;

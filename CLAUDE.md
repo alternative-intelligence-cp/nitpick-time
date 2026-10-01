@@ -37,7 +37,10 @@ measured (TM-225) — and `tests/unit/utc_vectors.npk` holds sixteen instants to
 their civil readings, `timestamp_order.npk`'s chain among them. **86 400
 belongs to `core` alone** in `check_constants_named`'s owner map: `span`
 divides by `NTIME_SECS_PER_DAY`, read by name, and `SAFETY.md` S-16 moved with
-the map (TM-223). `span` owes **11** arms and the umbrella **13** still, and
+the map (TM-223). **And a point on the UTC scale is no longer called "a
+wall-clock reading"** — `meta/specs/GLOSSARY.md`'s words for a civil one — at
+the sites that did: six reworded, and TM-215 and TM-216 marked (TM-226).
+`span` owes **11** arms and the umbrella **13** still, and
 the umbrella re-exports 68 <!-- [[sweep: lib_reexports=68]] --> names. A full
 invocation is **126 units green** at pin `5fbaf4a`.
 

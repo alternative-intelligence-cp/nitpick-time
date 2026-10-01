@@ -6268,6 +6268,12 @@ by a decision, the compiler's `List<T>` its shape (`vec_at`'s comment).
 > subtracting two clocks' readings by hand, because the floor's `mono_now()`
 > hands any program the same raw number, and a readable reading serves
 > logging. The text below is left exactly as written.
+>
+> **And TM-226 (2026-10-01) reads a name in its example:** `wall_clock_ns` is a
+> reading of the system's realtime clock in nanoseconds — a point on the UTC
+> scale, which `meta/specs/GLOSSARY.md` never calls a wall-clock reading, the
+> words it keeps for a civil one; read it as `realtime_ns`. The text below is
+> left exactly as written.
 
 **2026-10-01, cycle 0.2.0 (the plan's PD-53). Amends `TIME_MODEL.md` §2 and M-2
 and `HOST.md` H-6; implements TM-010's corollary, TM-010.1.**
@@ -6303,6 +6309,12 @@ and `instant_cmp` is the comparison, which refuses them; **no `Copy`** — a
 `Vec<Instant>` would not be writable at all.
 
 ### TM-216 — `Instant`'s operations: `instant_of` builds one, `never fails`; `instant_since` and `instant_cmp` refuse two clocks with `ETimeValue`, `ValueFault.ClockMismatch`; `instant_add` keeps the clock and traps on overflow; the clock is read as the sealed field, and O-X3 is settled without an accessor
+
+> **TM-226 (2026-10-01) reads one phrase of it:** *"a caller who hands it a
+> wall-clock reading"* means a reading of the system's realtime clock — a point
+> on the UTC scale, what a `Timestamp` holds — and `meta/specs/GLOSSARY.md`
+> keeps "a wall-clock reading" for a civil one; read it as *"a reading of the
+> realtime clock"*. The text below is left exactly as written.
 
 **2026-10-01, cycle 0.2.0 (the plan's PD-54). Amends `TIME_MODEL.md` M-4 and
 `SAFETY.md` S-3, appends `ClockMismatch` to `src/cal/cal.npk`'s `ValueFault`,
@@ -6786,3 +6798,53 @@ line, and its field order is read back; **its cases inside
 `timestamp_construct.npk`** — that file is the constructor's, with its own
 exits and imports; **the refusal's detail asserted** — how a refusal hands back
 its `ValueFault` is `OPEN_QUESTIONS.md` O-X8, still open.
+
+### TM-226 — a point on the UTC scale is never "a wall-clock reading" or "a wall-clock time": six sites are reworded and TM-215 and TM-216 marked; "the wall clock" for the system's realtime clock itself, the compiler's word, stays
+
+**2026-10-01, cycle 0.2.2 (the plan's PD-71). Corrects text, and amends no
+rule; from cycle 0.2.1's verifier.**
+
+**What was found** (`meta/roadmap/0.2/0.2.2.md` §1). `meta/specs/GLOSSARY.md`
+keeps "a wall-clock reading" for a civil reading, one with no zone, and lists
+*"wall clock" for `Timestamp`* among the words it does not use: *"a `Timestamp`
+is UTC and has no wall; a wall reading is civil"*. Cycle 0.2.1's verifier found
+five older sites calling a reading of the system's realtime clock — a point on
+the UTC scale — "a wall-clock reading" or "time": the public `README.md`'s
+status and its paragraph on the clocks, `src/lib.npk`'s `span` paragraph,
+`probe20`'s header (two lines of it), and TM-216.
+Measured over the live tree by `git grep -i wall` and by the same pattern read
+across line breaks, and over `DECISIONS.md` apart: beyond those five,
+`probe03`'s *"Uptime is not wall-clock time"* is the same use, and so is
+TM-215's example name, `wall_clock_ns`; and `probe20d`'s header keeps *"the
+timeout written against a wall clock"* and goes on *"NTP steps the absolute
+scale"*, which makes the wall clock the scale a `Timestamp` is on. Every other
+hit is a civil reading in the glossary's own sense, the elapsed time of a run,
+or the realtime clock itself in the compiler's word — its runtime's *"Wall
+clocks are excluded from the deadline path"* (D-176), quoted in `TIME_MODEL.md`
+M-3, `src/span/span.npk` and TM-010, and followed by `HOST.md` H-5,
+`SAFETY.md` §1, `OPEN_QUESTIONS.md` O-N2 and this repository's *"a timeout
+cannot be written against a wall clock"*.
+
+**The decision.** *A reading of the realtime clock — a point on the UTC scale,
+what a `Timestamp` holds — is called that, never "a wall-clock reading" or "a
+wall-clock time". The README's status says an `Instant` cannot be converted to
+a point on the UTC scale; its paragraph on the clocks names that clock's
+reading, so it calls the clock the realtime clock, and gives the compiler's
+word for it once; `src/lib.npk` and
+`probe20`'s header say a reading of the realtime clock; `probe03` says uptime
+is not time since the epoch; and `probe20d` says NTP steps the realtime clock a
+`Timestamp` is read from, keeping its first phrase. Each probe keeps its line
+count, so no refusal's site moves. TM-215 and TM-216 are settled, and each
+gains a marker that reads its words, the text left as written. "The wall clock"
+for the realtime clock itself stays where the tree quotes or follows the
+compiler: it names a clock, not a `Timestamp`.*
+
+*Alternatives declined:* **"the wall clock" renamed everywhere** — it is the
+compiler's word for its own deadline argument, quoted and followed in the
+places above, and the glossary's row is about a `Timestamp`, not the clock;
+**a glossary row for the clock** — the existing row already excludes what the
+six sites did, and a second would state it twice; **TM-215's and TM-216's
+words left unmarked** — a settled decision is read for years, and its reader
+meets its words before any other site's; **`README.md`'s *"add a duration to a
+wall-clock reading"*, in the next paragraph, changed too** — there it is a
+civil reading, the glossary's own sense.

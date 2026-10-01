@@ -6,14 +6,14 @@
 //
 // ASKS: may a consumer write `Instant{ ns: 1000i64, clock:
 // InstantClock.Monotonic }` -- a reading made of any `int64` it likes, a
-// wall-clock one included?
+// reading of the realtime clock included?
 //
 // MATTERS BECAUSE "a timeout cannot be written against a wall clock" is half
 // the TYPE's: if a struct literal could build an `Instant`, a
 // `CLOCK_REALTIME` nanosecond count would become one in a line, and every
 // refusal `instant_since` makes would be about a value it cannot trust.
-// `instant_of` is the one constructor, and a caller handing it a wall-clock
-// reading has opted out in writing (TM-216).
+// `instant_of` is the one constructor, and a caller handing it a reading of
+// the realtime clock has opted out in writing (TM-216, as TM-226 reads it).
 //
 // ANSWER, measured at `5fbaf4a`: NO. Both fields are `sealed` (the compiler's
 // D-313), so the literal below is `NITPICK-TYPE-079` -- reported ONCE PER

@@ -7330,7 +7330,7 @@ Three decisions, drafted at planning (`meta/roadmap/0.2/0.2.4a.md` §2, PD-83 �
 PD-85, in that order) from the cycle audit's C3, C8, C4 and D1 (the workbench's
 `meta/audits/nitpick-time-0.2-2026-10-02.md`), each measured at compiler
 `5fbaf4a` and each a harness change with its self-check plants. `src/` changes
-in two comments, `limits.npk`'s header and `core.npk`'s.
+in three comments: `limits.npk`'s header, `core.npk`'s and one in `bytes.npk`.
 
 ### TM-238 — `check_constants_named` holds what its row says: an owned number to its owner's PLACE, `core`'s being `src/core/limits.npk` alone, and every bound that file declares by its VALUE, the small structural values excepted
 

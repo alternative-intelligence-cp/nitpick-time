@@ -207,7 +207,9 @@ pub func:bytes_extend_str = NIL(Bytes->:b, string:src) never fails {
 // `check_constants_named` could not see it (`_NUMBER` wants four or more
 // digits and `CONSTANT_OWNER` has no entry for `20`; since cycle 0.2.3a the
 // check reads every literal's value, and 20 is still no owned number,
-// TM-231). Measured before it was
+// TM-231; since cycle 0.2.4a a `uint8[20]` here is a finding, 20 being the
+// value of the bound `NTIME_DIGITS_MAX`, which the check holds to
+// `limits.npk`, TM-238). Measured before it was
 // changed: `uint8[N]` with `N` a module-level `fixed`, and with one imported
 // from another module, both compile at exit 0 -- so the name was always
 // spellable here and the literal was the only thing standing.

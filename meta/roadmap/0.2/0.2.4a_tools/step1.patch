@@ -1,5 +1,5 @@
 diff --git a/harness/checks.py b/harness/checks.py
-index bd2ffa08301c585c597b42240c8a5b85f320fe58..7df1b87da9f776359db90c3ac77e89726a815be2 100644
+index bd2ffa08301c585c597b42240c8a5b85f320fe58..acd6f55940c85d167d381c5be67ef64227618848 100644
 --- a/harness/checks.py
 +++ b/harness/checks.py
 @@ -517,6 +517,16 @@ CONSTANT_OWNER = {
@@ -231,7 +231,7 @@ index bd2ffa08301c585c597b42240c8a5b85f320fe58..7df1b87da9f776359db90c3ac77e8972
 +# EVERY INTEGER WIDER THAN `int64`, NOT `int128` ALONE (cycle 0.2.4a, the cycle
 +# audit's D1). N-20's reason -- a wide type used casually is a wide type nobody
 +# reasons about -- is the reason for every width past 64 bits, and the language
-+# has sixteen: `int128` ... `int4096`, the unsigned six, `tbb128` and `tbb256`
++# has fourteen: `int128` ... `int4096`, the unsigned six, `tbb128` and `tbb256`
 +# (the compiler's `TYPE_REFERENCE.md` §4, at the pin). An `int256` intermediate
 +# narrowed by a bare `=>! int64` compiled, ran, and passed every tree check,
 +# measured; the same function in `int128` was red. `§5`'s column keeps its
@@ -293,7 +293,7 @@ index bd2ffa08301c585c597b42240c8a5b85f320fe58..7df1b87da9f776359db90c3ac77e8972
                  % (seen, len(files), len(holders), len(sites), len(unwritten),
                     ": " + ", ".join(unwritten) if unwritten else ""))
 diff --git a/harness/selfcheck.py b/harness/selfcheck.py
-index 02f6f454e8d4c7d023af95a5b992bb514aa5dea6..11869cfe1652b9846608327c1ab0b2238a355eca 100644
+index 02f6f454e8d4c7d023af95a5b992bb514aa5dea6..b7d0f0723ae64125956110f985eb70de820e8a4b 100644
 --- a/harness/selfcheck.py
 +++ b/harness/selfcheck.py
 @@ -1015,6 +1015,66 @@ PLANTED = [
@@ -317,8 +317,8 @@ index 02f6f454e8d4c7d023af95a5b992bb514aa5dea6..11869cfe1652b9846608327c1ab0b223
 +                         "{ pass z / 146097i64; };\n"),
 +     "is spelled in `src/cal/` alone"),
 +    # A BOUND SPELLED BY ITS VALUE (C8): `limits.npk` declares the range's last
-+    # second, and `span` compares against the number rather than the name.
-+    # The control compares against the second before it, which is no bound.
++    # second, and `span` divides by the number rather than by the name.
++    # The control divides by the second before it, which is no bound.
 +    (checks_mod.check_constants_named,
 +     [("src/core/limits.npk",
 +       "mod:limits;\npub fixed int64:NTIME_SECS_MAX = 253402300799i64;\n"),

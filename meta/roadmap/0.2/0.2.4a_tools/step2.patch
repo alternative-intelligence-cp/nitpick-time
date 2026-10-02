@@ -28,7 +28,7 @@ index 6ce8fa80c25e86c703b970c279d8c7e4e0b72fca..7a9da677033ae7803c9a876f78673bf2
  # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
  # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
 diff --git a/CLAUDE.md b/CLAUDE.md
-index 1b99c6415ed5681b1aae37dbec67b93bd8a0caa2..3976741d7f42f7926ba0db6d97f606f87b2e471d 100644
+index 1b99c6415ed5681b1aae37dbec67b93bd8a0caa2..a99388b7c751b9c76c5126efb4ac42cff5245718 100644
 --- a/CLAUDE.md
 +++ b/CLAUDE.md
 @@ -12,8 +12,28 @@ safety-critical systems language at `../../nitpick`.
@@ -53,7 +53,7 @@ index 1b99c6415ed5681b1aae37dbec67b93bd8a0caa2..3976741d7f42f7926ba0db6d97f606f8
 +`nitpick-regex`'s `_SMALL` set are excepted — today `NTIME_PARSE_MAX`'s 128
 +alone (TM-238). **`check_no_view_returns` reads an optional as what it
 +holds**, so `uint8[]?` and `cstring?` are views (TM-239). **`check_int128_sites`
-+reads every integer wider than `int64`**, sixteen types, where an `int256`
++reads every integer wider than `int64`**, fourteen types, where an `int256`
 +intermediate passed it; and `TESTING.md` V-1 says what that check guards and
 +what no check does — S-15b's range check before every `=>!` is review's
 +(TM-240). The self-check plants 92 tree-check violations, each new one red
@@ -135,7 +135,7 @@ index b769e7360bc51ca139b2cc2dc7438db67ac5ea31..e281fcf90207d3e2d671013646e6fc9a
    0.1.1, swept over the whole range since 0.1.2 -- and the suite is evidence
    about both, and since 0.2.0 about `src/span/`'s `Instant` -- and since
 diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
-index e59d03347d8839ae6d12f2c9d9d218579c80e117..bb742bd27fef539be8c719b8dc38307aceb2c0b1 100644
+index e59d03347d8839ae6d12f2c9d9d218579c80e117..edf33da1d9063cd14070923d6a82d267572cfab6 100644
 --- a/meta/DECISIONS.md
 +++ b/meta/DECISIONS.md
 @@ -6668,6 +6668,11 @@ every member of the gate.
@@ -165,7 +165,7 @@ index e59d03347d8839ae6d12f2c9d9d218579c80e117..bb742bd27fef539be8c719b8dc38307a
  
  ### TM-230 — `check_int128_sites` is live: it reads §5's `int128` column, finds every `int128` in `src/` by the function it is in, and fails in both directions; a marked function not yet written is named on every run
 +> **TM-240 (@@DATE@@, cycle 0.2.4a) reads one clause of it:** *"finds every
-+> `int128` in `src/`"* — since TM-240 every integer wider than `int64`, sixteen
++> `int128` in `src/`"* — since TM-240 every integer wider than `int64`, fourteen
 +> types; an `int256` or a `uint128` intermediate passed it (the cycle audit's
 +> D1).
  
@@ -192,7 +192,7 @@ index e59d03347d8839ae6d12f2c9d9d218579c80e117..bb742bd27fef539be8c719b8dc38307a
 +PD-85, in that order) from the cycle audit's C3, C8, C4 and D1 (the workbench's
 +`meta/audits/nitpick-time-0.2-2026-10-02.md`), each measured at compiler
 +`5fbaf4a` and each a harness change with its self-check plants. `src/` changes
-+in two comments, `limits.npk`'s header and `core.npk`'s.
++in three comments: `limits.npk`'s header, `core.npk`'s and one in `bytes.npk`.
 +
 +### TM-238 — `check_constants_named` holds what its row says: an owned number to its owner's PLACE, `core`'s being `src/core/limits.npk` alone, and every bound that file declares by its VALUE, the small structural values excepted
 +
@@ -230,8 +230,8 @@ index e59d03347d8839ae6d12f2c9d9d218579c80e117..bb742bd27fef539be8c719b8dc38307a
 +*Alternatives declined:* **the row restated to "no bound DECLARED outside"** —
 +the audit's alternative for C8: true, and it protects nothing the declaration
 +check did not, while a bound written inline is what the row was written
-+against; **every bound's value keyed, the small ones included** — 128 and 20
-+are bounds here and structure everywhere else, and a check that fires on every
++against; **every bound's value keyed, the small ones included** — 128 is a
++bound here and structure everywhere else, and a check that fires on every
 +byte mask is a check that gets switched off; **a small set of this library's
 +own** — two libraries disagreeing on what "small" means is the C8 finding's own
 +shape; **comparisons only, as `nitpick-regex`'s check reads** — a bound is spent
@@ -277,7 +277,7 @@ index e59d03347d8839ae6d12f2c9d9d218579c80e117..bb742bd27fef539be8c719b8dc38307a
 +`=>! int64`: every live tree check was silent on both, and the `int256` one
 +compiles and runs at the pin; the same function in `int128` is red. N-20's
 +reason — a wide type used casually is one nobody reasons about — is the reason
-+for every width past 64 bits, and the language has sixteen (the compiler's
++for every width past 64 bits, and the language has fourteen (the compiler's
 +`TYPE_REFERENCE.md` §4 at the pin): `int128` … `int4096`, `uint128` …
 +`uint4096`, `tbb128` and `tbb256`. And V-1 credits the check with guarding
 +"that its arithmetic does not silently overflow", which no lexical check of
@@ -285,7 +285,7 @@ index e59d03347d8839ae6d12f2c9d9d218579c80e117..bb742bd27fef539be8c719b8dc38307a
 +or at a pointer or by construction in range, by reading (`0.2.4a.md` §1), and
 +nothing checks that they stay so.
 +
-+**The decision.** *The check reads all sixteen: any of them in `src/` outside a
++**The decision.** *The check reads all fourteen: any of them in `src/` outside a
 +function §5 marks **yes** is a finding, as `int128` was, and a marked function
 +that spells none of them is the stale mark it was. §5's column keeps its name —
 +`int128` is the one width this library computes in — and N-20 is dated to say
@@ -338,7 +338,7 @@ index 0b4f6c44651de93e1b32d63fa23ec95adc9cb651..7e38615dc53ff09bc4bb106daa25a416
  D-004's escape rule was **unenforced for slice views**: `string_bytes` on a
  local `string` returned a `uint8[]` out of its owning frame at exit 0, and
 diff --git a/meta/specs/SPAN_MODEL.md b/meta/specs/SPAN_MODEL.md
-index 12511bbb7ff61748c0d149d34282ae1bcea644ea..512ec78ee324e64d9e4b3ef01bd913c7eab5e0ac 100644
+index 12511bbb7ff61748c0d149d34282ae1bcea644ea..fa2f9e912095d924c12403a28afca7eb8d1f9d0d 100644
 --- a/meta/specs/SPAN_MODEL.md
 +++ b/meta/specs/SPAN_MODEL.md
 @@ -223,6 +223,13 @@ whole-tree check asserts that `int128` appears nowhere else in `src/`", and
@@ -349,14 +349,14 @@ index 12511bbb7ff61748c0d149d34282ae1bcea644ea..512ec78ee324e64d9e4b3ef01bd913c7
 +integer wider than `int64` — `int128` … `int4096`, `uint128` … `uint4096`,
 +`tbb128` and `tbb256` — because its reason is. An `int256` intermediate
 +narrowed by a bare `=>!` compiled, ran and passed every tree check, measured,
-+until `check_int128_sites` read all sixteen. The column keeps its name:
++until `check_int128_sites` read all fourteen. The column keeps its name:
 +`int128` is the one width this library computes in.)*
 +
  **Rule N-20b (TM-105) — the range check at each of those sites is mandatory
  library code, because the language provides no checked narrowing.** Measured at
  cycle 0.0.0: `=>!` at a value that does not fit **truncates silently** (no trap,
 diff --git a/meta/specs/TESTING.md b/meta/specs/TESTING.md
-index 4d9f22e83f40837e3983cbc844fc1012c3df54a3..a2f66693a4ad2214377d1cfc148f15207db8443d 100644
+index 4d9f22e83f40837e3983cbc844fc1012c3df54a3..8dbb3c571dac11f3911f9ae47b948b7ac7b67a32 100644
 --- a/meta/specs/TESTING.md
 +++ b/meta/specs/TESTING.md
 @@ -43,11 +43,11 @@ them found something on its first run.
@@ -365,7 +365,7 @@ index 4d9f22e83f40837e3983cbc844fc1012c3df54a3..a2f66693a4ad2214377d1cfc148f1520
  | `check_no_owning_fields` | **no `fixed` table's element owns — itself, or through a field at any depth** (`SAFETY.md` S-19b). **It could not see a SINGLE-LINE struct until cycle 0.0.6 and both of this repository's structs are one** (TM-138), so neither type's real fields had ever been examined while the check reported `0 of 0`; the self-check now plants the same violation in both spellings. **And until cycle 0.1.3b it could not see an owning ELEMENT (`fixed string[2]`) or an owner two structs down, and it matched owners by substring**, so a field named `string_off` read as one — all three found by re-measuring the premise the check was written on, which was false (TM-177), and all three planted now |
 -| `check_int128_sites` (TM-230) | **`int128` in `src/` only inside a function `SPAN_MODEL.md` §5's table marks yes in its `int128` column**, and every marked function `src/` declares spells one — N-20, as TM-229 restates it; a marked function not written yet is named on every run, not failed. Comments and literals are blanked first, so the type in prose is nothing. Live since cycle 0.2.3a. *(It read "`int128` appears at exactly the three sites `SPAN_MODEL.md` §5 names, and nowhere else" — a count §5's table did not match, `OPEN_QUESTIONS.md` O-X6, so it could not be written until the question was answered.)* |
 -| `check_constants_named` | no bound outside `src/core/limits.npk`; no magic 86400, 146097, 719468 or 1000000000 outside the module that owns it — `core` alone for 86400 since cycle 0.2.2 (TM-223) and for 1000000000 since 0.2.3a (TM-232), "the algorithm module" for all four until 0.2.2. **A literal is read as the compiler's lexer reads it, and held to the map by its VALUE** (TM-231): every base suffix, `_` wherever it stands, every width, a character literal's code point, a bound after `..` — and a float, or a token the lexer refuses, is reported by its text, never passed. *(Until cycle 0.2.3a it read four or more decimal digits as text, and sixteen spellings of the four numbers passed it, measured.)* |
-+| `check_int128_sites` (TM-230) | **`int128` — and every other integer wider than `int64`, sixteen types, since cycle 0.2.4a (TM-240) — in `src/` only inside a function `SPAN_MODEL.md` §5's table marks yes in its `int128` column**, and every marked function `src/` declares spells one — N-20, as TM-229 restates it; a marked function not written yet is named on every run, not failed. Comments and literals are blanked first, so the type in prose is nothing. Live since cycle 0.2.3a. *(It read "`int128` appears at exactly the three sites `SPAN_MODEL.md` §5 names, and nowhere else" — a count §5's table did not match, `OPEN_QUESTIONS.md` O-X6, so it could not be written until the question was answered. And until cycle 0.2.4a it read `int128` alone, so an `int256` or a `uint128` intermediate narrowed by a bare `=>!` passed it — the cycle audit's D1.)* |
++| `check_int128_sites` (TM-230) | **`int128` — and every other integer wider than `int64`, fourteen types, since cycle 0.2.4a (TM-240) — in `src/` only inside a function `SPAN_MODEL.md` §5's table marks yes in its `int128` column**, and every marked function `src/` declares spells one — N-20, as TM-229 restates it; a marked function not written yet is named on every run, not failed. Comments and literals are blanked first, so the type in prose is nothing. Live since cycle 0.2.3a. *(It read "`int128` appears at exactly the three sites `SPAN_MODEL.md` §5 names, and nowhere else" — a count §5's table did not match, `OPEN_QUESTIONS.md` O-X6, so it could not be written until the question was answered. And until cycle 0.2.4a it read `int128` alone, so an `int256` or a `uint128` intermediate narrowed by a bare `=>!` passed it — the cycle audit's D1.)* |
 +| `check_constants_named` | **no bound outside `src/core/limits.npk` — declared there, and spelled nowhere else in `src/` by its value** (TM-238): the value of every bound that file declares, its initializer evaluated, is held to it, but a value in `nitpick-regex`'s `_SMALL` set (its RX-062), which review reads and the headline names — today `NTIME_PARSE_MAX`'s 128; and **no magic 86400, 146097, 719468 or 1000000000 outside its owner's place** — `core`'s is `src/core/limits.npk` alone and `cal`'s is `src/cal/` (TM-238), `core` the owner of 86400 since cycle 0.2.2 (TM-223) and of 1000000000 since 0.2.3a (TM-232), "the algorithm module" for all four until 0.2.2. **A literal is read as the compiler's lexer reads it, and held to the map by its VALUE** (TM-231): every base suffix, `_` wherever it stands, every width, a character literal's code point, a bound after `..` — and a float, or a token the lexer refuses, is reported by its text, never passed. *(Until cycle 0.2.3a it read four or more decimal digits as text, and sixteen spellings of the four numbers passed it, measured. And until cycle 0.2.4a it read a bound as a declaration alone, so `253402300799i64` in place of `NTIME_SECS_MAX` passed it, and held a copy to the module `core`, so `86400i64` in `src/core/bytes.npk` passed it — the cycle audit's C8 and C3.)* |
  | `check_literal_divisors` (TM-163) | **every `/`, `%`, `/=` and `%=` in `src/cal/` against `CALENDAR.md` C-11**: the divisor must be a positive decimal integer literal with its width suffix, standing alone — nothing after it that binds tighter than `/`, since `256i64 =>! uint8` is 0 — so D-007's divide-by-zero and `MIN / −1` traps are unreachable by construction. It reads code with comments AND strings blanked, because every `use` path in `cal.npk` holds a `/`; `+%`, `-%` and `*%` are the wrapping operators and not divisions. It is C-11's list of divisors, which a list in the rule's text could not be: the one C-11 carried was short by eight the day `civil_from_days` arrived. *(Until cycle 0.1.5 this row said its docstring's limits — block comments, character literals, raw strings and templates "not modelled", `src/cal/` having none — and the docstring called the gap the safe direction. Measured at 0.1.5's planning, a `'"'`, a template's `//` and a lone CR in a `//` comment each HID a division, and a `//` inside a `/* */` hid a clock call and a declaration from the checks beside this one; since then it reads through V-1k's reader, and each shape is planted.)* |
  | `check_no_format_string` | no function anywhere takes a pattern `string` and interprets it — `FORMAT_MODEL.md` F-5's rule, made checkable. **Pending until cycle 0.4**: nothing enforces F-5 before then, and V-1a's table says why |
@@ -394,6 +394,21 @@ index 4d9f22e83f40837e3983cbc844fc1012c3df54a3..a2f66693a4ad2214377d1cfc148f1520
  
  **Rule V-1a (TM-126) — a check runs from the cycle it can be written, and its
  pending siblings are PRINTED.** The table above has **20**
+diff --git a/src/core/bytes.npk b/src/core/bytes.npk
+index bce62b0b69ad3b0b622c42fcf54d82d36fbeecbf..54425e5736e6c595094c23a30170f8c1a0f3ae77 100644
+--- a/src/core/bytes.npk
++++ b/src/core/bytes.npk
+@@ -207,7 +207,9 @@ pub func:bytes_extend_str = NIL(Bytes->:b, string:src) never fails {
+ // `check_constants_named` could not see it (`_NUMBER` wants four or more
+ // digits and `CONSTANT_OWNER` has no entry for `20`; since cycle 0.2.3a the
+ // check reads every literal's value, and 20 is still no owned number,
+-// TM-231). Measured before it was
++// TM-231; since cycle 0.2.4a a `uint8[20]` here is a finding, 20 being the
++// value of the bound `NTIME_DIGITS_MAX`, which the check holds to
++// `limits.npk`, TM-238). Measured before it was
+ // changed: `uint8[N]` with `N` a module-level `fixed`, and with one imported
+ // from another module, both compile at exit 0 -- so the name was always
+ // spellable here and the literal was the only thing standing.
 diff --git a/src/core/core.npk b/src/core/core.npk
 index 379bd9566a9fc43087541d91b486b5ee0f66c80c..5aad0c132839a54a3b83495716b489259f857ec7 100644
 --- a/src/core/core.npk

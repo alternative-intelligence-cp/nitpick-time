@@ -1,0 +1,95 @@
+diff --git a/harness/checks.py b/harness/checks.py
+index c59ac74602f1c84cf96cdbb4bd296806d4be0475..bd2ffa08301c585c597b42240c8a5b85f320fe58 100644
+--- a/harness/checks.py
++++ b/harness/checks.py
+@@ -489,8 +489,12 @@ def check_error_budget(tree, **_):
+ # THE OWNER MAP IS THE SPECIFICATIONS' AND NOT THIS FILE'S OPINION. `SAFETY.md`
+ # S-16 names the numbers the calendar algorithms divide by, and `CALENDAR.md` §4
+ # is where 146097 and 719468 appear in Hinnant's civil-from-days, so those two
+-# are `cal`'s, and so is 1000000000 until cycle 0.2.3's nanosecond arithmetic
+-# decides where it lives. 86400 IS `core`'S ALONE SINCE CYCLE 0.2.2 (TM-223):
++# are `cal`'s. 86400 IS `core`'S ALONE SINCE CYCLE 0.2.2 (TM-223), AND
++# 1000000000 SINCE CYCLE 0.2.3a (TM-232), by the same reasoning: `cal` reads
++# it by name, `NTIME_NANOS_PER_SEC`, and so does `span`, so the one copy is
++# `src/core/limits.npk`'s -- and it moved only once this check read a
++# literal in every spelling, so that `1_000_000_000i64` is a copy too.
++# For 86400:
+ # `cal` works in days and never spelled it, and the first code to divide by it,
+ # `span`'s conversions between a `Timestamp` and a civil reading, reads it by
+ # name, `NTIME_SECS_PER_DAY` -- so the one copy is `src/core/limits.npk`'s, and
+@@ -499,7 +503,8 @@ def check_error_budget(tree, **_):
+ # wanted the number: the whole contract of this check family is that it fails
+ # when the tree and the document disagree, and the fix is whichever of the two
+ # is wrong. (Until cycle 0.2.2 all four were `cal`'s, "as the documents stand
+-# TODAY".)
++# TODAY"; until cycle 0.2.3a 1000000000 was, "until cycle 0.2.3's nanosecond
++# arithmetic decides where it lives".)
+ #
+ # KEYED BY VALUE SINCE CYCLE 0.2.3a (TM-231): a literal is held to the map by
+ # what the compiler reads it as, never by its digits -- `15180hexi64` is 86 400,
+@@ -509,7 +514,7 @@ CONSTANT_OWNER = {
+     146097: "cal",          # days in 400 Gregorian years -- CALENDAR.md §4
+     719468: "cal",          # the 0000-03-01 era shift  -- CALENDAR.md §4
+     86400: "core",          # seconds per day, read by name -- S-16, TM-223
+-    1000000000: "cal",      # nanoseconds per second    -- SAFETY.md S-16
++    1000000000: "core",     # nanoseconds per second, by name -- S-16, TM-232
+ }
+ 
+ # B-15: constants are SCREAMING_SNAKE. A *bound* is the subset this rule is
+diff --git a/harness/selfcheck.py b/harness/selfcheck.py
+index 395a80096a778df0747934fdc0516f662ed3bfa7..02f6f454e8d4c7d023af95a5b992bb514aa5dea6 100644
+--- a/harness/selfcheck.py
++++ b/harness/selfcheck.py
+@@ -1005,6 +1005,16 @@ PLANTED = [
+      ("src/core/limits.npk",
+       "mod:limits;\npub fixed int64:NTIME_SECS_PER_DAY = 86400i64;\n"),
+      "belongs to module `core`"),
++    # 1 000 000 000 IS `core`'S ALONE SINCE CYCLE 0.2.3a (TM-232): the plant is
++    # the old owner spelling it -- digit-separated, the spelling the check
++    # could not read until TM-231 -- and the control the one copy, declared
++    # where `src/core/limits.npk` declares it.
++    (checks_mod.check_constants_named,
++     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64(int64:n) never fails "
++                         "{ pass n / 1_000_000_000i64; };\n"),
++     ("src/core/limits.npk",
++      "mod:limits;\npub fixed int64:NTIME_NANOS_PER_SEC = 1_000_000_000i64;\n"),
++     "1000000000 as `1_000_000_000i64`, which belongs to module `core`"),
+     (checks_mod.check_constants_named,
+      ("src/cal/cal.npk", "mod:cal;\nfixed int64:YEAR_MAX = 9999i64;\n"),
+      ("src/core/limits.npk", "mod:limits;\nfixed int64:YEAR_MAX = 9999i64;\n"),
+diff --git a/src/cal/cal.npk b/src/cal/cal.npk
+index 2e289654a07387af768113057e2c20347f91e46e..a2d7d42f1dad2f731719e2aa664be77b4b5bfca9 100644
+--- a/src/cal/cal.npk
++++ b/src/cal/cal.npk
+@@ -511,7 +511,9 @@ pub func:civil_date = CivilDate(int64:y, int64:m, int64:d) {
+ //
+ // The nanosecond bound is `NTIME_NANOS_PER_SEC - 1i64` and not a literal: S-12
+ // makes every bound a named constant and `check_constants_named` fails the run
+-// on a second copy of 1000000000 outside its owner.
++// on a second copy of 1000000000 outside its owner -- `cal` among them since
++// cycle 0.2.3a, when the owner became `core` alone (TM-232); until then the map
++// made this module the owner, and a copy here would have passed.
+ pub func:civil_time = CivilTime(int64:h, int64:mi, int64:s, int64:n) {
+     if (h < 0i64)  { fail ETimeValue; }            // ValueFault.HourRange
+     if (h > 23i64) { fail ETimeValue; }            // ValueFault.HourRange
+diff --git a/src/core/limits.npk b/src/core/limits.npk
+index 11c026d173a3bfd487e74d078ca39bb0bb99de9b..20b465de0460f046e2bf6b57945cef34e7e140b4 100644
+--- a/src/core/limits.npk
++++ b/src/core/limits.npk
+@@ -107,10 +107,12 @@ pub fixed int64:NTIME_OFFSET_MAX = 64800i64;
+ // rather than bounds, and `check_constants_named`'s `_BOUND_DECL` pattern
+ // matches only the bound suffixes. They live here anyway because S-16 names
+ // 86400 and 1000000000 as numbers a date library gets wrong by copying, and
+-// `CONSTANT_OWNER` maps 86400 to `core` alone and 1000000000 to `cal` -- with
+-// module `core` permitted for both, which is what lets this file hold them. So
+-// a literal 86400 anywhere else in `src/` is a finding: `span`'s conversions
+-// divide by `NTIME_SECS_PER_DAY` and spell no copy (TM-223). (Until cycle 0.2.2
++// `CONSTANT_OWNER` maps both to `core` alone -- 86400 since cycle 0.2.2
++// (TM-223), 1000000000 since 0.2.3a (TM-232). So a literal of either number
++// anywhere else in `src/` is a finding, in whatever spelling the compiler reads
++// (TM-231): `span`'s conversions divide by `NTIME_SECS_PER_DAY`, `cal` and
++// `span` read `NTIME_NANOS_PER_SEC`, and none spells a copy. (Until cycle 0.2.3a
++// the map gave 1000000000 to `cal`, with `core` permitted for it. Until 0.2.2
+ // the map gave both numbers to `cal`, and this said "A SECOND literal copy in
+ // `cal` or `span` is a finding" -- which the map made false of `cal`, whose
+ // copy it permitted; the self-check's control planted one in `cal`, silent.)

@@ -1,0 +1,688 @@
+diff --git a/tests/unit/duration_ctors.npk b/tests/unit/duration_ctors.npk
+new file mode 100644
+index 0000000000000000000000000000000000000000..b8a4955337735f93564bf5a395a9b9aa126bc993
+--- /dev/null
++++ b/tests/unit/duration_ctors.npk
+@@ -0,0 +1,98 @@
++// expect-exit: 0
++//
++// `ntime`'s four `Duration` constructors at every argument their ranges hold,
++// both ends included -- every one for the hours, the days and the weeks, and
++// every 262nd for the minutes (cycle 0.2.3; `SPAN_MODEL.md` N-2 and §5's first
++// row; `TIME_MODEL.md` M-17).
++//
++// ASKS: does each constructor give exactly its argument's nanoseconds -- a
++// minute 60 x 10^9, an hour 3 600 x 10^9, a day 86 400 x 10^9 and not a
++// calendar day, a week seven such days -- at every argument it accepts?
++//
++// MATTERS BECAUSE `Duration` is the prelude's and the ecosystem's one span type
++// (TM-004): every deadline and every I/O call takes one, so a constructor wrong
++// by a second in a day is wrong in every consumer that asks for a day. And
++// `duration_days` is the one whose name invites the wrong reading -- N-2's
++// note: a day here is 86 400 SI seconds, exactly, and `Period{ days: 1 }` is
++// the thing that means the same wall time tomorrow.
++//
++// THE RANGES are each constructor's largest argument and its negation --
++// `int64`'s maximum nanoseconds over the unit's, truncated: 153 722 867
++// minutes, 2 562 047 hours, 106 751 days, 15 250 weeks -- and every argument
++// visited is held to the product computed in `int128` with the unit's
++// nanoseconds WRITTEN here, apart from the library's names. The minutes'
++// stride, 262, divides their span, 2 x 153 722 867, exactly, so both ends are
++// visited. One past each end traps `IntOverflow` in the prelude's
++// `duration_secs` (D-210, as N-2 says): `duration_days_past_max.npk` and
++// `duration_days_past_min.npk` assert that trap at a day's two ends, and the
++// other three meet it in the same multiplication.
++//
++// EXIT CODES, clear of every arm code (TM-152): 10 a minute's value not its
++// product, 11 an hour's, 12 a day's, 13 a week's; 14 a loop visited other than
++// the arguments it counts. SEEN RED AT PLANNING, on both legs, in a copy of the
++// tree (`meta/roadmap/0.2/0.2.3.md`, step 3): 10 with a minute of 59 seconds,
++// 11 with an hour of 3 599, 12 with a day one second short, 13 with a week of
++// six days. 14 is reached only by editing this file, and was so measured: the
++// days' loop a day short.
++//
++// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
++// `span`: its eleven (`SAFETY.md` S-4).
++mod:duration_ctors;
++
++use "../../src/span/span.npk".*;
++
++fixed int64:MINS_END = 153722867i64;
++fixed int64:HOURS_END = 2562047i64;
++fixed int64:DAYS_END = 106751i64;
++fixed int64:WEEKS_END = 15250i64;
++
++func:main = int32(cstring[]:_~argv) {
++    int64:seen = 0i64;
++    for (int64:k in 0i64..1173457i64) {
++        int64:m = (0i64 - MINS_END) + (k * 262i64);
++        Duration:dm = raw duration_mins(m);
++        if ((dm.ns => int128) != (m => int128) * 60000000000i128) { exit 10i32; }
++        seen = seen + 1i64;
++    }
++    if (seen != 1173458i64) { exit 14i32; }
++    seen = 0i64;
++    for (int64:h in (0i64 - HOURS_END)..HOURS_END) {
++        Duration:dh = raw duration_hours(h);
++        if ((dh.ns => int128) != (h => int128) * 3600000000000i128) { exit 11i32; }
++        seen = seen + 1i64;
++    }
++    if (seen != 5124095i64) { exit 14i32; }
++    seen = 0i64;
++    for (int64:d in (0i64 - DAYS_END)..DAYS_END) {
++        Duration:dd = raw duration_days(d);
++        if ((dd.ns => int128) != (d => int128) * 86400000000000i128) { exit 12i32; }
++        seen = seen + 1i64;
++    }
++    if (seen != 213503i64) { exit 14i32; }
++    seen = 0i64;
++    for (int64:w in (0i64 - WEEKS_END)..WEEKS_END) {
++        Duration:dw = raw duration_weeks(w);
++        if ((dw.ns => int128) != (w => int128) * 604800000000000i128) { exit 13i32; }
++        seen = seen + 1i64;
++    }
++    if (seen != 30501i64) { exit 14i32; }
++    exit 0i32;
++};
++
++func:failsafe = int32(Error:e) {
++    pick (e) {
++        (cal.ETimeValue)    { exit 80i32; },
++        (HeapBadRequest)    { exit 91i32; },
++        (HeapOom)           { exit 92i32; },
++        (IntOverflow)       { exit 93i32; },
++        (OutOfBounds)       { exit 94i32; },
++        (Unreachable)       { exit 95i32; },
++        (WildLeak)          { exit 96i32; },
++        (DivByZero)         { exit 97i32; },
++        (DivOverflow)       { exit 98i32; },
++        (StackExhausted)    { exit 106i32; },
++        (MachineFault)      { exit 107i32; },
++        (*)                 { exit 99i32; }
++    }
++    exit 9i32;
++};
+diff --git a/tests/unit/duration_days_past_max.npk b/tests/unit/duration_days_past_max.npk
+new file mode 100644
+index 0000000000000000000000000000000000000000..0ef41aa6f350bfbbfcd2f4e533bff84a4ace6850
+--- /dev/null
++++ b/tests/unit/duration_days_past_max.npk
+@@ -0,0 +1,54 @@
++// expect-exit: 93
++//
++// `duration_days` at 106 752 days, one past its largest argument, traps
++// `IntOverflow` -- D-210's trap is the constructor's range check (cycle 0.2.3;
++// `SPAN_MODEL.md` N-2 and §5's first row; `TESTING.md` V-1j: 93 is the arm this
++// file asserts, the trap itself).
++//
++// ASKS: does a day count past `Duration`'s ±292 years stop the program, rather
++// than wrap into a span of the other sign or saturate at the end?
++//
++// MATTERS BECAUSE N-2 makes the four constructors `never fails`, as the
++// prelude's own are, so the trap IS the range check: a constructor that wrapped
++// would hand a deadline a negative span, in silence. The multiplication that
++// traps is the prelude's, `duration_secs`'s times 10^9, which `duration_mins`,
++// `duration_hours` and `duration_weeks` reach the same way; this file and
++// `duration_days_past_min.npk` assert it at a day's two ends, and
++// `duration_ctors.npk` holds every argument inside them.
++//
++// EXIT CODES: 93, `IntOverflow`, the pass; 10 or 11 the call returned -- a span
++// above zero or not -- which is the failure. SEEN RED AT PLANNING, on both
++// legs, in a copy of the tree (`meta/roadmap/0.2/0.2.3.md`, step 3): 10 with a
++// day one second short, which leaves 106 752 days inside `int64`; 11 with the
++// constructor multiplying by the wrapping `*%` itself, where `duration_secs`
++// would have trapped.
++//
++// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
++// `span`: its eleven (`SAFETY.md` S-4).
++mod:duration_days_past_max;
++
++use "../../src/span/span.npk".duration_days;
++
++func:main = int32(cstring[]:_~argv) {
++    Duration:d = raw duration_days(106752i64);
++    if (d.ns > 0i64) { exit 10i32; }
++    exit 11i32;
++};
++
++func:failsafe = int32(Error:e) {
++    pick (e) {
++        (cal.ETimeValue)    { exit 80i32; },
++        (HeapBadRequest)    { exit 91i32; },
++        (HeapOom)           { exit 92i32; },
++        (IntOverflow)       { exit 93i32; },
++        (OutOfBounds)       { exit 94i32; },
++        (Unreachable)       { exit 95i32; },
++        (WildLeak)          { exit 96i32; },
++        (DivByZero)         { exit 97i32; },
++        (DivOverflow)       { exit 98i32; },
++        (StackExhausted)    { exit 106i32; },
++        (MachineFault)      { exit 107i32; },
++        (*)                 { exit 99i32; }
++    }
++    exit 9i32;
++};
+diff --git a/tests/unit/duration_days_past_min.npk b/tests/unit/duration_days_past_min.npk
+new file mode 100644
+index 0000000000000000000000000000000000000000..7fc64797568c1814798eef64585835f74e037d7f
+--- /dev/null
++++ b/tests/unit/duration_days_past_min.npk
+@@ -0,0 +1,54 @@
++// expect-exit: 93
++//
++// `duration_days` at -106 752 days, one past its smallest argument, traps
++// `IntOverflow` -- D-210's trap is the constructor's range check (cycle 0.2.3;
++// `SPAN_MODEL.md` N-2 and §5's first row; `TESTING.md` V-1j: 93 is the arm this
++// file asserts, the trap itself).
++//
++// ASKS: does a day count past `Duration`'s ±292 years stop the program, rather
++// than wrap into a span of the other sign or saturate at the end?
++//
++// MATTERS BECAUSE N-2 makes the four constructors `never fails`, as the
++// prelude's own are, so the trap IS the range check: a constructor that wrapped
++// would hand a deadline a negative span, in silence. The multiplication that
++// traps is the prelude's, `duration_secs`'s times 10^9, which `duration_mins`,
++// `duration_hours` and `duration_weeks` reach the same way; this file and
++// `duration_days_past_max.npk` assert it at a day's two ends, and
++// `duration_ctors.npk` holds every argument inside them.
++//
++// EXIT CODES: 93, `IntOverflow`, the pass; 10 or 11 the call returned -- a span
++// above zero or not -- which is the failure. SEEN RED AT PLANNING, on both
++// legs, in a copy of the tree (`meta/roadmap/0.2/0.2.3.md`, step 3): 11 with a
++// day one second short, which leaves -106 752 days inside `int64`; 10 with the
++// constructor multiplying by the wrapping `*%` itself, where `duration_secs`
++// would have trapped.
++//
++// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
++// `span`: its eleven (`SAFETY.md` S-4).
++mod:duration_days_past_min;
++
++use "../../src/span/span.npk".duration_days;
++
++func:main = int32(cstring[]:_~argv) {
++    Duration:d = raw duration_days((0i64 - 106752i64));
++    if (d.ns > 0i64) { exit 10i32; }
++    exit 11i32;
++};
++
++func:failsafe = int32(Error:e) {
++    pick (e) {
++        (cal.ETimeValue)    { exit 80i32; },
++        (HeapBadRequest)    { exit 91i32; },
++        (HeapOom)           { exit 92i32; },
++        (IntOverflow)       { exit 93i32; },
++        (OutOfBounds)       { exit 94i32; },
++        (Unreachable)       { exit 95i32; },
++        (WildLeak)          { exit 96i32; },
++        (DivByZero)         { exit 97i32; },
++        (DivOverflow)       { exit 98i32; },
++        (StackExhausted)    { exit 106i32; },
++        (MachineFault)      { exit 107i32; },
++        (*)                 { exit 99i32; }
++    }
++    exit 9i32;
++};
+diff --git a/tests/unit/limits_named.npk b/tests/unit/limits_named.npk
+index 3ed85f319d5f74ba1219d36e07d71a8cf155f4bb..f0c4009fad6f8770a71e5f36d47856e51391bb97 100644
+--- a/tests/unit/limits_named.npk
++++ b/tests/unit/limits_named.npk
+@@ -84,6 +84,14 @@ func:main = int32(cstring[]:_~argv) {
+     }
+     if (digits != NTIME_DIGITS_MAX)                       { exit 21i32; }
+ 
++    // ---- `SPAN_MODEL.md` N-3: `Duration`'s range is `int64`'s -----------
++    // Both ends held to `int64`'s own, built from its bit pattern (TM-149):
++    // the maximum `~0u64 >> 1`, the minimum one below its negation. A bound
++    // a nanosecond short at either end is red here, where `timestamp_since`
++    // would refuse a difference `Duration` can hold (cycle 0.2.3, TM-236).
++    if (NTIME_DURATION_NS_MAX != (((~0u64) >> 1u64) =>! int64))        { exit 22i32; }
++    if (NTIME_DURATION_NS_MIN != ((0i64 - NTIME_DURATION_NS_MAX) - 1i64)) { exit 23i32; }
++
+     exit 0i32;
+ };
+ 
+diff --git a/tests/unit/timestamp_add_edges.npk b/tests/unit/timestamp_add_edges.npk
+new file mode 100644
+index 0000000000000000000000000000000000000000..96ead6aeafb3915e39eefd11052c8bf46759bea0
+--- /dev/null
++++ b/tests/unit/timestamp_add_edges.npk
+@@ -0,0 +1,222 @@
++// expect-exit: 0
++//
++// `timestamp_add` at every boundary it decides, from both sides; every
++// `Timestamp` it returns normalised and in the range, whatever it is handed;
++// and a seeded sequence of a hundred thousand additions held to an `int128`
++// count of nanoseconds (cycle 0.2.3; `VERIFICATION.md` P-4 and P-3,
++// `TIME_MODEL.md` M-7 and M-8, `SPAN_MODEL.md` §5's second row).
++//
++// ASKS: does `timestamp_add` move a `Timestamp` by exactly a `Duration`'s
++// nanoseconds -- borrowing a second when the `Duration`'s remainder is
++// negative, carrying one when the two remainders pass a second -- and refuse
++// exactly the sums that leave the range?
++//
++// MATTERS BECAUSE it is the first operation that must RE-ESTABLISH M-7 rather
++// than refuse it (TM-220): `timestamp_of` refuses a `nanos` outside one second,
++// and a sum of two remainders is one, so this function carries. THIS FILE
++// EXTENDS P-4'S STAND-IN TO IT (P-1b), beside
++// `tests/unit/timestamp_construct.npk`, `tests/unit/civil_to_utc_edges.npk` and
++// the seal's two probes: no sequence of additions, negative durations included,
++// yields a `nanos` outside one second.
++//
++// THE CASES. Written, each verdict and answer below: a carry, a borrow, each
++// the other way, and none, from the epoch; the `Duration`'s two ends from the
++// epoch and from a remainder that carries; and both sides of the range's top
++// and bottom -- by a nanosecond, by a second, and by a `Duration` at its end.
++// Forged through `wild` storage, as `tests/unit/civil_to_utc_edges.npk` forges,
++// the opt-out `CALENDAR.md` C-8c names: a `nanos` of one and a half seconds,
++// which one carry repairs; one of 2^32 - 1, which one carry cannot, and which a
++// `timestamp_add` writing its own `Timestamp` literal would hand back
++// denormalised; and a second past the range, moved back into it and not. And
++// SEEDED: 100 000 additions from the epoch, the `Duration`s from a 64-bit
++// xorshift begun at the seed this file commits -- every odd step one over the
++// whole of `int64`, every even step one within a second either way, so the
++// carries and the borrows are a quarter of the steps each -- each answer held
++// to the `int128` sum of its nanoseconds, its refusal to that sum's place
++// outside the range, and the counts to a transcription of the same steps in
++// Python: 99 511 accepted, 489 refused, 206 of them above the range and 283
++// below.
++//
++// THE ORDER is the sequence first, then the forged, then the written: each
++// later section asks what the earlier cannot -- the forged whether an answer is
++// a `Timestamp` when the constructor's own check is all that stands between a
++// carry and a denormalised value, the written the exact edges no random step
++// lands on.
++//
++// EXIT CODES, clear of every arm code (TM-152): 40 a written case's verdict or
++// answer not the table's; 41 an answer's `nanos` not below one second -- M-7
++// itself, held apart from every table and asked of every answer, written,
++// forged or sequenced; 42 an answer's seconds outside the range -- M-8, the
++// same; 43 a forged `Timestamp` did not read back; 44 the epoch refused, or a
++// step's verdict not the `int128` sum's; 45 a step's answer not the sum; 46 the
++// counts not the transcription's. SEEN RED AT PLANNING, on both legs, in a copy
++// of the tree (`meta/roadmap/0.2/0.2.3.md`, step 3): 44 with the borrow
++// deleted, and with the carry; 45 with either keeping its second, with the
++// remainder dropped, and with the seconds; 42 with `timestamp_add` writing its
++// own `Timestamp` literal, and with `timestamp_of`'s upper bound deleted; 41
++// with `timestamp_of`'s `nanos` check deleted, and with `timestamp_add` writing
++// its own literal behind a range check of its own -- each the forged 2^32 - 1
++// coming back denormalised; 40 with the borrow only below -1, the carry only
++// past a second, and `timestamp_of`'s lower bound one high. 43 and 46 are
++// reached only by editing this file, and were so measured: 43 with the forge
++// declaring its two fields the other way round, 46 with the sequence a step
++// short.
++//
++// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
++// `span`: its eleven (`SAFETY.md` S-4).
++mod:timestamp_add_edges;
++
++use "../../src/span/span.npk".*;
++
++// `Timestamp` field for field, unsealed -- the forge's shape.
++struct:RawTs = { int64:secs; uint32:nanos; };
++
++fixed int64:LO_SECS = -377705116800i64;          // the range's first second
++fixed int64:HI_SECS = 253402300799i64;           // and its last
++fixed int64:NANOS = 1000000000i64;
++
++// The written cases: `t`, `d`, and whether the sum is in the range and what it
++// is. Rows 7 ... 14 sit at the range's two edges.
++fixed int64[15]:TS   = [ 0i64, 0i64, 0i64, -1i64, 0i64, 0i64, 0i64,
++                         253402300799i64, 253402300799i64, 253402300799i64, 253402300799i64,
++                         -377705116800i64, -377705116800i64, -377705116800i64, -377705116800i64 ];
++fixed int64[15]:TN   = [ 0i64, 999999999i64, 0i64, 999999999i64, 500000000i64, 500000000i64, 999999999i64,
++                         999999999i64, 999999999i64, 0i64, 0i64,
++                         0i64, 1i64, 0i64, 999999999i64 ];
++fixed int64[15]:DN   = [ 1i64, 1i64, -1i64, 1i64, 999999999i64, -999999999i64, 0i64,
++                         0i64, 1i64, 999999999i64, 1000000000i64,
++                         -1i64, -1i64, -1000000000i64, -999999999i64 ];
++fixed bool[15]:IN    = [ true, true, true, true, true, true, true,
++                         true, false, true, false,
++                         false, true, false, true ];
++fixed int64[15]:WS   = [ 0i64, 1i64, -1i64, 0i64, 1i64, -1i64, 0i64,
++                         253402300799i64, 0i64, 253402300799i64, 0i64,
++                         0i64, -377705116800i64, 0i64, -377705116800i64 ];
++fixed int64[15]:WN   = [ 1i64, 0i64, 999999999i64, 0i64, 499999999i64, 500000001i64, 999999999i64,
++                         999999999i64, 0i64, 999999999i64, 0i64,
++                         0i64, 0i64, 0i64, 0i64 ];
++
++func:main = int32(cstring[]:_~argv) {
++    // `int64`'s two ends, a `Duration`'s: the maximum as a constant bit
++    // pattern (TM-149), the minimum one below its negation.
++    int64:dmax = ((~0u64) >> 1u64) =>! int64;
++    int64:dmin = (0i64 - dmax) - 1i64;
++
++    // ---- the seeded sequence ----------------------------------------------
++    // The range in nanoseconds, in `int128`: its first nanosecond and its last.
++    int128:lo = (LO_SECS => int128) * (NANOS => int128);
++    int128:hi = ((HI_SECS => int128) * (NANOS => int128)) + ((NANOS - 1i64) => int128);
++    Result<Timestamp>:t0 = timestamp_of(0i64, 0i64);
++    if (t0.is_error) { exit 44i32; }
++    Timestamp:t = t0.value;
++    uint64:x = 20261001u64;
++    int64:accepted = 0i64;
++    int64:refused = 0i64;
++    for (int64:k in 1i64..100000i64) {
++        x = x ^ (x << 13u64);
++        x = x ^ (x >> 7u64);
++        x = x ^ (x << 17u64);
++        int64:dn = x =>! int64;
++        if ((k % 2i64) == 0i64) {
++            dn = ((x % 2000000000u64) =>! int64) - 1000000000i64;
++        }
++        int128:want = ((t.secs => int128) * (NANOS => int128)) + (t.nanos => int128) + (dn => int128);
++        Result<Timestamp>:r = timestamp_add(t, raw duration_ns(dn));
++        if (r.is_error) {
++            if (want >= lo && want <= hi) { exit 44i32; }
++            refused = refused + 1i64;
++        } else {
++            Timestamp:u = r.value;
++            int32:m = raw check_answer(u);
++            if (m != 0i32) { exit m; }
++            if (want < lo || want > hi) { exit 44i32; }
++            if ((((u.secs => int128) * (NANOS => int128)) + (u.nanos => int128)) != want) { exit 45i32; }
++            t = u;
++            accepted = accepted + 1i64;
++        }
++    }
++    if (accepted != 99511i64 || refused != 489i64) { exit 46i32; }
++    if (t.secs != -78690499287i64 || (t.nanos => int64) != 983031784i64) { exit 46i32; }
++
++    // ---- forged `Timestamp`s: whatever it is handed, an answer is one -----
++    wild int8->:mem = alloc(#size_of<Timestamp>());
++    int32:f = raw check_forged(mem, 0i64, 1500000000u32, 0i64);
++    if (f == 0i32) { f = raw check_forged(mem, 0i64, 4294967295u32, 0i64); }
++    if (f == 0i32) { f = raw check_forged(mem, HI_SECS + 1i64, 0u32, 0i64 - NANOS); }
++    if (f == 0i32) { f = raw check_forged(mem, HI_SECS + 1i64, 0u32, 0i64); }
++    dalloc(mem);
++    if (f != 0i32) { exit f; }
++
++    // ---- the written cases -------------------------------------------------
++    for (int64:i in 0i64..14i64) {
++        int32:e = raw check_case(TS[i], TN[i], DN[i], IN[i], WS[i], WN[i]);
++        if (e != 0i32) { exit e; }
++    }
++    // The `Duration`'s ends, from the epoch and from a remainder that carries;
++    // and at the range's edges, a `Duration` at its end lands exactly on the
++    // first and the last second, and a nanosecond more leaves.
++    int32:e2 = raw check_case(0i64, 0i64, dmax, true, 9223372036i64, 854775807i64);
++    if (e2 == 0i32) { e2 = raw check_case(0i64, 0i64, dmin, true, -9223372037i64, 145224192i64); }
++    if (e2 == 0i32) { e2 = raw check_case(0i64, 999999999i64, dmax, true, 9223372037i64, 854775806i64); }
++    if (e2 == 0i32) { e2 = raw check_case(HI_SECS - 9223372036i64, 145224192i64, dmax, true, HI_SECS, 999999999i64); }
++    if (e2 == 0i32) { e2 = raw check_case(HI_SECS - 9223372036i64, 145224193i64, dmax, false, 0i64, 0i64); }
++    if (e2 == 0i32) { e2 = raw check_case(LO_SECS + 9223372036i64, 854775808i64, dmin, true, LO_SECS, 0i64); }
++    if (e2 == 0i32) { e2 = raw check_case(LO_SECS + 9223372036i64, 854775807i64, dmin, false, 0i64, 0i64); }
++    if (e2 != 0i32) { exit e2; }
++    exit 0i32;
++};
++
++// 0, or 41 / 42 when an answer is not a `Timestamp` -- M-7, M-8.
++func:check_answer = int32(Timestamp:u) never fails {
++    if ((u.nanos => int64) >= NANOS)          { pass 41i32; }
++    if (u.secs < LO_SECS || u.secs > HI_SECS) { pass 42i32; }
++    pass 0i32;
++};
++
++// 0, or the exit code of the first thing wrong with `t + d` against the
++// verdict and the answer written for it.
++func:check_case = int32(int64:ts, int64:tn, int64:dn, bool:inr, int64:ws, int64:wn) never fails {
++    Result<Timestamp>:t = timestamp_of(ts, tn);
++    if (t.is_error) { pass 40i32; }
++    Result<Timestamp>:r = timestamp_add(t.value, raw duration_ns(dn));
++    if (r.is_error) {
++        if (inr) { pass 40i32; }
++        pass 0i32;
++    }
++    Timestamp:u = r.value;
++    int32:m = raw check_answer(u);
++    if (m != 0i32) { pass m; }
++    if (!inr || u.secs != ws || (u.nanos => int64) != wn) { pass 40i32; }
++    pass 0i32;
++};
++
++// `t + d` for a `Timestamp` forged through `wild` storage at `mem`, read back
++// field by field first: refused, or a `Timestamp`.
++func:check_forged = int32(wild int8->:mem, int64:ts, uint32:tn, int64:dn) never fails {
++    wild RawTs->:w = mem =>! wild RawTs->;
++    <-w = RawTs{ secs: ts, nanos: tn };
++    wild Timestamp->:p = mem =>! wild Timestamp->;
++    Timestamp:t = <-p;
++    if (t.secs != ts || t.nanos != tn) { pass 43i32; }
++    Result<Timestamp>:r = timestamp_add(t, raw duration_ns(dn));
++    if (r.is_error) { pass 0i32; }
++    pass (raw check_answer(r.value));
++};
++
++func:failsafe = int32(Error:e) {
++    pick (e) {
++        (cal.ETimeValue)    { exit 80i32; },
++        (HeapBadRequest)    { exit 91i32; },
++        (HeapOom)           { exit 92i32; },
++        (IntOverflow)       { exit 93i32; },
++        (OutOfBounds)       { exit 94i32; },
++        (Unreachable)       { exit 95i32; },
++        (WildLeak)          { exit 96i32; },
++        (DivByZero)         { exit 97i32; },
++        (DivOverflow)       { exit 98i32; },
++        (StackExhausted)    { exit 106i32; },
++        (MachineFault)      { exit 107i32; },
++        (*)                 { exit 99i32; }
++    }
++    exit 9i32;
++};
+diff --git a/tests/unit/timestamp_since_edges.npk b/tests/unit/timestamp_since_edges.npk
+new file mode 100644
+index 0000000000000000000000000000000000000000..3a9d5bac087aae4bb0a80b5df1f57109ec752cf2
+--- /dev/null
++++ b/tests/unit/timestamp_since_edges.npk
+@@ -0,0 +1,211 @@
++// expect-exit: 0
++//
++// `timestamp_since` at `Duration`'s two ends exactly, from both sides, at four
++// places in the range; a seeded sample of a hundred thousand pairs held to the
++// `int128` difference of their nanoseconds; and pairs forged past the range
++// answered or refused, never trapped (cycle 0.2.3; `TIME_MODEL.md` M-18 and
++// M-20, `SPAN_MODEL.md` N-3 and §5's third row).
++//
++// ASKS: does `timestamp_since(later, earlier)` give exactly `later - earlier`
++// in nanoseconds whenever `Duration` can hold it, and refuse with `ETimeValue`
++// exactly when it cannot -- at 9 223 372 036 854 775 807 nanoseconds and at one
++// more, and at -9 223 372 036 854 775 808 and one less?
++//
++// MATTERS BECAUSE M-18 is the place the library's ±9999 years and `Duration`'s
++// ±292 years meet, and the cycle README's watch-for says it: "an 'about 292
++// years' check is a check that is wrong by a day". So the ends are COMPUTED
++// here, never approximated: `int64`'s maximum is the bit pattern `~0u64 >> 1`
++// (TM-149), its minimum one below its negation, and each is split into seconds
++// and a non-negative remainder by this file's own arithmetic -- 9 223 372 036 s
++// and 854 775 807 ns, and -9 223 372 037 s and 145 224 192 ns -- so a library
++// whose bound were a second short, or read from the wrong end, meets a value it
++// did not choose. The difference is nominal, not elapsed: a `Timestamp`
++// difference is the scale's, which leap seconds make different from the SI time
++// that passed (`TIME_MODEL.md` M-12, `GLOSSARY.md`).
++//
++// THE CASES, in this order -- each later section asks what the earlier cannot.
++// SEEDED: 100 000 pairs from a 64-bit xorshift begun at the seed this file
++// commits -- an earlier reading anywhere in the range, a later one within six
++// hundred years of it either way -- each answer held to the `int128`
++// difference, its refusal to that difference's place outside `int64`, and each
++// answer added back to the earlier reading by `timestamp_add` to give the
++// later; the counts held to a transcription of the same steps in Python, 48 617
++// answered and 51 383 refused. THE ENDS, which no random pair lands on: each
++// from four earlier readings -- the epoch, the last nanosecond of the epoch's
++// second, and the two readings from which an end lands on the range's last
++// second and on its first -- each pair answered with the end exactly, and the
++// pair one nanosecond further refused. FORGED through `wild` storage: a later
++// reading at `int64`'s largest second, refused rather than trapped, and one
++// with a `nanos` of 2^32 - 1, answered with its exact difference -- `int128`
++// holds every difference two `int64`s and two `uint32`s can make.
++//
++// EXIT CODES, clear of every arm code (TM-152): 50 a sampled pair's verdict not
++// the `int128` difference's; 51 its answer not the difference; 52 an answer
++// added back not the later reading; 53 the counts not the transcription's; 54 a
++// pair at an end refused, or answered other than the end; 55 a pair one
++// nanosecond past an end answered; 56 a forged pair's verdict or answer wrong,
++// or the forge did not read back. SEEN RED AT PLANNING, on both legs, in a copy
++// of the tree (`meta/roadmap/0.2/0.2.3.md`, step 3): 50 with either bound's
++// check deleted; 51 with the operands swapped, and with the nanoseconds
++// dropped; 52 with `timestamp_add`'s carry deleted; 54 with either bound's
++// check at the end itself, with the upper bound a second short, and with either
++// of `limits.npk`'s two ends one inside `int64`'s own; 55 with either bound a
++// nanosecond wide; 56 with a forged `nanos` read through `int32`, which only a
++// value past 2^31 can tell. With the arithmetic in `int64` the program stops at
++// 93, `IntOverflow`, at the first pair past ±292 years. 53 is reached only by
++// editing this file, and was so measured -- the sample a pair short -- and 56
++// by that too, with the forge declaring its two fields the other way round.
++//
++// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
++// `span`: its eleven (`SAFETY.md` S-4).
++mod:timestamp_since_edges;
++
++use "../../src/span/span.npk".*;
++
++// `Timestamp` field for field, unsealed -- the forge's shape.
++struct:RawTs = { int64:secs; uint32:nanos; };
++
++fixed int64:LO_SECS = -377705116800i64;
++fixed int64:HI_SECS = 253402300799i64;
++fixed int64:NANOS = 1000000000i64;
++fixed int64:SIX_CENTURIES = 18934560000i64;       // 600 x 365.25 x 86 400 s
++
++// Four earlier readings for the ends: the epoch, its second's last
++// nanosecond, and the two from which an end lands on the range's last second
++// and on its first.
++fixed int64[4]:BASE_S = [ 0i64, 0i64, 244178928762i64, -368481744763i64 ];
++fixed int64[4]:BASE_N = [ 0i64, 999999999i64, 999999999i64, 0i64 ];
++
++func:main = int32(cstring[]:_~argv) {
++    int64:dmax = ((~0u64) >> 1u64) =>! int64;
++    int64:dmin = (0i64 - dmax) - 1i64;
++    int64:max_s = dmax / NANOS;                    // 9 223 372 036
++    int64:max_n = dmax % NANOS;                    // 854 775 807
++    int64:min_s = (dmin / NANOS) - 1i64;           // floored: -9 223 372 037
++    int64:min_n = (dmin % NANOS) + NANOS;          // 145 224 192
++
++    // ---- the seeded sample ---------------------------------------------------
++    int128:wmax = dmax => int128;
++    int128:wmin = dmin => int128;
++    uint64:span = ((HI_SECS - LO_SECS) + 1i64) =>! uint64;
++    uint64:x = 20261001u64;
++    int64:answered = 0i64;
++    int64:refused = 0i64;
++    for (int64:k in 1i64..100000i64) {
++        x = raw step(x);
++        int64:es = LO_SECS + ((x % span) =>! int64);
++        x = raw step(x);
++        int64:en = (x % (NANOS =>! uint64)) =>! int64;
++        x = raw step(x);
++        int64:off = ((x % ((2i64 * SIX_CENTURIES + 1i64) =>! uint64)) =>! int64) - SIX_CENTURIES;
++        int64:ls = es + off;
++        if (ls < LO_SECS || ls > HI_SECS) { ls = es - off; }
++        x = raw step(x);
++        int64:ln = (x % (NANOS =>! uint64)) =>! int64;
++        Result<Timestamp>:a = timestamp_of(ls, ln);
++        if (a.is_error) { exit 50i32; }
++        Result<Timestamp>:b = timestamp_of(es, en);
++        if (b.is_error) { exit 50i32; }
++        int128:want = (((ls => int128) - (es => int128)) * (NANOS => int128))
++                      + ((ln => int128) - (en => int128));
++        Result<Duration>:d = timestamp_since(a.value, b.value);
++        if (want >= wmin && want <= wmax) {
++            if (d.is_error) { exit 50i32; }
++            Duration:got = d.value;
++            if ((got.ns => int128) != want) { exit 51i32; }
++            Result<Timestamp>:again = timestamp_add(b.value, got);
++            if (again.is_error) { exit 52i32; }
++            if (again.value.secs != ls || (again.value.nanos => int64) != ln) { exit 52i32; }
++            answered = answered + 1i64;
++        } else {
++            if (!(d.is_error)) { exit 50i32; }
++            refused = refused + 1i64;
++        }
++    }
++    if (answered != 48617i64 || refused != 51383i64) { exit 53i32; }
++
++    // ---- the ends, exactly, from both sides --------------------------------
++    for (int64:i in 0i64..3i64) {
++        int32:e = raw check_end(BASE_S[i], BASE_N[i], max_s, max_n, dmax, 1i64);
++        if (e != 0i32) { exit e; }
++        e = raw check_end(BASE_S[i], BASE_N[i], min_s, min_n, dmin, 0i64 - 1i64);
++        if (e != 0i32) { exit e; }
++    }
++
++    // ---- forged pairs: answered or refused, never trapped -------------------
++    wild int8->:mem = alloc(#size_of<Timestamp>());
++    int32:f = raw check_forged(mem, dmax, 0u32, false, 0i64);
++    if (f == 0i32) { f = raw check_forged(mem, 0i64, 4294967295u32, true, 4294967295i64); }
++    dalloc(mem);
++    if (f != 0i32) { exit f; }
++    exit 0i32;
++};
++
++func:step = uint64(uint64:x0) never fails {
++    uint64:x = x0 ^ (x0 << 13u64);
++    x = x ^ (x >> 7u64);
++    pass x ^ (x << 17u64);
++};
++
++// The pair whose difference is `bound` -- `(s, n)` from the base, carried --
++// answered with exactly `bound`, and the pair one nanosecond further, `dir` of
++// +1 or -1, refused.
++func:check_end = int32(int64:bs, int64:bn, int64:s, int64:n, int64:bound, int64:dir) never fails {
++    int64:ls = bs + s;
++    int64:ln = bn + n;
++    if (ln >= NANOS) { ls = ls + 1i64; ln = ln - NANOS; }
++    Result<Timestamp>:b = timestamp_of(bs, bn);
++    if (b.is_error) { pass 54i32; }
++    Result<Timestamp>:a = timestamp_of(ls, ln);
++    if (a.is_error) { pass 54i32; }
++    Result<Duration>:d = timestamp_since(a.value, b.value);
++    if (d.is_error) { pass 54i32; }
++    if (d.value.ns != bound) { pass 54i32; }
++    int64:fs = ls;
++    int64:fnn = ln + dir;
++    if (fnn >= NANOS) { fs = fs + 1i64; fnn = fnn - NANOS; }
++    if (fnn < 0i64) { fs = fs - 1i64; fnn = fnn + NANOS; }
++    Result<Timestamp>:far = timestamp_of(fs, fnn);
++    if (far.is_error) { pass 55i32; }
++    Result<Duration>:past = timestamp_since(far.value, b.value);
++    if (!(past.is_error)) { pass 55i32; }
++    pass 0i32;
++};
++
++// A later reading forged through `wild` storage at `mem`, read back first,
++// against the epoch.
++func:check_forged = int32(wild int8->:mem, int64:ts, uint32:tn, bool:answered, int64:want) never fails {
++    wild RawTs->:w = mem =>! wild RawTs->;
++    <-w = RawTs{ secs: ts, nanos: tn };
++    wild Timestamp->:p = mem =>! wild Timestamp->;
++    Timestamp:t = <-p;
++    if (t.secs != ts || t.nanos != tn) { pass 56i32; }
++    Result<Timestamp>:e = timestamp_of(0i64, 0i64);
++    if (e.is_error) { pass 56i32; }
++    Result<Duration>:d = timestamp_since(t, e.value);
++    if (!answered) {
++        if (!(d.is_error)) { pass 56i32; }
++        pass 0i32;
++    }
++    if (d.is_error) { pass 56i32; }
++    if (d.value.ns != want) { pass 56i32; }
++    pass 0i32;
++};
++
++func:failsafe = int32(Error:e) {
++    pick (e) {
++        (cal.ETimeValue)    { exit 80i32; },
++        (HeapBadRequest)    { exit 91i32; },
++        (HeapOom)           { exit 92i32; },
++        (IntOverflow)       { exit 93i32; },
++        (OutOfBounds)       { exit 94i32; },
++        (Unreachable)       { exit 95i32; },
++        (WildLeak)          { exit 96i32; },
++        (DivByZero)         { exit 97i32; },
++        (DivOverflow)       { exit 98i32; },
++        (StackExhausted)    { exit 106i32; },
++        (MachineFault)      { exit 107i32; },
++        (*)                 { exit 99i32; }
++    }
++    exit 9i32;
++};

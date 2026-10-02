@@ -1,0 +1,15 @@
+diff --git a/meta/scratch/github.txt b/meta/scratch/github.txt
+index 87b0bbfc7468751324e0eaf0629c09737fb68ded..cb2205674d56ecb6f4b13ec308aa67b160b0b674 100644
+--- a/meta/scratch/github.txt
++++ b/meta/scratch/github.txt
+@@ -1,8 +1,8 @@
+ Proposed GitHub metadata for alternative-intelligence-cp/nitpick-time.
+ Written by the planning pass; apply after review.
+ 
+---- description (350 char limit; this is 218) ---
+-Dates, times and time zones for Nitpick — zero dependency, no libc, no system tzdb. The IANA database is compiled in from a pinned release, so the same program gives the same answer on every machine. Monotonic and wall clocks are different types.
++--- description (350 char limit; this is 258) ---
++Dates, times and time zones for Nitpick — zero dependency, no libc, no system tzdb. The IANA database is compiled in from a pinned release, so the same program gives the same answer on every machine. Monotonic readings and UTC timestamps are different types.
+ 
+ --- topics (20 max, lowercase, alphanumeric and hyphens) ---
+ datetime

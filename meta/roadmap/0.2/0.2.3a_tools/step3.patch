@@ -1,0 +1,396 @@
+diff --git a/harness/checks.py b/harness/checks.py
+index 5d44b5dcf8ee10f8cc91671615611942b12bb8c9..a1a54da6f53d24c06ba83461180e820f9129d012 100644
+--- a/harness/checks.py
++++ b/harness/checks.py
+@@ -1532,6 +1532,239 @@ def check_denominators(tree, extra=None, **_):
+     return res
+ 
+ 
++# ---------------------------------------------------------------------------
++# the functions in `src/`, as declared -- for the two checks below
++# ---------------------------------------------------------------------------
++
++_FUNC_DECL = re.compile(r"(?<![A-Za-z0-9_.])func%s*:%s*([A-Za-z_][A-Za-z0-9_]*)"
++                        % (_W, _W))
++
++
++def _close(code, at, open_ch, close_ch):
++    """The offset just past the `close_ch` that closes the `open_ch` at `at`."""
++    depth = 0
++    for j in range(at, len(code)):
++        if code[j] == open_ch:
++            depth += 1
++        elif code[j] == close_ch:
++            depth -= 1
++            if depth == 0:
++                return j + 1
++    return len(code)
++
++
++def functions(tree, files=None):
++    """Every `func` declared in `src/`, as `(rel, lineno, name, result, params,
++    start, end)`: `result` the declared result type with its whitespace
++    removed, `params` the parameter list's text, and `start`/`end` the
++    declaration's extent in the blanked text -- from `func` to the `}` that
++    closes its body, or its `;` when it has none.
++
++    READ FROM BLANKED CODE AND ACROSS LINE ENDS (TM-200), so a comment or a
++    literal holding `func:` or a brace is nothing here. A generic function's
++    `<...>` is skipped; the result type is the text between `=` and the `(` at
++    angle depth 0, where the `>` of a pointer's `->` closes nothing."""
++    out = []
++    for rel in (src_files(tree) if files is None else files):
++        code = blank_code(lexical.read(os.path.join(tree, rel)))
++        for m in _FUNC_DECL.finditer(code):
++            i = m.end()
++            while i < len(code) and code[i] in " \t\r\n":
++                i += 1
++            if i < len(code) and code[i] == "<":
++                i = _close(code, i, "<", ">")
++            eq = code.find("=", i)
++            if eq < 0:
++                continue
++            j, depth = eq + 1, 0
++            while j < len(code):
++                c = code[j]
++                if c == "<":
++                    depth += 1
++                elif c == ">" and depth and code[j - 1] != "-":
++                    depth -= 1
++                elif c == "(" and depth == 0:
++                    break
++                j += 1
++            result = "".join(code[eq + 1:j].split())
++            pend = _close(code, j, "(", ")")
++            params = code[j + 1:pend - 1]
++            semi, brace = code.find(";", pend), code.find("{", pend)
++            if brace < 0 or 0 <= semi < brace:
++                end = len(code) if semi < 0 else semi + 1
++            else:
++                end = _close(code, brace, "{", "}")
++            out.append((rel, _line(code, m.start()), m.group(1), result,
++                        params, m.start(), end))
++    return out
++
++
++# ---------------------------------------------------------------------------
++# check_no_view_returns -- SAFETY.md S-22 (TM-109, TM-110, TM-204)
++# ---------------------------------------------------------------------------
++
++# A VIEW, for S-22: a slice -- `uint8[]`, or a slice of anything, `T[]` --
++# a `cstring`, or a type that holds one: a struct declared in `src/` with such
++# a field at any depth, a fixed array of one, or a type ARGUMENT that is one
++# (`Vec<uint8[]>`). The last is cycle 0.2.0b's question, answered here: a
++# `#[derive(Copy)]` struct holding a slice is a legal `Vec` element under
++# `Vec<T: Copy>`, so a `Vec` of them hands its caller views as surely as a
++# struct holding one does. A type PARAMETER -- `vec_at`'s `T` -- is no view at
++# the declaration: its instantiations are its callers', and a caller that
++# instantiates `Vec` at a view type is S-22's to answer where it is written.
++# A pointer, `T->`, is not a view either: S-22 names a slice, a `cstring` and
++# a struct holding one, and no function in `src/` returned a pointer at cycle
++# 0.2.3a.
++_SLICE = re.compile(r"\[\]$")
++_FIXED_ARRAY = re.compile(r"^(.*)\[[0-9A-Za-z_]+\]$")
++
++# THE ONE NAMED EXEMPTION (TM-204), and what its reason is RE-DERIVED from on
++# every run (TM-137): `name -> (file, container)`. The reason S-22 gives is "a
++# container's own accessor over the container's own storage, reached through a
++# pointer parameter, named here beside the rule that governs its lifetime" --
++# "here" is S-22 -- so the check holds each part of that sentence to the
++# tree: the function is declared in `file`; its result is a view; a parameter
++# is a pointer to `container`; `container` is a struct `file` declares; and
++# S-22's own text names the function. Any part false is a stale exemption, and
++# a stale exemption is a failure (V-1c, TM-145).
++VIEW_RETURN_EXEMPT = {
++    "bytes_view": ("src/core/bytes.npk", "Bytes"),
++}
++_S22 = re.compile(r"^\*\*Rule S-22\b")
++
++
++def _type_args(t):
++    """The type arguments of `Name<A, B>`, split at depth 0; `[]` for none."""
++    i = t.find("<")
++    if i < 0 or not t.endswith(">"):
++        return []
++    args, depth, cur = [], 0, ""
++    for c in t[i + 1:-1]:
++        if c == "<":
++            depth += 1
++        elif c == ">" and cur[-1:] != "-":
++            depth -= 1
++        if c == "," and depth == 0:
++            args.append(cur)
++            cur = ""
++        else:
++            cur += c
++    return args + [cur] if cur else args
++
++
++def _view_in(t, structs, seen=()):
++    """Why the type `t` is or holds a view, in a few words -- or None."""
++    if _SLICE.search(t):
++        return "`%s` is a slice" % t
++    if t == "cstring":
++        return "a `cstring`"
++    if t.endswith("->"):
++        return None
++    m = _FIXED_ARRAY.match(t)
++    if m:
++        why = _view_in(m.group(1), structs, seen)
++        return None if why is None else "an array of %s" % why
++    for arg in _type_args(t):
++        why = _view_in(arg, structs, seen)
++        if why:
++            return "its type argument `%s`: %s" % (arg, why)
++    base = t.split("<", 1)[0]
++    if base in structs and base not in seen:
++        for rel, lineno, ftext in structs[base]:
++            why = _view_in(_field_type(ftext), structs, seen + (base,))
++            if why:
++                return "`%s` holds one -- `%s` at %s:%d, %s" % (
++                    base, ftext, rel, lineno, why)
++    return None
++
++
++def _s22_text(tree):
++    """S-22's own paragraphs in `SAFETY.md`, from its rule line to the next
++    rule or heading -- read as text (V-1k's third way)."""
++    path = os.path.join(tree, "meta", "specs", "SAFETY.md")
++    if not os.path.isfile(path):
++        return ""
++    with open(path, encoding="utf-8") as fh:
++        lines = fh.read().split("\n")
++    out, inside = [], False
++    for line in lines:
++        if _S22.match(line):
++            inside = True
++        elif inside and (line.startswith("**Rule ") or line.startswith("#")):
++            break
++        if inside:
++            out.append(line)
++    return "\n".join(out)
++
++
++def check_no_view_returns(tree, exempt=None, **_):
++    """No function in `src/` returns a view but S-22's named exemption.
++
++    `exempt` is a parameter for the reason `EXPECT_EXEMPT` is (V-14c): the
++    self-check must be able to point the exemption at a tree where its reason
++    is false. By default it is `VIEW_RETURN_EXEMPT` for THIS tree and nothing
++    for any other, as `CITATION_EXEMPT` is.
++    """
++    if exempt is None:
++        exempt = VIEW_RETURN_EXEMPT if os.path.abspath(tree) == REPO else {}
++    files = src_files(tree)
++    structs = _structs(tree, files)
++    funcs = functions(tree, files)
++    problems, views = [], []
++    for rel, lineno, name, result, params, _s, _e in funcs:
++        why = _view_in(result, structs)
++        if why is None:
++            continue
++        views.append(name)
++        if name in exempt:
++            continue
++        problems.append(
++            "%s:%d `%s` returns `%s` -- %s. No function in `src/` returns a "
++            "view (SAFETY.md S-22): a parser takes a `uint8[]` and returns a "
++            "value and an offset. A view out of its owner's frame is what "
++            "O-N9 measured reading freed memory at exit 0. If this one must, "
++            "it is a decision that loosens S-22 and names the function there."
++            % (rel, lineno, name, result, why))
++    sp = _s22_text(tree)
++    for name in sorted(exempt):
++        rel, container = exempt[name]
++        mine = [f for f in funcs if f[2] == name and f[0] == rel]
++        if not mine:
++            problems.append(
++                "stale exemption: S-22's exemption names `%s` in %s, and %s "
++                "declares no function of that name. An exemption that "
++                "outlives its function excuses the next one given its name "
++                "(V-1c, TM-137)." % (name, rel, rel))
++            continue
++        _r, lineno, _n, result, params, _s, _e = mine[0]
++        if _view_in(result, structs) is None:
++            problems.append(
++                "stale exemption: `%s` (%s:%d) no longer returns a view, so "
++                "S-22's exemption excuses nothing (V-1c)." % (name, rel, lineno))
++        if not re.search(r"(?<![A-Za-z0-9_])%s%s*->" % (re.escape(container), _W),
++                         params):
++            problems.append(
++                "stale exemption: `%s` (%s:%d) takes no pointer to `%s`, so "
++                "its view no longer roots at its container through a pointer "
++                "parameter -- S-22's reason for the exemption (TM-204)."
++                % (name, rel, lineno, container))
++        if not any(s[0] == rel for s in structs.get(container, ())):
++            problems.append(
++                "stale exemption: `%s` is excused as `%s`'s own accessor, and "
++                "%s declares no struct `%s` (TM-204)."
++                % (name, container, rel, container))
++        if "`%s`" % name not in sp:
++            problems.append(
++                "stale exemption: S-22's text in meta/specs/SAFETY.md no longer "
++                "names `%s`, and the exemption is S-22's to give (TM-204)."
++                % name)
++    headline = ("%d function(s) over %d file(s) in src/, %d returning a view: "
++                "%d excused by name (S-22, re-derived)"
++                % (len(funcs), len(files), len(views),
++                   len([v for v in views if v in exempt])))
++    return Result("check_no_view_returns", headline, problems)
++
++
+ # ---------------------------------------------------------------------------
+ # check_check_registry -- TESTING.md V-14e (TM-201)
+ # ---------------------------------------------------------------------------
+@@ -1774,6 +2007,7 @@ LIVE = (
+     check_constants_named,
+     check_literal_divisors,
+     check_no_owning_fields,
++    check_no_view_returns,
+     check_raw_index,
+     check_purity,
+     check_host_isolation,
+diff --git a/harness/selfcheck.py b/harness/selfcheck.py
+index bd4a309f61113036b500f8de2564a20c6a407fd2..93c68681eeeeb463290d069c07707dbcd0568e0a 100644
+--- a/harness/selfcheck.py
++++ b/harness/selfcheck.py
+@@ -866,6 +866,17 @@ def _family(rows=("check_a", "check_b", "check_c", "check_p"),
+             ("harness/run.py", run), ("harness/arms.py", arms)]
+ 
+ 
++# A FUNCTION IN `src/fmt/`, the first code that could want a view back (cycle
++# 0.4's parsers): `check_no_view_returns` (TM-204) is planted with each shape
++# it reads as a view -- a `uint8[]`, a slice of anything else, a `cstring`, a
++# struct holding a slice, and one handed back inside a `Vec` -- beside the same
++# function returning what owns nothing: a `string`, a fixed array, a struct of
++# integers, a `Vec<int64>`. A fixed `int64[4]` is a value, not a view, which
++# is what the second row's control is for.
++def _fmt(decl):
++    return ("src/fmt/fmt.npk", "mod:fmt;\n" + decl + "\n")
++
++
+ # Each row: the check, the file that violates it, the file that does not, and a
+ # fragment the finding must name. The CLEAN column is not decoration -- several
+ # of these checks are one predicate away from failing this repository's own
+@@ -1249,9 +1260,90 @@ PLANTED = [
+     # ONE CHECK STATED TWICE -- live in `LIVE` and pending at once.
+     (checks_mod.check_check_registry,
+      _family(live=("check_a", "check_p")), _family(), "at once"),
++    (checks_mod.check_no_view_returns,
++     _fmt("pub func:f = uint8[](string:s) never fails { pass string_bytes(s); };"),
++     _fmt("pub func:f = string(string:s) never fails { pass s; };"),
++     "returns `uint8[]`"),
++    (checks_mod.check_no_view_returns,
++     _fmt("pub func:f = int64[](int64:n) never fails { pass n; };"),
++     _fmt("pub func:f = int64[4](int64:n) never fails { pass n; };"),
++     "`int64[]` is a slice"),
++    (checks_mod.check_no_view_returns,
++     _fmt("pub func:f = cstring(string:s) { pass to_cstring(s); };"),
++     _fmt("pub func:f = int64(string:s) never fails { pass 0i64; };"),
++     "a `cstring`"),
++    (checks_mod.check_no_view_returns,
++     _fmt("struct:Span = { uint8[]:text; int64:at; };\n"
++          "pub func:f = Span(int64:n) never fails { pass n; };"),
++     _fmt("struct:Span = { int64:text; int64:at; };\n"
++          "pub func:f = Span(int64:n) never fails { pass n; };"),
++     "`Span` holds one"),
++    (checks_mod.check_no_view_returns,
++     _fmt("pub func:f = Vec<uint8[]>(int64:n) never fails { pass n; };"),
++     _fmt("pub func:f = Vec<int64>(int64:n) never fails { pass n; };"),
++     "its type argument `uint8[]`"),
+ ]
+ 
+ 
++# S-22'S ONE EXEMPTION, RE-DERIVED (TM-204, TM-137) -- which no `PLANTED` row
++# can express, because the exemption applies to this repository's tree and to
++# no scratch tree unless it is handed one. Each plant falsifies one part of the
++# reason S-22 gives -- the function gone, no view, no pointer to its
++# container, no container, and S-22 silent about it -- beside a control where
++# every part holds, as `bytes_view` holds them today.
++_EXEMPT_VIEW = {"bytes_view": ("src/core/bytes.npk", "Bytes")}
++_S22_TEXT = ("# Safety\n\n## 5. Resources\n\n**Rule S-22 -- a view is a "
++             "parameter, never a return value.** One is named -- %s.\n\n"
++             "## 6. What an application owes\n")
++_BYTES = ("mod:bytes;\npub struct:%s = { hidden buffer:body; sealed int64:len; };\n"
++          "pub func:%s = %s(%s:b) never fails {\n"
++          "    pass #wild_slice<uint8>(b.body.ptr, b.len);\n};\n")
++VIEW_EXEMPT_PLANTS = [
++    ("the function gone",
++     _BYTES % ("Bytes", "bytes_peek", "uint8[]", "Bytes->"), "`bytes_view`",
++     "declares no function of that name"),
++    ("no view returned",
++     _BYTES % ("Bytes", "bytes_view", "int64", "Bytes->"), "`bytes_view`",
++     "no longer returns a view"),
++    ("no pointer to the container",
++     _BYTES % ("Bytes", "bytes_view", "uint8[]", "Bytes"), "`bytes_view`",
++     "takes no pointer to `Bytes`"),
++    ("no container",
++     _BYTES % ("Sink", "bytes_view", "uint8[]", "Bytes->"), "`bytes_view`",
++     "declares no struct `Bytes`"),
++    ("S-22 silent about it",
++     _BYTES % ("Bytes", "bytes_view", "uint8[]", "Bytes->"), "`bytes_peek`",
++     "no longer names `bytes_view`"),
++]
++
++
++def part_b_view_exempt(rep, base):
++    """S-22's exemption, each part of its reason falsified alone."""
++    problems = []
++    good = _mini_tree(os.path.join(base, "planted", "view_exempt_good"), [
++        ("src/core/bytes.npk",
++         _BYTES % ("Bytes", "bytes_view", "uint8[]", "Bytes->")),
++        ("meta/specs/SAFETY.md", _S22_TEXT % "`bytes_view`")])
++    res = checks_mod.check_no_view_returns(good, exempt=_EXEMPT_VIEW)
++    if res.problems:
++        problems.append(
++            "check_no_view_returns fired on an exemption whose every reason "
++            "holds, so its reds below are not evidence.\n      it said: %s"
++            % res.problems[0])
++    for i, (what, bytes_text, named, needle) in enumerate(VIEW_EXEMPT_PLANTS):
++        red = _mini_tree(os.path.join(base, "planted", "view_exempt_%d" % i), [
++            ("src/core/bytes.npk", bytes_text),
++            ("meta/specs/SAFETY.md", _S22_TEXT % named)])
++        res = checks_mod.check_no_view_returns(red, exempt=_EXEMPT_VIEW)
++        if not any(needle in p for p in res.problems):
++            problems.append(
++                "check_no_view_returns did not fail S-22's exemption with %s: "
++                "an exemption whose reason no longer holds excuses the next "
++                "view returned (TM-137).\n      it said: %s"
++                % (what, res.problems[0] if res.problems else "nothing"))
++    return problems
++
++
+ # THE COUNTS THIS FILE PRINTS, DERIVED RATHER THAN TYPED (TM-142).
+ #
+ #   V14_CASES     what `TESTING.md` V-14 names -- seven, plus this repository's
+@@ -1274,7 +1366,7 @@ PLANTED = [
+ #                 which is why the two numbers printed are equal.
+ V14_CASES = 13
+ PLANTED_CASES = 12
+-TREE_PLANTS = len(PLANTED) + 3
++TREE_PLANTS = len(PLANTED) + 3 + len(VIEW_EXEMPT_PLANTS)
+ 
+ 
+ def part_b(rep, base):
+@@ -2014,7 +2106,8 @@ def run(rep, root, steps):
+                case_12_code_named_once, case_13_silent_site):       # TM-210
+         ok = _report_case(rep, fn(root, man, base)) and ok
+ 
+-    problems = part_b(rep, base) + part_b_specs_current(rep, base)
++    problems = (part_b(rep, base) + part_b_specs_current(rep, base)
++                + part_b_view_exempt(rep, base))
+     if problems:
+         ok = False
+         rep.fail("self-check: the tree checks", "%d of them did not behave"
+diff --git a/meta/specs/TESTING.md b/meta/specs/TESTING.md
+index eec89e4374a6b6611b6a620dccb2228c2e1a2d6f..e32a9602bfa5fc3611c5b788e4bfb5298b46932b 100644
+--- a/meta/specs/TESTING.md
++++ b/meta/specs/TESTING.md
+@@ -47,6 +47,7 @@ them found something on its first run.
+ | `check_constants_named` | no bound outside `src/core/limits.npk`; no magic 86400, 146097, 719468 or 1000000000 outside the module that owns it — `core` alone for 86400 since cycle 0.2.2 (TM-223), "the algorithm module" for all four until then |
+ | `check_literal_divisors` (TM-163) | **every `/`, `%`, `/=` and `%=` in `src/cal/` against `CALENDAR.md` C-11**: the divisor must be a positive decimal integer literal with its width suffix, standing alone — nothing after it that binds tighter than `/`, since `256i64 =>! uint8` is 0 — so D-007's divide-by-zero and `MIN / −1` traps are unreachable by construction. It reads code with comments AND strings blanked, because every `use` path in `cal.npk` holds a `/`; `+%`, `-%` and `*%` are the wrapping operators and not divisions. It is C-11's list of divisors, which a list in the rule's text could not be: the one C-11 carried was short by eight the day `civil_from_days` arrived. *(Until cycle 0.1.5 this row said its docstring's limits — block comments, character literals, raw strings and templates "not modelled", `src/cal/` having none — and the docstring called the gap the safe direction. Measured at 0.1.5's planning, a `'"'`, a template's `//` and a lone CR in a `//` comment each HID a division, and a `//` inside a `/* */` hid a clock call and a declaration from the checks beside this one; since then it reads through V-1k's reader, and each shape is planted.)* |
+ | `check_no_format_string` | no function anywhere takes a pattern `string` and interprets it — `FORMAT_MODEL.md` F-5's rule, made checkable. **Pending until cycle 0.4**: nothing enforces F-5 before then, and V-1a's table says why |
++| `check_no_view_returns` (TM-228) | **no function in `src/` returns a view** (`SAFETY.md` S-22): a slice — `uint8[]` or any other `T[]` — a `cstring`, or a type that holds one: a struct's field at any depth, a fixed array's element, a type argument (`Vec<uint8[]>`), but no type parameter and no pointer. **But S-22's one named exemption, `bytes_view`, whose reason is re-derived on every run** (TM-137): it is declared in `src/core/bytes.npk`, returns a view, takes a pointer to `Bytes`, which that file declares, and S-22's own text names it — any part false fails the run. Live since cycle 0.2.3a, before cycle 0.4's parsers, the first code that could want another view back (TM-204) |
+ | `check_raw_index` | **no index through a bare pointer in `src/`, by FIELD or by BINDING.** `Vec<T>.items` and `Bytes`' buffer body are bare pointers, which the language does not bounds-check (TM-108, `SAFETY.md` S-17b), so the accessor pair is the only bound there is. It was two literal substrings until cycle 0.0.6 and was **evadable in one line** — bind the pointer to a local and index the local, which was built at `aaffb87`, ran, and read four elements past the live prefix while the check reported `0 sites` (TM-144). Every `wild T->:name` in a file is now watched. **The limit is stated: it is lexical and per-file**, so a bare pointer passed to another function and indexed there is still not covered; cycle 0.5 gets the widening |
+ | `check_expect_headers` | **the tree partitioned three ways, with the denominator printed** (TM-115): every `.npk` is under `src/` (judged by "it compiles"), or under `tests/` with an `expect-` marker of its own or a NAMED exemption, or it is unowned — and unowned is a failure. The exemption list is diffed in both directions, so an exemption naming a file that is gone fails too. **It says a marker is WELL-FORMED and nothing about whether it is TRUE**; that is `check_exemptions_live`'s and `run_defect_corpus`'s job, and the gap between the two readings was TM-141 |
+ | `check_exemptions_live` (TM-137) | **every exemption's recorded VERDICT, re-derived from the file on every run.** An exemption's reason is a claim about what the compiler does, and the compiler moves. The superseded mechanism checked only that the named file still existed: O-N17 landed, two files went from stopping at `llc` to running clean, the suite stayed green and nothing said a word |

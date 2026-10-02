@@ -1,0 +1,431 @@
+diff --git a/harness/checks.py b/harness/checks.py
+index c76ff8031437ba37b0ae6b7412c7b99594ee36fd..c59ac74602f1c84cf96cdbb4bd296806d4be0475 100644
+--- a/harness/checks.py
++++ b/harness/checks.py
+@@ -500,11 +500,16 @@ def check_error_budget(tree, **_):
+ # when the tree and the document disagree, and the fix is whichever of the two
+ # is wrong. (Until cycle 0.2.2 all four were `cal`'s, "as the documents stand
+ # TODAY".)
++#
++# KEYED BY VALUE SINCE CYCLE 0.2.3a (TM-231): a literal is held to the map by
++# what the compiler reads it as, never by its digits -- `15180hexi64` is 86 400,
++# and `86400hexi64` is 549 888 and no owned number at all. (Until then the keys
++# were the decimal digit strings, and `_NUMBER` below read only those.)
+ CONSTANT_OWNER = {
+-    "146097": "cal",        # days in 400 Gregorian years -- CALENDAR.md §4
+-    "719468": "cal",        # the 0000-03-01 era shift  -- CALENDAR.md §4
+-    "86400": "core",        # seconds per day, read by name -- S-16, TM-223
+-    "1000000000": "cal",    # nanoseconds per second    -- SAFETY.md S-16
++    146097: "cal",          # days in 400 Gregorian years -- CALENDAR.md §4
++    719468: "cal",          # the 0000-03-01 era shift  -- CALENDAR.md §4
++    86400: "core",          # seconds per day, read by name -- S-16, TM-223
++    1000000000: "cal",      # nanoseconds per second    -- SAFETY.md S-16
+ }
+ 
+ # B-15: constants are SCREAMING_SNAKE. A *bound* is the subset this rule is
+@@ -513,14 +518,132 @@ CONSTANT_OWNER = {
+ _BOUND_DECL = re.compile(
+     r"(?<![A-Za-z0-9_.])(?:pub%s+)?fixed%s+[A-Za-z_][A-Za-z0-9_<>\[\]]*%s*:%s*"
+     r"([A-Z][A-Z0-9_]*(?:_MAX|_MIN|_LIMIT|_BOUND))\b" % (_W, _W, _W, _W))
+-# A NUMERIC LITERAL CARRIES ITS TYPE SUFFIX, so `\b(\d+)\b` does not match
+-# `86400i64` -- the `i` is a word character and kills the trailing boundary.
+-# That is not a hypothetical: the first draft of this check used `\b…\b` and
+-# `selfcheck.py`'s planted `86400i64` walked straight past it. Every integer
+-# literal in this language is written `<digits><i|u><width>`, so the match ends
+-# at "not another digit" and the LEADING boundary is what keeps it off the
+-# `12` in `int64[12]` and the `64` in `int64`.
+-_NUMBER = re.compile(r"(?<![0-9A-Za-z_.])(\d{4,})(?![0-9])")
++
++# A NUMERIC LITERAL AS THE COMPILER'S LEXER READS ONE -- cycle 0.2.3a, TM-231.
++# Read at `5fbaf4a` with `git show`: `src/frontend/lexer.npk`'s `lexer_next`,
++# `src/frontend/numeric.npk`'s `num_scan`, `src/frontend/num_width.npk`'s
++# `num_width_of`, and `LEXICAL_REFERENCE.md` §6.2. A token that begins with a
++# decimal digit -- which no identifier does, the compiler's D-147 -- runs on
++# through letters, digits and `_`; a `.` with a digit after it makes it a
++# float, which runs on through the same, and through one sign. An integer's
++# VALUE is `num_scan`'s: the longest width suffix stripped (`num_width_of`'s
++# thirty-seven, longest first), then a base suffix (`hex`, `bin`, `oct`, `ter`,
++# `tri`, `non`, then `t` and `n`), every `_` dropped wherever it stands -- two
++# together, or one before the width -- and the digits read in the base, the
++# balanced ones with their negative digits: `T` or `t` for -1 in ternary,
++# `a` ... `d` for -1 ... -4 in nonary. A character literal's value is its code
++# point, the lexer's `CharLit` payload, and a widening makes it an integer
++# (`'\u{15180}' => int64` is 86 400, measured at the pin), so it is read too.
++#
++# WHY, MEASURED AT CYCLE 0.2.3a's PLANNING. The pattern below the line read a
++# literal as four or more DECIMAL digits not after a letter, a digit, `_` or
++# `.`, and compared the digits as text. Planted in `src/span/span.npk` one at a
++# time, sixteen spellings the pinned compiler reads as 86 400 or 1 000 000 000
++# passed it -- `86_400i64` and `1_000_000_000i64`, `86__400i64`, a leading zero,
++# hex, binary, octal, both balanced bases, a character literal, and a bound
++# after `..` or `...`, which its look-behind on `.` hid -- while `86400hexi64`,
++# which is 549 888, and the string `"86400"` were each a finding. The self-check
++# plants each class, and part E asks the pinned compiler about every spelling
++# in one program, so a re-pin that moves the numeric scan is a red run.
++# (`_NUMBER = re.compile(r"(?<![0-9A-Za-z_.])(\d{4,})(?![0-9])")` until then.)
++#
++# A FLOAT is read by its extent and not evaluated: no float is written in this
++# library, and a float's value is the compiler's const evaluator's, from its
++# text. One in `src/` is reported by its text, never passed -- a spelling this
++# reader cannot read is a spelling it cannot clear -- and so is a token that is
++# no literal the lexer accepts (`0xFF` is `NITPICK-LEX-003`, "digit is not valid
++# for this base").
++_WIDTHS = frozenset((
++    "i8", "u8", "f32", "f64", "i16", "i32", "i64", "u16", "u32", "u64", "f128",
++    "i128", "i256", "i512", "tbb8", "u128", "u256", "u512", "char8", "i1024",
++    "i2048", "i4096", "tbb16", "tbb32", "tbb64", "tfp32", "tfp64", "u1024",
++    "u2048", "u4096", "char16", "char32", "dim256", "tbb128", "tbb256",
++    "tfp128", "tfp256"))
++_BASES = (("hex", 16), ("bin", 2), ("oct", 8), ("ter", 3), ("tri", 3),
++          ("non", 9), ("t", 3), ("n", 9))
++_IDENT_PART = frozenset("0123456789abcdefghijklmnopqrstuvwxyz"
++                        "ABCDEFGHIJKLMNOPQRSTUVWXYZ_")
++_DIGIT = {c: i for i, c in enumerate("0123456789abcdef")}
++_DIGIT.update({c: i for i, c in enumerate("0123456789ABCDEF")})
++_BALANCED = {3: {"0": 0, "1": 1, "T": -1, "t": -1},
++             9: {"0": 0, "1": 1, "2": 2, "3": 3, "4": 4, "a": -1, "b": -2,
++                 "c": -3, "d": -4, "A": -1, "B": -2, "C": -3, "D": -4}}
++
++
++def literal_value(tok):
++    """The value of the integer literal `tok` as `num_scan` reads it, or None
++    for a token the lexer would refuse."""
++    width = 0
++    for n in range(6, 1, -1):                 # `strip_type_suffix`: longest first,
++        if len(tok) > n and tok[-n:] in _WIDTHS:   # and something left before it
++            width = n
++            break
++    body = tok[:len(tok) - width]
++    base, digits = 10, body
++    for sfx, b in _BASES:                     # `strip_base_suffix`'s order
++        if body.endswith(sfx):
++            base, digits = b, body[:-len(sfx)]
++            break
++    value, seen = 0, False
++    for c in digits:
++        if c == "_":
++            continue                          # `_` is ignored wherever it stands
++        d = _BALANCED[base].get(c) if base in _BALANCED else _DIGIT.get(c)
++        if d is None or (base not in _BALANCED and d >= base):
++            return None                       # a bad digit: `NITPICK-LEX-003`
++        value, seen = value * base + d, True
++    return value if seen else None
++
++
++def _char_value(text):
++    """A character literal's code point, as the lexer reads it -- `'x'`, one
++    code point in UTF-8, or one escape -- or None."""
++    body = text[1:-1] if len(text) >= 3 and text.endswith("'") else ""
++    if body.startswith("\\"):
++        r = lexical._escape(body, 0)
++        return r[0] if r and r[1] == len(body) else None
++    try:
++        cp = body.encode("latin-1").decode("utf-8")
++    except UnicodeDecodeError:
++        return None
++    return ord(cp) if len(cp) == 1 else None
++
++
++def literals(text):
++    """Every numeric literal in a file's text as the compiler's lexer reads it:
++    `[(offset, token, value)]` in the order they stand, `value` None for one
++    this reader does not evaluate -- a float, or a token the lexer refuses.
++    `text` is what `lexical.read` returns; comments and every other literal are
++    blanked first, so a number in prose or in a string's text is nothing, as it
++    is to the compiler."""
++    sp = lexical.spans(text)
++    code = lexical.blank(text, sp)
++    out, n, i = [], len(code), 0
++    while i < n:
++        c = code[i]
++        if c not in _IDENT_PART or (i and code[i - 1] in _IDENT_PART):
++            i += 1
++            continue
++        j = i
++        while j < n and code[j] in _IDENT_PART:
++            j += 1
++        if "0" <= c <= "9":
++            if j + 1 < n and code[j] == "." and "0" <= code[j + 1] <= "9":
++                j += 1                        # a float: `lexer_next`'s extent
++                while j < n and code[j] in _IDENT_PART:
++                    j += 1
++                if j < n and code[j] in "+-":
++                    j += 1
++                    while j < n and code[j] in _IDENT_PART:
++                        j += 1
++                out.append((i, code[i:j], None))
++            else:
++                out.append((i, code[i:j], literal_value(code[i:j])))
++        i = j
++    for kind, s, e in sp:
++        if kind == "char":
++            out.append((s, text[s:e], _char_value(text[s:e])))
++    return sorted(out)
+ 
+ 
+ def check_constants_named(tree, **_):
+@@ -531,14 +654,16 @@ def check_constants_named(tree, **_):
+     86400 seconds to a caller who has heard of leap seconds, and 1000000000 is
+     the one that decides whether a nanosecond field is `uint32`. Each belongs to
+     exactly one module, and a second copy is how two modules come to disagree.
++    A copy is a literal whose VALUE is one of them, in whatever spelling the
++    compiler reads (TM-231), negated or not.
+     """
+     files = src_files(tree)
+-    problems, hits, bounds = [], 0, 0
++    problems, hits, bounds, read = [], 0, 0, 0
+     limits_rel = "src/core/limits.npk"
+     for rel in files:
+         mod = module_of(rel)
+         text = lexical.read(os.path.join(tree, rel))
+-        decls, code = blank_code(text), strip_comments(text)
++        decls = blank_code(text)
+         for m in _BOUND_DECL.finditer(decls):
+             bounds += 1
+             if rel != limits_rel:
+@@ -549,22 +674,33 @@ def check_constants_named(tree, **_):
+                     "uses it is a bound nobody can review against the "
+                     "range it is supposed to enforce."
+                     % (rel, _line(decls, m.start()), m.group(1), limits_rel))
+-        for m in _NUMBER.finditer(code):
+-            num = m.group(1)
+-            if num not in CONSTANT_OWNER:
++        for at, tok, value in literals(text):
++            read += 1
++            if value is None:
++                problems.append(
++                    "%s:%d holds `%s`, a literal this check does not read: a "
++                    "float, or a token the compiler's lexer refuses. A "
++                    "spelling it cannot read is a spelling it cannot clear "
++                    "of being a copy of an owned number (TM-231)."
++                    % (rel, _line(text, at), tok))
++                continue
++            if abs(value) not in CONSTANT_OWNER:
+                 continue
+             hits += 1
+-            owner = CONSTANT_OWNER[num]
++            owner = CONSTANT_OWNER[abs(value)]
+             if mod not in (owner, "core"):
+                 problems.append(
+-                    "%s:%d spells the magic number %s, which belongs to "
++                    "%s:%d spells the magic number %d%s, which belongs to "
+                     "module `%s` (SAFETY.md S-16, CALENDAR.md §4). Give it "
+                     "a name in `%s` and import the name: a second literal "
+                     "copy is how two modules come to disagree about a "
+                     "constant neither of them owns."
+-                    % (rel, _line(code, m.start()), num, owner, limits_rel))
++                    % (rel, _line(text, at), abs(value),
++                       "" if tok == str(value) else " as `%s`" % tok,
++                       owner, limits_rel))
+     headline = ("%d bound declaration(s) and %d owned-constant occurrence(s) "
+-                "over %d file(s) in src/" % (bounds, hits, len(files)))
++                "over %d file(s) in src/, %d literal(s) read"
++                % (bounds, hits, len(files), read))
+     return Result("check_constants_named", headline, problems)
+ 
+ 
+diff --git a/harness/selfcheck.py b/harness/selfcheck.py
+index 47ec1a571ac9d43ece7e8e29feeadf5984330d22..395a80096a778df0747934fdc0516f662ed3bfa7 100644
+--- a/harness/selfcheck.py
++++ b/harness/selfcheck.py
+@@ -900,6 +900,28 @@ def _narrow(name):
+             "    pass a + b;\n};\n" % name)
+ 
+ 
++# `check_constants_named` READS A LITERAL AS THE COMPILER'S LEXER DOES (cycle
++# 0.2.3a, TM-231). Twelve rows plant one spelling the pinned compiler reads as
++# 86 400 -- one of them as its negation -- in `span`, where the number is
++# `core`'s, beside the SAME spelling one higher, so a check that fired on the
++# shape rather than on the value fails its control. Two are the other way
++# round, their GOOD column the point: `86400hexi64` is 549 888 and a string's
++# text is no number, and the check before TM-231 fired on both. The last plants
++# a token the lexer refuses, beside a hex literal it reads.
++def _div(expr):
++    return ("src/span/span.npk",
++            "mod:span;\nfunc:f = int64(int64:s) never fails { pass s / %s; };\n"
++            % expr)
++
++
++def _loop(hi):
++    return ("src/span/span.npk",
++            "mod:span;\nfunc:f = int64(int64:s) never fails {\n"
++            "    int64:last = 0i64;\n"
++            "    for (int64:k in 0i64...%s) { last = k; }\n"
++            "    pass last;\n};\n" % hi)
++
++
+ # Each row: the check, the file that violates it, the file that does not, and a
+ # fragment the finding must name. The CLEAN column is not decoration -- several
+ # of these checks are one predicate away from failing this repository's own
+@@ -1347,6 +1369,51 @@ PLANTED = [
+       ("src/span/span.npk", "mod:span;\n")],
+      [_span5((("`g`", "**yes**"),)), ("src/span/span.npk", "mod:span;\n")],
+      "no table with an `int128` column"),
++    # A DIGIT SEPARATOR -- the dispatch's measured case, `86_400i64`.
++    (checks_mod.check_constants_named, _div("86_400i64"), _div("86_401i64"),
++     "belongs to module `core`"),
++    # TWO TOGETHER, which Python's own `int()` refuses -- so a reader that left
++    # the separators to `int()` passes the row above and fails this one.
++    (checks_mod.check_constants_named, _div("86__400i64"), _div("86__401i64"),
++     "belongs to module `core`"),
++    # A LEADING ZERO: decimal still, and no longer the digits `86400`.
++    (checks_mod.check_constants_named, _div("086400i64"), _div("086401i64"),
++     "belongs to module `core`"),
++    (checks_mod.check_constants_named, _div("15180hexi64"), _div("15181hexi64"),
++     "belongs to module `core`"),
++    (checks_mod.check_constants_named, _div("10101000110000000bini64"),
++     _div("10101000110000001bini64"), "belongs to module `core`"),
++    (checks_mod.check_constants_named, _div("250600octi64"), _div("250601octi64"),
++     "belongs to module `core`"),
++    # THE BALANCED BASES: ternary's `T` is -1, nonary's `a` ... `d` -1 ... -4.
++    (checks_mod.check_constants_named, _div("1111TTTT000ti64"),
++     _div("1111TTTT001ti64"), "belongs to module `core`"),
++    (checks_mod.check_constants_named, _div("142dc0ni64"), _div("142dc1ni64"),
++     "belongs to module `core`"),
++    # A NEGATIVE LITERAL, which only a balanced base spells: -86 400 is a copy.
++    (checks_mod.check_constants_named, _div("0TTTT1111000ti64"),
++     _div("0TTTT1111001ti64"), "belongs to module `core`"),
++    # A WIDTH PAST `u64`, from the width table.
++    (checks_mod.check_constants_named, _div("86400i128"), _div("86401i128"),
++     "belongs to module `core`"),
++    # A CHARACTER LITERAL: its value is its code point, and it widens.
++    (checks_mod.check_constants_named, _div("('\\u{15180}' => int64)"),
++     _div("('\\u{15181}' => int64)"), "belongs to module `core`"),
++    # A BOUND AFTER `...` -- the old pattern's look-behind on `.` hid it.
++    (checks_mod.check_constants_named, _loop("86400i64"), _loop("86401i64"),
++     "belongs to module `core`"),
++    # THE GOOD COLUMN IS THE POINT: 0x86400 is 549 888.
++    (checks_mod.check_constants_named, _div("86400i64"), _div("86400hexi64"),
++     "belongs to module `core`"),
++    # THE GOOD COLUMN IS THE POINT: a string's text is no number.
++    (checks_mod.check_constants_named, _div("86400i64"),
++     ("src/span/span.npk", "mod:span;\nfunc:f = string() never fails { "
++                           "pass \"86400\"; };\n"),
++     "belongs to module `core`"),
++    # A TOKEN THE LEXER REFUSES is reported, never passed -- `0x` is no prefix
++    # here: `0x15180` is `NITPICK-LEX-003`, "digit is not valid for this base".
++    (checks_mod.check_constants_named, _div("0x15180"), _div("0FFhex"),
++     "a literal this check does not read"),
+ ]
+ 
+ 
+@@ -2040,8 +2107,71 @@ _FORMS_LITERALS = ((21, "a = 5i32"), (24, "a = 6i32"), (27, "a = 7i32"),
+                    (30, "a = 8i32"), (33, "a = 9i32"), (36, "a = 20i32"))
+ 
+ 
++# THE SPELLINGS OF A NUMBER `check_constants_named` READS (cycle 0.2.3a, TM-231),
++# and part E's third half asks the pinned compiler about every one: line by
++# line, each spelling against the plain decimal the compiler must read it as,
++# so the program exits 0 only if it reads every one so -- and the reader,
++# `checks.literals`, must read each spelling on its line as that decimal too.
++# A re-pin that moves the numeric scan on one of them -- a base suffix, a
++# width, the separator, the leading-digit rule -- is a red run. Its own
++# `failsafe`, because the loop's counter can reach `IntOverflow`.
++_NUM_FORMS = (
++    ("86_400i64", 86400), ("86__400i64", 86400), ("86400_i64", 86400),
++    ("086400i64", 86400), ("15180hexi64", 86400),
++    ("10101000110000000bini64", 86400), ("250600octi64", 86400),
++    ("1111TTTT000ti64", 86400), ("142dc0ni64", 86400),
++    ("0TTTT1111000ti64", -86400), ("86400hexi64", 549888),
++    ("(86400i128 =>! int64)", 86400), ("('\\u{15180}' => int64)", 86400),
++    ("1_000_000_000i64", 1000000000), ("01000000000i64", 1000000000),
++    ("3B9ACA00hexi64", 1000000000),
++    ("111011100110101100101000000000bini64", 1000000000),
++    ("7346545000octi64", 1000000000), ("10TT1T01T001T1010001ti64", 1000000000),
++    ("3d21c1b101ni64", 1000000000), ("(1000000000i128 =>! int64)", 1000000000),
++)
++_NUM_FAILSAFE = """
++func:failsafe = int32(Error:e) {
++    pick (e) {
++        (HeapBadRequest) { exit 91i32; },
++        (HeapOom)        { exit 92i32; },
++        (IntOverflow)    { exit 93i32; },
++        (Unreachable)    { exit 95i32; },
++        (WildLeak)       { exit 96i32; },
++        (StackExhausted) { exit 106i32; },
++        (MachineFault)   { exit 107i32; },
++        (*)              { exit 99i32; }
++    }
++    exit 9i32;
++};
++"""
++
++
++def _num_program():
++    """`(text, lines)`: the program, and `[(line, token, value)]` -- the token
++    on each line the reader must read as `value`."""
++    head = ("mod:numeric_forms;\n"
++            "func:main = int32(cstring[]:_~argv) {\n")
++    body, lines = [], []
++    for k, (expr, value) in enumerate(_NUM_FORMS):
++        want = "%di64" % value if value >= 0 else "(0i64 - %di64)" % -value
++        body.append("    if (%s != %s) { exit %di32; }\n" % (expr, want, 10 + k))
++        tok = expr.strip("()").split(" ")[0]
++        lines.append((3 + k, tok, value))
++    k = len(_NUM_FORMS)
++    body.append("    int64:last = 0i64;\n")
++    body.append("    for (int64:s in 0i64...86400i64) { last = s; }\n")
++    lines.append((3 + k + 1, "86400i64", 86400))
++    body.append("    if (last != 86399i64) { exit %di32; }\n" % (10 + k))
++    text = head + "".join(body) + "    exit 0i32;\n};\n" + _NUM_FAILSAFE
++    return text, lines
++
++
++_NUM_TEXT, _NUM_LINES = _num_program()
++
++
+ def part_e(rep, root, man, base, npkc, npkrt):
+-    """The reader against the compiler's lexer: E1 and E2 above."""
++    """The reader against the compiler's lexer: E1 and E2 above -- and, since
++    cycle 0.2.3a, E3: `check_constants_named`'s literal reader against the
++    compiler's numeric scan (TM-231)."""
+     import lexical
+     # `run` imports this module; by the time this is called it is initialised.
+     import run as run_mod
+@@ -2117,6 +2247,32 @@ def part_e(rep, root, man, base, npkc, npkrt):
+             "MIRRORS: re-read `src/frontend/lexer.npk` at the new pin and bring "
+             "the reader to it, in the adoption that moved the pin."
+             % (verdict, _FORMS_EXIT.get(code_, "it did not build and run")))
++
++    # E3 -- `check_constants_named`'s literal reader against the compiler's
++    # numeric scan (cycle 0.2.3a, TM-231): the reader on every spelling's
++    # line of one program, and the pinned compiler on the program, which
++    # exits at the first spelling it reads as another number.
++    _write(os.path.join(where, "numeric_forms.npk"), _NUM_TEXT)
++    lines = lexical.read(os.path.join(where, "numeric_forms.npk")).split("\n")
++    for ln, tok, value in _NUM_LINES:
++        got = [v for _a, t, v in checks_mod.literals(lines[ln - 1]) if t == tok]
++        if got != [value]:
++            problems.append(
++                "E3: line %d: the reader reads `%s` as %s, and the program "
++                "asserts %d." % (ln, tok, got or "nothing", value))
++    verdict = run_mod._verdict(bld, where, "numeric_forms.npk", out_dir)
++    if verdict != "run:0":
++        code_ = int(verdict[4:]) if verdict.startswith("run:") else None
++        problems.append(
++            "E3: the pinned compiler's verdict on the numeric program is %s, "
++            "not run:0 -- %s. THE COMPILER'S NUMERIC SCAN HAS MOVED FROM WHAT "
++            "`checks.literals` MIRRORS: re-read `src/frontend/numeric.npk`, "
++            "`num_width.npk` and `lexer.npk` at the new pin and bring the "
++            "reader to them, in the adoption that moved the pin."
++            % (verdict, "its line %d, `%s`, was read as another number"
++               % _NUM_LINES[code_ - 10][:2]
++               if code_ is not None and 10 <= code_ < 10 + len(_NUM_LINES)
++               else "it did not build and run"))
+     return problems
+ 
+ 
+@@ -2237,9 +2393,11 @@ def run(rep, root, steps):
+                 % ("the reader (lexical.py)",
+                    "E1: %d lines of every form read back, %d import(s) as the "
+                    "compiler reads them; E2: the pinned compiler runs the %d "
+-                   "observable forms it names to 0"
++                   "observable forms it names to 0; E3: it runs %d spellings "
++                   "of a number to their values, and the literal reader reads "
++                   "each the same"
+                    % (_LEX_TEXT.count("\n"), len(_LEX_IMPORTS),
+-                      len(_FORMS_EXIT))))
++                      len(_FORMS_EXIT), len(_NUM_LINES))))
+     return ok
+ 
+ 

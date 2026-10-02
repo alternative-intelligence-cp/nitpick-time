@@ -1,0 +1,24 @@
+# 0.2.3's omission sweep, block 5b -- one extended regular expression per line, each
+# read by `sweep.py` line by line AND across line breaks, case-insensitive. Each is a
+# fact steps 1 to 5 moved: the constructors' and the two functions' arrival;
+# `timestamp_until`'s move; the umbrella's names; the counts; the interop's name;
+# M-7's first re-establishing operation; P-3's old names; the glossary's word for a
+# `Timestamp` difference; `probe02`'s three sites; `Duration`'s range; and what
+# `span` holds.
+(duration_(mins|hours|days|weeks)|constructors? .?ntime.? adds).{0,80}(0\.2\.3|next|to come|not yet|placeholder)
+(0\.2\.3|to come|not yet|placeholder).{0,80}(duration_(mins|hours|days|weeks)|constructors? .?ntime.? adds)
+(timestamp_add|timestamp_since).{0,80}(0\.2\.3|next|to come|not yet|placeholder|the first that)
+(0\.2\.3|to come|not yet|placeholder).{0,80}(timestamp_add|timestamp_since)
+timestamp_until
+\b(68|76|sixty-eight|seventy-six)\b.{0,40}(names|re-?export)
+\b(126|131)\b.{0,30}units?
+\b(142|147)\b.{0,40}(files|\.npk|parse)
+\b(91|96)\b.{0,40}(suite|roots)
+\b(97|102)\b.{0,20}parse
+\binterop
+no arithmetic operation|first .{0,30}(operation|arithmetic entry).{0,60}(re-establish|M-7)
+(^|[^A-Z_])SECS_M(IN|AX)\b
+\belapsed\b
+add, compare|three named sites|nothing divides
+±292|292(\.277)? (years|y)\b
+span.{0,80}\b(imports?|holds|declares)\b

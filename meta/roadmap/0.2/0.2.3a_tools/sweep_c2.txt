@@ -1,0 +1,25 @@
+# 0.2.3a's first omission sweep, block 6b, over the family's commit -- one extended
+# regular expression per line, each read by `sweep.py` line by line AND across line
+# breaks, case-insensitive. Each is a fact steps 2 to 5 moved: the family's size, in
+# digits and in words; the registry built; the view check built; O-X6 answered and
+# N-20's count; the int128 check live; the self-check's plant count; the site
+# found at planning; the document form the registry was deferred for; and the
+# open questions, a set O-X6's answer made smaller, counted where they are stated.
+\b(18|20|eighteen|twenty)\b.{0,30}\brows?\b
+\b(10|11|13|14|17|ten|eleven|thirteen|fourteen|seventeen)\b.{0,20}\blive\b
+\b(3|4|5|three|four|five)\b.{0,30}\b(pending|PEND)\b
+\bnine (live |tree )*checks|\btwelve checks
+checks\.LIVE.{0,30}\b(9|10|12|13|nine|ten|twelve|thirteen)\b
+check_check_registry|nothing diffs|row by row
+check_no_view_returns|view returns?
+O-X6
+check_int128_sites
+(exactly|the) three\b.{0,40}(int128|sites|narrowings|named)|int128.{0,40}\bthree\b
+marks? (exactly )?\**(one|ONE)\b
+timestamp_to_civil
+\bN-20\b
+\b(44|66|forty-four|sixty-six)\b.{0,40}(planted|violations|tree-check|plants)
+bytes_put_int.{0,60}(measure|int128)|decreases 0i128
+machine-readable
+S-22.{0,80}(cycle 0\.2\.3|until it is built|never built)|cycle 0\.2\.3'?s?\b.{0,40}view
+questions are open|\b(eleven|ten|nine|eight|seven) (open )?questions\b

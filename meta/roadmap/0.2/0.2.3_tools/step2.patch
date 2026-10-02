@@ -1,0 +1,86 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index d402cb59dcfc8b5fe410d50ba415b2a1e9931cc0..6c961a20d33000471bdf043d82a4ac9f6f35ae7c 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -45,7 +45,7 @@
+ # and `src/span/` since 0.2.0, `Instant` and its four operations, and since
+ # 0.2.1 `Timestamp` and its constructor, and since 0.2.2 the two conversions
+ # between a `Timestamp` and its civil reading --
+-# re-exported together as 68 public names [[sweep: lib_reexports=68]],
++# re-exported together as 76 public names [[sweep: lib_reexports=76]],
+ # so this IS evidence about behaviour, of the 126 units the runner reports at
+ # compiler `5fbaf4a` since cycle 0.2.2 (122 at cycle 0.2.1, 114 at cycle 0.2.0, 111 at 0.2.0b, 113 at 0.2.0a and at
+ # `c970483` at cycle 0.1.5's second half; 62 at cycle 0.0.6, 67 at 0.1.0,
+diff --git a/meta/specs/SAFETY.md b/meta/specs/SAFETY.md
+index 39f354c6d5dc18d63b6325d4fca56604d1c19c64..b247c3f32b711d6c0386bf92e45adf96e24b79e0 100644
+--- a/meta/specs/SAFETY.md
++++ b/meta/specs/SAFETY.md
+@@ -87,7 +87,7 @@ import-scoped:
+ | `ntime/lib.npk` — **the umbrella**, the import a consumer writes | — (re-exports) | one arm today (`cal`'s) | **13** <!-- [[sweep: arms_lib=13]] --> (—) — generated since cycle 0.1.0b (TM-155): the floor of six, `cal.ETimeValue`, the four arithmetic arms, `DecreasesViolated` from `src/core/bytes.npk`'s measured loops, and — since cycle 0.1.0c (TM-156, TM-159) — `LimitViolated` from the `ListLen` on `src/core/`'s sealed lengths. It was **12** until then |
+ | `ntime/core.npk` | — | nothing | **6** <!-- [[sweep: arms_core=6]] --> (4) — the floor; `core` is not yet reachable as its own public module, and its code is billed through the umbrella's row |
+ | `ntime/cal.npk` | `ETimeValue` | one arm | **11** <!-- [[sweep: arms_cal=11]] --> (9) — measured 2026-09-06 and 2026-09-25 |
+-| `ntime/span.npk` | — (raises `cal`'s) | one arm | **11** <!-- [[sweep: arms_span=11]] --> (—) — since cycle 0.2.0, measured: `cal.ETimeValue`, which `span` raises for two clocks' readings (TM-216), since cycle 0.2.1 for a `secs` outside the range or a `nanos` outside one second handed to `timestamp_of` (TM-220), and since cycle 0.2.2 for a civil reading `civil_to_utc` cannot convert, `timestamp_of`'s refusal relayed (TM-222), the floor of six, and `cal`'s four arithmetic arms, which reach every importer of `span` because `span` imports `cal`. **No new identity**: the umbrella's row stays 13. *(A placeholder until cycle 0.2.0, the row read **6** (4), the floor, "meaningless until cycle 0.2 gives the module a body".)* |
++| `ntime/span.npk` | — (raises `cal`'s) | one arm | **11** <!-- [[sweep: arms_span=11]] --> (—) — since cycle 0.2.0, measured: `cal.ETimeValue`, which `span` raises for two clocks' readings (TM-216), since cycle 0.2.1 for a `secs` outside the range or a `nanos` outside one second handed to `timestamp_of` (TM-220), since cycle 0.2.2 for a civil reading `civil_to_utc` cannot convert, `timestamp_of`'s refusal relayed (TM-222), and since cycle 0.2.3 for a sum `timestamp_add` cannot keep in the range, relayed the same way (TM-234), and a difference `timestamp_since` cannot hold in a `Duration` (TM-236); the floor of six; and `cal`'s four arithmetic arms, which reach every importer of `span` because `span` imports `cal`. **No new identity**: the umbrella's row stays 13. *(A placeholder until cycle 0.2.0, the row read **6** (4), the floor, "meaningless until cycle 0.2 gives the module a body".)* |
+ | `ntime/zone.npk` | `ETimeZone` | two arms | placeholder; **6** <!-- [[sweep: arms_zone=6]] --> (4) today (cycle 0.3) |
+ | `ntime/fmt.npk` | `ETimeParse` | three arms | placeholder; **6** <!-- [[sweep: arms_fmt=6]] --> (4) today (cycle 0.4) |
+ | `ntime/host.npk` | — (forwards errnos) | one arm | placeholder; **6** <!-- [[sweep: arms_host=6]] --> (4) today |
+diff --git a/src/lib.npk b/src/lib.npk
+index 46212e5be95dcfe0e31ecf2f85855356475a5968..43e985773ec71517504a4e70f2bdbfb541e712d5 100644
+--- a/src/lib.npk
++++ b/src/lib.npk
+@@ -19,8 +19,10 @@
+ // deliberate. Adding a line here is the moment a name becomes public and, by
+ // TM-013, a thing a MAJOR version is needed to take away.
+ //
+-// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 68
+-// names now [[sweep: lib_reexports=68]], below -- 66 until cycle 0.2.2 added
++// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 76
++// names now [[sweep: lib_reexports=76]], below -- 68 until cycle 0.2.3 added
++// `Duration`'s two ends and `span`'s six for the `Duration` interop, 66 until
++// cycle 0.2.2 added
+ // `timestamp_to_utc` and `civil_to_utc`, 64 until cycle 0.2.1 added
+ // `Timestamp` and `timestamp_of`, 58 until cycle 0.2.0 added
+ // `span`'s six, 59 until cycle 0.2.0a retired
+@@ -154,6 +156,8 @@ pub use "./core/limits.npk".NTIME_OFFSET_MIN;
+ pub use "./core/limits.npk".NTIME_OFFSET_MAX;
+ pub use "./core/limits.npk".NTIME_SECS_PER_DAY;
+ pub use "./core/limits.npk".NTIME_NANOS_PER_SEC;
++pub use "./core/limits.npk".NTIME_DURATION_NS_MAX;
++pub use "./core/limits.npk".NTIME_DURATION_NS_MIN;
+ pub use "./core/limits.npk".NTIME_DIGITS_MAX;
+ 
+ // ===========================================================================
+@@ -247,9 +251,9 @@ pub use "./cal/cal.npk".iso_weekday;
+ pub use "./cal/cal.npk".iso_week_to_date;
+ 
+ // ===========================================================================
+-// span -- instants (cycle 0.2.0), timestamps (0.2.1) and the conversions
+-// between a timestamp and a civil reading (0.2.2). NO NEW IDENTITY, AND NO NEW
+-// ARM.
++// span -- instants (cycle 0.2.0), timestamps (0.2.1), the conversions
++// between a timestamp and a civil reading (0.2.2), and the `Duration`
++// interop (0.2.3). NO NEW IDENTITY, AND NO NEW ARM.
+ // ===========================================================================
+ //
+ // `Instant` and its clock tag, and the four operations (TM-215, TM-216). `span`
+@@ -296,3 +300,20 @@ pub use "./span/span.npk".timestamp_of;
+ // NAMES, each a MAJOR version to take away (TM-013).
+ pub use "./span/span.npk".timestamp_to_utc;
+ pub use "./span/span.npk".civil_to_utc;
++
++// The `Duration` interop (cycle 0.2.3; TM-233, TM-234, TM-236). `ntime`
++// declares no `Duration` (TM-004): it adds four constructors to the prelude's,
++// each `never fails`, a day exactly 86 400 x 10^9 nanoseconds and not a
++// calendar day (`SPAN_MODEL.md` N-2); `timestamp_add` moves a `Timestamp` by
++// one, through `timestamp_of`, and `timestamp_since` gives the nominal span
++// between two, refusing one past `Duration`'s ±292 years (`TIME_MODEL.md`
++// M-18) -- each fallible one raising `cal`'s `ETimeValue`, so the bill does
++// not move: 11 for `span` alone [[sweep: arms_span=11]] and 13 here
++// [[sweep: arms_lib=13]], measured. SIX NAMES, each a MAJOR version to take
++// away (TM-013).
++pub use "./span/span.npk".duration_mins;
++pub use "./span/span.npk".duration_hours;
++pub use "./span/span.npk".duration_days;
++pub use "./span/span.npk".duration_weeks;
++pub use "./span/span.npk".timestamp_add;
++pub use "./span/span.npk".timestamp_since;

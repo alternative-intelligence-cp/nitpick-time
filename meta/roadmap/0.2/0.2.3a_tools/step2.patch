@@ -1,0 +1,340 @@
+diff --git a/harness/checks.py b/harness/checks.py
+index 80c711c1b0f50b137406bfb9cc38ffbb3b031bf3..5d44b5dcf8ee10f8cc91671615611942b12bb8c9 100644
+--- a/harness/checks.py
++++ b/harness/checks.py
+@@ -1532,7 +1532,242 @@ def check_denominators(tree, extra=None, **_):
+     return res
+ 
+ 
++# ---------------------------------------------------------------------------
++# check_check_registry -- TESTING.md V-14e (TM-201)
++# ---------------------------------------------------------------------------
++
++# THE FAMILY IS STATED FOUR TIMES, AND UNTIL CYCLE 0.2.3a NOTHING DIFFED THEM.
++# `TESTING.md` §2's table, `LIVE` and `PENDING` below, and the checks `run.py`
++# drives outside step 5's loop are four statements of one family (V-14e), and
++# every drift this repository has had in it was between two of them: a check
++# `run.py` drove that V-1a's count left out (`check_expect_headers`, cycle
++# 0.0.6's C2), a mechanism with no row for a whole subcycle
++# (`check_exemptions_live`), and V-1a's arithmetic stale from cycle 0.1.0 to
++# 0.1.0b. TM-201 made the next subcycle that adds or retires a check build this
++# one FIRST; cycle 0.2.3a adds two.
++#
++# ALL FOUR ARE READ FROM THE TREE THE CHECK IS POINTED AT, as text: the
++# document's two tables, and `harness/checks.py`, `harness/arms.py` and
++# `harness/run.py` through Python's own parser, never imported -- so the
++# self-check can plant a drift in any one of the four in a scratch tree, which
++# an imported `LIVE` could not be.
++#
++#   * §2's table: the first backticked name of each row of the table headed
++#     `| Check |` under `## 2.`, and V-1a's pending table, headed
++#     `| Pending |`, its rows' names and their cycles. A row with no backticked
++#     name first is a finding: it is the one shape this reading needs.
++#   * `LIVE`: the names in the tuple. `PENDING`: each entry's name and cycle.
++#   * WHAT `run.py` DRIVES OUTSIDE STEP 5's LOOP: every call in `run.py` whose
++#     callee is named by a row of §2's table, or is a `check_...` function that
++#     `checks.py`, `arms.py` or `run.py` defines -- so a check `run.py` grows
++#     with no row is a finding, while `toolchain.check_target`, the manifest's
++#     target pin (`BUILD.md` B-1a), is a toolchain step and not this family.
++#     What it cannot see is stated: a new check `run.py` drives under a name
++#     that no row holds and that is no `check_...` definition of the three
++#     files -- `run_defect_corpus` is today's one such name, and its row is
++#     what lets this reading see it.
++REGISTRY_DOC = "meta/specs/TESTING.md"
++_REGISTRY_SOURCES = ("harness/checks.py", "harness/arms.py", "harness/run.py")
++_ROW_NAME = re.compile(r"^\|[ \t]*`([a-z_][a-z0-9_]*)`")
++
++
++def _registry_doc(tree):
++    """`(rows, pending, problems)` from `TESTING.md` §2 -- the family table's row
++    names in order, and V-1a's pending table as `{name: cycle}` -- or `None`s
++    when the document or the section is absent. Read as text (V-1k's third
++    way)."""
++    path = os.path.join(tree, REGISTRY_DOC)
++    if not os.path.isfile(path):
++        return None, None, []
++    with open(path, encoding="utf-8") as fh:
++        lines = fh.read().split("\n")
++    start = next((i for i, l in enumerate(lines) if l.startswith("## 2. ")), None)
++    if start is None:
++        return None, None, []
++    end = next((i for i in range(start + 1, len(lines))
++                if lines[i].startswith("## ")), len(lines))
++    rows, pending, problems, table = None, None, [], None
++    for i in range(start + 1, end):
++        line = lines[i]
++        if not line.startswith("|"):
++            table = None
++            continue
++        cells = [c.strip() for c in line.strip().strip("|").split("|")]
++        if table is None:                      # a table's header row
++            table = {"Check": "rows", "Pending": "pending"}.get(cells[0], "other")
++            if table == "rows" and rows is None:
++                rows = []
++            elif table == "pending" and pending is None:
++                pending = {}
++            elif table in ("rows", "pending"):
++                table = "other"                # a second table so headed is not read
++            continue
++        if table == "other" or not cells[0].strip("-: "):
++            continue                           # another table, or a separator row
++        m = _ROW_NAME.match(line)
++        if not m:
++            problems.append(
++                "%s:%d is a row of §2's %s table that names no check first, "
++                "in backticks -- the one shape this check reads a row in."
++                % (REGISTRY_DOC, i + 1, "family" if table == "rows" else "pending"))
++            continue
++        if table == "rows":
++            rows.append(m.group(1))
++        else:
++            pending[m.group(1)] = cells[1] if len(cells) > 1 else ""
++    return rows, pending, problems
++
++
++def _registry_harness(tree):
++    """`(live, pending, calls, defined, problems)` from the harness's SOURCE
++    TEXT: the names in `checks.LIVE`; `checks.PENDING` as `{name: cycle}`; every
++    name `run.py` calls; and every `check_...` function the three files define
++    -- each of the first three `None` when its file is absent."""
++    import ast
++    problems, trees = [], {}
++    for rel in _REGISTRY_SOURCES:
++        path = os.path.join(tree, rel)
++        if not os.path.isfile(path):
++            continue
++        with open(path, encoding="utf-8") as fh:
++            try:
++                trees[rel] = ast.parse(fh.read(), filename=rel)
++            except SyntaxError as err:
++                problems.append("%s does not parse (%s), so it states nothing "
++                                "this check can read." % (rel, err))
++    live = pending = driven = None
++    checks_ast = trees.get("harness/checks.py")
++    if checks_ast is not None:
++        for node in checks_ast.body:
++            if not (isinstance(node, ast.Assign) and len(node.targets) == 1
++                    and isinstance(node.targets[0], ast.Name)
++                    and isinstance(node.value, ast.Tuple)):
++                continue
++            if node.targets[0].id == "LIVE":
++                live = [e.id for e in node.value.elts if isinstance(e, ast.Name)]
++            elif node.targets[0].id == "PENDING":
++                pending = {}
++                for e in node.value.elts:
++                    if (isinstance(e, ast.Tuple) and len(e.elts) >= 2
++                            and all(isinstance(x, ast.Constant)
++                                    and isinstance(x.value, str)
++                                    for x in e.elts[:2])):
++                        pending[e.elts[0].value] = e.elts[1].value
++    defined = set()
++    for t in trees.values():
++        defined |= {n.name for n in ast.walk(t)
++                    if isinstance(n, ast.FunctionDef) and n.name.startswith("check_")}
++    run_ast = trees.get("harness/run.py")
++    calls = None
++    if run_ast is not None:
++        calls = []
++        for n in ast.walk(run_ast):
++            if not isinstance(n, ast.Call):
++                continue
++            f = n.func
++            name = f.id if isinstance(f, ast.Name) else (
++                f.attr if isinstance(f, ast.Attribute) else None)
++            if name and name not in calls:
++                calls.append(name)
++    return live, pending, calls, defined, problems
++
++
++def registry(tree):
++    """The four statements of the family, read from `tree`: a dict, or `None`
++    when the tree holds neither the document nor the harness. `denominators()`
++    reads its counts; `check_check_registry` diffs it."""
++    rows, doc_pending, doc_problems = _registry_doc(tree)
++    live, pending, calls, defined, src_problems = _registry_harness(tree)
++    if rows is None and live is None:
++        return None
++    driven = None if calls is None else [
++        n for n in calls if n in (rows or ()) or n in defined]
++    return {"rows": rows, "doc_pending": doc_pending, "live": live,
++            "pending": pending, "driven": driven,
++            "problems": doc_problems + src_problems}
++
++
++def check_check_registry(tree, **_):
++    """The four statements of `TESTING.md` §2's family are one list (V-14e)."""
++    reg = registry(tree)
++    if reg is None:
++        return Result("check_check_registry",
++                      "0 row(s): the tree holds neither %s nor the harness"
++                      % REGISTRY_DOC, [])
++    problems = list(reg["problems"])
++    missing = [what for what, val in (
++        ("§2's family table in %s" % REGISTRY_DOC, reg["rows"]),
++        ("V-1a's pending table in %s" % REGISTRY_DOC, reg["doc_pending"]),
++        ("`LIVE` in harness/checks.py", reg["live"]),
++        ("`PENDING` in harness/checks.py", reg["pending"]),
++        ("harness/run.py", reg["driven"])) if val is None]
++    for what in missing:
++        problems.append("%s could not be read, so the family has a statement "
++                        "this check cannot diff." % what)
++    if missing:
++        return Result("check_check_registry", "the family could not be read",
++                      problems)
++    rows, doc_pending = reg["rows"], reg["doc_pending"]
++    live, pending, driven = reg["live"], reg["pending"], reg["driven"]
++    # A LIVE check runs through step 5's loop and a driven one by name, so a
++    # LIVE check `run.py` ALSO calls by name is a check stated twice, which the
++    # next block names.
++    statements = (("`checks.LIVE`", live), ("`checks.PENDING`", list(pending)),
++                  ("the checks `run.py` drives outside step 5", driven))
++    seen = {}
++    for label, names in statements:
++        for name in names:
++            seen.setdefault(name, []).append(label)
++    for name in sorted(seen):
++        if len(seen[name]) > 1:
++            problems.append(
++                "`%s` is in %s at once. A check is live in one place or "
++                "pending, never two -- the arithmetic of V-1a counts each "
++                "statement, and a check in two is counted twice."
++                % (name, " and ".join(seen[name])))
++    for dup in sorted({r for r in rows if rows.count(r) > 1}):
++        problems.append("§2's table has %d rows for `%s`." % (rows.count(dup), dup))
++    for name in sorted(seen):
++        if name not in rows:
++            problems.append(
++                "`%s` is in %s and §2's table has no row for it. A check that "
++                "runs with no row is a mechanism nobody can find from the "
++                "document -- `check_exemptions_live`, for a whole subcycle "
++                "(V-14e). Give it a row, in the same commit."
++                % (name, " and ".join(seen[name])))
++    for name in rows:
++        if name not in seen:
++            problems.append(
++                "§2's table has a row for `%s`, and nothing runs it: it is in "
++                "neither `checks.LIVE` nor `checks.PENDING`, and `run.py` "
++                "calls no function of that name. A row nothing drives is a "
++                "check the document promises and the run does not keep."
++                % name)
++    for name in sorted(set(doc_pending) | set(pending)):
++        if name not in pending:
++            problems.append(
++                "V-1a's pending table names `%s` (cycle %s) and "
++                "`checks.PENDING` does not, so the run never prints it as "
++                "`PEND`." % (name, doc_pending[name]))
++        elif name not in doc_pending:
++            problems.append(
++                "`checks.PENDING` names `%s` (cycle %s) and V-1a's pending "
++                "table does not, so the document says it is live."
++                % (name, pending[name]))
++        elif doc_pending[name] != pending[name]:
++            problems.append(
++                "`%s` turns on at cycle %s by V-1a's pending table and at "
++                "cycle %s by `checks.PENDING`." % (name, doc_pending[name],
++                                                    pending[name]))
++    headline = ("%d row(s) in §2 = %d in `checks.LIVE` + %d driven by `run.py`"
++                " + %d pending; V-1a's table %d"
++                % (len(rows), len(live), len(driven), len(pending),
++                   len(doc_pending)))
++    return Result("check_check_registry", headline, problems)
++
++
+ LIVE = (
++    check_check_registry,
+     check_denominators,
+     check_layering,
+     check_error_budget,
+diff --git a/harness/selfcheck.py b/harness/selfcheck.py
+index 9712fbfb6cbc51dfb65f252c8fda8dc2f7185f53..bd4a309f61113036b500f8de2564a20c6a407fd2 100644
+--- a/harness/selfcheck.py
++++ b/harness/selfcheck.py
+@@ -829,6 +829,43 @@ def _div_tree(expr):
+             + expr + "; };\n")
+ 
+ 
++# ---- CYCLE 0.2.3a: THE FAMILY'S THREE NEW MEMBERS ---------------------------
++#
++# `check_check_registry` (TM-201) reads four texts -- `TESTING.md` §2's two
++# tables and `harness/checks.py`, `arms.py` and `run.py` -- so each of its rows
++# below plants a STUB of each, never imported, and drifts ONE statement. The
++# consistent family is four checks: `check_a` live in `LIVE`, `check_b` and
++# `check_c` driven by `run.py` (one defined there, one in `arms.py`, called
++# through `arms_mod`), and `check_p` pending at cycle 0.9.
++def _family(rows=("check_a", "check_b", "check_c", "check_p"),
++            doc_pending=(("check_p", "0.9"),), live=("check_a",),
++            pending=(("check_p", "0.9"),), run_defs=("check_b",),
++            run_calls=("check_b", "arms_mod.check_c")):
++    """The four statements as a list of `(rel, text)` stubs."""
++    doc = ("# Testing\n\n## 2. What the harness checks about the tree\n\n"
++           "| Check | Diffs |\n|---|---|\n"
++           + "".join("| `%s` | the stub's %s |\n" % (r, r) for r in rows)
++           + "\n**Rule V-1a.** The pending ones:\n\n"
++           "| Pending | Live from | Why not now |\n|---|---|---|\n"
++           + "".join("| `%s` | %s | nothing to check |\n" % p for p in doc_pending)
++           + "\n## 3. The next section\n")
++    checks = ("".join("def %s(tree, **_):\n    return None\n\n\n" % n
++                      for n in sorted(set(live) | {"check_a"}))
++              + "LIVE = (\n" + "".join("    %s,\n" % n for n in live) + ")\n\n"
++              + "PENDING = (\n"
++              + "".join("    (%r, %r, \"nothing to check\"),\n" % p
++                        for p in pending) + ")\n")
++    run = ("".join("def %s(rep, root):\n    return None\n\n\n" % n
++                   for n in run_defs)
++           + "def run_tree_checks(rep, root):\n    return None\n\n\n"
++           + "def main(argv):\n"
++           + "".join("    %s(None, None)\n" % c for c in run_calls)
++           + "    run_tree_checks(None, None)\n    return 0\n")
++    arms = "def check_c(tree, **_):\n    return None\n"
++    return [("meta/specs/TESTING.md", doc), ("harness/checks.py", checks),
++            ("harness/run.py", run), ("harness/arms.py", arms)]
++
++
+ # Each row: the check, the file that violates it, the file that does not, and a
+ # fragment the finding must name. The CLEAN column is not decoration -- several
+ # of these checks are one predicate away from failing this repository's own
+@@ -1186,6 +1223,32 @@ PLANTED = [
+      ("src/zone/zone.npk",
+       "mod:zone;\npub fixed int64\n[2]:IDS = [1i64, 2i64];\n"),
+      "owning element"),
++    # A ROW NOTHING DRIVES -- the document promising a check the run does not
++    # keep.
++    (checks_mod.check_check_registry,
++     _family(rows=("check_a", "check_b", "check_c", "check_p", "check_d")),
++     _family(), "nothing runs it"),
++    # A LIVE CHECK WITH NO ROW -- `check_exemptions_live`'s shape for a whole
++    # subcycle (V-14e).
++    (checks_mod.check_check_registry,
++     _family(live=("check_a", "check_e")), _family(),
++     "is in `checks.LIVE` and §2's table has no row for it"),
++    # A PENDING CHECK THE DOCUMENT TURNS ON AT ANOTHER CYCLE.
++    (checks_mod.check_check_registry,
++     _family(pending=(("check_p", "0.8"),)), _family(),
++     "turns on at cycle 0.9 by V-1a's pending table and at cycle 0.8"),
++    # A PENDING CHECK THE DOCUMENT CALLS LIVE.
++    (checks_mod.check_check_registry,
++     _family(doc_pending=()), _family(), "the document says it is live"),
++    # A CHECK `run.py` DRIVES WITH NO ROW -- `check_expect_headers`' shape,
++    # the row V-1a's count left out at cycle 0.0.6 (C2).
++    (checks_mod.check_check_registry,
++     _family(run_defs=("check_b", "check_f"),
++             run_calls=("check_b", "arms_mod.check_c", "check_f")),
++     _family(), "the checks `run.py` drives outside step 5 and §2's table has no row"),
++    # ONE CHECK STATED TWICE -- live in `LIVE` and pending at once.
++    (checks_mod.check_check_registry,
++     _family(live=("check_a", "check_p")), _family(), "at once"),
+ ]
+ 
+ 
+diff --git a/meta/specs/TESTING.md b/meta/specs/TESTING.md
+index 680c99791f462dd8d8bb653948f84911de74a969..eec89e4374a6b6611b6a620dccb2228c2e1a2d6f 100644
+--- a/meta/specs/TESTING.md
++++ b/meta/specs/TESTING.md
+@@ -52,6 +52,7 @@ them found something on its first run.
+ | `check_exemptions_live` (TM-137) | **every exemption's recorded VERDICT, re-derived from the file on every run.** An exemption's reason is a claim about what the compiler does, and the compiler moves. The superseded mechanism checked only that the named file still existed: O-N17 landed, two files went from stopping at `llc` to running clean, the suite stayed green and nothing said a word |
+ | `run_defect_corpus` (TM-141) | **every `expect-` marker under `tests/probe/defect/`, asserted.** The `probe` entry is non-recursive by design, so the suite selected 0 of these 24 files and 21 committed expectations — the whole regression corpus for four discharged compiler defects — were evaluated by nothing. The inversion was sharp: the 3 files EXEMPT from having an expectation had their verdict re-derived every run, and the 21 that HAD one did not |
+ | `check_denominators` (TM-142) | **every number TAGGED `[[sweep: name=N]]` against what the tree measures.** The tree went from 50 `.npk` to 78 and eleven sites in six live files still carried the 0.0.3 figures. The harness PRINTS every denominator on every run (V-1b) and no document was diffed against the print. **The mechanism is narrower than "every number": it checks the tagged ones**, and an untagged number is not covered — which is why the marker is ugly enough to notice in review. **And since cycle 0.1.2 it measures what each `sweep` member DECLARES**, as `domain_<stem>`, so a specification's statement of a domain and the test's are one list (TM-161, TM-168). **And since cycle 0.1.5's second half it measures every public module's arm bill as `arms_<module>`** — `arms.compute_bill`'s, which `check_failsafe_arms` holds to `NITPICK-REACH-003` on every run — so the totals `SAFETY.md` S-4 and the summary pages WRITE are held to the bill as well as the bill to the compiler (TM-205; the cycle audit's C6) |
++| `check_check_registry` (TM-227) | **the family's four statements as one list** (V-14e): this table, `checks.LIVE`, `checks.PENDING` and the checks `run.py` drives outside step 5 — each read from the tree as text, the harness's files through Python's own parser and never imported, so the self-check plants a drift in any one — and V-1a's pending table against `checks.PENDING`, name and cycle. A row nothing runs, a check that runs with no row, a check stated twice and a pending check the two lists disagree about each fail the run. Built FIRST at cycle 0.2.3a, before that subcycle's two new checks moved the family (TM-201); and V-1a's three numbers are tagged since, so `check_denominators` holds the rule's arithmetic to what this check reads |
+ | `check_specs_current` | **reports** spec citations that no longer resolve — a renumbering is not a reason to stop a build — and **FAILS on a stale exemption** (TM-145). Those are different animals: a stale exemption is V-1c's both-directions rule, a failure everywhere else in this harness, and the one thing here a green run would otherwise hide. It matters at a cycle close, when archiving `meta/roadmap/<cycle>/` moves the paths two of its keys name. **There is no whole-file entry in its table, as a rule**: `checks.py` marks one excused as long as the file EXISTS, so its reason is never re-derived — TM-137's shape inside the mechanism written to prevent it. **It reads every kind of file one character per byte (TM-199), so its citation pattern's ends are ASCII look-arounds** rather than `\b`, which found no boundary before an em dash or a curly apostrophe read that way (TM-206) |
+ 
+ **Rule V-1.** `check_purity` and `check_int128_sites` are the two that matter

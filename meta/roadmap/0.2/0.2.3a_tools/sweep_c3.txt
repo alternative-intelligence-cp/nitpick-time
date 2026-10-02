@@ -1,0 +1,19 @@
+# 0.2.3a's second omission sweep, block 10b, over the reader's commit -- one extended
+# regular expression per line, read as block 6b's are. Each is a fact steps 7 to 9
+# moved: the old number pattern and its keys; the owner of 1 000 000 000, both ways
+# round; part E's halves; the compiler files the reader mirrors; the plant count;
+# the subcycle's status; and how a literal is read.
+(^|[^a-z0-9])_number\b|four or more (decimal )?digits|digits as text|digit strings?
+CONSTANT_OWNER|owner map
+(1 ?000 ?000 ?000|1_000_000_000|1000000000|10⁹|nanoseconds per second).{0,80}(\bcal\b|owner|\bcore\b|belongs)
+(\bcal\b|owner|belongs).{0,80}(1 ?000 ?000 ?000|1_000_000_000|1000000000|10⁹)
+stays .{0,3}cal.{0,3}'s|belongs to (module )?.?cal|the algorithm module
+part E.{0,60}(two|both|halves|E1|E2|third)|\bE[123]\b
+(lexer|numeric|num_width)\.npk
+\b(66|82|sixty-six|eighty-two)\b.{0,40}(planted|violations|tree-check|plants)
+0\.2\.3,? the .?Duration.? interop.{0,30}(is )?next|0\.2\.2.{0,80}(are|is) done
+(digit|thousands?)[ -]separator|separators?\b
+\b(hex|binary|octal|ternary|nonary|balanced)\b.{0,40}(literal|spelling|base)
+literal.{0,40}(spelling|spelled|read as|every spelling)
+\bS-16\b
+TM-223

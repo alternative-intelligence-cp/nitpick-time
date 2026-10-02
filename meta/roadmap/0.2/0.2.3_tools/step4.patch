@@ -1,8 +1,14 @@
 diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
-index 6c961a20d33000471bdf043d82a4ac9f6f35ae7c..512b3fcbd6c15f2f3924719c4f3b53d49d54d4d4 100644
+index 6c961a20d33000471bdf043d82a4ac9f6f35ae7c..4c7f815ab6054084e6465647b55d492cb75ff4ac 100644
 --- a/.github/workflows/ci.yml
 +++ b/.github/workflows/ci.yml
-@@ -43,8 +43,9 @@
+@@ -39,12 +39,14 @@
+ # ============================================================================
+ #
+ # WHAT A GREEN RUN PROVES TODAY. `src/core/` is real code since cycle 0.0.4 --
+-# `Vec<T>`, `Bytes` and thirteen named bounds -- and `src/cal/` since 0.1.0 --
++# `Vec<T>`, `Bytes` and fifteen named bounds, thirteen until 0.2.3 added
++# `Duration`'s two ends -- and `src/cal/` since 0.1.0 --
  # the civil types and their validating constructors, and since 0.1.1 Hinnant's
  # `date_to_days` and `days_to_date`, and since 0.1.3 the derived fields --
  # and `src/span/` since 0.2.0, `Instant` and its four operations, and since
@@ -14,7 +20,7 @@ index 6c961a20d33000471bdf043d82a4ac9f6f35ae7c..512b3fcbd6c15f2f3924719c4f3b53d4
  # re-exported together as 76 public names [[sweep: lib_reexports=76]],
  # so this IS evidence about behaviour, of the 126 units the runner reports at
  # compiler `5fbaf4a` since cycle 0.2.2 (122 at cycle 0.2.1, 114 at cycle 0.2.0, 111 at 0.2.0b, 113 at 0.2.0a and at
-@@ -143,7 +144,14 @@
+@@ -143,7 +145,14 @@
  # `bytes_view`, whose exemption is re-derived (TM-228); `int128` stands in
  # `src/` only at the sites `SPAN_MODEL.md` §5 marks (TM-229, TM-230); and no
  # owned number is spelled outside its module in any spelling the compiler
@@ -30,7 +36,7 @@ index 6c961a20d33000471bdf043d82a4ac9f6f35ae7c..512b3fcbd6c15f2f3924719c4f3b53d4
  #
  # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
  # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
-@@ -173,8 +181,9 @@
+@@ -173,8 +182,9 @@
  #
  # WHAT IT IS STILL NOT EVIDENCE OF. Three of the six `src/` directories are
  # still placeholders -- `zone/`, `fmt/`, `host/` -- and `span/` holds `Instant`
@@ -140,10 +146,16 @@ index 52b2dd74da502a84fc76fa8f7cb5dfc868442864..4e33f7003d6e8344f33c5fa7219a259a
    converts a time to a zone, or between a time and text. *(It said "a
    timestamp to a date" too until cycle 0.2.2, and four placeholders until
 diff --git a/harness/run.py b/harness/run.py
-index 7e2fe694b0123a483becd531ca7e24a52613dbef..13e23e6ea7f369d2de697cde487ba4e14f7fd9da 100644
+index 7e2fe694b0123a483becd531ca7e24a52613dbef..53774994b7e621a1ae8656c679af863eca847022 100644
 --- a/harness/run.py
 +++ b/harness/run.py
-@@ -30,8 +30,9 @@ WHAT A GREEN RUN HERE IS, AND IS NOT.
+@@ -26,12 +26,14 @@ WHAT A GREEN RUN HERE IS, AND IS NOT.
+   a SOURCE-level check and is the only thing that answers that question.
+ 
+   IT IS NOT evidence that the WHOLE library works. `src/core/` is real code
+-  since cycle 0.0.4 -- `Vec<T>`, `Bytes` and thirteen named bounds -- and
++  since cycle 0.0.4 -- `Vec<T>`, `Bytes` and fifteen named bounds, thirteen
++  until 0.2.3 added `Duration`'s two ends -- and
    `src/cal/` since 0.1.0 -- the civil types, Hinnant's two algorithms since
    0.1.1, swept over the whole range since 0.1.2 -- and the suite is evidence
    about both, and since 0.2.0 about `src/span/`'s `Instant` -- and since

@@ -39,7 +39,8 @@
 # ============================================================================
 #
 # WHAT A GREEN RUN PROVES TODAY. `src/core/` is real code since cycle 0.0.4 --
-# `Vec<T>`, `Bytes` and thirteen named bounds -- and `src/cal/` since 0.1.0 --
+# `Vec<T>`, `Bytes` and fifteen named bounds, thirteen until 0.2.3 added
+# `Duration`'s two ends -- and `src/cal/` since 0.1.0 --
 # the civil types and their validating constructors, and since 0.1.1 Hinnant's
 # `date_to_days` and `days_to_date`, and since 0.1.3 the derived fields --
 # and `src/span/` since 0.2.0, `Instant` and its four operations, and since

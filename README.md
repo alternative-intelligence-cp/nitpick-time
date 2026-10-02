@@ -17,13 +17,14 @@ answer on every machine.
 > exhaustive: every day of years −9999 … +9999 goes to its day number and back,
 > both ways, on every full run, and every date of years 1 … 9999 agrees with
 > Python's `datetime`. Since cycle 0.2.0, `src/span/` holds `Instant`, a
-> reading of one of two clocks that cannot be built from a number or converted
-> to a point on the UTC scale, and since cycle 0.2.1 `Timestamp`, such a point,
-> with one spelling per instant. Since cycle 0.2.2 a `Timestamp` converts
-> to its civil reading in UTC and back, and both directions are checked on
-> every full run, over both sides of every day boundary in the range and every
-> second of 512 days chosen at random. Since cycle 0.2.3 `ntime` adds the
-> minute, the hour, the day and the week to the prelude's `Duration` — a day
+> reading of one of two clocks that no function converts to a point on the UTC
+> scale, nor the type implicitly, nor the language's cast, and since cycle 0.2.1
+> `Timestamp`, such a point, with one spelling per instant. Since cycle 0.2.2
+> a `Timestamp` converts to its civil reading in UTC and back, and both
+> directions are checked on every full run, over both sides of every day
+> boundary in the range and every second of 512 days chosen at random. Since
+> cycle 0.2.3 `ntime` adds the minute, the hour, the day and the week to the
+> prelude's `Duration` — a day
 > exactly 86 400 seconds, not a calendar day — moves a `Timestamp` by one, and
 > gives the span between two, refusing one past `Duration`'s ±292 years rather
 > than wrapping it. Zones, formats and the clocks are still
@@ -59,9 +60,15 @@ which is why the compiler's own deadline substrate will not use it at all — it
 runtime calls it a wall clock (D-176). `ntime` makes that structural — an
 `Instant` has no epoch, and the library measures only the distance between two
 readings of one clock; a `Timestamp`, what the realtime clock reads, is an
-absolute point on the UTC scale; and **there is no conversion between them**,
-not even by the language's unchecked cast. A timeout measured against the
-realtime clock is a bug you cannot write here. *(Until cycle 0.2.2 this
+absolute point on the UTC scale; and **there is no conversion between them**
+— no function, no implicit one, not even the language's unchecked cast. A
+timeout measured against the realtime clock is a bug you cannot write here by
+accident: what you can write is a construction, `instant_of` handed a number
+computed from a `Timestamp`, which names in writing the clock it claims to have
+read. *(Until cycle 0.2.4b this said an `Instant` "cannot be built from a
+number", and that the bug cannot be written at all — the cycle audit's C2,
+TM-243; `meta/OPEN_QUESTIONS.md` Q-7 asks whether `instant_of`'s name should
+say so.)* *(Until cycle 0.2.2 this
 paragraph called the realtime clock's reading "a wall-clock reading" — the
 words `meta/specs/GLOSSARY.md` keeps for a civil reading, which a `Timestamp`
 is not — and the clock itself "the wall clock" twice, TM-226.)* *(Until cycle

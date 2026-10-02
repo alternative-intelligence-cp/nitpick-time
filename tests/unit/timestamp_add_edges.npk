@@ -27,7 +27,15 @@
 // the opt-out `CALENDAR.md` C-8c names: a `nanos` of one and a half seconds,
 // which one carry repairs; one of 2^32 - 1, which one carry cannot, and which a
 // `timestamp_add` writing its own `Timestamp` literal would hand back
-// denormalised; and a second past the range, moved back into it and not. And
+// denormalised; a second past the range, moved back into it and not; and
+// since cycle 0.2.4b `int64`'s two ends -- its largest `secs` moved on by a
+// second, which the add would overflow, and by a nanosecond from the last
+// nanosecond of a second, which the carry would, and its smallest moved back
+// by a nanosecond, which the borrow would -- each refused by the operand check
+// before any arithmetic (`SAFETY.md` S-12, TM-241), where until then each
+// trapped `IntOverflow` (the cycle audit's C1). The second past the range,
+// moved back into it, is refused by that check too, where until then it was
+// answered: either is an answer, and this file asks only that. And
 // SEEDED: 100 000 additions from the epoch, the `Duration`s from a 64-bit
 // xorshift begun at the seed this file commits -- every odd step one over the
 // whole of `int64`, every even step one within a second either way, so the
@@ -50,7 +58,8 @@
 // same; 43 a forged `Timestamp` did not read back; 44 the epoch refused, or a
 // step's verdict not the `int128` sum's; 45 a step's answer not the sum; 46 the
 // counts not the transcription's. SEEN RED AT PLANNING, on both legs, in a copy
-// of the tree (`meta/roadmap/0.2/0.2.3.md`, step 3): 44 with the borrow
+// of the tree (`meta/roadmap/0.2/0.2.3.md`, step 3, and again at cycle
+// 0.2.4b's, `0.2.4b.md` step 2, each at the same exit): 44 with the borrow
 // deleted, and with the carry; 45 with either keeping its second, with the
 // remainder dropped, and with the seconds; 42 with `timestamp_add` writing its
 // own `Timestamp` literal, and with `timestamp_of`'s upper bound deleted; 41
@@ -60,7 +69,10 @@
 // past a second, and `timestamp_of`'s lower bound one high. 43 and 46 are
 // reached only by editing this file, and were so measured: 43 with the forge
 // declaring its two fields the other way round, 46 with the sequence a step
-// short.
+// short. AND 93, the floor's `IntOverflow` arm and no code of this file's,
+// since cycle 0.2.4b: `timestamp_add` trapping on a forged `secs` at `int64`'s
+// ends, seen with either of its operand checks deleted (`0.2.4b.md` step 2)
+// -- the upper's deletion traps the add, the lower's the borrow.
 //
 // THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
 // `span`: its eleven (`SAFETY.md` S-4).
@@ -144,6 +156,10 @@ func:main = int32(cstring[]:_~argv) {
     if (f == 0i32) { f = raw check_forged(mem, 0i64, 4294967295u32, 0i64); }
     if (f == 0i32) { f = raw check_forged(mem, HI_SECS + 1i64, 0u32, 0i64 - NANOS); }
     if (f == 0i32) { f = raw check_forged(mem, HI_SECS + 1i64, 0u32, 0i64); }
+    // `int64`'s ends (cycle 0.2.4b, TM-241): the add, the carry, the borrow.
+    if (f == 0i32) { f = raw check_forged(mem, dmax, 0u32, NANOS); }
+    if (f == 0i32) { f = raw check_forged(mem, dmax, 999999999u32, 1i64); }
+    if (f == 0i32) { f = raw check_forged(mem, dmin, 0u32, 0i64 - 1i64); }
     dalloc(mem);
     if (f != 0i32) { exit f; }
 

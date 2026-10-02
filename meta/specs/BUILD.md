@@ -202,8 +202,8 @@ add — is the document that was wrong.
 **Rule B-4c (TM-119) — inside a `program` entry, the FILE'S OWN HEADER decides
 what kind of test it is. This is a deliberate divergence from `npkg`'s `kind`.**
 A `[[test]]` selects by **directory** and `kind` is per entry, so one entry over
-`tests/probe/` cannot be true about both the 28 files carrying `expect-exit:`
-<!-- [[sweep: probe_exit=28]] -->
+`tests/probe/` cannot be true about both the 29 files carrying `expect-exit:`
+<!-- [[sweep: probe_exit=29]] --> (28 until cycle 0.2.4b)
 and the 29 carrying `expect-error:` (O-X7; 8 until cycle 0.1.0c, 13 until 0.1.3b, 15 until 0.1.3c, 21 until 0.2.0, 23 until 0.2.1). The runner therefore dispatches per
 file: `expect-error:` present makes it a **refusal** member — `npkc` must fail
 and the *set* of codes must equal the set named (B-7), each code named once
@@ -316,16 +316,17 @@ list kept the old code until cycle 0.2.0), `BORROW-001`, `BORROW-012`,
 `RESOLVE-001`, `RESOLVE-002` (since cycle 0.2.0, `probe20b`),
 `REACH-002` and `REACH-003`, and every family
 after the first three runs only on something that parsed. Re-measured at pin
-`5fbaf4a`, cycle 0.2.3: **147 files = 102 parse cleanly + 43
+`5fbaf4a`, cycle 0.2.4b: **149 files = 104 parse cleanly + 43
 parse and are refused later + 2 do not parse**
-<!-- [[sweep: npk_total=147]] --> (`127 = 90 + 35 + 2` from cycle 0.1.3c until
+<!-- [[sweep: npk_total=149]] --> (`127 = 90 + 35 + 2` from cycle 0.1.3c until
 `tests/unit/civil_total_edges.npk` joined, `128 = 91 + 35 + 2` from then
 until cycle 0.2.0b retired the churn pair, TM-214, `126 = 89 + 35 + 2`
 until cycle 0.2.0 added `Instant`'s unit, its two refusals and the relay
 specimen, `130 = 91 + 37 + 2` until cycle 0.2.1 added `Timestamp`'s two
 units and six refusals, `138 = 93 + 43 + 2` until cycle 0.2.2 added the
-conversions' two units and two sweeps, and `142 = 97 + 43 + 2` until cycle
-0.2.3 added the interop's five units), and the two
+conversions' two units and two sweeps, `142 = 97 + 43 + 2` until cycle
+0.2.3 added the interop's five units, and `147 = 102 + 43 + 2` until cycle
+0.2.4b added a unit and a probe), and the two
 are `probe02d_wide_literal_refused.npk` (LEX-004, PARSE-002) and
 `probe14_error_payload_refused.npk` (PARSE-001, TM-147). It read
 `50 = 36 + 13 + 1` for three subcycles after the tree stopped being that size,

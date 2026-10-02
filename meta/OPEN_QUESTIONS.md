@@ -896,11 +896,11 @@ table, `tests/probe/README.md`'s table and several decisions cite by name, and
 P-5 says a probe is never deleted for the same reason those citations exist.
 
 **Settled at 0.0.2**, which builds the runner. **Nothing waits on it**: no
-probe changes either way, and the entry in the manifest is true about the 28
-<!-- [[sweep: probe_exit=28]] --> today. *(That word was `nineteen` until cycle
-0.0.6 — a settled question's prose is history and is normally frozen, but this
-sentence is in the PRESENT tense about the tree as it is now, so it is a claim
-and not a record. TM-142.)*
+probe changes either way, and the entry in the manifest is true about the 29
+<!-- [[sweep: probe_exit=29]] --> today. *(That word was `nineteen` until cycle
+0.0.6, and 28 until cycle 0.2.4b — a settled question's prose is history and
+is normally frozen, but this sentence is in the PRESENT tense about the tree as
+it is now, so it is a claim and not a record. TM-142.)*
 
 ### O-X9 — should an IR call-edge scan answer "did this module touch the kernel"?
 
@@ -1309,6 +1309,33 @@ raised from here, the section below says this file restates the ids `ntime`
 raised, and it never restated this one — and the cycle's findings list
 recorded `bytes_take` and not the language decision it produced
 (`roadmap/done/0.1/0.1.5.md`'s record, the second half).
+
+---
+
+### O-N34 — `#unreachable()` ending an `if (r.is_error)` arm is not counted as leaving it, so a read of `r.value` below is `NITPICK-TAINT-001`: a refusal of a correct program
+
+**Raised** from this repository's cycle 0.2.2 planning, 2026-10-01, at pin
+`5fbaf4a` (`roadmap/0.2/0.2.2.md` §1.2): `timestamp_to_utc` wanted the statement
+form for its two refusals that cannot happen. **Numbered O-N34** in the
+workbench registry (`../../meta/OPEN_QUESTIONS.md`), reproduced there at
+`5fbaf4a` and sent to the compiler, whose own registry holds it. **Open at our
+pin.** *(Restated here at cycle 0.2.4b, TM-245 — the cycle audit's S2: this
+file restates the ids `ntime` raised, and had none for this one; 0.2.2's REPORT
+said `compiler-defect: none`, and TM-222 recorded the refusal as the language's
+rule.)*
+
+**What it is.** `Result<int64>:r = take(); if (r.is_error) { #unreachable(); }
+if (r.value != 5i64) { … }` exits 1 at `NITPICK-TAINT-001` and writes no IR,
+while the same arm ending `exit 10i32;` compiles. The compiler's own D-121 says
+an arm that leaves contributes nothing to the merge, and its
+`BUILTIN_REFERENCE` that `#unreachable()` traps if reached and produces no
+value — so the arm leaves, and the refusal is the taint analysis's defect.
+
+**What it holds here: nothing.** `span` writes `r ?| #unreachable()` at both
+sites (`SAFETY.md` S-15c, TM-222), which compiles at every pin and says the same
+thing. **The adoption that moves the pin past the compiler's fix re-measures
+the statement form** — an item cycle 0.2's close writes into cycle 0.3's
+README — and keeps `?|` or respells the two sites, by a decision then.
 
 ---
 

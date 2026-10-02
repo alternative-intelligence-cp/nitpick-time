@@ -1,0 +1,112 @@
+// expect-exit: 0
+//
+// `instant_since` at both ends of `Duration`, from both sides, for readings
+// `instant_of` builds (cycle 0.2.4b; `TIME_MODEL.md` M-4 and §9,
+// `SPAN_MODEL.md` §5's `instant_since` row, `SAFETY.md` S-12, TM-242).
+//
+// ASKS: is every pair of one clock whose difference `Duration` holds answered
+// with exactly that difference, and every pair whose difference it cannot
+// hold refused -- never trapped?
+//
+// MATTERS BECAUSE `instant_of` takes any `int64` (TM-216), so a pair whose
+// difference passes `int64` is one a caller builds without the opt-out, and
+// until cycle 0.2.4b the subtraction was `int64`'s and trapped `IntOverflow`
+// there (the cycle audit's C6): `(int64 max) - (-1)` exited 93 on both legs.
+// M-4's footnote -- "cannot overflow in practice" -- is true of a boot
+// clock's readings and of no other number. `tests/unit/instant_ops.npk` holds
+// the rest of `instant_since`, two clocks refused among it.
+//
+// THE CASES, each pair of the monotonic clock: `Duration`'s largest value
+// taken from three pairs -- (max - 1, -1), (max, 0), (0, min + 1) -- and one
+// more from two, (max, -1) and (0, min); its smallest from (min + 1, 1),
+// (min, 0) and (-1, max), and one less from (min, 1) and (-2, max); the two
+// readings furthest apart, both ways; and two ordinary pairs. Each answer is
+// held to the difference computed in `int128` here.
+//
+// THE ORDER is every pair that must be answered first, then every pair that
+// must be refused, so a check that refuses too much is seen before one that
+// refuses too little, and an `int64` subtraction traps at the first refusal.
+//
+// EXIT CODES, clear of every arm code (TM-152): 10 a pair past `Duration`'s
+// largest value answered; 11 a pair past its smallest answered; 12 a pair at
+// or inside its largest refused, an ordinary pair among them; 13 a pair at or
+// inside its smallest refused; 14 an answer not the exact difference. SEEN
+// RED AT PLANNING, on both legs, in a copy of the tree
+// (`meta/roadmap/0.2/0.2.4b.md`, step 2): 93, the floor's `IntOverflow` arm,
+// with the difference computed in `int64` as it was until cycle 0.2.4b; 10
+// with the upper check deleted, and with its bound a nanosecond wide; 11 with
+// the lower check deleted, and with its bound a nanosecond wide; 12 with the
+// upper check at the end itself, and with its bound a nanosecond short; 13
+// with the lower check at the end itself, and with its bound a nanosecond
+// short; 14 with the readings swapped.
+//
+// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
+// `span`: its eleven (`SAFETY.md` S-4).
+mod:instant_since_edges;
+
+use "../../src/span/span.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    // `int64`'s two ends, a `Duration`'s: the maximum as a constant bit
+    // pattern (TM-149), the minimum one below its negation.
+    int64:dmax = ((~0u64) >> 1u64) =>! int64;
+    int64:dmin = (0i64 - dmax) - 1i64;
+
+    // ---- answered, exactly -------------------------------------------------
+    int32:e = raw answered(dmax - 1i64, -1i64, 12i32);
+    if (e == 0i32) { e = raw answered(dmax, 0i64, 12i32); }
+    if (e == 0i32) { e = raw answered(0i64, dmin + 1i64, 12i32); }
+    if (e == 0i32) { e = raw answered(dmin + 1i64, 1i64, 13i32); }
+    if (e == 0i32) { e = raw answered(dmin, 0i64, 13i32); }
+    if (e == 0i32) { e = raw answered(-1i64, dmax, 13i32); }
+    if (e == 0i32) { e = raw answered(5i64, 3i64, 12i32); }
+    if (e == 0i32) { e = raw answered(-3i64, 5i64, 12i32); }
+    if (e != 0i32) { exit e; }
+
+    // ---- refused, never trapped --------------------------------------------
+    e = raw refused(dmax, -1i64, 10i32);
+    if (e == 0i32) { e = raw refused(0i64, dmin, 10i32); }
+    if (e == 0i32) { e = raw refused(dmax, dmin, 10i32); }
+    if (e == 0i32) { e = raw refused(dmin, 1i64, 11i32); }
+    if (e == 0i32) { e = raw refused(-2i64, dmax, 11i32); }
+    if (e == 0i32) { e = raw refused(dmin, dmax, 11i32); }
+    if (e != 0i32) { exit e; }
+    exit 0i32;
+};
+
+// 0 when `later - earlier` is answered with exactly that difference; `code`
+// when it is refused; 14 when the answer is another number.
+func:answered = int32(int64:later, int64:earlier, int32:code) never fails {
+    Result<Duration>:r = instant_since(raw instant_of(later, InstantClock.Monotonic),
+                                       raw instant_of(earlier, InstantClock.Monotonic));
+    if (r.is_error) { pass code; }
+    Duration:d = r.value;
+    if ((d.ns => int128) != (later => int128) - (earlier => int128)) { pass 14i32; }
+    pass 0i32;
+};
+
+// 0 when `later - earlier` is refused; `code` when it is answered.
+func:refused = int32(int64:later, int64:earlier, int32:code) never fails {
+    Result<Duration>:r = instant_since(raw instant_of(later, InstantClock.Monotonic),
+                                       raw instant_of(earlier, InstantClock.Monotonic));
+    if (r.is_error) { pass 0i32; }
+    pass code;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

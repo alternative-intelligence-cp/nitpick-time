@@ -76,13 +76,29 @@ way, `NITPICK-TYPE-032`. What converts is `wild` storage reinterpreted through
 a pointer cast, the opt-out `CALENDAR.md` C-8c states for every checked
 property.)*
 
+*(Cycle 0.2.4b, TM-243 — the cycle audit's C2. "Here that program does not
+compile" is true of every CONVERSION and not of a CONSTRUCTION. The library
+offers no conversion function (`probe20b`), the types convert neither
+implicitly (`probe20c`, `probe20d`) nor through `=>!` (`probe20e`, `probe20f`),
+and neither can be written as a literal or edited (`probe20`, `probe21`,
+`probe21b`). But `instant_of` takes any `int64`, so a consumer that writes no
+`wild` and no `=>!` multiplies out a `Timestamp`'s two fields, hands them to
+`instant_of` with `InstantClock.Monotonic`, and divides the `Instant`'s `ns`
+back into `timestamp_of` — measured at `5fbaf4a`, exit 0 on both legs, and
+pinned by `probe20g`. That is a construction that names, in writing, the clock
+it claims to have read (TM-216), and it is what M-3 does not refuse: the
+guarantee is that a timeout cannot be written against the realtime clock BY
+ACCIDENT. Whether `instant_of`'s name should say it takes a raw reading is
+`../OPEN_QUESTIONS.md` Q-7, the author's, before 1.0; this note is true under
+either answer.)*
+
 **Rule M-4 — the only thing you can do with two `Instant`s is subtract them**,
 and the result is a `Duration` — or compare them; and both refuse a pair from
 two clocks:
 
 ```nitpick
 pub func:instant_of    = Instant(int64:ns, InstantClock:clock) never fails;
-pub func:instant_since = Duration(Instant:later, Instant:earlier);   // ETimeValue: two clocks*
+pub func:instant_since = Duration(Instant:later, Instant:earlier);   // ETimeValue: two clocks; past Duration*
 pub func:instant_add   = Instant(Instant:t, Duration:d) never fails;  // keeps t's clock
 pub func:instant_cmp   = Ordering(Instant:a, Instant:b);              // ETimeValue: two clocks
 ```
@@ -97,6 +113,18 @@ refusal hands it back is still `../OPEN_QUESTIONS.md` O-X8.)*
 is the boot, and `int64` nanoseconds is 292 years of uptime — but D-210 traps
 if it somehow did, which is the correct outcome for a machine that has been up
 since the Cretaceous.
+
+*(Cycle 0.2.4b, TM-242 — the cycle audit's C6. The footnote is true of two
+readings of a clock and of nothing else, and `instant_of` takes any `int64`:
+the pair `int64`'s maximum and −1, both `Monotonic`, trapped `IntOverflow` in
+`instant_since`, exit 93 on both legs — a pair a caller builds without the
+opt-out. Since then `instant_since` computes the difference in `int128`, as
+M-20 asks, and refuses it past `Duration`'s range with `ETimeValue`,
+`ValueFault.Overflow` — a second refusal beside two clocks — so it answers or
+refuses every pair and traps on none. `instant_add` is `never fails` and keeps
+the trap, the deadline arithmetic's: `SAFETY.md` S-12 names it among its
+exceptions. The block's
+comment on `instant_since` read `// ETimeValue: two clocks*` until then.)*
 
 **Rule M-5.** `Instant` is what a timeout, an elapsed measurement, a rate limit
 and a benchmark use. `ntime` provides it so that those uses have a type; the
@@ -344,7 +372,7 @@ normative: a conversion not on it does not exist.
 | From | To | How | Fails? |
 |---|---|---|---|
 | `Instant` | `Instant` | `+ Duration` | traps on overflow only |
-| `Instant`, `Instant` | `Duration` | `instant_since` | `ETimeValue` for two clocks (M-4) |
+| `Instant`, `Instant` | `Duration` | `instant_since` | `ETimeValue` for two clocks, or past `Duration`'s range (M-4) |
 | `int64` ns + `InstantClock` | `Instant` | `instant_of` | no |
 | `Instant` | `Timestamp` | **refused** (M-3) | — |
 | `Timestamp` | `Instant` | **refused** (M-3) | — |
@@ -367,6 +395,11 @@ normative: a conversion not on it does not exist.
 `timestamp_since`'s rows are code, as they are written — `timestamp_add`'s
 refusal is `timestamp_of`'s, relayed — and `timestamp_until`'s row is cycle
 0.7.3's.)*
+
+*(Cycle 0.2.4b, TM-241 and TM-242: `timestamp_add` refuses a `secs` outside the
+range before it adds as well — the same `ETimeValue`, so its row is unchanged —
+and `instant_since` refuses a pair whose difference passes `Duration`'s range,
+which its row did not say; it read "`ETimeValue` for two clocks (M-4)".)*
 
 *(Amended at cycle 0.2.1, TM-220 and TM-221: the `timestamp_of` row is new;
 `Timestamp` → `Instant` is written out, M-3 refusing both directions where the

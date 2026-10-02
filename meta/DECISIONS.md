@@ -4279,6 +4279,12 @@ could hide code.
 again, and the check is the list that cannot go stale.
 
 ### TM-164 — 0.1.1's contracts are comments, per Q-6's recommended answer A′, and nothing arms
+> **SUPERSEDED IN PART by TM-244 (2026-10-02, cycle 0.2.4b).** Its *"`answer`
+> for `result` (TM-130)"* in contract text: TM-130's `answer` is a word for a
+> local, and a live `ensures` takes `result` — `answer` is
+> `NITPICK-RESOLVE-002` there, measured at `5fbaf4a` (the cycle audit's C5).
+> Its two comments read `result` now, and `days_to_date`'s `prove` is the
+> `ensures` it states. The rest stands as decided.
 
 **2026-09-25, cycle 0.1.1 (PD-15).** `meta/OPEN_QUESTIONS.md` Q-6 is still the
 author's; the orchestrator's dispatch said to work `0.1.1.md` as written, which
@@ -6315,6 +6321,13 @@ and `instant_cmp` is the comparison, which refuses them; **no `Copy`** — a
 > on the UTC scale, what a `Timestamp` holds — and `meta/specs/GLOSSARY.md`
 > keeps "a wall-clock reading" for a civil one; read it as *"a reading of the
 > realtime clock"*. The text below is left exactly as written.
+>
+> **And TM-242 (2026-10-02, cycle 0.2.4b) reads two clauses of it:**
+> `instant_since`, fallible here, trapped `IntOverflow` on a pair `instant_of`
+> builds until TM-242 computed the difference in `int128` and refused one past
+> `Duration`'s range (the cycle audit's C6); and *"as `TIME_MODEL.md` §8's
+> table has said since cycle 0.0"* is §9's row — §8 has none for an `Instant`
+> (S1).
 
 **2026-10-01, cycle 0.2.0 (the plan's PD-54). Amends `TIME_MODEL.md` M-4 and
 `SAFETY.md` S-3, appends `ClockMismatch` to `src/cal/cal.npk`'s `ValueFault`,
@@ -6546,6 +6559,12 @@ alone — no specification names one, a nanosecond count spans ±292 years and i
 0.2.3's `Duration` interop, and each would be a public name (TM-013).
 
 ### TM-221 — `Timestamp`'s refusals are six probes, one refusal each: `probe20c` and `probe20d`, M-3 at a parameter in both directions (`NITPICK-TYPE-007`); `probe20e` and `probe20f`, M-3 through the unchecked cast in both directions (`NITPICK-TYPE-032`); and `probe21` and `probe21b`, the seal (`NITPICK-TYPE-079`)
+> **TM-243 (2026-10-02, cycle 0.2.4b) reads one clause of it:** *"M-3's 'in
+> either direction, ever' holds against everything a consumer can write but the
+> `wild` opt-out"* — a consumer builds an `Instant` from a `Timestamp`'s numbers
+> through `instant_of`, and back through `timestamp_of`, with neither: a
+> construction in writing, which TM-216 had named and `probe20g` pins (the cycle
+> audit's C2).
 
 **2026-10-01, cycle 0.2.1 (the plan's PD-66). Adds the six probes and their rows
 in `tests/probe/README.md`, and dates `TIME_MODEL.md` M-3 and §9's lattice;
@@ -6599,6 +6618,10 @@ and a `check` entry** — TM-218's reason, unchanged.
 # Cycle 0.2.2 — the conversions, ratified 2026-10-01
 
 ### TM-222 — `timestamp_to_utc` and `civil_to_utc`, in `span`, over `cal`'s algorithms: `timestamp_to_utc` never fails, its day number a FLOOR division of the seconds and its two unreachable refusals `?| #unreachable()`; `civil_to_utc` fallible, through `timestamp_of`, and so total over every field value
+> **TM-245 (2026-10-02, cycle 0.2.4b) reads one clause of it:** the
+> `NITPICK-TAINT-001` refusal of `if (r.is_error) { #unreachable(); }` is the
+> compiler's defect, O-N34, and not the language's rule; `?| #unreachable()`
+> stays the spelling at this pin (the cycle audit's S2).
 
 **2026-10-01, cycle 0.2.2 (the plan's PD-67). Implements `TIME_MODEL.md`
 M-11 and §9's two conversion rows as they are written, and dates both; dates
@@ -7168,6 +7191,14 @@ asserted for all four** — it is the prelude's multiplication, the same
 instruction for each, and two programs assert it at a day's two ends.
 
 ### TM-234 — `timestamp_add` splits the `Duration` by the truncating `/` and `%`, re-establishes M-7 with one borrow or one carry, and builds its answer through `timestamp_of`, whose range check it relays: `ETimeValue`, `YearRange`
+> **SUPERSEDED IN PART by TM-241 (2026-10-02, cycle 0.2.4b).** Its *"a
+> `Timestamp` forged through the opt-out is answered with a `Timestamp` or
+> refused, whatever it holds, because `timestamp_of` builds every answer"*: a
+> forged `secs` within 292 years of either end of `int64` trapped in the add,
+> the borrow or the carry before `timestamp_of` ran (the cycle audit's C1), and
+> TM-241's operand check is what makes the sentence true. And its *"nine
+> orders of magnitude"*, which is seven for the seconds and none for a forged
+> operand (K1). The rest stands as decided.
 
 **2026-10-01, cycle 0.2.3 (the plan's PD-79). Implements `TIME_MODEL.md` §9's
 row and dates M-7; dates `SPAN_MODEL.md` §5's second row and `SAFETY.md`
@@ -7208,6 +7239,11 @@ the constructor's, and a detail its own check does not give would be a second
 reading of one fact.
 
 ### TM-235 — `VERIFICATION.md` P-4's stand-in extends to `timestamp_add`: a seeded sequence of a hundred thousand additions held to an `int128` count of nanoseconds, forged inputs answered with a `Timestamp` or refused, and both sides of every boundary it decides; P-3's sample restated as the function is written
+> **SUPERSEDED IN PART by TM-244 (2026-10-02, cycle 0.2.4b).** P-3's restated
+> sample's `answer` for `result`: a live `ensures` takes `result`, and `answer`
+> is `NITPICK-RESOLVE-002` (the cycle audit's C5). And TM-241 makes its *"the
+> function answers whatever it is handed"* true, which it was not of a forged
+> `secs` near `int64`'s ends (C1). The rest stands as decided.
 
 **2026-10-01, cycle 0.2.3 (the plan's PD-80). Dates `VERIFICATION.md` P-4 and
 §6's row; restates P-3's `timestamp_add` sample; discharges the item TM-220
@@ -7442,3 +7478,227 @@ path, which a lexical check cannot place, and a check that guessed would be
 believed; **a check for the wrapping operators `+%`, `-%` and `*%`** — none is
 in `src/`, measured, and none was asked for; V-1 now says what nothing checks,
 so the next reader knows where the line is.
+
+# Cycle 0.2.4b — the cycle audit's library findings, ratified 2026-10-02
+
+Five decisions, drafted at planning (`meta/roadmap/0.2/0.2.4b.md` §2, PD-86 …
+PD-90, in that order) from the cycle audit's C1, C2, C5, C6, C7, D2 and S2, with
+K1 and K6 and the stale S1 (the workbench's
+`meta/audits/nitpick-time-0.2-2026-10-02.md`), each measured at compiler
+`5fbaf4a`.
+
+### TM-241 — `timestamp_add` checks its operand's seconds against the range before it adds, as `SAFETY.md` S-12 asks, so it answers or refuses whatever it is handed and traps on nothing
+
+**2026-10-02, cycle 0.2.4b (the plan's PD-86) — the cycle audit's C1 and K1. It
+supersedes TM-234 in part. Dates `SAFETY.md` S-12, `SPAN_MODEL.md` §5's
+`timestamp_add` row and `VERIFICATION.md` P-3's and P-4's notes; extends
+`tests/unit/timestamp_add_edges.npk`.**
+
+**What was found** (`0.2.4b.md` §1). TM-234 checked the SUM, through
+`timestamp_of`, and never the operand, and said a forged `Timestamp` is
+answered or refused *"whatever it holds, because `timestamp_of` builds every
+answer"*. Measured on both legs, forged through `wild` storage as the test
+forges: `int64`'s largest `secs` plus a second traps `IntOverflow` in the add
+(exit 93), the same `secs` with 999 999 999 nanoseconds plus a nanosecond traps
+in the carry, and `int64`'s smallest less a nanosecond in the borrow; every
+forged `secs` within 9 223 372 037 seconds of either end of `int64` traps for
+some `Duration`, and no other `secs` traps for any. The three with a zero
+`Duration` are refused. Only `wild` storage makes such a value — a constructed
+`Timestamp`'s seconds lie within 3.8 × 10¹¹ of the epoch, and `5i128 =>!
+Timestamp` is `NITPICK-TYPE-032` — and the trap is loud. But S-12 already says
+*"every arithmetic entry point checks its operands against the supported range
+and returns the error; the trap remains as the belt"*, and `CALENDAR.md` C-8c
+says to write downstream functions total where they can be. And TM-234's
+*"it fits `int64` by nine orders of magnitude"* is the nanoseconds' margin; the
+seconds' is seven, and a forged operand's none (K1).
+
+**The decision.** *`timestamp_add` refuses a `t.secs` below `NTIME_SECS_MIN` or
+above `NTIME_SECS_MAX` with `ETimeValue` — `YearRange`, `timestamp_of`'s own
+answer for that `secs` — before any arithmetic. After those two lines the
+seconds stay within 3.9 × 10¹¹ of the epoch through the add, the borrow and the
+carry, so the function traps on nothing, whatever it is handed, and `timestamp_of`
+still builds every answer and checks the sum. `tests/unit/timestamp_add_edges.npk`
+forges the three: each refused, never trapped; with either line deleted, the
+test exits 93 on both legs. The forged second past the range, moved back into
+it, is refused now where it was answered — either is an answer, which is all
+the test asks. TM-234 is superseded in part: its sentence that a forged
+`Timestamp` is answered or refused because `timestamp_of` builds every answer,
+and its "nine orders of magnitude", which is seven for the seconds and none for
+a forged operand; the rest stands as decided.*
+
+*Alternatives declined:* **the claim narrowed instead** — that a forged
+`Timestamp` near `int64`'s ends traps — the audit's alternative: S-12 asks for
+the operand check, C-8c for totality where it costs nothing, and both siblings
+are total over forged input already, `timestamp_since` by its `int128` (TM-236)
+and `civil_to_utc` by its narrow operands; **TM-234's declined "range check of
+its own"** — that was a second check of the SUM, dead for every input; this one
+is the OPERAND's, and one edit reddens it: delete either line and the forged
+cases trap; **the arithmetic in `int128`** — a wider sum to make a forged
+`secs` fit, where a narrower operand makes every `secs` fit; **a `requires` on
+`t`** — P-1b puts none on an argument a caller supplies, and a live one would
+trap where S-12 asks for an answer.
+
+### TM-242 — `instant_since` computes the difference in `int128` and refuses it past `Duration`'s range, as M-20 and S-12 ask, and `SPAN_MODEL.md` §5 enumerates every site it says it does
+
+**2026-10-02, cycle 0.2.4b (the plan's PD-87) — the cycle audit's C6, C7 and S1.
+Dates `TIME_MODEL.md` M-4 and §9's `instant_since` row, `SAFETY.md` S-12 and
+`VERIFICATION.md` §6; adds six rows to `SPAN_MODEL.md` §5; adds
+`tests/unit/instant_since_edges.npk`. Reads one clause of TM-216.**
+
+**What was found** (`0.2.4b.md` §1). `instant_since(instant_of(int64 max,
+Monotonic), instant_of(-1, Monotonic))` exits 93 on both legs, and the pair
+(max, 0) is answered exactly: the subtraction was `int64`'s. M-4's footnote —
+*"cannot overflow in practice — the monotonic clock's origin is the boot"* —
+was written when `instant_since` was `never fails`; TM-216 made it fallible and
+`instant_of` public over any `int64`, and did not revisit the overflow. M-20
+already says internal arithmetic that could exceed `int64` nanoseconds computes
+in `int128`. And §5 says *"every site is enumerated"* while six sites written in
+cycle 0.2 have no row: `instant_since`, `instant_add`, `civil_to_utc`, and
+`duration_mins`, `duration_hours` and `duration_weeks` beside the one
+`duration_days` row. TM-216 and `span.npk` cite §8 for `instant_add`'s trap,
+whose table has no `Instant` row; it is §9's (S1).
+
+**The decision.** *`instant_since` computes `later.ns − earlier.ns` in `int128`,
+refuses it above `NTIME_DURATION_NS_MAX` or below `NTIME_DURATION_NS_MIN` with
+`ETimeValue` — `Overflow`, as `timestamp_since`'s refusal is — and narrows once,
+P-5's `prove` a comment before the narrowing; §5 gains its row, marked `int128`,
+which `check_int128_sites` holds it to. `instant_add` stays `never fails`, its
+trap the range check: a deadline computed from it needs no test, which is why it
+traps and `instant_since`, already fallible, refuses — and S-12 names the
+`never fails` arithmetic whose trap is its range check by decision, this one and
+the four `Duration` constructors (TM-233), as its exceptions. §5 gains the six
+rows, `instant_since`'s marked and five not. `tests/unit/instant_since_edges.npk`
+takes `Duration`'s two ends from both sides, from three pairs each, and refuses
+the readings furthest apart; computed in `int64` it exits 93.*
+
+*Alternatives declined:* **the trap stated instead** — in M-4, in §9's row and as
+an exception to S-12, for symmetry with `instant_add`, the audit's lean: the
+symmetry is the wrong one, since `instant_add` is `never fails` and so must trap
+while `instant_since` already returns a `Result`, so refusing costs its caller
+nothing; **a sign test in `int64` before the subtraction** — correct, and M-20
+says `int128`, as TM-236 held for `timestamp_since`; **§5's "every site"
+restated instead** — the six rows cost a line each and are what the sentence
+promises.
+
+### TM-243 — M-3 claims what the type enforces: no conversion function, no implicit conversion, no cast, no literal, no write; an `Instant` built from numbers is a construction in writing, pinned by a probe, and whether its constructor should say so is the author's
+
+**2026-10-02, cycle 0.2.4b (the plan's PD-88) — the cycle audit's C2 and K6. Dates
+`TIME_MODEL.md` M-3, `CLAUDE.md`'s cycle 0.2.0 paragraph and the cycle README's
+0.2.0 row; restates the public `README.md`'s two sentences,
+`src/span/span.npk`'s and `src/lib.npk`'s, and `probe20`'s title and its
+reason; rewords `GLOSSARY.md`'s *instant*; adds
+`tests/probe/probe20g_construction_from_numbers.npk`. Reads one clause of
+TM-221. `meta/OPEN_QUESTIONS.md` Q-7 is the author's.**
+
+**What was found** (`0.2.4b.md` §1). A consumer that imports `span` and writes no
+`wild` and no `=>!` converts both ways: a `Timestamp`'s two fields, multiplied
+out, handed to `instant_of` with `InstantClock.Monotonic`, and the `Instant`'s
+`ns`, divided, handed back to `timestamp_of` — exit 0 on both legs, the round
+trip exact. TM-221 says M-3 *"holds against everything a consumer can write but
+the `wild` opt-out"*, and TM-216 says *"a caller who hands it a wall-clock
+reading has opted out in writing"*: both cannot be right. The cycle's own
+watch-for says M-3's "there is no conversion" is only true if a program
+attempting it fails to compile. And `GLOSSARY.md` defines an instant as *"a
+point on the monotonic timeline"*, where since TM-215 an `Instant` is a reading
+of one of two clocks (K6).
+
+**The decision.** *M-3 and the sites that restate it say what the type
+enforces — no conversion function (`probe20b`), no implicit conversion either
+way (`probe20c`, `probe20d`), no `=>!` either way (`probe20e`, `probe20f`), no
+literal and no write (`probe20`, `probe21`, `probe21b`) — and name the path that
+remains: an `Instant` built by `instant_of` from a number computed from a
+`Timestamp`, and the reverse by `timestamp_of`, each a construction that names
+in writing the clock it claims (TM-216). `probe20g` compiles and runs that path,
+so the claim is checked. The guarantee M-3 exists for — a timeout cannot be
+written against the realtime clock BY ACCIDENT — is the type's and holds. Whether
+`instant_of`'s name should say it takes a raw reading is an API question before
+1.0, registered as Q-7 with its recommendation, and nothing is decided about the
+API here: the restated text is true under either answer. The glossary's
+*instant* is a reading of one of two clocks.*
+
+*Alternatives declined:* **the README's guarantee kept as written** — no
+constructor's name makes it true in both directions, since `ns` is readable
+(TM-219) and `timestamp_of` public; **the constructor renamed now** — the author's
+question, Q-7, and a public name is his to settle before 1.0 (TM-013); **no
+probe, the restatement alone** — a claim the tree does not check is the class
+this cycle's audit found four of.
+
+### TM-244 — a contract comment is written in the syntax its live clause takes — `result`, `old`, the widening its operand needs, `raw` before a call — measured so; `VERIFICATION.md` P-3 asks a contract of every constructor and arithmetic entry point that checks a range, and `span`'s two that did not carry one do
+
+**2026-10-02, cycle 0.2.4b (the plan's PD-89) — the cycle audit's C5 and D2. It
+supersedes TM-164 and TM-235 in part. Restates `VERIFICATION.md` P-1b's
+substitution and its "mechanical" claim, P-3 and its sample, and §6's three
+rows; rewrites the contract comments in `src/`.**
+
+**What was found** (`0.2.4b.md` §1). Every contract comment in `src/` made a
+live clause, one at a time, in a scratch copy, and put to the pinned compiler:
+of forty, thirteen compiled — every one that wrote `answer` for `result` is
+`NITPICK-RESOLVE-002`, *"cannot find `answer` in this scope"*, because `result`
+is the keyword an `ensures` takes and no binding can shadow it (the compiler's
+`VERIFICATION_REFERENCE.md` §3 at the pin), while TM-130's `answer` was a word
+for a LOCAL. With `answer` read as `result`, twenty-nine compiled; four more
+wanted the widening their operands' types need (`TYPE-007`), one called a `min`
+that does not exist, three called a function without `raw` (`TYPE-060`), and
+the three `prove`s stood above a function with no statement to become. So
+P-1b's *"the switch for any row is mechanical — uncomment the clause"* was false
+of most rows. And P-3 asks *"every constructor and every arithmetic entry
+point"* to carry its range, which three of `span`'s thirteen functions did
+(D2); of the ten, eight check no range — a reading's range is its type's, a
+`never fails` constructor's trap is its check — and two check one through
+`timestamp_of` or a refusal: `civil_to_utc` and, since TM-242, `instant_since`.
+
+**The decision.** *Every contract comment is written as its live clause would
+be: `result` and `old(…)`, which are reserved as locals and are what a clause
+takes; the widening an operand's type needs; `raw` before a call; and no
+function that does not exist. A `prove` stands where its statement goes, inside
+the body, on a local the body names; one that stated the answer is the `ensures`
+it is. Measured after it: forty-three contract comments, thirty-nine compile as
+live clauses at the pin, and the four that call a function — `date_to_days`,
+`day_of_year` and the ISO week readings — need their callee `pure` too
+(`TYPE-060`), which the decision that arms one gives it. P-1b's claim is restated
+to that measurement. P-3 asks its contract of every constructor and arithmetic
+entry point that checks a range; `civil_to_utc` carries its two `ensures` and
+`instant_since` P-5's `prove`, and the eight that check none — `instant_of`,
+`instant_add`, `timestamp_to_utc` and the four `Duration` constructors, with
+`instant_cmp` — carry none, which P-3's note names. TM-164's `answer` for
+`result` in contract text, and TM-235's in P-3's restated sample, are superseded;
+the rest of each stands as decided.*
+
+*Alternatives declined:* **`answer` kept, and the claim restated to name the
+rename** — the audit's alternative: the tree already wrote `old(…)`, so it
+substituted one keyword and not the other, and the rename is only one of the
+four reasons the switch was not mechanical; **the four callees marked `pure` now**
+— one keyword each, and a public commitment the decision that arms a contract
+should make with the arm; **every `prove` an `ensures`** — a `prove` costs a
+consumer no arm when it goes live and an `ensures` costs one, and P-4's
+invariant was a `prove` by choice (TM-220); **P-3's contracts written at all ten**
+— a contract that restates a function's whole body, at a function that checks
+nothing, is not the range P-3 asks for; **a tree check that compiles every
+contract live on every run** — P-1b makes a comment evidence of nothing until a
+decision arms it, and cycle 0.8's verified build is where contracts become
+checks; the measurement is the plan's, and repeatable.
+
+### TM-245 — the refusal of `if (r.is_error) { #unreachable(); }` is the compiler's defect, O-N34, not the language's rule; `span` keeps `?| #unreachable()` at this pin, and the adoption that moves it re-measures
+
+**2026-10-02, cycle 0.2.4b (the plan's PD-90) — the cycle audit's S2. Restates
+O-N34 in `meta/OPEN_QUESTIONS.md`; reads one clause of TM-222; dates
+`src/span/span.npk`'s note.**
+
+**What was found** (`0.2.4b.md` §1). TM-222 and `span.npk`'s header record the
+`NITPICK-TAINT-001` refusal of the statement form as what *"the taint analysis
+does not count"* — the language's rule. It is a defect this repository found at
+0.2.2's planning and the workbench registry holds as O-N34: the compiler's own
+D-121 says an arm that leaves contributes nothing to the merge, and its
+`BUILTIN_REFERENCE` that `#unreachable()` produces no value. 0.2.2's REPORT said
+`compiler-defect: none`, and this repository's registry section has no entry for
+it. At `5fbaf4a` the refusal stands, measured again.
+
+**The decision.** *O-N34 is restated in this repository's `OPEN_QUESTIONS.md`,
+open at our pin; TM-222's sentence is read as the defect it records; `span`'s
+two refusals keep `?| #unreachable()`, which compiles at every pin; and the
+adoption that moves the pin past the compiler's fix re-measures the statement
+form there — an item cycle 0.2's close writes into cycle 0.3's README.*
+
+*Alternatives declined:* **the two sites respelled in the statement form now** —
+refused at our pin; **the note left as the language's rule** — a defect recorded
+as a rule is a rule nobody re-measures.

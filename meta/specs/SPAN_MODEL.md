@@ -187,9 +187,15 @@ wrong**, so every site is enumerated and each carries a `prove` obligation
 | Site | Risk | Answer | `int128` |
 |---|---|---|---|
 | `duration_days(n)` | `n × 86 400 × 10⁹` overflows `int64` past ±106 751 days | D-210 traps; the constructor is `never fails` and the trap is the range check, as the prelude's own constructors are | no |
+| `duration_mins(n)` | `n × 60 × 10⁹` overflows `int64` past ±153 722 867 minutes | as `duration_days`' | no |
+| `duration_hours(n)` | `n × 3 600 × 10⁹` overflows `int64` past ±2 562 047 hours | as `duration_days`' | no |
+| `duration_weeks(n)` | `n × 7 × 86 400 × 10⁹` overflows `int64` past ±15 250 weeks | as `duration_days`' | no |
+| `instant_since(later, earlier)` | `later.ns − earlier.ns` overflows `int64` for two readings `instant_of` builds | computed in `int128` (M-20), checked against `Duration`'s range and narrowed once; past it, `ETimeValue`/`Overflow` | **yes** |
+| `instant_add(t, d)` | `t.ns + d.ns` overflows `int64` 292 years from the clock's origin | D-210 traps; `never fails`, and the trap is the range check — a deadline's arithmetic (`TIME_MODEL.md` M-4, §9) | no |
 | `timestamp_add(t, d)` | `secs + d.ns / 10⁹` leaves the supported range | checked, `ETimeValue`/`Overflow` | no |
 | `timestamp_since(a, b)` | difference exceeds `Duration`'s ±292 y | computed in `int128` (M-20), checked against `Duration`'s range and narrowed once; past it, `ETimeValue`/`Overflow` (M-18) | **yes** |
 | `timestamp_to_utc` | `secs × 10⁹` for the nanosecond field | never computed — the seconds and nanos are kept apart, which is why `Timestamp` is a pair and not an `int64` of nanoseconds | no |
+| `civil_to_utc(c)` | `days × 86 400 + sod` | none — a day number from any `int32` year is at most 7.84 × 10¹¹ in magnitude (C-12), times 86 400 6.8 × 10¹⁶, and the second of the day at most 933 555 from three `uint8`s; `timestamp_of` checks the sum | no |
 | `period_add` year/month step | `year + years` leaves `int32` or the range | computed in `int64`, checked, narrowed with `=>!` | no |
 | `period_add` day step | day number leaves the range | checked against C-4's bounds | no |
 | `period_add` ns step | `ns` sum overflows `int64` | computed in `int128`, checked, narrowed | **yes** |
@@ -208,6 +214,15 @@ is `timestamp_to_utc` since cycle 0.2.2, TM-222.)* *(Cycle 0.2.3, TM-234:
 refusal would carry, when O-X8 delivers one, is `YearRange` — the range's own
 name for a `secs` outside it; `Overflow` is `timestamp_since`'s, where
 `Duration` cannot hold the answer.)*
+
+*(Cycle 0.2.4b, TM-241 and TM-242 — the cycle audit's C1, C6 and C7.
+`timestamp_add` checks its OPERAND first, `t.secs` against the range, so the
+add, the borrow and the carry cannot trap whatever `t` holds; a forged `secs`
+near `int64`'s ends trapped until then. And "every site is enumerated" was not
+true: six rows are new — the three other `Duration` constructors, `instant_since`,
+`instant_add` and `civil_to_utc` — and `instant_since`'s is marked, since it
+computes in `int128` now, where its `int64` subtraction trapped on a pair
+`instant_of` builds.)*
 
 **Rule N-20 — the `int128` sites are the rows the table above marks in its
 `int128` column, and no other.** A whole-tree check, `check_int128_sites`,

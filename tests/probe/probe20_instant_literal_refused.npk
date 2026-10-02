@@ -1,15 +1,15 @@
 // expect-error: NITPICK-TYPE-079
 // expect-error: NITPICK-TYPE-079
 //
-// PROBE 20 — A CONSUMER CANNOT BUILD AN `Instant` FROM A NUMBER (cycle 0.2.0,
-// TM-215, TM-218).
+// PROBE 20 — A CONSUMER CANNOT WRITE AN `Instant` AS A LITERAL (cycle 0.2.0,
+// TM-215, TM-218; "BUILD ... FROM A NUMBER" until cycle 0.2.4b, TM-243).
 //
 // ASKS: may a consumer write `Instant{ ns: 1000i64, clock:
 // InstantClock.Monotonic }` -- a reading made of any `int64` it likes, a
 // reading of the realtime clock included?
 //
-// MATTERS BECAUSE "a timeout cannot be written against a wall clock" is half
-// the TYPE's: if a struct literal could build an `Instant`, a
+// MATTERS BECAUSE "a timeout cannot be written against a wall clock" BY
+// ACCIDENT is half the TYPE's: if a struct literal could build an `Instant`, a
 // `CLOCK_REALTIME` nanosecond count would become one in a line, and every
 // refusal `instant_since` makes would be about a value it cannot trust.
 // `instant_of` is the one constructor, and a caller handing it a reading of

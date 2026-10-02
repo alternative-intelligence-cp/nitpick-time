@@ -82,12 +82,12 @@ two clocks. `span` raises `cal`'s identity, so `cal`'s enum carries its variant.
 **Rule S-4 — module decomposition is part of the budget**, because REACH is
 import-scoped:
 
-| Module | Declares | Identity arms a consumer importing only this owes | TOTAL arms, MEASURED at pin `c3bdae2` (at `aaffb87`) |
+| Module | Declares | Identity arms a consumer importing only this owes | TOTAL arms, MEASURED at the pin each run uses (at `aaffb87`) |
 |---|---|---|---|
 | `ntime/lib.npk` — **the umbrella**, the import a consumer writes | — (re-exports) | one arm today (`cal`'s) | **13** <!-- [[sweep: arms_lib=13]] --> (—) — generated since cycle 0.1.0b (TM-155): the floor of six, `cal.ETimeValue`, the four arithmetic arms, `DecreasesViolated` from `src/core/bytes.npk`'s measured loops, and — since cycle 0.1.0c (TM-156, TM-159) — `LimitViolated` from the `ListLen` on `src/core/`'s sealed lengths. It was **12** until then |
 | `ntime/core.npk` | — | nothing | **6** <!-- [[sweep: arms_core=6]] --> (4) — the floor; `core` is not yet reachable as its own public module, and its code is billed through the umbrella's row |
 | `ntime/cal.npk` | `ETimeValue` | one arm | **11** <!-- [[sweep: arms_cal=11]] --> (9) — measured 2026-09-06 and 2026-09-25 |
-| `ntime/span.npk` | — (raises `cal`'s) | one arm | **11** <!-- [[sweep: arms_span=11]] --> (—) — since cycle 0.2.0, measured: `cal.ETimeValue`, which `span` raises for two clocks' readings (TM-216), since cycle 0.2.1 for a `secs` outside the range or a `nanos` outside one second handed to `timestamp_of` (TM-220), since cycle 0.2.2 for a civil reading `civil_to_utc` cannot convert, `timestamp_of`'s refusal relayed (TM-222), and since cycle 0.2.3 for a sum `timestamp_add` cannot keep in the range, relayed the same way (TM-234), and a difference `timestamp_since` cannot hold in a `Duration` (TM-236); the floor of six; and `cal`'s four arithmetic arms, which reach every importer of `span` because `span` imports `cal`. **No new identity**: the umbrella's row stays 13. *(A placeholder until cycle 0.2.0, the row read **6** (4), the floor, "meaningless until cycle 0.2 gives the module a body".)* |
+| `ntime/span.npk` | — (raises `cal`'s) | one arm | **11** <!-- [[sweep: arms_span=11]] --> (—) — since cycle 0.2.0, measured: `cal.ETimeValue`, which `span` raises for two clocks' readings (TM-216), since cycle 0.2.1 for a `secs` outside the range or a `nanos` outside one second handed to `timestamp_of` (TM-220), since cycle 0.2.2 for a civil reading `civil_to_utc` cannot convert, `timestamp_of`'s refusal relayed (TM-222), and since cycle 0.2.3 for a sum `timestamp_add` cannot keep in the range, relayed the same way (TM-234), and a difference `timestamp_since` cannot hold in a `Duration` (TM-236), and since cycle 0.2.4b for a `secs` handed to `timestamp_add` outside the range (TM-241) and a difference `instant_since` cannot hold (TM-242); the floor of six; and `cal`'s four arithmetic arms, which reach every importer of `span` because `span` imports `cal`. **No new identity**: the umbrella's row stays 13. *(A placeholder until cycle 0.2.0, the row read **6** (4), the floor, "meaningless until cycle 0.2 gives the module a body".)* |
 | `ntime/zone.npk` | `ETimeZone` | two arms | placeholder; **6** <!-- [[sweep: arms_zone=6]] --> (4) today (cycle 0.3) |
 | `ntime/fmt.npk` | `ETimeParse` | three arms | placeholder; **6** <!-- [[sweep: arms_fmt=6]] --> (4) today (cycle 0.4) |
 | `ntime/host.npk` | — (forwards errnos) | one arm | placeholder; **6** <!-- [[sweep: arms_host=6]] --> (4) today |
@@ -108,6 +108,10 @@ identity by its declaring module — `cal.ETimeValue` — so a budgeted name
 declared in a second module, or outside the module this column names, is a
 second arm in every consumer, measured at `c970483` as `moda.ETimeValue` and
 `modb.ETimeValue` for one name in two modules, and the check fails on either.)*
+*(Cycle 0.2.4b — the cycle audit's K7: the totals column's header read
+"MEASURED at pin `c3bdae2`" through the adoptions of `c970483` and `5fbaf4a`.
+Every total is tagged and held to the bill generated at whichever pin a run
+uses, so the header says that, and no pin.)*
 
 **A program that only wants calendar arithmetic owes one IDENTITY arm.** That is
 the decomposition working, and it is why `cal` does not import `zone`.
@@ -400,6 +404,18 @@ returns the error; the trap remains as the belt for a path the check missed.
 answers that caller with `ETimeValue` through `timestamp_of`, whose range
 check it relays — so the detail is `YearRange`, the range's own name;
 `Overflow` is `timestamp_since`'s, past `Duration`'s range, TM-236.)*
+
+*(Cycle 0.2.4b, TM-241 and TM-242 — the cycle audit's C1 and C6.
+`timestamp_add` checked the sum and not its operand, so a `secs` forged near
+`int64`'s ends trapped before `timestamp_of` ran; it checks the operand first
+now. `instant_since` subtracted in `int64` and trapped on a pair `instant_of`
+builds; it computes in `int128` and refuses past `Duration`'s range now,
+`Overflow`. **The rule's exceptions, named:** an arithmetic entry point that is
+`never fails` by decision, its trap its range check — the four `Duration`
+constructors (`SPAN_MODEL.md` N-2, TM-233) and `instant_add` (`TIME_MODEL.md`
+M-4, TM-216). A deadline computed from them needs no test, and past ±292 years
+the trap is the prelude's own answer for a span no `Duration` holds. Every
+fallible entry point checks before the trap.)*
 
 **Rule S-13 (TM-014) — the supported range is `year −9999 … +9999`**, proleptic
 Gregorian, astronomical year numbering (year 0 exists and is 1 BCE).

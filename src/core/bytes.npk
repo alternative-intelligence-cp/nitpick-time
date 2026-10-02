@@ -105,7 +105,7 @@ use "./limits.npk".*;
 // module but this one names it at all, and `bytes_capacity` reads its `cap`.
 pub struct:Bytes = { hidden buffer:body; sealed limit<ListLen> int64:len; };
 
-// `ensures answer.len == 0 && answer.body.cap >= 1`
+// `ensures result.len == 0 && result.body.cap >= 1`
 pub func:bytes_init = Bytes(int64:cap) never fails {
     int64:n = cap;
     if (n < 1i64) { n = 1i64; }
@@ -306,12 +306,12 @@ pub func:bytes_put_int = NIL(Bytes->:b, int64:v) never fails {
 // READING AND FINISHING
 // ===========================================================================
 
-// `ensures answer == b.len`
+// `ensures result == b.len`
 pub func:bytes_len = int64(Bytes->:b) never fails {
     pass b.len;
 };
 
-// `ensures answer == b.body.cap`
+// `ensures result == b.body.cap`
 //
 // THE CAPACITY, READ HERE BECAUSE NOWHERE ELSE CAN (cycle 0.1.3c, TM-195).
 // `body` is `hidden`, so outside this module `b.body.cap` is `NITPICK-TYPE-080`

@@ -14,8 +14,31 @@ instants and timestamps, is OPEN: its 0.2.0a, the adoption of compiler
 `Timestamp`, its 0.2.2, the conversions and the cycle's gate, its 0.2.3a, the
 instruments, and its 0.2.3, the `Duration` interop, are done; and its close is
 under way in three parts, each triaging the cycle audit's findings: 0.2.4a, the
-audit's instruments, is done, 0.2.4b, the library's findings, is next, and
-0.2.4, the close itself, follows it.**
+audit's instruments, and 0.2.4b, the library's findings, are done, and 0.2.4,
+the close itself, is next.**
+
+**After cycle 0.2.4b: the cycle audit's library findings.** **`timestamp_add`
+checks its operand before it adds** — `t.secs` against the range,
+`ETimeValue`, `YearRange` — so it answers or refuses whatever it is handed,
+where a `secs` forged near `int64`'s ends trapped `IntOverflow` in the add, the
+borrow or the carry before `timestamp_of` ran (TM-241). **`instant_since`
+computes in `int128`** and refuses a difference past `Duration`'s range,
+`Overflow`, where a pair `instant_of` builds trapped; `SPAN_MODEL.md` §5 has a
+row for every site it said it had, six new, and `SAFETY.md` S-12 names its
+exceptions — `instant_add` and the four `Duration` constructors, `never fails`,
+the trap their check (TM-242). **M-3 says what the type enforces** — no
+conversion function, no implicit conversion, no cast, no literal, no write —
+and names what it cannot refuse: an `Instant` built by `instant_of` from a
+`Timestamp`'s numbers, a construction in writing, which `probe20g` runs
+(TM-243); whether that constructor should say it takes a raw reading is the
+author's, `meta/OPEN_QUESTIONS.md` Q-7. **Every contract comment is written as
+its live clause would be** — `result` where it wrote `answer`, a widening, a
+`raw` — and measured: of forty-three, thirty-nine compile as live clauses at
+the pin, and four wait on a `pure` callee; P-3 asks a contract of what checks a
+range, and `civil_to_utc` and `instant_since` carry theirs (TM-244). **O-N34 is
+restated here**: the refusal of the `#unreachable()` statement form is the
+compiler's defect, not the language's rule (TM-245). A full invocation is
+**133 units green** at pin `5fbaf4a`.
 
 **After cycle 0.2.4a: the cycle audit's instruments.** Cycle 0.2's audit
 (ACCEPT, twenty-two findings) found instruments that passed a planted violation
@@ -143,7 +166,9 @@ reading of one of two clocks — `{ sealed int64:ns; sealed InstantClock:clock; 
 refuse a pair from two clocks with `ETimeValue` (`ValueFault.ClockMismatch`,
 appended); and `instant_add`, which keeps its clock (TM-215, TM-216;
 `TIME_MODEL.md` M-2 and M-4 and `HOST.md` H-6 amended). **A timeout cannot be
-written against a wall clock**: a consumer can neither build an `Instant` by a
+written against a wall clock** *(by accident: `instant_of` takes any `int64`,
+so an `Instant` built from a realtime reading's numbers is written, and runs —
+cycle 0.2.4b, TM-243)*: a consumer can neither build an `Instant` by a
 struct literal nor edit one — `NITPICK-TYPE-079`, `probe20` — and there is no
 conversion to a `Timestamp` — `NITPICK-RESOLVE-002`, `probe20b` (TM-218). The
 clock is read as the sealed field, so O-X3 is settled without an accessor.
@@ -704,7 +729,9 @@ cycle 0.0.4** (TM-130, `BUILD.md` B-18): `prove`, `assert_static`, `requires`,
 All ten measured refused as local names at pin `0dfddac`. The last three are
 the compiler's D-221, and `old` and `result` are the dangerous pair, because
 this library's own contract syntax uses them — `ensures v.count == old(v.count)`
-— so you meet them as things to write. Use **`outgoing`** and **`answer`**.
+— so you meet them as things to write. Use **`outgoing`** and **`answer`** as
+locals; in a contract comment write `old` and `result`, as the live clause
+takes them (TM-244).
 **At compiler `c3bdae2` there are twelve**: D-304 added **`decreases`** and
 **`unbounded`**, and the new field qualifiers **`sealed`** and **`hidden`** are
 refused as local names the same way (cycle 0.1.0b; `BUILD.md` B-18).

@@ -290,13 +290,14 @@ pub func:is_leap_year = bool(int64:y) never fails {
 };
 
 // `requires m >= 1 && m <= 12`
-// `ensures answer >= 28 && answer <= 31`
+// `ensures result >= 28 && result <= 31`
 //
 // (`VERIFICATION.md` P-1b, A': an obligation is a comment in the syntax it
 // would take unless a numbered decision accepts the arm its live clause costs
-// every consumer. `answer`, never `result` -- `result` and `old` are
-// reserved `VerificationKeyword`s, TM-130/B-18, and this library's own contract
-// syntax is exactly where you meet them as things to write.)
+// every consumer. `result` and `old` are written as the live clause takes them:
+// they are reserved as LOCAL names, TM-130/B-18, and a comment is no local.
+// Until cycle 0.2.4b these comments wrote `answer` for `result`, which the
+// live clause refuses, `NITPICK-RESOLVE-002` -- the cycle audit's C5, TM-244.)
 //
 // THE YEAR IS NOT RANGE-CHECKED HERE and that is deliberate: C-3's rule is
 // defined for every `int64` year, the range is the CONSTRUCTOR's obligation
@@ -370,12 +371,13 @@ func:days_from_civil = int64(int64:y, int64:m, int64:d) never fails {
     pass (era * 146097i64) + doe - 719468i64;
 };
 
-// `ensures answer >= NTIME_DAY_MIN && answer <= NTIME_DAY_MAX`
+// `ensures result >= NTIME_DAY_MIN && result <= NTIME_DAY_MAX`
 //  (true of every `CivilDate` that `civil_date` can build -- C-8c)
 //
 // (`VERIFICATION.md` P-1b -- A', the author's answer to `meta/OPEN_QUESTIONS.md`
-// Q-6 -- reads it: a comment in the syntax it would take, `answer` for `result`
-// (TM-130) -- and evidence of NOTHING, since a plain build checks no comment.
+// Q-6 -- reads it: a comment in the syntax it would take, `result` included
+// since cycle 0.2.4b (TM-244; `answer` until then, TM-130's word for a LOCAL)
+// -- and evidence of NOTHING, since a plain build checks no comment.
 // The live `ensures` would arm `EnsuresViolated` in every consumer;
 // `0.1.1.md` §6 is that alternative, measured.)
 //
@@ -396,9 +398,11 @@ pub func:date_to_days = int64(CivilDate:cd) never fails {
     pass raw days_from_civil(cd.year => int64, cd.month => int64, cd.day => int64);
 };
 
-// `ensures answer.month >= 1 && answer.month <= 12`
+// `ensures result.month >= 1 && result.month <= 12`
 //  -- held by construction: it is `civil_date`'s result
-// `prove(date_to_days(answer) == n)`      -- `VERIFICATION.md` §6's row
+// `ensures raw date_to_days(result) == n` -- `VERIFICATION.md` §6's row; a
+//  call in a contract needs its callee `pure` too (the compiler's TYPE-060),
+//  which the decision that arms this clause gives `date_to_days` (TM-244)
 //
 // THE CIVIL DATE OF A DAY NUMBER -- `civil_from_days`, with the same deviation.
 //
@@ -438,7 +442,8 @@ pub func:days_to_date = CivilDate(int64:n) {
 // The validating constructors -- C-8, and the whole contract of this cycle
 // ===========================================================================
 
-// `ensures answer.year == y && answer.month == m && answer.day == d`
+// `ensures (result.year => int64) == y && (result.month => int64) == m
+//          && (result.day => int64) == d`
 //
 // C-8: VALIDATING CONSTRUCTORS ONLY. There is no unchecked constructor in this
 // module and there is not to be one. Everything downstream -- every conversion,
@@ -492,8 +497,8 @@ pub func:civil_date = CivilDate(int64:y, int64:m, int64:d) {
     pass CivilDate{ year: y =>! int32, month: m =>! uint8, day: d =>! uint8 };
 };
 
-// `ensures answer.hour == h && answer.minute == mi`
-// `ensures answer.second == s && answer.nanos == n`
+// `ensures (result.hour => int64) == h && (result.minute => int64) == mi`
+// `ensures (result.second => int64) == s && (result.nanos => int64) == n`
 //
 // C-9 (TM-029): `hour in [0,23]`, `minute in [0,59]`, `second in [0,59]`,
 // `nanos in [0, 999 999 999]`.
@@ -540,7 +545,7 @@ pub func:civil_time = CivilTime(int64:h, int64:mi, int64:s, int64:n) {
 // Weekday numbering -- C-7
 // ===========================================================================
 
-// `ensures answer >= 1 && answer <= 7`
+// `ensures result >= 1 && result <= 7`
 //
 // ISO 8601: Monday = 1 ... Sunday = 7. Read off the TAG rather than written as
 // a seven-arm `pick`, and the reason is that the enum's declaration order is
@@ -556,7 +561,7 @@ pub func:weekday_number = int64(Weekday:w) never fails {
     pass ((w =>! int32) => int64) + 1i64;
 };
 
-// `ensures answer >= 0 && answer <= 6`
+// `ensures result >= 0 && result <= 6`
 //
 // C-7: Sunday = 0 ... Saturday = 6, the convention the C library uses. It is
 // here because a caller porting code will look for it, and the enum's own order
@@ -595,7 +600,7 @@ pub func:weekday_number_sunday_first = int64(Weekday:w) never fails {
 // a Thursday, index 3, so the index is `(n + 3) mod 7`, with the modulus made
 // non-negative because `%` here truncates toward zero.
 //
-// `ensures answer >= 0 && answer <= 6` -- `VERIFICATION.md` §6's weekday row,
+// `ensures result >= 0 && result <= 6` -- `VERIFICATION.md` §6's weekday row,
 // a comment per A' (`VERIFICATION.md` P-1b; TM-164) -- AND THE LINE THAT
 // CHECKS IT IS CODE, which P-1b admits at no arm cost. The
 // correction leaves `rem` in 0 ... 6 for every `int64` -- `%` by 7 lies in
@@ -625,7 +630,7 @@ pub func:weekday = Weekday(CivilDate:cd) never fails {
     pass ((raw weekday_index(raw date_to_days(cd))) =>! int32) =>! Weekday;
 };
 
-// `ensures answer >= 1 && answer <= 366`
+// `ensures result >= 1 && result <= 366`
 //
 // THE DAY OF THE YEAR, 1 ... 366 (C-15): the day number less 1 January's, plus
 // one -- from the day number, like every field here, and not from a table of
@@ -635,7 +640,7 @@ pub func:day_of_year = int64(CivilDate:cd) never fails {
     pass ((raw date_to_days(cd)) - (raw days_from_civil(cd.year => int64, 1i64, 1i64))) + 1i64;
 };
 
-// `ensures day_of_year(answer) == doy`
+// `ensures raw day_of_year(result) == doy` -- its callee `pure` when it arms
 //
 // THE DATE OF AN ORDINAL DATE -- the round trip's other half (C-15,
 // `TESTING.md` V-4). A validating constructor: the year against C-4's range,
@@ -671,7 +676,8 @@ func:iso_week_one = int64(int64:iy) never fails {
     pass jan4 - (raw weekday_index(jan4));
 };
 
-// `ensures answer >= cd.year - 1 && answer <= cd.year + 1` --
+// `ensures result >= (cd.year => int64) - 1
+//          && result <= (cd.year => int64) + 1` --
 // `VERIFICATION.md` §6's "the week-year is within one of the calendar year"
 //
 // THE WEEK-YEAR OF A DATE (C-14): the year its ISO week belongs to, which is a
@@ -685,7 +691,7 @@ pub func:iso_week_year = int64(CivilDate:cd) never fails {
     pass y;
 };
 
-// `ensures answer >= 1 && answer <= 53` -- `VERIFICATION.md` §6's ISO row
+// `ensures result >= 1 && result <= 53` -- `VERIFICATION.md` §6's ISO row
 //
 // THE WEEK NUMBER, 1 ... 53 (C-14): whole weeks since the week-year's first
 // Monday, plus one. The difference is 0 ... 370, never negative, so `/`
@@ -695,7 +701,7 @@ pub func:iso_week_number = int64(CivilDate:cd) never fails {
     pass ((n - (raw iso_week_one(raw iso_week_year(cd)))) / 7i64) + 1i64;
 };
 
-// `ensures answer >= 1 && answer <= 7`
+// `ensures result >= 1 && result <= 7`
 //
 // THE ISO WEEKDAY, Monday = 1 ... Sunday = 7 (C-14, C-7): what
 // `weekday_number(weekday(cd))` gives, from the same `weekday_index` and
@@ -704,8 +710,9 @@ pub func:iso_weekday = int64(CivilDate:cd) never fails {
     pass (raw weekday_index(raw date_to_days(cd))) + 1i64;
 };
 
-// `ensures iso_week_year(answer) == iy && iso_week_number(answer) == w`
-// `ensures iso_weekday(answer) == wd`
+// `ensures raw iso_week_year(result) == iy
+//          && raw iso_week_number(result) == w`
+// `ensures raw iso_weekday(result) == wd` -- the callees `pure` when they arm
 //
 // THE DATE OF AN ISO WEEK DATE -- the round trip's other half (C-14,
 // `TESTING.md` V-4). A validating constructor, each argument checked BEFORE

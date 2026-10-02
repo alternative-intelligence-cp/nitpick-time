@@ -16,14 +16,22 @@
 // cycle 0.2.2 this said the conversions were that cycle's, and until cycle
 // 0.2.3 that the interop was.)
 //
-// A TIMEOUT CANNOT BE WRITTEN AGAINST A WALL CLOCK, and this module is half of
-// why: there is no conversion between an `Instant` and anything else (TM-010),
-// and a consumer can neither build an `Instant` from a number nor edit one --
-// both fields are `sealed`, so `Instant{ ns: n, clock: c }` and `a.ns = n` are
-// `NITPICK-TYPE-079` outside this module (`tests/probe/probe20_instant_literal_refused.npk`;
-// the missing conversion is `probe20b`). The compiler's runtime says the same
-// of its own deadline clock -- `runtime/npkrt.ll` at the pin, the block headed
-// "the monotonic clock (D-176, 1.1.3)", above `npk_chain_reset`:
+// A TIMEOUT CANNOT BE WRITTEN AGAINST A WALL CLOCK BY ACCIDENT, and this
+// module is half of why: this library offers no conversion between an
+// `Instant` and anything else (TM-010), and a consumer can neither write an
+// `Instant` as a literal nor edit one -- both fields are `sealed`, so
+// `Instant{ ns: n, clock: c }` and `a.ns = n` are `NITPICK-TYPE-079` outside
+// this module (`tests/probe/probe20_instant_literal_refused.npk`; the missing
+// conversion is `probe20b`). What a consumer CAN write is a construction:
+// `instant_of` takes any `int64`, so a number computed from a `Timestamp`'s
+// fields becomes an `Instant` that names, in writing, the clock it claims to
+// have read -- TM-216's opt-out in writing, which `probe20g` compiles and
+// runs, so this paragraph is checked (TM-243; `meta/OPEN_QUESTIONS.md` Q-7
+// asks the author whether the constructor's name should say so). (Until cycle
+// 0.2.4b this said a consumer could not build an `Instant` from a number --
+// the cycle audit's C2.) The compiler's runtime says the same of its own
+// deadline clock -- `runtime/npkrt.ll` at the pin, the block headed "the
+// monotonic clock (D-176, 1.1.3)", above `npk_chain_reset`:
 //
 //     CLOCK_MONOTONIC nanoseconds since an arbitrary epoch -- the deadline
 //     substrate's one clock. Wall clocks are excluded from the deadline path:
@@ -37,7 +45,8 @@
 // have no values in common. `=>!` does not help" (`probe20e`, `probe20f`) --
 // though each type is 16 bytes. What remains is `wild` storage reinterpreted
 // through a pointer cast, the opt-out `CALENDAR.md` C-8c names for every
-// checked property.
+// checked property -- and the construction from numbers above, which is
+// written, not converted.
 //
 // TWO CLOCKS, ONE TYPE, AND THE TAG IS AN ENUM (TM-215). `Boottime` counts
 // suspend and `Monotonic` does not (`HOST.md` H-6), so a reading of one less a
@@ -98,7 +107,12 @@
 // form, `if (r.is_error) { #unreachable(); }`, leaves `r.value` tainted --
 // `NITPICK-TAINT-001`, measured at planning: the taint analysis does not count
 // the builtin as leaving the block. `?|`'s fallback is the builtin itself,
-// which the compiler types as whatever its position expects.)
+// which the compiler types as whatever its position expects.) (Cycle 0.2.4b:
+// that refusal is a compiler defect and not the language's rule -- the
+// workbench registry's O-N34, restated in `meta/OPEN_QUESTIONS.md`, the cycle
+// audit's S2: the compiler's own decisions say an arm that ends in the builtin
+// leaves. At this pin it stands, so `?|` is the spelling, and the adoption that
+// moves the pin re-measures it (TM-245).)
 //
 // `civil_to_utc` IS FALLIBLE, AS §9 SAYS, AND THAT IS WHAT MAKES IT TOTAL. It
 // adds the day number `date_to_days` gives to the second of the day and builds
@@ -108,7 +122,11 @@
 // lies in the range -- so the refusal is reached only through C-8c's opt-out:
 // a forged year of 10 000, or a forged `nanos` of one second, is refused, and
 // never trapped or carried (`tests/unit/civil_to_utc_edges.npk`, which is
-// `VERIFICATION.md` P-4's stand-in for this function). That is `CALENDAR.md`
+// `VERIFICATION.md` P-4's stand-in for this function). A forged reading whose
+// sum `timestamp_of` accepts is answered as the arithmetic gives it: an hour of
+// 24, which C-9 refuses and the seal keeps out, is the next day's midnight,
+// measured at cycle 0.2.4b's planning -- a misleading answer and no
+// misbehaviour, which C-8b allows (the cycle audit's K2). That is `CALENDAR.md`
 // C-8b's second bullet -- total where it can be. And nothing here can trap on
 // the way: a day number from any `int32` year is at most 7.84e11 in magnitude
 // (C-12), times 86 400 is 6.8e16, and the second of the day is at most 933 555
@@ -124,7 +142,14 @@
 // the prelude's, `never fails`, and `pass duration_ns(...)` inside
 // `instant_since` is `NITPICK-TYPE-007` without it (measured at planning).
 // `instant_add` overflows only 292 years past the clock's origin, and traps
-// there (D-210), as `TIME_MODEL.md` §8 has said since cycle 0.0.
+// there (D-210), as `TIME_MODEL.md` §9's row has said since cycle 0.0 -- `never
+// fails`, the trap its range check (it said §8 until cycle 0.2.4b, and §8's
+// table has no `Instant` row: the cycle audit's S1). `instant_since` does not
+// trap: since cycle 0.2.4b it computes the difference in `int128` and refuses
+// one past `Duration`'s range, `ETimeValue`/`Overflow` (TM-242). M-4's "cannot
+// overflow in practice" is no premise for a library whose `instant_of` takes
+// any `int64`, and a pair it built trapped `IntOverflow` until then -- the
+// cycle audit's C6.
 //
 // FOUR CONSTRUCTORS, AND NO TYPE (TM-004, N-2; TM-233). `duration_mins`,
 // `duration_hours`, `duration_days` and `duration_weeks` multiply in `int64` and
@@ -142,11 +167,17 @@
 // one borrow or one carry puts them back in [0, 10^9). The answer is built by
 // `timestamp_of`, the one constructor, so the range check is its own, and a sum
 // outside the range is `ETimeValue` -- `ValueFault.YearRange`, as every `secs`
-// outside the range is. Nothing here can trap for a `Timestamp` the
-// constructors made: a `Duration` moves the seconds by at most 9.3 x 10^9. A
-// `Timestamp` forged through the opt-out is answered with a `Timestamp` or
-// refused, whatever it holds (`tests/unit/timestamp_add_edges.npk`,
-// `VERIFICATION.md` P-4's stand-in for this function, TM-235).
+// outside the range is. AND IT CHECKS ITS OPERAND FIRST (`SAFETY.md` S-12,
+// TM-241): a `t.secs` outside the range is refused before the arithmetic, with
+// `timestamp_of`'s own answer for that `secs`, so the seconds stay within 3.9 x
+// 10^11 of the epoch through the add, the borrow and the carry -- a `Duration`
+// moves them by at most 9.3 x 10^9 -- and nothing here can trap, whatever `t`
+// holds. A `Timestamp` forged through the opt-out is answered with a
+// `Timestamp` or refused (`tests/unit/timestamp_add_edges.npk`,
+// `VERIFICATION.md` P-4's stand-in for this function, TM-235). (Until cycle
+// 0.2.4b the check was the sum's alone, and a forged `secs` within 292 years of
+// either end of `int64` trapped `IntOverflow` before `timestamp_of` ran -- the
+// cycle audit's C1.)
 //
 // `timestamp_since` COMPUTES IN `int128` AND NARROWS ONCE (TM-236; M-18, M-20).
 // Two readings' seconds differ by as much as the range is wide, about 6.3 x
@@ -156,8 +187,9 @@
 // overflow it -- checked against `NTIME_DURATION_NS_MIN` and
 // `NTIME_DURATION_NS_MAX`, and refused past them, `ETimeValue`/`Overflow`: it
 // does not trap, saturate or lose precision.
-// `SPAN_MODEL.md` §5 marks it an `int128` site, and `check_int128_sites` holds
-// it to that. The difference is nominal -- the scale's, not the SI time that
+// `SPAN_MODEL.md` §5 marks it an `int128` site, as it marks `instant_since`
+// since cycle 0.2.4b, and `check_int128_sites` holds both to that. The
+// difference is nominal -- the scale's, not the SI time that
 // elapsed between the readings, which leap seconds make different (M-12). The
 // calendar-scale answer, `timestamp_until`, is cycle 0.7.3's, beside
 // `date_until` (TM-237).
@@ -199,13 +231,27 @@ pub enum:InstantClock = { Monotonic; Boottime; };
 #[derive(Eq, Clone, Debug, Copy)]
 pub struct:Instant = { sealed int64:ns; sealed InstantClock:clock; };
 
+// The one constructor, and it checks nothing: a reading's range is its type's,
+// any `int64` on either clock, so `VERIFICATION.md` P-3 asks no contract of
+// it. A number computed from anything -- a `Timestamp`'s fields included --
+// becomes a reading that names, in writing, the clock it claims to have read
+// (TM-216; `meta/OPEN_QUESTIONS.md` Q-7 asks whether the name should say
+// so).
 pub func:instant_of = Instant(int64:ns, InstantClock:clock) never fails {
     pass Instant{ ns: ns, clock: clock };
 };
 
+// The span between two readings of one clock. Computed in `int128` (M-20;
+// `SPAN_MODEL.md` §5 marks the row), refused past `Duration`'s range rather
+// than trapped (`SAFETY.md` S-12), and narrowed once.
 pub func:instant_since = Duration(Instant:later, Instant:earlier) {
     if (later.clock != earlier.clock) { fail ETimeValue; }   // ValueFault.ClockMismatch
-    pass raw duration_ns(later.ns - earlier.ns);
+    int128:ns = (later.ns => int128) - (earlier.ns => int128);
+    if (ns > (NTIME_DURATION_NS_MAX => int128)) { fail ETimeValue; }   // ValueFault.Overflow
+    if (ns < (NTIME_DURATION_NS_MIN => int128)) { fail ETimeValue; }   // ValueFault.Overflow
+    // `prove(ns >= (NTIME_DURATION_NS_MIN => int128)
+    //        && ns <= (NTIME_DURATION_NS_MAX => int128));` -- P-5
+    pass raw duration_ns(ns =>! int64);
 };
 
 pub func:instant_add = Instant(Instant:t, Duration:d) never fails {
@@ -222,15 +268,16 @@ pub func:instant_cmp = Ordering(Instant:a, Instant:b) {
 #[derive(Eq, Ord, Clone, Debug, Copy)]
 pub struct:Timestamp = { sealed int64:secs; sealed uint32:nanos; };
 
-// `ensures answer.secs == secs && (answer.nanos => int64) == nanos`
-// `prove((answer.nanos => int64) < NTIME_NANOS_PER_SEC)` -- `VERIFICATION.md`
-// P-4, the invariant to prove first; a comment until the verified build (P-1b),
-// and stood in for by `tests/unit/timestamp_construct.npk`.
+// `ensures result.secs == secs && (result.nanos => int64) == nanos` --
+// `VERIFICATION.md` P-3; and P-4, the invariant to prove first, is the `prove`
+// before the narrowing. Comments until the verified build (P-1b), and stood in
+// for by `tests/unit/timestamp_construct.npk`.
 pub func:timestamp_of = Timestamp(int64:secs, int64:nanos) {
     if (secs < NTIME_SECS_MIN)        { fail ETimeValue; }   // ValueFault.YearRange
     if (secs > NTIME_SECS_MAX)        { fail ETimeValue; }   // ValueFault.YearRange
     if (nanos < 0i64)                 { fail ETimeValue; }   // ValueFault.NanoRange
     if (nanos >= NTIME_NANOS_PER_SEC) { fail ETimeValue; }   // ValueFault.NanoRange
+    // `prove(nanos >= 0i64 && nanos < NTIME_NANOS_PER_SEC);` -- P-4
     pass Timestamp{ secs: secs, nanos: nanos =>! uint32 };
 };
 
@@ -253,6 +300,11 @@ pub func:timestamp_to_utc = CivilDateTime(Timestamp:t) never fails {
 // The point on the absolute scale a civil reading names, read as UTC (M-11,
 // §9). Fallible, and only through `timestamp_of`: a reading from the
 // constructors always converts, and a forged one is refused, not trapped.
+// `ensures result.secs >= NTIME_SECS_MIN && result.secs <= NTIME_SECS_MAX`
+// `ensures (result.nanos => int64) == (c.time.nanos => int64)` --
+// `VERIFICATION.md` P-3, a `Timestamp` constructor's; comments until
+// the verified build (P-1b), and stood in for by
+// `tests/unit/civil_to_utc_edges.npk`.
 pub func:civil_to_utc = Timestamp(CivilDateTime:c) {
     int64:days = raw date_to_days(c.date);
     int64:sod = ((c.time.hour => int64) * 3600i64)
@@ -281,14 +333,20 @@ pub func:duration_weeks = Duration(int64:w) never fails {
     pass raw duration_secs(w * 7i64 * NTIME_SECS_PER_DAY);
 };
 
-// The point `d` from `t` (§9). `/` and `%` truncate, so the remainder keeps
-// `d`'s sign and the nanoseconds come out in (-10^9, 2 x 10^9): one borrow or
-// one carry puts them back in [0, 10^9), and `timestamp_of` builds the answer.
-// `ensures answer.secs >= NTIME_SECS_MIN && answer.secs <= NTIME_SECS_MAX`
-// `ensures (answer.nanos => int64) < NTIME_NANOS_PER_SEC` -- `VERIFICATION.md`
+// The point `d` from `t` (§9). `t`'s seconds are checked against the range
+// first (`SAFETY.md` S-12), so nothing below can trap whatever `t` holds;
+// then `/` and `%` truncate, so the remainder keeps `d`'s sign and the
+// nanoseconds come out in (-10^9, 2 x 10^9) -- at most 2^32 - 1 + 10^9 for a
+// forged `nanos` -- and one borrow or one carry puts a normalised one back in
+// [0, 10^9), and `timestamp_of` builds the answer, refusing what one carry
+// cannot repair.
+// `ensures result.secs >= NTIME_SECS_MIN && result.secs <= NTIME_SECS_MAX`
+// `ensures (result.nanos => int64) < NTIME_NANOS_PER_SEC` -- `VERIFICATION.md`
 // P-3; comments until the verified build (P-1b), and stood in for by
 // `tests/unit/timestamp_add_edges.npk`.
 pub func:timestamp_add = Timestamp(Timestamp:t, Duration:d) {
+    if (t.secs < NTIME_SECS_MIN) { fail ETimeValue; }    // ValueFault.YearRange
+    if (t.secs > NTIME_SECS_MAX) { fail ETimeValue; }    // ValueFault.YearRange
     int64:secs = t.secs + (d.ns / NTIME_NANOS_PER_SEC);
     int64:nanos = (t.nanos => int64) + (d.ns % NTIME_NANOS_PER_SEC);
     if (nanos < 0i64) {                              // `%` kept `d`'s sign: borrow
@@ -304,15 +362,15 @@ pub func:timestamp_add = Timestamp(Timestamp:t, Duration:d) {
 
 // The nominal span from `earlier` to `later`, in nanoseconds (M-18). Computed
 // in `int128` (M-20; `SPAN_MODEL.md` §5 marks the row), checked against
-// `Duration`'s range, and narrowed once:
-// `prove(ns >= (NTIME_DURATION_NS_MIN => int128)
-//        && ns <= (NTIME_DURATION_NS_MAX => int128))` -- P-5, before the
-// narrowing; a comment until the verified build (P-1b).
+// `Duration`'s range, and narrowed once, after P-5's `prove`; a comment until
+// the verified build (P-1b).
 pub func:timestamp_since = Duration(Timestamp:later, Timestamp:earlier) {
     int128:ns = (((later.secs => int128) - (earlier.secs => int128))
                  * (NTIME_NANOS_PER_SEC => int128))
                 + ((later.nanos => int128) - (earlier.nanos => int128));
     if (ns > (NTIME_DURATION_NS_MAX => int128)) { fail ETimeValue; }   // Overflow
     if (ns < (NTIME_DURATION_NS_MIN => int128)) { fail ETimeValue; }   // Overflow
+    // `prove(ns >= (NTIME_DURATION_NS_MIN => int128)
+    //        && ns <= (NTIME_DURATION_NS_MAX => int128));` -- P-5
     pass raw duration_ns(ns =>! int64);
 };

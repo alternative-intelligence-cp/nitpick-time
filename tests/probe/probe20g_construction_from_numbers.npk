@@ -1,0 +1,64 @@
+// expect-exit: 0
+//
+// PROBE 20g — A CONSUMER CAN BUILD AN `Instant` FROM A `Timestamp`'S NUMBERS,
+// AND A `Timestamp` FROM AN `Instant`'S: A CONSTRUCTION IN WRITING, NOT A
+// CONVERSION (cycle 0.2.4b, TM-243; `TIME_MODEL.md` M-3 as restated, TM-216).
+//
+// ASKS: may a consumer that imports `span` and writes no `wild` storage and no
+// `=>!` hand a `Timestamp`'s two fields, multiplied out, to `instant_of`, and
+// an `Instant`'s `ns`, divided, to `timestamp_of` -- and get every number
+// back exactly?
+//
+// MATTERS BECAUSE M-3 said an `Instant` "cannot be converted to a `Timestamp`,
+// in either direction, ever", and the public README that one "cannot be built
+// from a number", and this program -- the cycle audit's C2 -- compiled and ran
+// against both sentences. What the type refuses is probes 20 ... 21b's: no
+// conversion function, no implicit conversion, no `=>!`, no literal, no write.
+// What it cannot refuse is a CONSTRUCTION from numbers, which names in
+// writing the clock it claims to have read. ANSWER, measured at `5fbaf4a`:
+// YES, exit 0 on both legs. THIS FILE PINS THE PATH, so the restated M-3 is
+// checked rather than stated: if a later change refuses it -- the author's
+// answer to `meta/OPEN_QUESTIONS.md` Q-7 may rename `instant_of` -- this file
+// stops compiling, and M-3 is restated with it.
+//
+// EXIT CODES, clear of every arm code (TM-152): 10 `timestamp_of` refused the
+// reading; 11 the `Instant` holds another number; 12 `instant_since` refused
+// two readings of one clock; 13 their span not five seconds; 14 the
+// `Timestamp` built back refused; 15 it is not the reading it came from.
+mod:probe20g_construction_from_numbers;
+
+use "../../src/span/span.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    Result<Timestamp>:rt = timestamp_of(1759363200i64, 250000000i64);
+    if (rt.is_error) { exit 10i32; }
+    Timestamp:t = rt.value;
+    Instant:i = raw instant_of((t.secs * 1000000000i64) + (t.nanos => int64),
+                               InstantClock.Monotonic);
+    if (i.ns != 1759363200250000000i64) { exit 11i32; }
+    Result<Duration>:d = instant_since(raw instant_add(i, raw duration_secs(5i64)), i);
+    if (d.is_error) { exit 12i32; }
+    if (d.value.ns != 5000000000i64) { exit 13i32; }
+    Result<Timestamp>:back = timestamp_of(i.ns / 1000000000i64, i.ns % 1000000000i64);
+    if (back.is_error) { exit 14i32; }
+    if (back.value.secs != t.secs || back.value.nanos != t.nanos) { exit 15i32; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

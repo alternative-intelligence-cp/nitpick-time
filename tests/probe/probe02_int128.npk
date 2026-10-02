@@ -45,7 +45,10 @@
 // would quietly add a libcall to a library whose whole posture is TM-027,
 // no dependencies. The three named sites add, compare and narrow. Nothing
 // divides. (Cycle 0.2.3: and `timestamp_since`, one of them, multiplies too
-// -- inline at the pin, no libcall, measured; still nothing divides.)
+// -- inline at the pin, no libcall, measured; still nothing divides.) (Cycle
+// 0.2.4b, TM-242: and §5 marks a fourth row, `instant_since`, which subtracts,
+// compares and narrows -- inline, no libcall -- so where this header says
+// three sites, there are four; still nothing divides.)
 mod:probe02_int128;
 
 // int64's bounds, spelled once. `0i64 - ...` rather than a unary minus so

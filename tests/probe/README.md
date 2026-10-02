@@ -155,6 +155,7 @@ by the harness as ordinary `program`-stage entries from cycle 0.0.2.
 | `probe20d_timestamp_as_instant_refused.npk` | *(must not compile)* a `Timestamp` handed to `instant_since` | M-3, TM-221 — `NITPICK-TYPE-007` |
 | `probe20e_instant_cast_to_timestamp_refused.npk` | *(must not compile)* `a =>! Timestamp` — the unchecked cast | M-3, TM-221 — `NITPICK-TYPE-032` |
 | `probe20f_timestamp_cast_to_instant_refused.npk` | *(must not compile)* `t =>! Instant` — the unchecked cast | M-3, TM-221 — `NITPICK-TYPE-032` |
+| `probe20g_construction_from_numbers.npk` | a consumer builds an `Instant` from a `Timestamp`'s numbers through `instant_of`, and a `Timestamp` back through `timestamp_of`, with no `wild` and no `=>!` — the construction M-3 does not refuse | M-3, TM-216, TM-243 — the positive twin of `probe20b` … `probe20f` |
 | `probe21_timestamp_literal_refused.npk` | *(must not compile)* a denormalised `Timestamp` built by a consumer's struct literal | M-7, TM-219 — `NITPICK-TYPE-079`, twice: one report per sealed field |
 | `probe21b_timestamp_field_write_refused.npk` | *(must not compile)* a consumer's write to a `Timestamp`'s `nanos` | M-7, TM-219 — `NITPICK-TYPE-079` |
 
@@ -179,6 +180,10 @@ probe that imports the module it asks about (TM-218).)*
 *(Cycle 0.2.1: the six rows after `probe20b` are new — M-3's refusal at the
 type, both directions and through the unchecked cast, and `Timestamp`'s seal,
 one refusal per probe, each importing `span` and nothing more (TM-221).)*
+
+*(Cycle 0.2.4b: the `probe20g` row is new — the path M-3 does not refuse, a
+construction from numbers in writing, compiled and run so the restated rule is
+checked (TM-243; the cycle audit's C2).)*
 
 Probes 09 and 10 were planned in `0.0.0.md` §4 and **held, not merely
 unwritten**: they are the borrow-edge probes, and the author ruled O-N9

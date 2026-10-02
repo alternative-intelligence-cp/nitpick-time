@@ -441,6 +441,20 @@ specimens; the tree checks at
 unchanged at 36; and library + repro + suite at 96. `131 = 35 + 96`. A full
 invocation about 200 s, as at cycle 0.2.3: the new plants cost milliseconds.
 
+**At cycle 0.2.4b, the same pin, 133 units**: two tests added —
+`tests/unit/instant_since_edges.npk` and
+`tests/probe/probe20g_construction_from_numbers.npk` (TM-242, TM-243) — and
+`timestamp_add_edges.npk` changed in place, for `timestamp_add`'s operand check
+(TM-241). The self-check unchanged — 12 of V-14's 13 cases, 92 tree-check
+violations with 92 clean controls, 4 arm specimens and 4 verdict specimens;
+`check_int128_sites` meets `instant_since`, its third written site; parse over
+149 files, `104 + 43 + 2`; the defect corpus unchanged at 36; the library
+reaching 6 sources and its IR **288 795 B**, `instant_since`'s `int128` and
+`timestamp_add`'s two checks; and library + repro + suite at **98** (**58
+probe**, **31 unit**, **8 sweep**). `133 = 35 + 98`. A full invocation about
+207 s; the two units cost about a second together, both legs, compile
+included.
+
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the
 run makes about 200 of them. One that does *not* compile costs ~0.03 s.

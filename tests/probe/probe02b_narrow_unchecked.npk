@@ -23,7 +23,9 @@
 // every one of the three sites carries an EXPLICIT RUNTIME RANGE CHECK before
 // its `=>!` (since cycle 0.2.3a, TM-229, every `int128` site that narrows --
 // `SPAN_MODEL.md` §5 marks three and N-20 states no count, and the third,
-// `bytes_put_int`'s loop measure, narrows nothing), and that is now a rule
+// `bytes_put_int`'s loop measure, narrows nothing; since cycle 0.2.4b it marks
+// four, and the fourth, `instant_since`, narrows after its check, TM-242), and
+// that is now a rule
 // rather than a habit -- TM-105, with
 // SAFETY.md S-15b and SPAN_MODEL.md N-20b written against it. Probe 02's
 // `ns_add_checked` is the shape they require.

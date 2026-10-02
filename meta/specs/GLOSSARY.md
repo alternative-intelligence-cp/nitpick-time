@@ -6,7 +6,7 @@ instead.
 
 | Term | Means, in `ntime` |
 |---|---|
-| **instant** | a point on the monotonic timeline, with no epoch. The type is `Instant`. Never a wall-clock reading. |
+| **instant** | a reading of one of two clocks, the monotonic or the boot-time, each a timeline with no epoch. The type is `Instant`. Never a wall-clock reading. |
 | **timestamp** | a point on the absolute UTC timeline. The type is `Timestamp`. Never monotonic. |
 | **civil** | a wall-clock reading with no zone — what a clock on a wall says. `CivilDate`, `CivilTime`, `CivilDateTime`. |
 | **zoned** | a civil reading plus the zone that makes it an instant. `ZonedDateTime`. |
@@ -30,6 +30,11 @@ instead.
 | **the sweep** | an exhaustive test over a whole domain, as opposed to a sampled one. |
 | **the budget** | the three public error identities, and the rule that there are three. |
 | **arm** | one `pick` case in a consuming program's `failsafe`. |
+
+*(Cycle 0.2.4b, TM-243 — the cycle audit's K6: *instant* read "a point on the
+monotonic timeline, with no epoch" until then. Since TM-215 an `Instant` is a
+reading of one of two clocks, `Monotonic` or `Boottime`, and a reading of one
+is no point on the other's timeline.)*
 
 ## Words deliberately not used
 

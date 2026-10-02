@@ -264,12 +264,13 @@ mod:vec;
 // changes no field and no byte: the bound is a fact about `T`.
 pub struct:Vec<T: Copy> = { hidden wild T->:items; sealed limit<ListLen> int64:count; sealed limit<ListLen> int64:cap; hidden string[0]:move_only; };
 
-// `ensures answer.count == 0 && answer.cap >= 1`
+// `ensures result.count == 0 && result.cap >= 1`
 //
 // (`VERIFICATION.md` P-1b: an obligation is a comment in the syntax it would
 // take unless a numbered decision accepts the arm its live clause costs every
-// consumer. `answer` and not `result` -- `result` is a reserved
-// `VerificationKeyword`, TM-130/B-18.)
+// consumer. `result`, as the live clause takes it: it is reserved as a LOCAL
+// name, TM-130/B-18, and a comment is no local -- `answer` until cycle 0.2.4b,
+// which the live clause refuses, the cycle audit's C5, TM-244.)
 //
 // A REQUEST OF ZERO OR LESS BECOMES ONE, rather than an error or a null block.
 // `alloc(0)` would give a block no element can be written to while `cap` said
@@ -458,7 +459,9 @@ pub func:vec_pop<T: Copy> = T(Vec<T>->:v) never fails {
     pass answer;
 };
 
-// `ensures v.count == min(n, old(v.count))`
+// `ensures (n < 0 && v.count == 0)
+//          || (n >= 0 && n < old(v.count) && v.count == n)
+//          || (n >= old(v.count) && v.count == old(v.count))`
 //
 // At a non-owning `T` dropping the tail is exactly lowering `count`. At an
 // owning `T` it would additionally owe a drop per discarded element (S-18c),

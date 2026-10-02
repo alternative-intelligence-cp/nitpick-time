@@ -25,7 +25,7 @@
 // Because neither spelling checks at run time, the range test at each of
 // SPAN_MODEL.md §5's three `int128` sites is ORDINARY LIBRARY CODE that must
 // be written, and `VERIFICATION.md` P-5's `prove` documents it rather than
-// replacing it. (Since 0.2.3a, TM-229: each that NARROWS; the third does not.)
+// replacing it. (Since 0.2.3a: each that NARROWS, TM-229; four sites, TM-242.)
 mod:probe02c_narrow_refused;
 
 func:main = int32(cstring[]:_~argv) {

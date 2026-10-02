@@ -54,8 +54,9 @@ recommendation on q-6 seems fine to me."* A `requires`, `ensures`,
 check earns the one `failsafe` identity it adds to every consuming program —
 today that is TM-156's `ListLen` on the containers' lengths alone, which costs
 every consumer of `core` `LimitViolated`. Every other obligation stays a
-comment in the syntax it would take, `answer` and `outgoing` for `result` and
-`old` (TM-130), is **evidence of nothing**, and is stood in for by a property
+comment in the syntax it would take — `result` and `old(…)` as a live clause
+takes them, the widening an operand's type needs, `raw` before a call (TM-244)
+— is **evidence of nothing**, and is stood in for by a property
 test — the sweeps of cycle 0.1, which check every day of the range, stand in
 for `cal`'s. And:
 
@@ -75,7 +76,21 @@ for `cal`'s. And:
   compiler `c970483`, cycle 0.1.3c's planning.
 
 The switch for any row is mechanical — uncomment the clause, and record the
-decision that accepts its arm — which is what P-1 promised and still delivers.
+decision that accepts its arm — which is what P-1 promised and still delivers;
+and a clause that calls a function needs that function `never fails` and
+`pure` (the compiler's `NITPICK-TYPE-060`), which the same decision gives it.
+
+*(Amended at cycle 0.2.4b, TM-244 — the cycle audit's C5. The comments wrote
+`answer` and `outgoing` for `result` and `old` — TM-130's words for LOCALS —
+and the claim above was false of most rows: made live one at a time, in a
+scratch copy at compiler `5fbaf4a`, thirteen of `src/`'s forty contract
+comments compiled, `answer` being `NITPICK-RESOLVE-002` where `result` is the
+keyword an `ensures` takes; read as `result`, twenty-nine, the rest wanting a
+widening, a `raw`, a function that exists, or a body for a `prove` to stand
+in. Rewritten in the syntax a clause takes, all forty-three compile as live
+clauses but the four that call a function, whose callee needs `pure` as well —
+`days_to_date`'s, `ordinal_to_date`'s and `iso_week_to_date`'s two —
+`meta/roadmap/0.2/0.2.4b.md` §1.)*
 `nitpick-regex` records the same answer as its rule P-1b (its RX-164).
 
 ---
@@ -147,9 +162,9 @@ loop of the binary search.
 
 ## 4. Range — the class this library is really about
 
-**Rule P-3.** Every constructor and every arithmetic entry point carries its
-range as a contract, so that `SAFETY.md` S-12's "checked before the trap" is
-proven rather than reviewed:
+**Rule P-3.** Every constructor and every arithmetic entry point that checks a
+range carries that range as a contract, so that `SAFETY.md` S-12's "checked
+before the trap" is proven rather than reviewed:
 
 ```nitpick
 pub func:civil_date = CivilDate(int32:year, uint8:month, uint8:day)
@@ -159,8 +174,8 @@ pub func:civil_date = CivilDate(int32:year, uint8:month, uint8:day)
 { … };
 
 pub func:timestamp_add = Timestamp(Timestamp:t, Duration:d)
-    ensures  (answer.secs >= NTIME_SECS_MIN && answer.secs <= NTIME_SECS_MAX)
-    ensures  ((answer.nanos => int64) < NTIME_NANOS_PER_SEC)
+    ensures  (result.secs >= NTIME_SECS_MIN && result.secs <= NTIME_SECS_MAX)
+    ensures  ((result.nanos => int64) < NTIME_NANOS_PER_SEC)
 { … };
 ```
 
@@ -174,6 +189,21 @@ argument a caller supplies, and the function answers whatever it is handed.
 Both `ensures` are comments at the function, by P-1b. `civil_date`'s sample
 above keeps cycle 0.0's notation; its contract as written is the comments
 beside it in `src/cal/cal.npk`.)*
+
+*(Amended at cycle 0.2.4b, TM-244 — the cycle audit's C5 and D2. The rule
+read "Every constructor and every arithmetic entry point carries its range as
+a contract", and three of `span`'s thirteen functions did. Of the ten without
+one, eight check no range and carry none: `instant_of`, whose reading ranges
+over its type; `instant_add` and the four `Duration` constructors, `never
+fails`, each trap its range check (`SAFETY.md` S-12's named exceptions);
+`timestamp_to_utc`, whose two refusals are S-15c's stops; and `instant_cmp`, a
+comparison. Two check one, and carry it now: `civil_to_utc` its two `ensures`,
+as `timestamp_add`'s, and `instant_since` P-5's `prove`. And the
+`timestamp_add` sample above wrote `answer`, TM-130's word for a local, where
+a live `ensures` takes `result` — restored. The 0.2.3 note's *"the function
+answers whatever it is handed"* was not true of a forged `secs` near
+`int64`'s ends until `timestamp_add` checked its operand, TM-241 — the cycle
+audit's C1.)*
 
 **Rule P-4 — the normalisation invariant is the one to prove first.**
 `nanos < 1_000_000_000` on every `Timestamp` that exists. It is a precondition
@@ -195,6 +225,11 @@ held to an `int128` count of nanoseconds, `Timestamp`s forged denormalised
 and past the range answered with a `Timestamp` or refused, and both sides of
 every boundary it decides. It sees a `timestamp_add` writing its own
 `Timestamp` literal, behind a range check of its own or not, measured.)*
+*(Cycle 0.2.4b, TM-241: and every forged `secs`, `int64`'s two ends among
+them, which trapped `IntOverflow` in the add, the borrow or the carry until
+`timestamp_add` checked its operand first — the cycle audit's C1. The note
+above was true of the four forgeries the test made, and general in its
+words.)*
 
 **Rule P-5 — the `int128` sites** (`SPAN_MODEL.md` §5, N-20, N-20b) each carry
 a `prove` that the narrowing `=>!` cannot lose, **beside** the runtime range
@@ -250,7 +285,9 @@ N-20 states no count. The `prove` and the range check are owed where a site
 NARROWS — `timestamp_since` and `period_add`'s nanosecond step;
 `bytes_put_int`'s loop measure, the third marked row, computes in `int128` and
 compares, and narrows nothing.)* *(Cycle 0.2.3, TM-236: `timestamp_since`'s is
-written, a comment before its one narrowing, beside its two checks.)*
+written, a comment before its one narrowing, beside its two checks.)* *(Cycle
+0.2.4b, TM-242: and `instant_since`'s, the fourth marked row, which narrows
+after its two checks — a comment there too, where the statement goes.)*
 
 ---
 
@@ -293,12 +330,12 @@ the gap is written down here.
 
 | Site | Proof |
 |---|---|
-| after `days_to_date` | the result is in the supported range, and `date_to_days` of it returns the input — **written as comments at 0.1.1 (Q-6, TM-164)**: `prove(date_to_days(answer) == n)`, and the range half as an `ensures` comment, since the result is `civil_date`'s. **Stood in for, over the whole range, by `tests/unit/sweep/every_day_number.npk` and `every_civil_date.npk` since cycle 0.1.2** (TM-166) — P-1's property test, and the row P-11 hands over |
-| after `date_to_days` | the result is in `[DAY_MIN, DAY_MAX]` — **written as a comment at 0.1.1 (Q-6, TM-164)**: `ensures answer >= NTIME_DAY_MIN && answer <= NTIME_DAY_MAX`. **Stood in for, over the whole range, by `tests/unit/sweep/every_day_number.npk` and `every_civil_date.npk` since cycle 0.1.2** (TM-166) — P-1's property test, and the row P-11 hands over |
-| after every `Timestamp` construction | `nanos < 1_000_000_000` (P-4) — **written as a comment at 0.2.1 (TM-220)** at `timestamp_of`: `prove((answer.nanos => int64) < NTIME_NANOS_PER_SEC)`. **Stood in for by `tests/unit/timestamp_construct.npk` since cycle 0.2.1**, with the seal's two probes, **by `tests/unit/civil_to_utc_edges.npk` since 0.2.2** for `civil_to_utc`'s (TM-225), and **by `tests/unit/timestamp_add_edges.npk` since 0.2.3** for `timestamp_add`'s (TM-235) |
+| after `days_to_date` | the result is in the supported range, and `date_to_days` of it returns the input — **written as comments at 0.1.1 (Q-6, TM-164)**: `prove(date_to_days(answer) == n)`, and the range half as an `ensures` comment, since the result is `civil_date`'s. *(Since cycle 0.2.4b, TM-244: `ensures raw date_to_days(result) == n` — a statement about the answer, which a `prove` cannot name; its callee needs `pure` when it arms.)* **Stood in for, over the whole range, by `tests/unit/sweep/every_day_number.npk` and `every_civil_date.npk` since cycle 0.1.2** (TM-166) — P-1's property test, and the row P-11 hands over |
+| after `date_to_days` | the result is in `[DAY_MIN, DAY_MAX]` — **written as a comment at 0.1.1 (Q-6, TM-164)**: `ensures answer >= NTIME_DAY_MIN && answer <= NTIME_DAY_MAX` — `result` since cycle 0.2.4b (TM-244). **Stood in for, over the whole range, by `tests/unit/sweep/every_day_number.npk` and `every_civil_date.npk` since cycle 0.1.2** (TM-166) — P-1's property test, and the row P-11 hands over |
+| after every `Timestamp` construction | `nanos < 1_000_000_000` (P-4) — **written as a comment at 0.2.1 (TM-220)** at `timestamp_of`: `prove((answer.nanos => int64) < NTIME_NANOS_PER_SEC)` — since cycle 0.2.4b `prove(nanos >= 0i64 && nanos < NTIME_NANOS_PER_SEC);` in the body, before the narrowing, where a `prove` can stand (TM-244). **Stood in for by `tests/unit/timestamp_construct.npk` since cycle 0.2.1**, with the seal's two probes, **by `tests/unit/civil_to_utc_edges.npk` since 0.2.2** for `civil_to_utc`'s (TM-225), and **by `tests/unit/timestamp_add_edges.npk` since 0.2.3** for `timestamp_add`'s (TM-235) |
 | in the transition binary search | the invariant `trans[lo].at_utc <= target < trans[hi].at_utc` holds at every step |
 | after an offset lookup | `|offset| <= 64_800` |
-| after each `int128` narrowing — `timestamp_since`'s, and `period_add`'s nanosecond step's: the rows of `SPAN_MODEL.md` §5's `int128` column that narrow ("the three `int128` narrowings" until cycle 0.2.3a, TM-229) | the value fits (P-5) |
+| after each `int128` narrowing — `timestamp_since`'s, `instant_since`'s since cycle 0.2.4b (TM-242), and `period_add`'s nanosecond step's: the rows of `SPAN_MODEL.md` §5's `int128` column that narrow ("the three `int128` narrowings" until cycle 0.2.3a, TM-229) | the value fits (P-5) |
 | after weekday computation | the result is `0 … 6` — **written as a comment at 0.1.3 (Q-6, TM-164), and ALSO CHECKED IN CODE**: `weekday_index`'s `#unreachable()` belt stops the program on an index outside it, because `weekday` manufactures a `Weekday` tag from it (`SAFETY.md` S-15c). **Stood in for over the whole range by `tests/unit/sweep/every_civil_date.npk`'s weekday rider since cycle 0.1.3** |
 | after ISO week computation | the week is `1 … 53` and the week-year is within one of the calendar year — **written as comments at 0.1.3 (Q-6, TM-164)**; **stood in for over the whole range by `tests/unit/sweep/every_iso_week_date.npk` since cycle 0.1.3**, which compares every week and week-year with a walk of ISO 8601's rule |
 | in every parser loop | `at` strictly increases, so the loop terminates |

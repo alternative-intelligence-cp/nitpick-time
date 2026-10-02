@@ -630,16 +630,16 @@ def run_parse(rep, root, bld):
     """Every `.npk` in the tree in front of the real parser, each exactly once.
 
     THE DENOMINATOR IS THE WHOLE TREE AND THAT IS WHY THE STAGE IS WORTH ITS
-    COST. Re-measured at cycle 0.2.3: of the 147 `.npk` files
-    here [[sweep: npk_total=147]] the library build roots 6
-    [[sweep: lib_reach=6]], the suite roots 96 [[sweep: suite_roots=96]]
+    COST. Re-measured at cycle 0.2.4b: of the 149 `.npk` files
+    here [[sweep: npk_total=149]] the library build roots 6
+    [[sweep: lib_reach=6]], the suite roots 98 [[sweep: suite_roots=98]]
     (127 and 77 from cycle 0.1.3c until `tests/unit/civil_total_edges.npk`
     joined; 128 and 78 from then until cycle 0.2.0b retired the churn pair,
     TM-214; 126 and 76 until cycle 0.2.0 added `span`'s body to the
     library's reach and a unit and two probes to the suite; 130 and 79 until
     cycle 0.2.1 added two units and six probes; 138 and 87 until cycle 0.2.2
     added two units and two sweeps; 142 and 91 until cycle 0.2.3 added five
-    units), and of the 4
+    units; 147 and 96 until cycle 0.2.4b added a unit and a probe), and of the 4
     support modules [[sweep: support_total=4]] 3 are reached by `use` from
     a suite root -- and since cycle 0.1.4 so is the civil cross-oracle's
     corpus, which only its member imports -- so 41 are put in front of the
@@ -653,7 +653,7 @@ def run_parse(rep, root, bld):
     a support module no suite root imports, which only its part C compiles
     (TM-217).
 
-        147 = 6 (library) + 96 (suite roots) + 3 + 1 (reached by `use`) + 41
+        149 = 6 (library) + 98 (suite roots) + 3 + 1 (reached by `use`) + 41
 
     (It read `116 = 5 + 66 + 3 + 1 + 41` from cycle 0.1.4c until cycle 0.1.3c
     added eleven suite roots -- seven probes and four unit tests -- and none
@@ -661,8 +661,9 @@ def run_parse(rep, root, bld):
     root short of the tagged sentence above from cycle 0.1.5's second half,
     when `civil_total_edges` joined, and found at 0.2.0b's planning;
     `130 = 6 + 79 + 3 + 1 + 41` until cycle 0.2.1;
-    `138 = 6 + 87 + 3 + 1 + 41` until cycle 0.2.2; and
-    `142 = 6 + 91 + 3 + 1 + 41` until cycle 0.2.3.)
+    `138 = 6 + 87 + 3 + 1 + 41` until cycle 0.2.2;
+    `142 = 6 + 91 + 3 + 1 + 41` until cycle 0.2.3; and
+    `147 = 6 + 96 + 3 + 1 + 41` until cycle 0.2.4b.)
 
     EVERY NUMBER IN THAT SENTENCE IS TAGGED AND CHECKED (TM-142). It read
     `50 = 1 + 27 + 3 + 19` until cycle 0.0.6, three subcycles after the tree
@@ -765,8 +766,9 @@ def select(root, entry):
     """The files a `[[test]]` entry selects: `<path>/*.npk`, non-recursive.
 
     NOT recursive, and the omission is load-bearing (the manifest says so at
-    length): a plain glob over `tests/probe/` is exactly the 57
-    [[sweep: probe_dir=57]] probe programs and excludes `support/` -- four
+    length): a plain glob over `tests/probe/` is exactly the 58
+    [[sweep: probe_dir=58]] probe programs (57 until cycle 0.2.4b) and
+    excludes `support/` -- four
     library modules with no `main`, three until cycle 0.2.0 -- and `defect/`, whose files are
     reproductions rather than tests of this library and are judged by
     `run_defect_corpus` instead (TM-141). The schema has no `recursive` key, so

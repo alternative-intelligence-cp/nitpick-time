@@ -168,7 +168,7 @@ last clause: a live `requires i >= 0 && i < v.count` on `vec_at` adds
 
 **Raised 2026-10-02 by the stream-2 planner at cycle 0.2's close, from the
 cycle audit's C2** (the workbench's `meta/audits/nitpick-time-0.2-2026-10-02.md`;
-planned in [`roadmap/0.2/0.2.4b.md`](roadmap/0.2/0.2.4b.md)). `TIME_MODEL.md`
+planned in [`roadmap/0.2/0.2.4b.md`](roadmap/done/0.2/0.2.4b.md)). `TIME_MODEL.md`
 M-3 says an `Instant` cannot be converted to a `Timestamp` *"in either
 direction, ever"*, and the public `README.md` says an `Instant` *"cannot be
 built from a number or converted to a point on the UTC scale"*. **Measured at

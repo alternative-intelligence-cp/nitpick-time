@@ -11,8 +11,29 @@ safety-critical systems language at `../../nitpick`.
 — the civil calendar, with its exhaustive gate on every run — and cycle 0.2,
 instants and timestamps, is OPEN: its 0.2.0a, the adoption of compiler
 `5fbaf4a`, its 0.2.0b, `Vec<T: Copy>`, its 0.2.0, `Instant`, its 0.2.1,
-`Timestamp`, and its 0.2.2, the conversions and the cycle's gate, are done,
-and 0.2.3, the `Duration` interop, is next.**
+`Timestamp`, its 0.2.2, the conversions and the cycle's gate, and its 0.2.3a,
+the instruments, are done, and 0.2.3, the `Duration` interop, is next.**
+
+**After cycle 0.2.3a: the instruments.** The tree checks' family is one list:
+`check_check_registry`, built first, reads `TESTING.md` §2's two tables,
+`checks.LIVE`, `checks.PENDING` and the checks `run.py` drives outside step 5
+from the tree's text and fails any drift between them, and V-1a's three
+numbers — 20 rows, 17 live, 3 pending — are tagged and held to it (TM-227).
+**`check_no_view_returns` is live**: no function in `src/` returns a slice, a
+`cstring` or a type that holds one but `bytes_view`, whose exemption is
+re-derived from its reason on every run (TM-228, `SAFETY.md` S-22). **O-X6 is
+answered**: `SPAN_MODEL.md` §5's table names the `int128` sites in a column
+of its own and N-20 states no count — three marked, `bytes_put_int`'s loop
+measure among them, a site since cycle 0.1.0b that no row named — and
+`check_int128_sites` is live against it (TM-229, TM-230). **And
+`check_constants_named` reads a literal as the compiler's lexer does** —
+every base, `_` wherever it stands, every width, a character literal's code
+point, a bound after `..` — where sixteen spellings of 86 400 and
+1 000 000 000 passed it, measured; part E's third half asks the pinned
+compiler about every spelling (TM-231), and 1 000 000 000 is `core`'s alone,
+read by name everywhere as 86 400 is (TM-232). The self-check plants 82
+tree-check violations, and `src/` changed in comments only. A full
+invocation is **126 units green** at pin `5fbaf4a`, 4 pending.
 
 **After cycle 0.2.2: the conversions, and cycle 0.2's gate.** `src/span/`
 converts between the absolute scale and the civil one, read as UTC — every day

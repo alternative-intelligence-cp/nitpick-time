@@ -900,6 +900,28 @@ def _narrow(name):
             "    pass a + b;\n};\n" % name)
 
 
+# `check_constants_named` READS A LITERAL AS THE COMPILER'S LEXER DOES (cycle
+# 0.2.3a, TM-231). Twelve rows plant one spelling the pinned compiler reads as
+# 86 400 -- one of them as its negation -- in `span`, where the number is
+# `core`'s, beside the SAME spelling one higher, so a check that fired on the
+# shape rather than on the value fails its control. Two are the other way
+# round, their GOOD column the point: `86400hexi64` is 549 888 and a string's
+# text is no number, and the check before TM-231 fired on both. The last plants
+# a token the lexer refuses, beside a hex literal it reads.
+def _div(expr):
+    return ("src/span/span.npk",
+            "mod:span;\nfunc:f = int64(int64:s) never fails { pass s / %s; };\n"
+            % expr)
+
+
+def _loop(hi):
+    return ("src/span/span.npk",
+            "mod:span;\nfunc:f = int64(int64:s) never fails {\n"
+            "    int64:last = 0i64;\n"
+            "    for (int64:k in 0i64...%s) { last = k; }\n"
+            "    pass last;\n};\n" % hi)
+
+
 # Each row: the check, the file that violates it, the file that does not, and a
 # fragment the finding must name. The CLEAN column is not decoration -- several
 # of these checks are one predicate away from failing this repository's own
@@ -983,6 +1005,16 @@ PLANTED = [
      ("src/core/limits.npk",
       "mod:limits;\npub fixed int64:NTIME_SECS_PER_DAY = 86400i64;\n"),
      "belongs to module `core`"),
+    # 1 000 000 000 IS `core`'S ALONE SINCE CYCLE 0.2.3a (TM-232): the plant is
+    # the old owner spelling it -- digit-separated, the spelling the check
+    # could not read until TM-231 -- and the control the one copy, declared
+    # where `src/core/limits.npk` declares it.
+    (checks_mod.check_constants_named,
+     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64(int64:n) never fails "
+                         "{ pass n / 1_000_000_000i64; };\n"),
+     ("src/core/limits.npk",
+      "mod:limits;\npub fixed int64:NTIME_NANOS_PER_SEC = 1_000_000_000i64;\n"),
+     "1000000000 as `1_000_000_000i64`, which belongs to module `core`"),
     (checks_mod.check_constants_named,
      ("src/cal/cal.npk", "mod:cal;\nfixed int64:YEAR_MAX = 9999i64;\n"),
      ("src/core/limits.npk", "mod:limits;\nfixed int64:YEAR_MAX = 9999i64;\n"),
@@ -1347,6 +1379,51 @@ PLANTED = [
       ("src/span/span.npk", "mod:span;\n")],
      [_span5((("`g`", "**yes**"),)), ("src/span/span.npk", "mod:span;\n")],
      "no table with an `int128` column"),
+    # A DIGIT SEPARATOR -- the dispatch's measured case, `86_400i64`.
+    (checks_mod.check_constants_named, _div("86_400i64"), _div("86_401i64"),
+     "belongs to module `core`"),
+    # TWO TOGETHER, which Python's own `int()` refuses -- so a reader that left
+    # the separators to `int()` passes the row above and fails this one.
+    (checks_mod.check_constants_named, _div("86__400i64"), _div("86__401i64"),
+     "belongs to module `core`"),
+    # A LEADING ZERO: decimal still, and no longer the digits `86400`.
+    (checks_mod.check_constants_named, _div("086400i64"), _div("086401i64"),
+     "belongs to module `core`"),
+    (checks_mod.check_constants_named, _div("15180hexi64"), _div("15181hexi64"),
+     "belongs to module `core`"),
+    (checks_mod.check_constants_named, _div("10101000110000000bini64"),
+     _div("10101000110000001bini64"), "belongs to module `core`"),
+    (checks_mod.check_constants_named, _div("250600octi64"), _div("250601octi64"),
+     "belongs to module `core`"),
+    # THE BALANCED BASES: ternary's `T` is -1, nonary's `a` ... `d` -1 ... -4.
+    (checks_mod.check_constants_named, _div("1111TTTT000ti64"),
+     _div("1111TTTT001ti64"), "belongs to module `core`"),
+    (checks_mod.check_constants_named, _div("142dc0ni64"), _div("142dc1ni64"),
+     "belongs to module `core`"),
+    # A NEGATIVE LITERAL, which only a balanced base spells: -86 400 is a copy.
+    (checks_mod.check_constants_named, _div("0TTTT1111000ti64"),
+     _div("0TTTT1111001ti64"), "belongs to module `core`"),
+    # A WIDTH PAST `u64`, from the width table.
+    (checks_mod.check_constants_named, _div("86400i128"), _div("86401i128"),
+     "belongs to module `core`"),
+    # A CHARACTER LITERAL: its value is its code point, and it widens.
+    (checks_mod.check_constants_named, _div("('\\u{15180}' => int64)"),
+     _div("('\\u{15181}' => int64)"), "belongs to module `core`"),
+    # A BOUND AFTER `...` -- the old pattern's look-behind on `.` hid it.
+    (checks_mod.check_constants_named, _loop("86400i64"), _loop("86401i64"),
+     "belongs to module `core`"),
+    # THE GOOD COLUMN IS THE POINT: 0x86400 is 549 888.
+    (checks_mod.check_constants_named, _div("86400i64"), _div("86400hexi64"),
+     "belongs to module `core`"),
+    # THE GOOD COLUMN IS THE POINT: a string's text is no number.
+    (checks_mod.check_constants_named, _div("86400i64"),
+     ("src/span/span.npk", "mod:span;\nfunc:f = string() never fails { "
+                           "pass \"86400\"; };\n"),
+     "belongs to module `core`"),
+    # A TOKEN THE LEXER REFUSES is reported, never passed -- `0x` is no prefix
+    # here: `0x15180` is `NITPICK-LEX-003`, "digit is not valid for this base".
+    (checks_mod.check_constants_named, _div("0x15180"), _div("0FFhex"),
+     "a literal this check does not read"),
 ]
 
 
@@ -2040,8 +2117,71 @@ _FORMS_LITERALS = ((21, "a = 5i32"), (24, "a = 6i32"), (27, "a = 7i32"),
                    (30, "a = 8i32"), (33, "a = 9i32"), (36, "a = 20i32"))
 
 
+# THE SPELLINGS OF A NUMBER `check_constants_named` READS (cycle 0.2.3a, TM-231),
+# and part E's third half asks the pinned compiler about every one: line by
+# line, each spelling against the plain decimal the compiler must read it as,
+# so the program exits 0 only if it reads every one so -- and the reader,
+# `checks.literals`, must read each spelling on its line as that decimal too.
+# A re-pin that moves the numeric scan on one of them -- a base suffix, a
+# width, the separator, the leading-digit rule -- is a red run. Its own
+# `failsafe`, because the loop's counter can reach `IntOverflow`.
+_NUM_FORMS = (
+    ("86_400i64", 86400), ("86__400i64", 86400), ("86400_i64", 86400),
+    ("086400i64", 86400), ("15180hexi64", 86400),
+    ("10101000110000000bini64", 86400), ("250600octi64", 86400),
+    ("1111TTTT000ti64", 86400), ("142dc0ni64", 86400),
+    ("0TTTT1111000ti64", -86400), ("86400hexi64", 549888),
+    ("(86400i128 =>! int64)", 86400), ("('\\u{15180}' => int64)", 86400),
+    ("1_000_000_000i64", 1000000000), ("01000000000i64", 1000000000),
+    ("3B9ACA00hexi64", 1000000000),
+    ("111011100110101100101000000000bini64", 1000000000),
+    ("7346545000octi64", 1000000000), ("10TT1T01T001T1010001ti64", 1000000000),
+    ("3d21c1b101ni64", 1000000000), ("(1000000000i128 =>! int64)", 1000000000),
+)
+_NUM_FAILSAFE = """
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest) { exit 91i32; },
+        (HeapOom)        { exit 92i32; },
+        (IntOverflow)    { exit 93i32; },
+        (Unreachable)    { exit 95i32; },
+        (WildLeak)       { exit 96i32; },
+        (StackExhausted) { exit 106i32; },
+        (MachineFault)   { exit 107i32; },
+        (*)              { exit 99i32; }
+    }
+    exit 9i32;
+};
+"""
+
+
+def _num_program():
+    """`(text, lines)`: the program, and `[(line, token, value)]` -- the token
+    on each line the reader must read as `value`."""
+    head = ("mod:numeric_forms;\n"
+            "func:main = int32(cstring[]:_~argv) {\n")
+    body, lines = [], []
+    for k, (expr, value) in enumerate(_NUM_FORMS):
+        want = "%di64" % value if value >= 0 else "(0i64 - %di64)" % -value
+        body.append("    if (%s != %s) { exit %di32; }\n" % (expr, want, 10 + k))
+        tok = expr.strip("()").split(" ")[0]
+        lines.append((3 + k, tok, value))
+    k = len(_NUM_FORMS)
+    body.append("    int64:last = 0i64;\n")
+    body.append("    for (int64:s in 0i64...86400i64) { last = s; }\n")
+    lines.append((3 + k + 1, "86400i64", 86400))
+    body.append("    if (last != 86399i64) { exit %di32; }\n" % (10 + k))
+    text = head + "".join(body) + "    exit 0i32;\n};\n" + _NUM_FAILSAFE
+    return text, lines
+
+
+_NUM_TEXT, _NUM_LINES = _num_program()
+
+
 def part_e(rep, root, man, base, npkc, npkrt):
-    """The reader against the compiler's lexer: E1 and E2 above."""
+    """The reader against the compiler's lexer: E1 and E2 above -- and, since
+    cycle 0.2.3a, E3: `check_constants_named`'s literal reader against the
+    compiler's numeric scan (TM-231)."""
     import lexical
     # `run` imports this module; by the time this is called it is initialised.
     import run as run_mod
@@ -2117,6 +2257,32 @@ def part_e(rep, root, man, base, npkc, npkrt):
             "MIRRORS: re-read `src/frontend/lexer.npk` at the new pin and bring "
             "the reader to it, in the adoption that moved the pin."
             % (verdict, _FORMS_EXIT.get(code_, "it did not build and run")))
+
+    # E3 -- `check_constants_named`'s literal reader against the compiler's
+    # numeric scan (cycle 0.2.3a, TM-231): the reader on every spelling's
+    # line of one program, and the pinned compiler on the program, which
+    # exits at the first spelling it reads as another number.
+    _write(os.path.join(where, "numeric_forms.npk"), _NUM_TEXT)
+    lines = lexical.read(os.path.join(where, "numeric_forms.npk")).split("\n")
+    for ln, tok, value in _NUM_LINES:
+        got = [v for _a, t, v in checks_mod.literals(lines[ln - 1]) if t == tok]
+        if got != [value]:
+            problems.append(
+                "E3: line %d: the reader reads `%s` as %s, and the program "
+                "asserts %d." % (ln, tok, got or "nothing", value))
+    verdict = run_mod._verdict(bld, where, "numeric_forms.npk", out_dir)
+    if verdict != "run:0":
+        code_ = int(verdict[4:]) if verdict.startswith("run:") else None
+        problems.append(
+            "E3: the pinned compiler's verdict on the numeric program is %s, "
+            "not run:0 -- %s. THE COMPILER'S NUMERIC SCAN HAS MOVED FROM WHAT "
+            "`checks.literals` MIRRORS: re-read `src/frontend/numeric.npk`, "
+            "`num_width.npk` and `lexer.npk` at the new pin and bring the "
+            "reader to them, in the adoption that moved the pin."
+            % (verdict, "its line %d, `%s`, was read as another number"
+               % _NUM_LINES[code_ - 10][:2]
+               if code_ is not None and 10 <= code_ < 10 + len(_NUM_LINES)
+               else "it did not build and run"))
     return problems
 
 
@@ -2237,9 +2403,11 @@ def run(rep, root, steps):
                 % ("the reader (lexical.py)",
                    "E1: %d lines of every form read back, %d import(s) as the "
                    "compiler reads them; E2: the pinned compiler runs the %d "
-                   "observable forms it names to 0"
+                   "observable forms it names to 0; E3: it runs %d spellings "
+                   "of a number to their values, and the literal reader reads "
+                   "each the same"
                    % (_LEX_TEXT.count("\n"), len(_LEX_IMPORTS),
-                      len(_FORMS_EXIT))))
+                      len(_FORMS_EXIT), len(_NUM_LINES))))
     return ok
 
 

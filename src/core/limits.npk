@@ -107,10 +107,12 @@ pub fixed int64:NTIME_OFFSET_MAX = 64800i64;
 // rather than bounds, and `check_constants_named`'s `_BOUND_DECL` pattern
 // matches only the bound suffixes. They live here anyway because S-16 names
 // 86400 and 1000000000 as numbers a date library gets wrong by copying, and
-// `CONSTANT_OWNER` maps 86400 to `core` alone and 1000000000 to `cal` -- with
-// module `core` permitted for both, which is what lets this file hold them. So
-// a literal 86400 anywhere else in `src/` is a finding: `span`'s conversions
-// divide by `NTIME_SECS_PER_DAY` and spell no copy (TM-223). (Until cycle 0.2.2
+// `CONSTANT_OWNER` maps both to `core` alone -- 86400 since cycle 0.2.2
+// (TM-223), 1000000000 since 0.2.3a (TM-232). So a literal of either number
+// anywhere else in `src/` is a finding, in whatever spelling the compiler reads
+// (TM-231): `span`'s conversions divide by `NTIME_SECS_PER_DAY`, `cal` and
+// `span` read `NTIME_NANOS_PER_SEC`, and none spells a copy. (Until cycle 0.2.3a
+// the map gave 1000000000 to `cal`, with `core` permitted for it. Until 0.2.2
 // the map gave both numbers to `cal`, and this said "A SECOND literal copy in
 // `cal` or `span` is a finding" -- which the map made false of `cal`, whose
 // copy it permitted; the self-check's control planted one in `cal`, silent.)

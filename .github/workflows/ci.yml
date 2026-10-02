@@ -136,7 +136,14 @@
 # [[sweep: domain_every_sampled_second=44236800]] -- each direction handed a
 # walk's value, never the other's answer -- and every `Timestamp` the
 # conversion back returns is normalised, its refusals seen on readings forged
-# through the language's opt-out (TM-222 ... TM-225).
+# through the language's opt-out (TM-222 ... TM-225). AND SINCE CYCLE 0.2.3a:
+# the tree checks' four statements -- `TESTING.md` §2, `checks.LIVE`,
+# `checks.PENDING` and what the runner drives outside step 5 -- are one list,
+# diffed on every run (TM-227); no function in `src/` returns a view but
+# `bytes_view`, whose exemption is re-derived (TM-228); `int128` stands in
+# `src/` only at the sites `SPAN_MODEL.md` §5 marks (TM-229, TM-230); and no
+# owned number is spelled outside its module in any spelling the compiler
+# reads, hex and digit separators included (TM-231, TM-232).
 #
 # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
 # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
@@ -156,7 +163,10 @@
 # self-check names -- each literal's value asserted since the close's second
 # half (TM-202), which is what turns a lexer move on one of them red; a move
 # on a form the program does not hold is the adoption's to find, by reading
-# the compiler's lexer. It runs FIRST and its failure is fatal, so
+# the compiler's lexer. And since cycle 0.2.3a part E asks the literal
+# reader `check_constants_named` uses, and the pinned compiler, about one
+# program of every spelling of a number (TM-231). It runs FIRST and its
+# failure is fatal, so
 # a green run below a broken runner is not a state this workflow can report.
 # Until 0.0.3 that was the honest gap here, and it was written in this comment
 # for three cycles.

@@ -24,7 +24,7 @@ $ NPKC=… NPKRT=… python3 harness/run.py [--only SUBSTRING] [--quick]
 | `checks.py` | the **tree checks** — `TESTING.md` §2's family, each one diffing the library against a document that describes it |
 | `arms.py` | `check_failsafe_arms`: the S-6 arm generator, and `NITPICK-REACH-003` as its oracle |
 | `repro.py` | B-4: two builds of one tree must be the same bytes. Also a command in its own right, with `--between` for `check_tables_regenerate` |
-| `selfcheck.py` | **the only thing here that demonstrates the checks can fail.** V-14's thirteen cases, the tree checks on planted violations, the arm generator against the compiler, the verdict mechanisms, and — since cycle 0.1.5 — the reader against the compiler's lexer (part E) |
+| `selfcheck.py` | **the only thing here that demonstrates the checks can fail.** V-14's thirteen cases, the tree checks on planted violations, the arm generator against the compiler, the verdict mechanisms, and — since cycle 0.1.5 — the reader against the compiler's lexer (part E), and since cycle 0.2.3a `check_constants_named`'s literal reader against its numeric scan |
 | `run.py` | the driver: stage order, per-unit verdict lines, the summary and its counts |
 
 ## The stage order, and each line is a reason
@@ -59,11 +59,12 @@ running unlisted since cycle 0.0.6)*:
   a code named once for two sites and three times for two (TM-210). Case 6
   (a generator differing by one line) is **pending until 0.5** and prints as
   pending rather than passing.
-- **Sixty-six planted violations across the tree checks since cycle 0.2.3a**
+- **Eighty-two planted violations across the tree checks since cycle 0.2.3a**
   (forty-four from cycle 0.1.5's second half, forty after its first half,
-  twenty-three before it; 0.2.3a's twenty-two are `check_check_registry`'s six,
-  `check_no_view_returns`' five and its exemption's five, and
-  `check_int128_sites`' six; the 0.1.5 first
+  twenty-three before it; 0.2.3a's thirty-eight are `check_check_registry`'s
+  six, `check_no_view_returns`' five and its exemption's five,
+  `check_int128_sites`' six, and `check_constants_named`'s sixteen — its
+  literal reader's fifteen and the owner of 1 000 000 000; the 0.1.5 first
   half's seventeen are V-1k's reader rows and V-1l's token rows, the second
   half's four `check_error_budget`'s module-qualified pair (TM-203),
   `check_raw_index`'s line end after the dot (V-1l) and a written arm bill for
@@ -86,9 +87,13 @@ running unlisted since cycle 0.0.6)*:
   and one program of the forms `selfcheck._FORMS_EXIT` names — each literal's
   value asserted since the close's second half — compiled and run by the
   pinned compiler, which must exit 0 while the reader sees exactly the code
-  that ran (`TESTING.md` V-1k, TM-202). A re-pin that moves the lexer on one
-  of those forms is a red run; one that moves it on a form the program does
-  not hold is not, so the adoption re-reads the compiler's lexer anyway.
+  that ran (`TESTING.md` V-1k, TM-202) — and since cycle 0.2.3a a third
+  half: one program of every spelling of a number `check_constants_named`
+  reads, each against the plain decimal it must equal, run to 0 while that
+  check's literal reader reads each the same (TM-231). A re-pin that moves
+  the lexer on one of those forms is a red run; one that moves it on a form
+  the program does not hold is not, so the adoption re-reads the compiler's
+  lexer anyway.
 
 **Every case carries a CONTROL in the same run.** Without one, a red proves only
 that *something* went wrong — the tree, the manifest, the toolchain — and a
@@ -391,6 +396,20 @@ B**, the two conversions; and library + repro + suite at **91** (**57 probe**,
 2.9 + 5.3 + 2.1 + 8.1 + 0.6 + 5.6 + 3.6 + 15.1 = 43.3 s — over B-9's 30 s,
 under its 60 s, and B-9 is amended to that cost (TM-224) — and a full
 invocation about 200 s, some 24 s more than at cycle 0.2.1.
+
+**At cycle 0.2.3a, the same pin, 126 units**: no test added, and `src/`
+changed in comments only. The self-check plants 12 of V-14's 13 cases,
+**82** tree-check violations with 82 clean controls —
+`check_check_registry`'s six, `check_no_view_returns`' five and the five of
+its exemption, `check_int128_sites`' six, and `check_constants_named`'s
+sixteen, the literal reader's fifteen and the owner of 1 000 000 000 (TM-227
+… TM-232) — 4 arm specimens, 4 verdict specimens, and part E's third half,
+one program of every spelling of a number, run to 0; the tree checks at
+`14 live`, 3 pending, so the summary reads `4 pending` where it read 5; parse
+over 142 files, `97 + 43 + 2`; the defect corpus unchanged at 36; and
+library + repro + suite at 91. `126 = 35 + 91`. A full invocation about
+200 s, as at cycle 0.2.2 within noise: the new plants cost
+milliseconds, and part E's third half one compile and run.
 
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the

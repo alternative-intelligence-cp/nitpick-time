@@ -205,7 +205,9 @@ pub func:bytes_extend_str = NIL(Bytes->:b, string:src) never fails {
 // file `limits.npk` names as its consumer did not consume it, `use
 // "./limits.npk".*;` above imported nothing that was used, and
 // `check_constants_named` could not see it (`_NUMBER` wants four or more
-// digits and `CONSTANT_OWNER` has no entry for `20`). Measured before it was
+// digits and `CONSTANT_OWNER` has no entry for `20`; since cycle 0.2.3a the
+// check reads every literal's value, and 20 is still no owned number,
+// TM-231). Measured before it was
 // changed: `uint8[N]` with `N` a module-level `fixed`, and with one imported
 // from another module, both compile at exit 0 -- so the name was always
 // spellable here and the literal was the only thing standing.

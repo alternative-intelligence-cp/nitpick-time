@@ -503,6 +503,14 @@ check, `DivByZero`, which every importer of `span` owes already (the IR at
 belongs to `core` alone, spelled once and read by name everywhere, and
 1000000000 stays `cal`'s until cycle 0.2.3's nanosecond arithmetic decides.)*
 
+*(Cycle 0.2.3a, TM-231 and TM-232: 1000000000 is `core`'s alone too — `cal`
+reads it by name, `NTIME_NANOS_PER_SEC`, and so does `span`, so the one copy
+is `src/core/limits.npk`'s. And a copy is a copy in any spelling: the owner
+map's check reads a literal as the compiler's lexer does — every base, `_`
+wherever it stands, every width, a character literal's code point — so
+`1_000_000_000i64` or `15180hexi64` outside `core` is a finding, where until
+then each passed.)*
+
 **Rule S-17.** Every index into the zone tables goes through one accessor pair,
 and the accessor is where the bound is checked. Callers do not index raw
 storage. This makes the bound one obligation to discharge in cycle 1.5 rather

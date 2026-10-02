@@ -511,7 +511,9 @@ pub func:civil_date = CivilDate(int64:y, int64:m, int64:d) {
 //
 // The nanosecond bound is `NTIME_NANOS_PER_SEC - 1i64` and not a literal: S-12
 // makes every bound a named constant and `check_constants_named` fails the run
-// on a second copy of 1000000000 outside its owner.
+// on a second copy of 1000000000 outside its owner -- `cal` among them since
+// cycle 0.2.3a, when the owner became `core` alone (TM-232); until then the map
+// made this module the owner, and a copy here would have passed.
 pub func:civil_time = CivilTime(int64:h, int64:mi, int64:s, int64:n) {
     if (h < 0i64)  { fail ETimeValue; }            // ValueFault.HourRange
     if (h > 23i64) { fail ETimeValue; }            // ValueFault.HourRange

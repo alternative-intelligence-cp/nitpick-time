@@ -6664,6 +6664,10 @@ subtlety, refused at the first negative second by `civil_time`, and seen red on
 every member of the gate.
 
 ### TM-223 — `check_constants_named`'s owner of 86 400 is `core` alone: the conversions divide by `NTIME_SECS_PER_DAY`, read by name, and `SAFETY.md` S-16 and the map move together, as both said they must
+> **SUPERSEDED IN PART by TM-232 (2026-10-01, cycle 0.2.3a).** Its *"1 000 000 000
+> stays `cal`'s"*: cycle 0.2.3a gave it to `core` alone, by this decision's own
+> reasoning, once `check_constants_named` read a literal in every spelling
+> (TM-231). The rest stands as decided.
 
 **2026-10-01, cycle 0.2.2 (the plan's PD-68). Amends `harness/checks.py`'s
 `CONSTANT_OWNER` and `harness/selfcheck.py`'s row for it; dates `SAFETY.md`
@@ -7013,3 +7017,96 @@ lexical reading can say which of a function's statements is §5's step; **an
 unwritten marked function failed** — every row §5 writes ahead of its cycle
 would be red; **the tests' `int128` read too** — N-20 is about `src/`, and
 `probe02` is a probe of the type itself.
+
+### TM-231 — `check_constants_named` reads a literal as the compiler's lexer does — every base, separator and width, a character literal's code point, and a bound after `..` — and holds its VALUE to the owner map; part E asks the pinned compiler about every spelling
+
+**2026-10-01, cycle 0.2.3a (the plan's PD-76). Amends `harness/checks.py`'s
+`check_constants_named` and `TESTING.md` §2's row; extends `TESTING.md` V-1k's
+re-read and V-14c's part E row.**
+
+**What was found** (`0.2.3a.md` §1). The check read a literal with one
+pattern — four or more decimal digits not after a letter, a digit, `_` or `.`
+— and compared the digits as text. The compiler's lexer reads more
+(`LEXICAL_REFERENCE.md` §6.2, and its code at `5fbaf4a`: `lexer.npk`'s
+`lexer_next`, `numeric.npk`'s `num_scan`, `num_width.npk`'s `num_width_of`):
+one run of letters, digits and `_` from a decimal digit; the longest of
+thirty-seven width suffixes; a base suffix, `hex`, `bin`, `oct` and the
+balanced `t`, `ter`, `tri` and `n`, `non`; `_` dropped wherever it stands;
+and a character literal is a numeric token whose value is its code point.
+Measured at `5fbaf4a`, every spelling below compiles, links and runs on both
+legs with its value as written — and planted one at a time in
+`src/span/span.npk`, sixteen spellings of 86 400 or 1 000 000 000 passed the
+check: `86_400i64`, `86__400i64`, `086400i64`, `15180hexi64`,
+`10101000110000000bini64`, `250600octi64`, `1111TTTT000ti64`, `142dc0ni64`,
+`('\u{15180}' => int64)`, `1_000_000_000i64`, `01000000000i64`,
+`3B9ACA00hexi64`, `7346545000octi64`, the binary spelling of 1 000 000 000, and
+`86400i64` as a bound after `..` and after `...`. The other way, `86400hexi64`
+— 549 888 — and the string `"86400"` were each a finding. A width past `u64`
+and a literal left of a comparison — two that `nitpick-regex`'s check of the
+same name passed, measured at its own cycle 0.1.4's planning — this one saw.
+Read with the new reader, `src/` and `tests/` hold 114 285 numeric literals
+and every one is readable.
+
+**The decision.** *The check reads every numeric literal in a file as the
+lexer does — a token from a decimal digit through letters, digits and `_`, a
+float when a `.` and a digit follow — and an integer's VALUE as `num_scan`
+does: the longest width suffix, then the base suffix, `_` dropped, the digits
+read in the base, balanced bases with their negative digits; and a character
+literal's value as its code point. The owner map is keyed by value: a literal
+is a copy of an owned number when its value, or its negation, is one. Comments
+and every other literal are blanked first, so a number in a string's text is
+nothing, as to the compiler. A float is read by its extent and not evaluated,
+and a token the lexer refuses is not evaluated either; each is a finding by
+its text, never passed. The self-check plants fifteen rows — each class of
+spelling beside the same spelling one higher, the hex and string controls the
+other way round, and an unreadable token — and part E's third half compiles one
+program of every spelling against the plain decimal it must equal, run to 0 by
+the pinned compiler while the reader reads each the same. `TESTING.md` V-1k's
+re-read at an adoption takes in `numeric.npk` and `num_width.npk`.*
+
+*Alternatives declined:* **`_` added to the old pattern** — the measured case
+alone, leaving the bases, the leading zero, the character literal and the
+range bound as blind as before; **the reader in `harness/lexical.py`** — that
+module finds the spans that are not code and nothing else, and it is
+`nitpick-regex`'s reader ported statement for statement, which one check's
+number reading would end; **`nitpick-regex`'s reader as it stands** — it reads
+a literal beside a comparison, its check's subject, and this check's subject is
+every literal; **floats evaluated by their text** — no float is written here,
+none can be compiled at the pin to say what the compiler reads, and reporting
+one asks the question when the first is written; **digit strings kept as the
+map's keys** — `86400hexi64` is no copy of 86 400, and `15180hexi64` is one;
+**Python's `int()` left to drop the separators** — it accepts `1_000_000` and
+refuses `86__400`, which the compiler accepts: the row for two together is the
+one that sees the difference.
+
+### TM-232 — `check_constants_named`'s owner of 1 000 000 000 is `core` alone, by TM-223's reasoning, once the check reads it in every spelling; `SAFETY.md` S-16 moves with the map
+
+**2026-10-01, cycle 0.2.3a (the plan's PD-77). Amends `harness/checks.py`'s
+`CONSTANT_OWNER` and the self-check's row for it; dates `SAFETY.md` S-16 and
+`TESTING.md` §2's row; corrects `src/core/limits.npk`'s comment. It supersedes
+TM-223 in part.**
+
+**What was found.** TM-223 left 1 000 000 000 `cal`'s, for cycle 0.2.3's
+nanosecond arithmetic to decide by TM-223's reasoning. Measured at planning,
+`src/` spells it once, in `src/core/limits.npk` (`NTIME_NANOS_PER_SEC`); `cal`
+reads it by name, its nanosecond bound `NTIME_NANOS_PER_SEC - 1i64`; and so
+does `span`, `timestamp_of`'s `NanoRange` check — so every module reads it by
+name, as 86 400 is read since cycle 0.2.2. And until TM-231 a copy spelled
+`1_000_000_000i64` would have passed the check in any module.
+
+**The decision.** *`CONSTANT_OWNER[1000000000]` is `core`: the number is
+spelled once, in `src/core/limits.npk`, and read by name everywhere, so a
+literal 1 000 000 000 anywhere else in `src/` — in any spelling the compiler
+reads, since TM-231 — is a finding, `cal` and `span` included. It moves in the
+commit after the reader's first step, never before it. The self-check's row
+plants `1_000_000_000i64` in `cal`, the old owner, beside the one copy in
+`core`. S-16 is dated, and TM-223's clause that kept the number `cal`'s is
+marked.*
+
+*Alternatives declined:* **`cal` the owner still** — it would permit `cal` a
+second copy beside `core`'s, the copy the check exists to refuse, in a module
+that reads the name; **`span` the owner** — its nanosecond arithmetic at cycle
+0.2.3 is the most it will hold, and owning the number would permit it a literal,
+TM-223's reason against `span` for 86 400; **the owner moved before the reader**
+— the move's whole worth is that every copy outside `core` is refused, and
+before TM-231 a separated copy passed in any module.

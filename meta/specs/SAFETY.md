@@ -515,6 +515,16 @@ wherever it stands, every width, a character literal's code point — so
 `1_000_000_000i64` or `15180hexi64` outside `core` is a finding, where until
 then each passed.)*
 
+*(Cycle 0.2.4a, TM-238 — the cycle audit's C3: "the one copy is
+`src/core/limits.npk`'s" is now what the check holds. Until then it held a copy
+to the module `core`, so `86400i64` in `src/core/bytes.npk` passed it. And the
+record these notes keep, completed — the audit's K4: `timestamp_add` (cycle
+0.2.3) divides a `Duration`'s nanoseconds by `NTIME_NANOS_PER_SEC`, read by
+name, with `/` and `%`; the IR guards each with the compiler's zero check and
+its `MIN / −1` check (`npk_trap` −4097 and −4098, at `5fbaf4a`), and
+`tests/unit/limits_named.npk`'s exit 18 holds the divisor to 10⁹, so neither
+can fire.)*
+
 **Rule S-17.** Every index into the zone tables goes through one accessor pair,
 and the accessor is where the bound is checked. Callers do not index raw
 storage. This makes the bound one obligation to discharge in cycle 1.5 rather
@@ -1213,6 +1223,11 @@ re-derived from its reason on every run — declared in `src/core/bytes.npk`,
 returning a view, through a pointer to `Bytes`, which that file declares, and
 named here — so the day any part of it is false, the run is red. At its first
 run, `src/` declared 46 functions and one returned a view: `bytes_view`.)*
+
+*(Cycle 0.2.4a, TM-239 — the cycle audit's C4: and an optional of one.
+`uint8[]?` — "the rest, or none", the result a parser wants first — hands its
+caller a view whenever it is not `NIL`, compiles at the pin in a consumer, and
+passed the check, as `cstring?` did; the check reads a `T?` as its `T` now.)*
 
 **Why it was written as a belt, and why it stays one.** O-N9 measured that
 D-004's escape rule was **unenforced for slice views**: `string_bytes` on a

@@ -59,10 +59,16 @@ running unlisted since cycle 0.0.6)*:
   a code named once for two sites and three times for two (TM-210). Case 6
   (a generator differing by one line) is **pending until 0.5** and prints as
   pending rather than passing.
-- **Eighty-two planted violations across the tree checks since cycle 0.2.3a**
-  (forty-four from cycle 0.1.5's second half, forty after its first half,
-  twenty-three before it; 0.2.3a's thirty-eight are `check_check_registry`'s
-  six, `check_no_view_returns`' five and its exemption's five,
+- **Ninety-two planted violations across the tree checks since cycle 0.2.4a**
+  (eighty-two from cycle 0.2.3a, forty-four from cycle 0.1.5's second half,
+  forty after its first half, twenty-three before it; 0.2.4a's ten are
+  `check_constants_named`'s six — a `core` number in `core` outside
+  `limits.npk`, a `cal` number in `core`, a bound spelled by its value, the
+  folded minimum by its value, a small bound left to review, and an
+  initializer it cannot read — and `check_no_view_returns`' two optionals and
+  `check_int128_sites`' two wider types; 0.2.3a's thirty-eight are
+  `check_check_registry`'s six, `check_no_view_returns`' five and its
+  exemption's five,
   `check_int128_sites`' six, and `check_constants_named`'s sixteen — its
   literal reader's fifteen and the owner of 1 000 000 000; the 0.1.5 first
   half's seventeen are V-1k's reader rows and V-1l's token rows, the second
@@ -424,6 +430,16 @@ sources and its IR **285 881 B**, the interop's six functions; and library +
 repro + suite at **96** (**57 probe**, **30 unit**, **8 sweep**).
 `131 = 35 + 96`. A full invocation about 205 s; the five units cost a few
 seconds together, both legs, compile included.
+
+**At cycle 0.2.4a, the same pin, 131 units**: no test added, and `src/`
+changed in comments only. The self-check plants 12 of V-14's 13 cases,
+**92** tree-check violations with 92 clean controls — the ten new are
+`check_constants_named`'s six, `check_no_view_returns`' two and
+`check_int128_sites`' two (TM-238 … TM-240) — 4 arm specimens and 4 verdict
+specimens; the tree checks at
+`14 live`, 3 pending; parse over 147 files, `102 + 43 + 2`; the defect corpus
+unchanged at 36; and library + repro + suite at 96. `131 = 35 + 96`. A full
+invocation about 200 s, as at cycle 0.2.3: the new plants cost milliseconds.
 
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the

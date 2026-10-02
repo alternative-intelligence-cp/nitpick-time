@@ -6,7 +6,11 @@
 // module that owns it. The check reads `SAFETY.md` S-16 and `CALENDAR.md` §4
 // for the ownership, not a copy of them -- so if a later cycle gives another
 // module its own arithmetic, S-16 and the check's owner map are amended in ONE
-// commit, which is the whole contract of that check family.
+// commit, which is the whole contract of that check family. (Cycle 0.2.4a,
+// TM-238: and since then the owner is a FILE -- a `core` number is this file's
+// alone, a `cal` number `src/cal/`'s -- and a third half joins the two: the
+// VALUE of every bound declared here, spelled anywhere else under `src/`, is a
+// finding, but for a small structural value `nitpick-regex`'s set names.)
 //
 // EVERY CONSTANT CARRIES THE RULE THAT SET IT. A bound whose provenance is not
 // written beside it is a bound nobody can review against the range it is

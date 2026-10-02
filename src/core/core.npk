@@ -16,8 +16,10 @@
 // denominator (D1).
 //
 // WHAT FILLED THIS ONE, at cycle 0.0.4: `vec.npk` (`Vec<T>`, nine functions),
-// `bytes.npk` (`Bytes`, eleven) and `limits.npk` (thirteen named bounds), per
-// `BUILD.md` §5's rules B-12 and B-13 — one growable sequence, one byte sink,
+// `bytes.npk` (`Bytes`, eleven) and `limits.npk` (thirteen named constants,
+// eleven bounds and two unit conversions -- "thirteen named bounds" here until
+// cycle 0.2.4a, the cycle audit's K5), per `BUILD.md` §5's rules B-12 and
+// B-13 — one growable sequence, one byte sink,
 // one file of named bounds, and NO second container. **This header said "It is
 // REPLACED at the cycle below" and "WHEN: cycle 0.0.4" for two subcycles after
 // 0.0.4 was done** (F3), which reads as work outstanding.

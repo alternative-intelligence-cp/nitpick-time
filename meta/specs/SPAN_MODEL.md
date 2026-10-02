@@ -223,6 +223,13 @@ whole-tree check asserts that `int128` appears nowhere else in `src/`", and
 marked one. Three rows are marked now: the count came out three, and it is
 dropped anyway, because a number in a rule goes stale in silence.)*
 
+*(Cycle 0.2.4a, TM-240 — the cycle audit's D1: `int128` in this rule is every
+integer wider than `int64` — `int128` … `int4096`, `uint128` … `uint4096`,
+`tbb128` and `tbb256` — because its reason is. An `int256` intermediate
+narrowed by a bare `=>!` compiled, ran and passed every tree check, measured,
+until `check_int128_sites` read all fourteen. The column keeps its name:
+`int128` is the one width this library computes in.)*
+
 **Rule N-20b (TM-105) — the range check at each of those sites is mandatory
 library code, because the language provides no checked narrowing.** Measured at
 cycle 0.0.0: `=>!` at a value that does not fit **truncates silently** (no trap,

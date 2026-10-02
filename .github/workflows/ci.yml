@@ -39,8 +39,10 @@
 # ============================================================================
 #
 # WHAT A GREEN RUN PROVES TODAY. `src/core/` is real code since cycle 0.0.4 --
-# `Vec<T>`, `Bytes` and fifteen named bounds, thirteen until 0.2.3 added
-# `Duration`'s two ends -- and `src/cal/` since 0.1.0 --
+# `Vec<T>`, `Bytes` and fifteen named constants, thirteen bounds and two unit
+# conversions, thirteen in all until 0.2.3 added `Duration`'s two ends (it
+# said "fifteen named bounds" from 0.2.3 to 0.2.4a, the cycle audit's K5) --
+# and `src/cal/` since 0.1.0 --
 # the civil types and their validating constructors, and since 0.1.1 Hinnant's
 # `date_to_days` and `days_to_date`, and since 0.1.3 the derived fields --
 # and `src/span/` since 0.2.0, `Instant` and its four operations, and since
@@ -152,7 +154,10 @@
 # `timestamp_add` keeps every answer normalised over a hundred thousand
 # seeded additions and forged inputs; and `timestamp_since` answers at
 # `Duration`'s two ends exactly and refuses one nanosecond past them, never
-# wrapping (TM-233 ... TM-236).
+# wrapping (TM-233 ... TM-236). AND SINCE CYCLE 0.2.4a: an owned number is
+# held to its owner's file and every bound to its value, an optional of a view
+# is a view, and every integer wider than `int64` stands only where §5 marks
+# (TM-238 ... TM-240).
 #
 # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
 # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,

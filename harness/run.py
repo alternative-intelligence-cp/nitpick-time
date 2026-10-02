@@ -26,8 +26,10 @@ WHAT A GREEN RUN HERE IS, AND IS NOT.
   a SOURCE-level check and is the only thing that answers that question.
 
   IT IS NOT evidence that the WHOLE library works. `src/core/` is real code
-  since cycle 0.0.4 -- `Vec<T>`, `Bytes` and fifteen named bounds, thirteen
-  until 0.2.3 added `Duration`'s two ends -- and
+  since cycle 0.0.4 -- `Vec<T>`, `Bytes` and fifteen named constants,
+  thirteen bounds and two unit conversions, thirteen in all until 0.2.3 added
+  `Duration`'s two ends (it said "fifteen named bounds" from 0.2.3 to 0.2.4a,
+  the cycle audit's K5) -- and
   `src/cal/` since 0.1.0 -- the civil types, Hinnant's two algorithms since
   0.1.1, swept over the whole range since 0.1.2 -- and the suite is evidence
   about both, and since 0.2.0 about `src/span/`'s `Instant` -- and since

@@ -12,8 +12,28 @@ safety-critical systems language at `../../nitpick`.
 instants and timestamps, is OPEN: its 0.2.0a, the adoption of compiler
 `5fbaf4a`, its 0.2.0b, `Vec<T: Copy>`, its 0.2.0, `Instant`, its 0.2.1,
 `Timestamp`, its 0.2.2, the conversions and the cycle's gate, its 0.2.3a, the
-instruments, and its 0.2.3, the `Duration` interop, are done, and 0.2.4, the
-close, is next.**
+instruments, and its 0.2.3, the `Duration` interop, are done; and its close is
+under way in three parts, each triaging the cycle audit's findings: 0.2.4a, the
+audit's instruments, is done, 0.2.4b, the library's findings, is next, and
+0.2.4, the close itself, follows it.**
+
+**After cycle 0.2.4a: the cycle audit's instruments.** Cycle 0.2's audit
+(ACCEPT, twenty-two findings) found instruments that passed a planted violation
+in silence, and each reads what its row says now. **`check_constants_named`
+holds an owned number to its owner's PLACE** — `core`'s is
+`src/core/limits.npk` alone, where `86400i64` in `src/core/bytes.npk` passed it
+— **and every bound that file declares by its VALUE**: `253402300799i64`
+written in place of `NTIME_SECS_MAX` is a finding, the folded
+`NTIME_DURATION_NS_MIN` is read as −2⁶³, and the small values in
+`nitpick-regex`'s `_SMALL` set are excepted — today `NTIME_PARSE_MAX`'s 128
+alone (TM-238). **`check_no_view_returns` reads an optional as what it
+holds**, so `uint8[]?` and `cstring?` are views (TM-239). **`check_int128_sites`
+reads every integer wider than `int64`**, fourteen types, where an `int256`
+intermediate passed it; and `TESTING.md` V-1 says what that check guards and
+what no check does — S-15b's range check before every `=>!` is review's
+(TM-240). The self-check plants 92 tree-check violations, each new one red
+against the check before it, and `src/` changed in comments only. A full
+invocation is **131 units green** at pin `5fbaf4a`.
 
 **After cycle 0.2.3: the `Duration` interop.** `src/span/` adds four
 constructors to the prelude's `Duration` — `duration_mins`, `duration_hours`,
@@ -457,8 +477,10 @@ TM-007 stands and O-X2 and O-Z1 close.
 
 **After cycle 0.0.4: the first library code.** `src/core/` holds
 `vec.npk` (`Vec<T>`, nine functions), `bytes.npk` (`Bytes`, eleven) and
-`limits.npk` (thirteen named bounds, each with the rule that set it). The
-umbrella re-exports **35** names, one line each. The other five directories are
+`limits.npk` (thirteen named constants, eleven bounds and two unit
+conversions, each with the rule that set it *("thirteen named bounds" until
+cycle 0.2.4a, the cycle audit's K5)*). The umbrella re-exports **35** names,
+one line each. The other five directories are
 still placeholders that parse and are **replaced, not deleted**, by the cycle
 named in each header — and `src/core/core.npk` survives as that directory's
 LAYER NOTE, which is what the five point at. `harness/` is the runner

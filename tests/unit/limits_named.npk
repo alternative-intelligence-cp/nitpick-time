@@ -9,6 +9,13 @@
 // `CALENDAR.md` §2 states, so a wrong literal is a red run rather than a wrong
 // date in cycle 0.6.
 //
+// AND MORE THAN §2's (dated at cycle 0.2.4a -- the cycle audit's K3). It holds
+// `CALENDAR.md` C-4's symmetric years (exits 13 and 14), `ZONE_MODEL.md`
+// Z-19's offset (15 and 16), `SAFETY.md` S-16's two conversion factors (17 and
+// 18), two bounds' own numbers (19 and 20), the digit buffer's width (21), and
+// since cycle 0.2.3 `SPAN_MODEL.md` N-3's two `Duration` ends (22 and 23). The
+// sentence above is the file's founding purpose, not a list of what it holds.
+//
 // IT IS NOT THE RECOMPUTATION TEST. `limits.npk`'s header and `0.0.4.md` §4
 // both said cycle 0.1 would add a test that RECOMPUTES the four range
 // constants from the calendar algorithm, and cycle 0.1.1 did:

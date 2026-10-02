@@ -1015,6 +1015,66 @@ PLANTED = [
      ("src/core/limits.npk",
       "mod:limits;\npub fixed int64:NTIME_NANOS_PER_SEC = 1_000_000_000i64;\n"),
      "1000000000 as `1_000_000_000i64`, which belongs to module `core`"),
+    # A `core` NUMBER IN `core` BUT NOT IN `limits.npk` (cycle 0.2.4a, the
+    # cycle audit's C3): the check let a copy stand anywhere in the module,
+    # and S-16 says the one copy is the file's. The control is the one copy.
+    (checks_mod.check_constants_named,
+     ("src/core/bytes.npk", "mod:bytes;\nfunc:f = int64(int64:s) never fails "
+                            "{ pass s / 86400i64; };\n"),
+     ("src/core/limits.npk",
+      "mod:limits;\npub fixed int64:NTIME_SECS_PER_DAY = 86400i64;\n"),
+     "is spelled in `src/core/limits.npk` alone"),
+    # A `cal` NUMBER IN `core`: Hinnant's era constant is `src/cal/`'s.
+    (checks_mod.check_constants_named,
+     ("src/core/vec.npk", "mod:vec;\nfunc:f = int64(int64:z) never fails "
+                          "{ pass z / 146097i64; };\n"),
+     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64(int64:z) never fails "
+                         "{ pass z / 146097i64; };\n"),
+     "is spelled in `src/cal/` alone"),
+    # A BOUND SPELLED BY ITS VALUE (C8): `limits.npk` declares the range's last
+    # second, and `span` divides by the number rather than by the name.
+    # The control divides by the second before it, which is no bound.
+    (checks_mod.check_constants_named,
+     [("src/core/limits.npk",
+       "mod:limits;\npub fixed int64:NTIME_SECS_MAX = 253402300799i64;\n"),
+      _div("253402300799i64")],
+     [("src/core/limits.npk",
+       "mod:limits;\npub fixed int64:NTIME_SECS_MAX = 253402300799i64;\n"),
+      _div("253402300798i64")],
+     "the value of the bound `NTIME_SECS_MAX`"),
+    # THE FOLDED MINIMUM IS ITS VALUE, NEVER ITS PARTS: -2^63 spelled in
+    # `int128` is the bound; the `0` and the `1` the fold is written with are
+    # not, and the control holds both.
+    (checks_mod.check_constants_named,
+     [("src/core/limits.npk", "mod:limits;\npub fixed int64:NTIME_DURATION_NS_MIN"
+                              " = (0i64 - 9223372036854775807i64) - 1i64;\n"),
+      _div("9223372036854775808i128")],
+     [("src/core/limits.npk", "mod:limits;\npub fixed int64:NTIME_DURATION_NS_MIN"
+                              " = (0i64 - 9223372036854775807i64) - 1i64;\n"),
+      ("src/span/span.npk", "mod:span;\nfunc:f = int64(int64:s) never fails "
+                            "{ pass (s - 0i64) + 1i64; };\n")],
+     "the value of the bound `NTIME_DURATION_NS_MIN`"),
+    # A SMALL BOUND IS READ BY REVIEW: the GOOD column is the point --
+    # `NTIME_PARSE_MAX`'s 128 is in `nitpick-regex`'s `_SMALL` set (its
+    # RX-062), and a 128 in `span` is structure as often as policy. And the
+    # BAD column's 9999 is two bounds' value, `NTIME_YEAR_MIN` negated, so the
+    # finding names both: a literal does not say which it meant.
+    (checks_mod.check_constants_named,
+     [("src/core/limits.npk",
+       "mod:limits;\npub fixed int64:NTIME_YEAR_MIN = -9999i64;\n"
+       "pub fixed int64:NTIME_YEAR_MAX = 9999i64;\n"),
+      _div("9999i64")],
+     [("src/core/limits.npk",
+       "mod:limits;\npub fixed int64:NTIME_PARSE_MAX = 128i64;\n"),
+      _div("128i64")],
+     "the value of the bound `NTIME_YEAR_MIN` or `NTIME_YEAR_MAX`"),
+    # A BOUND THE CHECK CANNOT EVALUATE is reported, never passed.
+    (checks_mod.check_constants_named,
+     ("src/core/limits.npk",
+      "mod:limits;\npub fixed int64:NTIME_SECS_MAX = NTIME_SECS_MIN + 1i64;\n"),
+     ("src/core/limits.npk",
+      "mod:limits;\npub fixed int64:NTIME_SECS_MAX = 253402300799i64;\n"),
+     "with an initializer this check cannot evaluate"),
     (checks_mod.check_constants_named,
      ("src/cal/cal.npk", "mod:cal;\nfixed int64:YEAR_MAX = 9999i64;\n"),
      ("src/core/limits.npk", "mod:limits;\nfixed int64:YEAR_MAX = 9999i64;\n"),
@@ -1337,6 +1397,17 @@ PLANTED = [
      _fmt("pub func:f = Vec<uint8[]>(int64:n) never fails { pass n; };"),
      _fmt("pub func:f = Vec<int64>(int64:n) never fails { pass n; };"),
      "its type argument `uint8[]`"),
+    # AN OPTIONAL OF A VIEW (cycle 0.2.4a, the cycle audit's C4): "the rest,
+    # or none" -- the result cycle 0.4's parsers will want first -- each
+    # beside the same optional of an integer, which owns nothing.
+    (checks_mod.check_no_view_returns,
+     _fmt("pub func:f = uint8[]?(uint8[]:src) never fails { pass NIL; };"),
+     _fmt("pub func:f = int64?(uint8[]:src) never fails { pass NIL; };"),
+     "an optional of a view (`uint8[]` is a slice)"),
+    (checks_mod.check_no_view_returns,
+     _fmt("pub func:f = cstring?(cstring:src) never fails { pass NIL; };"),
+     _fmt("pub func:f = int64?(cstring:src) never fails { pass NIL; };"),
+     "an optional of a view (a `cstring`)"),
     # AN `int128` WHERE §5 MARKS NO SITE -- the control is the same function,
     # marked.
     (checks_mod.check_int128_sites,
@@ -1379,6 +1450,22 @@ PLANTED = [
       ("src/span/span.npk", "mod:span;\n")],
      [_span5((("`g`", "**yes**"),)), ("src/span/span.npk", "mod:span;\n")],
      "no table with an `int128` column"),
+    # A WIDER TYPE WHERE §5 MARKS NO SITE (cycle 0.2.4a, the cycle audit's
+    # D1): an `int256` and a `uint128` intermediate, each narrowed by a bare
+    # `=>!`, beside the same function marked -- N-20's reason is every width
+    # past 64 bits, and the check read `int128` alone.
+    (checks_mod.check_int128_sites,
+     [_span5((("`f`", "**yes**"),)),
+      ("src/span/span.npk", "mod:span;\n" + _wide("g").replace("int128", "int256"))],
+     [_span5((("`g`", "**yes**"),)),
+      ("src/span/span.npk", "mod:span;\n" + _wide("g").replace("int128", "int256"))],
+     "spells `int256` in `g`"),
+    (checks_mod.check_int128_sites,
+     [_span5((("`f`", "**yes**"),)),
+      ("src/span/span.npk", "mod:span;\n" + _wide("g").replace("int128", "uint128"))],
+     [_span5((("`g`", "**yes**"),)),
+      ("src/span/span.npk", "mod:span;\n" + _wide("g").replace("int128", "uint128"))],
+     "spells `uint128` in `g`"),
     # A DIGIT SEPARATOR -- the dispatch's measured case, `86_400i64`.
     (checks_mod.check_constants_named, _div("86_400i64"), _div("86_401i64"),
      "belongs to module `core`"),

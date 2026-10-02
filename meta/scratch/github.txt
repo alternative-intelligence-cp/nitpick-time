@@ -1,8 +1,8 @@
 Proposed GitHub metadata for alternative-intelligence-cp/nitpick-time.
 Written by the planning pass; apply after review.
 
---- description (350 char limit; this is 218) ---
-Dates, times and time zones for Nitpick — zero dependency, no libc, no system tzdb. The IANA database is compiled in from a pinned release, so the same program gives the same answer on every machine. Monotonic and wall clocks are different types.
+--- description (350 char limit; this is 258) ---
+Dates, times and time zones for Nitpick — zero dependency, no libc, no system tzdb. The IANA database is compiled in from a pinned release, so the same program gives the same answer on every machine. Monotonic readings and UTC timestamps are different types.
 
 --- topics (20 max, lowercase, alphanumeric and hyphens) ---
 datetime

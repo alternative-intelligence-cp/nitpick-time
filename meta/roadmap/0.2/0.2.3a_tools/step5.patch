@@ -556,3 +556,16 @@ index 04f72d1317650e408c8de3f43bf8f67511b84165..7a83aa40b198a66893456c662bb9f9d9
  // SAFETY.md S-15b and SPAN_MODEL.md N-20b written against it. Probe 02's
  // `ns_add_checked` is the shape they require.
  //
+diff --git a/tests/probe/probe02c_narrow_refused.npk b/tests/probe/probe02c_narrow_refused.npk
+index 569053e2dd9ac08585eb0d4322f031429f2e22ef..a0e29d6f803a496cfd17219e89008b0c292bcbcb 100644
+--- a/tests/probe/probe02c_narrow_refused.npk
++++ b/tests/probe/probe02c_narrow_refused.npk
+@@ -25,7 +25,7 @@
+ // Because neither spelling checks at run time, the range test at each of
+ // SPAN_MODEL.md §5's three `int128` sites is ORDINARY LIBRARY CODE that must
+ // be written, and `VERIFICATION.md` P-5's `prove` documents it rather than
+-// replacing it.
++// replacing it. (Since 0.2.3a, TM-229: each that NARROWS; the third does not.)
+ mod:probe02c_narrow_refused;
+ 
+ func:main = int32(cstring[]:_~argv) {

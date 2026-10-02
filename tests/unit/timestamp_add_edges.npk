@@ -1,0 +1,222 @@
+// expect-exit: 0
+//
+// `timestamp_add` at every boundary it decides, from both sides; every
+// `Timestamp` it returns normalised and in the range, whatever it is handed;
+// and a seeded sequence of a hundred thousand additions held to an `int128`
+// count of nanoseconds (cycle 0.2.3; `VERIFICATION.md` P-4 and P-3,
+// `TIME_MODEL.md` M-7 and M-8, `SPAN_MODEL.md` §5's second row).
+//
+// ASKS: does `timestamp_add` move a `Timestamp` by exactly a `Duration`'s
+// nanoseconds -- borrowing a second when the `Duration`'s remainder is
+// negative, carrying one when the two remainders pass a second -- and refuse
+// exactly the sums that leave the range?
+//
+// MATTERS BECAUSE it is the first operation that must RE-ESTABLISH M-7 rather
+// than refuse it (TM-220): `timestamp_of` refuses a `nanos` outside one second,
+// and a sum of two remainders is one, so this function carries. THIS FILE
+// EXTENDS P-4'S STAND-IN TO IT (P-1b), beside
+// `tests/unit/timestamp_construct.npk`, `tests/unit/civil_to_utc_edges.npk` and
+// the seal's two probes: no sequence of additions, negative durations included,
+// yields a `nanos` outside one second.
+//
+// THE CASES. Written, each verdict and answer below: a carry, a borrow, each
+// the other way, and none, from the epoch; the `Duration`'s two ends from the
+// epoch and from a remainder that carries; and both sides of the range's top
+// and bottom -- by a nanosecond, by a second, and by a `Duration` at its end.
+// Forged through `wild` storage, as `tests/unit/civil_to_utc_edges.npk` forges,
+// the opt-out `CALENDAR.md` C-8c names: a `nanos` of one and a half seconds,
+// which one carry repairs; one of 2^32 - 1, which one carry cannot, and which a
+// `timestamp_add` writing its own `Timestamp` literal would hand back
+// denormalised; and a second past the range, moved back into it and not. And
+// SEEDED: 100 000 additions from the epoch, the `Duration`s from a 64-bit
+// xorshift begun at the seed this file commits -- every odd step one over the
+// whole of `int64`, every even step one within a second either way, so the
+// carries and the borrows are a quarter of the steps each -- each answer held
+// to the `int128` sum of its nanoseconds, its refusal to that sum's place
+// outside the range, and the counts to a transcription of the same steps in
+// Python: 99 511 accepted, 489 refused, 206 of them above the range and 283
+// below.
+//
+// THE ORDER is the sequence first, then the forged, then the written: each
+// later section asks what the earlier cannot -- the forged whether an answer is
+// a `Timestamp` when the constructor's own check is all that stands between a
+// carry and a denormalised value, the written the exact edges no random step
+// lands on.
+//
+// EXIT CODES, clear of every arm code (TM-152): 40 a written case's verdict or
+// answer not the table's; 41 an answer's `nanos` not below one second -- M-7
+// itself, held apart from every table and asked of every answer, written,
+// forged or sequenced; 42 an answer's seconds outside the range -- M-8, the
+// same; 43 a forged `Timestamp` did not read back; 44 the epoch refused, or a
+// step's verdict not the `int128` sum's; 45 a step's answer not the sum; 46 the
+// counts not the transcription's. SEEN RED AT PLANNING, on both legs, in a copy
+// of the tree (`meta/roadmap/0.2/0.2.3.md`, step 3): 44 with the borrow
+// deleted, and with the carry; 45 with either keeping its second, with the
+// remainder dropped, and with the seconds; 42 with `timestamp_add` writing its
+// own `Timestamp` literal, and with `timestamp_of`'s upper bound deleted; 41
+// with `timestamp_of`'s `nanos` check deleted, and with `timestamp_add` writing
+// its own literal behind a range check of its own -- each the forged 2^32 - 1
+// coming back denormalised; 40 with the borrow only below -1, the carry only
+// past a second, and `timestamp_of`'s lower bound one high. 43 and 46 are
+// reached only by editing this file, and were so measured: 43 with the forge
+// declaring its two fields the other way round, 46 with the sequence a step
+// short.
+//
+// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
+// `span`: its eleven (`SAFETY.md` S-4).
+mod:timestamp_add_edges;
+
+use "../../src/span/span.npk".*;
+
+// `Timestamp` field for field, unsealed -- the forge's shape.
+struct:RawTs = { int64:secs; uint32:nanos; };
+
+fixed int64:LO_SECS = -377705116800i64;          // the range's first second
+fixed int64:HI_SECS = 253402300799i64;           // and its last
+fixed int64:NANOS = 1000000000i64;
+
+// The written cases: `t`, `d`, and whether the sum is in the range and what it
+// is. Rows 7 ... 14 sit at the range's two edges.
+fixed int64[15]:TS   = [ 0i64, 0i64, 0i64, -1i64, 0i64, 0i64, 0i64,
+                         253402300799i64, 253402300799i64, 253402300799i64, 253402300799i64,
+                         -377705116800i64, -377705116800i64, -377705116800i64, -377705116800i64 ];
+fixed int64[15]:TN   = [ 0i64, 999999999i64, 0i64, 999999999i64, 500000000i64, 500000000i64, 999999999i64,
+                         999999999i64, 999999999i64, 0i64, 0i64,
+                         0i64, 1i64, 0i64, 999999999i64 ];
+fixed int64[15]:DN   = [ 1i64, 1i64, -1i64, 1i64, 999999999i64, -999999999i64, 0i64,
+                         0i64, 1i64, 999999999i64, 1000000000i64,
+                         -1i64, -1i64, -1000000000i64, -999999999i64 ];
+fixed bool[15]:IN    = [ true, true, true, true, true, true, true,
+                         true, false, true, false,
+                         false, true, false, true ];
+fixed int64[15]:WS   = [ 0i64, 1i64, -1i64, 0i64, 1i64, -1i64, 0i64,
+                         253402300799i64, 0i64, 253402300799i64, 0i64,
+                         0i64, -377705116800i64, 0i64, -377705116800i64 ];
+fixed int64[15]:WN   = [ 1i64, 0i64, 999999999i64, 0i64, 499999999i64, 500000001i64, 999999999i64,
+                         999999999i64, 0i64, 999999999i64, 0i64,
+                         0i64, 0i64, 0i64, 0i64 ];
+
+func:main = int32(cstring[]:_~argv) {
+    // `int64`'s two ends, a `Duration`'s: the maximum as a constant bit
+    // pattern (TM-149), the minimum one below its negation.
+    int64:dmax = ((~0u64) >> 1u64) =>! int64;
+    int64:dmin = (0i64 - dmax) - 1i64;
+
+    // ---- the seeded sequence ----------------------------------------------
+    // The range in nanoseconds, in `int128`: its first nanosecond and its last.
+    int128:lo = (LO_SECS => int128) * (NANOS => int128);
+    int128:hi = ((HI_SECS => int128) * (NANOS => int128)) + ((NANOS - 1i64) => int128);
+    Result<Timestamp>:t0 = timestamp_of(0i64, 0i64);
+    if (t0.is_error) { exit 44i32; }
+    Timestamp:t = t0.value;
+    uint64:x = 20261001u64;
+    int64:accepted = 0i64;
+    int64:refused = 0i64;
+    for (int64:k in 1i64..100000i64) {
+        x = x ^ (x << 13u64);
+        x = x ^ (x >> 7u64);
+        x = x ^ (x << 17u64);
+        int64:dn = x =>! int64;
+        if ((k % 2i64) == 0i64) {
+            dn = ((x % 2000000000u64) =>! int64) - 1000000000i64;
+        }
+        int128:want = ((t.secs => int128) * (NANOS => int128)) + (t.nanos => int128) + (dn => int128);
+        Result<Timestamp>:r = timestamp_add(t, raw duration_ns(dn));
+        if (r.is_error) {
+            if (want >= lo && want <= hi) { exit 44i32; }
+            refused = refused + 1i64;
+        } else {
+            Timestamp:u = r.value;
+            int32:m = raw check_answer(u);
+            if (m != 0i32) { exit m; }
+            if (want < lo || want > hi) { exit 44i32; }
+            if ((((u.secs => int128) * (NANOS => int128)) + (u.nanos => int128)) != want) { exit 45i32; }
+            t = u;
+            accepted = accepted + 1i64;
+        }
+    }
+    if (accepted != 99511i64 || refused != 489i64) { exit 46i32; }
+    if (t.secs != -78690499287i64 || (t.nanos => int64) != 983031784i64) { exit 46i32; }
+
+    // ---- forged `Timestamp`s: whatever it is handed, an answer is one -----
+    wild int8->:mem = alloc(#size_of<Timestamp>());
+    int32:f = raw check_forged(mem, 0i64, 1500000000u32, 0i64);
+    if (f == 0i32) { f = raw check_forged(mem, 0i64, 4294967295u32, 0i64); }
+    if (f == 0i32) { f = raw check_forged(mem, HI_SECS + 1i64, 0u32, 0i64 - NANOS); }
+    if (f == 0i32) { f = raw check_forged(mem, HI_SECS + 1i64, 0u32, 0i64); }
+    dalloc(mem);
+    if (f != 0i32) { exit f; }
+
+    // ---- the written cases -------------------------------------------------
+    for (int64:i in 0i64..14i64) {
+        int32:e = raw check_case(TS[i], TN[i], DN[i], IN[i], WS[i], WN[i]);
+        if (e != 0i32) { exit e; }
+    }
+    // The `Duration`'s ends, from the epoch and from a remainder that carries;
+    // and at the range's edges, a `Duration` at its end lands exactly on the
+    // first and the last second, and a nanosecond more leaves.
+    int32:e2 = raw check_case(0i64, 0i64, dmax, true, 9223372036i64, 854775807i64);
+    if (e2 == 0i32) { e2 = raw check_case(0i64, 0i64, dmin, true, -9223372037i64, 145224192i64); }
+    if (e2 == 0i32) { e2 = raw check_case(0i64, 999999999i64, dmax, true, 9223372037i64, 854775806i64); }
+    if (e2 == 0i32) { e2 = raw check_case(HI_SECS - 9223372036i64, 145224192i64, dmax, true, HI_SECS, 999999999i64); }
+    if (e2 == 0i32) { e2 = raw check_case(HI_SECS - 9223372036i64, 145224193i64, dmax, false, 0i64, 0i64); }
+    if (e2 == 0i32) { e2 = raw check_case(LO_SECS + 9223372036i64, 854775808i64, dmin, true, LO_SECS, 0i64); }
+    if (e2 == 0i32) { e2 = raw check_case(LO_SECS + 9223372036i64, 854775807i64, dmin, false, 0i64, 0i64); }
+    if (e2 != 0i32) { exit e2; }
+    exit 0i32;
+};
+
+// 0, or 41 / 42 when an answer is not a `Timestamp` -- M-7, M-8.
+func:check_answer = int32(Timestamp:u) never fails {
+    if ((u.nanos => int64) >= NANOS)          { pass 41i32; }
+    if (u.secs < LO_SECS || u.secs > HI_SECS) { pass 42i32; }
+    pass 0i32;
+};
+
+// 0, or the exit code of the first thing wrong with `t + d` against the
+// verdict and the answer written for it.
+func:check_case = int32(int64:ts, int64:tn, int64:dn, bool:inr, int64:ws, int64:wn) never fails {
+    Result<Timestamp>:t = timestamp_of(ts, tn);
+    if (t.is_error) { pass 40i32; }
+    Result<Timestamp>:r = timestamp_add(t.value, raw duration_ns(dn));
+    if (r.is_error) {
+        if (inr) { pass 40i32; }
+        pass 0i32;
+    }
+    Timestamp:u = r.value;
+    int32:m = raw check_answer(u);
+    if (m != 0i32) { pass m; }
+    if (!inr || u.secs != ws || (u.nanos => int64) != wn) { pass 40i32; }
+    pass 0i32;
+};
+
+// `t + d` for a `Timestamp` forged through `wild` storage at `mem`, read back
+// field by field first: refused, or a `Timestamp`.
+func:check_forged = int32(wild int8->:mem, int64:ts, uint32:tn, int64:dn) never fails {
+    wild RawTs->:w = mem =>! wild RawTs->;
+    <-w = RawTs{ secs: ts, nanos: tn };
+    wild Timestamp->:p = mem =>! wild Timestamp->;
+    Timestamp:t = <-p;
+    if (t.secs != ts || t.nanos != tn) { pass 43i32; }
+    Result<Timestamp>:r = timestamp_add(t, raw duration_ns(dn));
+    if (r.is_error) { pass 0i32; }
+    pass (raw check_answer(r.value));
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

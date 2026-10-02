@@ -80,7 +80,7 @@ sibling libraries.
 |---|---|---|
 | ~~**0.0**~~ | **Foundations** — the language probes, the harness, `src/core/` — **CLOSED 2026-09-06, archived at [`done/0.0/`](done/0.0/README.md)** | — |
 | ~~**0.1**~~ | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **CLOSED 2026-09-26, archived at [`done/0.1/`](done/0.1/README.md)** | 0.0 ✓ |
-| **0.2** | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **IN PROGRESS**: [`0.2/0.2.0a.md`](0.2/0.2.0a.md), the adoption of compiler `5fbaf4a`, done; [`0.2/0.2.0b.md`](0.2/0.2.0b.md), `Vec<T: Copy>`, done; [`0.2/0.2.0.md`](0.2/0.2.0.md), `Instant`, done; [`0.2/0.2.1.md`](0.2/0.2.1.md), `Timestamp`, done; [`0.2/0.2.2.md`](0.2/0.2.2.md), the conversions and the gate, done; [`0.2/0.2.3a.md`](0.2/0.2.3a.md), the instruments, done; [`0.2/0.2.3.md`](0.2/0.2.3.md), the `Duration` interop, next | 0.1 ✓ |
+| **0.2** | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **IN PROGRESS**: [`0.2/0.2.0a.md`](0.2/0.2.0a.md), the adoption of compiler `5fbaf4a`, done; [`0.2/0.2.0b.md`](0.2/0.2.0b.md), `Vec<T: Copy>`, done; [`0.2/0.2.0.md`](0.2/0.2.0.md), `Instant`, done; [`0.2/0.2.1.md`](0.2/0.2.1.md), `Timestamp`, done; [`0.2/0.2.2.md`](0.2/0.2.2.md), the conversions and the gate, done; [`0.2/0.2.3a.md`](0.2/0.2.3a.md), the instruments, done; [`0.2/0.2.3.md`](0.2/0.2.3.md), the `Duration` interop, done; 0.2.4, the close, next | 0.1 ✓ |
 | **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double | 0.2 |
 | **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate | 0.2 |
 | **0.5** | **The zone table** — the generator, the committed tables, the size measurement | 0.1 |
@@ -161,7 +161,8 @@ the cycle found and taught.
 ### 0.2 — Instants and timestamps
 `src/span/`: `Instant` with its clock tag, `Timestamp` with its normalisation
 invariant, the `Duration` constructors `ntime` adds, `timestamp_since` with its
-±292-year refusal, and `timestamp_until` in calendar units.
+±292-year refusal, and `timestamp_until` in calendar units. *(`timestamp_until`
+moved to cycle 0.7.3 at 0.2.3's planning, beside `date_until`: TM-237.)*
 
 **The cycle's gate:** the `Timestamp` ↔ civil round trip over every day
 boundary in the range plus every second of 512 randomly chosen days, and a
@@ -204,7 +205,8 @@ second — plus the per-zone round trip over every hour from 1970 to 2040, plus
 the cross-oracle against Python's `zoneinfo` at the same pinned release.
 
 ### 0.7 — Calendar arithmetic
-`Period` addition with the clamping rules, `until` in units, `truncate_to` and
+`Period` addition with the clamping rules, `until` in units — `timestamp_until`
+among them since cycle 0.2.3 moved it here, TM-237 — `truncate_to` and
 `round_to`, and the wall-versus-instant rule on zoned values.
 
 Also the **dogfood consumers** (Q-4): a `date`-equivalent CLI and a small

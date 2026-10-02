@@ -7,12 +7,14 @@
 // one second (cycle 0.2.1; `TIME_MODEL.md` §3 and M-6 ... M-8, TM-219 and
 // TM-220); and the two conversions between that scale and the civil one,
 // `timestamp_to_utc` and `civil_to_utc` (cycle 0.2.2; `TIME_MODEL.md` M-11 and
-// §9, TM-222). The `Duration` interop -- `timestamp_add`, `timestamp_since` and
-// the constructors `ntime` adds -- is 0.2.3's, and the clocks themselves cycle
-// 0.3's: `host_now_instant` and `host_now_boot` will build their answers
-// through `instant_of`, and `host_now_utc` through `timestamp_of`, which is why
-// both are public. (Until cycle 0.2.2 this said the conversions were that
-// cycle's.)
+// §9, TM-222); and the `Duration` interop -- the four constructors `ntime` adds
+// to the prelude's, `timestamp_add` and `timestamp_since` (cycle 0.2.3;
+// `SPAN_MODEL.md` N-2 and §5, `TIME_MODEL.md` M-18 and M-20, TM-233 ...
+// TM-236). The clocks themselves are cycle 0.3's: `host_now_instant` and
+// `host_now_boot` will build their answers through `instant_of`, and
+// `host_now_utc` through `timestamp_of`, which is why both are public. (Until
+// cycle 0.2.2 this said the conversions were that cycle's, and until cycle
+// 0.2.3 that the interop was.)
 //
 // A TIMEOUT CANNOT BE WRITTEN AGAINST A WALL CLOCK, and this module is half of
 // why: there is no conversion between an `Instant` and anything else (TM-010),
@@ -124,13 +126,50 @@
 // `instant_add` overflows only 292 years past the clock's origin, and traps
 // there (D-210), as `TIME_MODEL.md` §8 has said since cycle 0.0.
 //
+// FOUR CONSTRUCTORS, AND NO TYPE (TM-004, N-2; TM-233). `duration_mins`,
+// `duration_hours`, `duration_days` and `duration_weeks` multiply in `int64` and
+// hand the seconds to the prelude's `duration_secs`, whose own multiplication by
+// 10^9 traps past `Duration`'s ±292 years -- D-210's `IntOverflow`, which is the
+// constructors' range check, as it is the prelude's; so each is `never fails`.
+// A day is exactly 86 400 x 10^9 nanoseconds, `NTIME_SECS_PER_DAY` read by name,
+// and NOT a calendar day: in a zone with DST a day is 23 or 25 hours, and
+// `Period{ days: 1 }` is the thing that means the same wall time tomorrow
+// (`SPAN_MODEL.md` N-2's note, §3). A week is seven of them.
+//
+// `timestamp_add` RE-ESTABLISHES M-7 RATHER THAN REFUSING IT (TM-234). It
+// splits the `Duration` by `/` and `%`, which truncate, so the remainder keeps
+// `d`'s sign; added to `t.nanos`, the nanoseconds lie in (-10^9, 2 x 10^9), and
+// one borrow or one carry puts them back in [0, 10^9). The answer is built by
+// `timestamp_of`, the one constructor, so the range check is its own, and a sum
+// outside the range is `ETimeValue` -- `ValueFault.YearRange`, as every `secs`
+// outside the range is. Nothing here can trap for a `Timestamp` the
+// constructors made: a `Duration` moves the seconds by at most 9.3 x 10^9. A
+// `Timestamp` forged through the opt-out is answered with a `Timestamp` or
+// refused, whatever it holds (`tests/unit/timestamp_add_edges.npk`,
+// `VERIFICATION.md` P-4's stand-in for this function, TM-235).
+//
+// `timestamp_since` COMPUTES IN `int128` AND NARROWS ONCE (TM-236; M-18, M-20).
+// Two readings' seconds differ by as much as the range is wide, about 6.3 x
+// 10^11, and times 10^9 that passes `int64` beyond ±292 years, `Duration`'s
+// range; so the difference is computed in `int128` -- which holds the
+// difference of any two `int64`s times 10^9, so even a forged pair cannot
+// overflow it -- checked against `NTIME_DURATION_NS_MIN` and
+// `NTIME_DURATION_NS_MAX`, and refused past them, `ETimeValue`/`Overflow`: it
+// does not trap, saturate or lose precision.
+// `SPAN_MODEL.md` §5 marks it an `int128` site, and `check_int128_sites` holds
+// it to that. The difference is nominal -- the scale's, not the SI time that
+// elapsed between the readings, which leap seconds make different (M-12). The
+// calendar-scale answer, `timestamp_until`, is cycle 0.7.3's, beside
+// `date_until` (TM-237).
+//
 // WHAT IT MAY IMPORT: `cal` and `core` (`BUILD.md` B-17). It imports `cal` for
 // `ETimeValue` and, since cycle 0.2.2, for the three civil types and the three
 // functions the conversions are made of; and `core`'s `limits` for the three
-// bounds `timestamp_of` checks and, since 0.2.2, the seconds in a day -- each
-// number by name, because `src/core/limits.npk` holds the one copy of it and
-// `check_constants_named` refuses a second (`SAFETY.md` S-16, TM-223). (It
-// imported `cal` alone until cycle 0.2.1, and `cal`'s identity and nothing
+// bounds `timestamp_of` checks, since 0.2.2 the seconds in a day, and since
+// 0.2.3 `Duration`'s two ends -- each number by name, because
+// `src/core/limits.npk` holds the one copy of it and `check_constants_named`
+// refuses a second in any spelling (`SAFETY.md` S-16, TM-223, TM-231, TM-232).
+// (It imported `cal` alone until cycle 0.2.1, and `cal`'s identity and nothing
 // else of it until 0.2.2.)
 //
 // WHAT IT MUST NOT DECLARE: a `Duration` (TM-004). The prelude's is the
@@ -151,6 +190,8 @@ use "../core/limits.npk".NTIME_SECS_MIN;
 use "../core/limits.npk".NTIME_SECS_MAX;
 use "../core/limits.npk".NTIME_NANOS_PER_SEC;
 use "../core/limits.npk".NTIME_SECS_PER_DAY;
+use "../core/limits.npk".NTIME_DURATION_NS_MAX;
+use "../core/limits.npk".NTIME_DURATION_NS_MIN;
 
 #[derive(Eq, Clone, Debug, Copy)]
 pub enum:InstantClock = { Monotonic; Boottime; };
@@ -218,4 +259,60 @@ pub func:civil_to_utc = Timestamp(CivilDateTime:c) {
                 + ((c.time.minute => int64) * 60i64) + (c.time.second => int64);
     pass (relay timestamp_of((days * NTIME_SECS_PER_DAY) + sod,
                              c.time.nanos => int64));
+};
+
+// `ntime`'s four constructors (`SPAN_MODEL.md` N-2): each multiplies in `int64`
+// and hands the seconds to the prelude's `duration_secs`, whose own `* 10^9`
+// traps past `Duration`'s range -- the range check, so each is `never fails`.
+// A day is exactly 86 400 x 10^9 nanoseconds, and not a calendar day.
+pub func:duration_mins = Duration(int64:m) never fails {
+    pass raw duration_secs(m * 60i64);
+};
+
+pub func:duration_hours = Duration(int64:h) never fails {
+    pass raw duration_secs(h * 3600i64);
+};
+
+pub func:duration_days = Duration(int64:d) never fails {
+    pass raw duration_secs(d * NTIME_SECS_PER_DAY);
+};
+
+pub func:duration_weeks = Duration(int64:w) never fails {
+    pass raw duration_secs(w * 7i64 * NTIME_SECS_PER_DAY);
+};
+
+// The point `d` from `t` (§9). `/` and `%` truncate, so the remainder keeps
+// `d`'s sign and the nanoseconds come out in (-10^9, 2 x 10^9): one borrow or
+// one carry puts them back in [0, 10^9), and `timestamp_of` builds the answer.
+// `ensures answer.secs >= NTIME_SECS_MIN && answer.secs <= NTIME_SECS_MAX`
+// `ensures (answer.nanos => int64) < NTIME_NANOS_PER_SEC` -- `VERIFICATION.md`
+// P-3; comments until the verified build (P-1b), and stood in for by
+// `tests/unit/timestamp_add_edges.npk`.
+pub func:timestamp_add = Timestamp(Timestamp:t, Duration:d) {
+    int64:secs = t.secs + (d.ns / NTIME_NANOS_PER_SEC);
+    int64:nanos = (t.nanos => int64) + (d.ns % NTIME_NANOS_PER_SEC);
+    if (nanos < 0i64) {                              // `%` kept `d`'s sign: borrow
+        secs = secs - 1i64;
+        nanos = nanos + NTIME_NANOS_PER_SEC;
+    }
+    if (nanos >= NTIME_NANOS_PER_SEC) {              // past a second: carry
+        secs = secs + 1i64;
+        nanos = nanos - NTIME_NANOS_PER_SEC;
+    }
+    pass (relay timestamp_of(secs, nanos));          // ValueFault.YearRange outside
+};
+
+// The nominal span from `earlier` to `later`, in nanoseconds (M-18). Computed
+// in `int128` (M-20; `SPAN_MODEL.md` §5 marks the row), checked against
+// `Duration`'s range, and narrowed once:
+// `prove(ns >= (NTIME_DURATION_NS_MIN => int128)
+//        && ns <= (NTIME_DURATION_NS_MAX => int128))` -- P-5, before the
+// narrowing; a comment until the verified build (P-1b).
+pub func:timestamp_since = Duration(Timestamp:later, Timestamp:earlier) {
+    int128:ns = (((later.secs => int128) - (earlier.secs => int128))
+                 * (NTIME_NANOS_PER_SEC => int128))
+                + ((later.nanos => int128) - (earlier.nanos => int128));
+    if (ns > (NTIME_DURATION_NS_MAX => int128)) { fail ETimeValue; }   // Overflow
+    if (ns < (NTIME_DURATION_NS_MIN => int128)) { fail ETimeValue; }   // Overflow
+    pass raw duration_ns(ns =>! int64);
 };

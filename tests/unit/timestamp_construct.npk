@@ -19,8 +19,9 @@
 // for the constructor, a statement about this function -- checked here at
 // every boundary it decides, from both sides -- and each cycle that adds an
 // operation adds it to the statement: cycle 0.2.2's `civil_to_utc` in
-// `tests/unit/civil_to_utc_edges.npk`, and 0.2.3's `timestamp_add` next. (Until
-// cycle 0.2.2 this said both were still to come.)
+// `tests/unit/civil_to_utc_edges.npk`, and 0.2.3's `timestamp_add` in
+// `tests/unit/timestamp_add_edges.npk`. (Until cycle 0.2.2 this said both were
+// still to come, and until 0.2.3 that `timestamp_add` was next.)
 //
 // THE CASES are the cross product of eleven `secs` -- `int64`'s two ends, one
 // past each end of the range, each end, one inside each end, and the epoch's

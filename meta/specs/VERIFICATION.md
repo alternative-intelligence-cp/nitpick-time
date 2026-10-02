@@ -159,11 +159,21 @@ pub func:civil_date = CivilDate(int32:year, uint8:month, uint8:day)
 { … };
 
 pub func:timestamp_add = Timestamp(Timestamp:t, Duration:d)
-    requires (t.nanos < 1000000000u32)
-    ensures  (result.secs >= SECS_MIN && result.secs <= SECS_MAX)
-    ensures  (result.nanos < 1000000000u32)
+    ensures  (answer.secs >= NTIME_SECS_MIN && answer.secs <= NTIME_SECS_MAX)
+    ensures  ((answer.nanos => int64) < NTIME_NANOS_PER_SEC)
 { … };
 ```
+
+*(Restated at cycle 0.2.3, TM-235, when `timestamp_add` was written. Its
+sample read `requires (t.nanos < 1000000000u32)`, `ensures (result.secs >=
+SECS_MIN && result.secs <= SECS_MAX)` and `ensures (result.nanos <
+1000000000u32)`: `src/core/limits.npk` spells the bounds `NTIME_SECS_MIN` and
+`NTIME_SECS_MAX` (`BUILD.md` B-15), `result` is reserved and this library
+writes `answer` (TM-130), and the `requires` goes — P-1b puts none on an
+argument a caller supplies, and the function answers whatever it is handed.
+Both `ensures` are comments at the function, by P-1b. `civil_date`'s sample
+above keeps cycle 0.0's notation; its contract as written is the comments
+beside it in `src/cal/cal.npk`.)*
 
 **Rule P-4 — the normalisation invariant is the one to prove first.**
 `nanos < 1_000_000_000` on every `Timestamp` that exists. It is a precondition
@@ -178,7 +188,13 @@ TM-225: and `civil_to_utc`, the first of them, by
 `tests/unit/civil_to_utc_edges.npk` — both sides of every boundary the
 conversion decides, the refusing side forged through `CALENDAR.md` C-8c's
 opt-out, and M-7 asserted of every value it returns. 0.2.3's `timestamp_add`
-is the other.)*
+is the other.)* *(Cycle 0.2.3, TM-235: and `timestamp_add`, the first
+operation that must re-establish M-7 rather than refuse it, by
+`tests/unit/timestamp_add_edges.npk` — a hundred thousand seeded additions
+held to an `int128` count of nanoseconds, `Timestamp`s forged denormalised
+and past the range answered with a `Timestamp` or refused, and both sides of
+every boundary it decides. It sees a `timestamp_add` writing its own
+`Timestamp` literal, behind a range check of its own or not, measured.)*
 
 **Rule P-5 — the `int128` sites** (`SPAN_MODEL.md` §5, N-20, N-20b) each carry
 a `prove` that the narrowing `=>!` cannot lose, **beside** the runtime range
@@ -233,7 +249,8 @@ checks, rather than a proof standing in for the check.
 N-20 states no count. The `prove` and the range check are owed where a site
 NARROWS — `timestamp_since` and `period_add`'s nanosecond step;
 `bytes_put_int`'s loop measure, the third marked row, computes in `int128` and
-compares, and narrows nothing.)*
+compares, and narrows nothing.)* *(Cycle 0.2.3, TM-236: `timestamp_since`'s is
+written, a comment before its one narrowing, beside its two checks.)*
 
 ---
 
@@ -278,7 +295,7 @@ the gap is written down here.
 |---|---|
 | after `days_to_date` | the result is in the supported range, and `date_to_days` of it returns the input — **written as comments at 0.1.1 (Q-6, TM-164)**: `prove(date_to_days(answer) == n)`, and the range half as an `ensures` comment, since the result is `civil_date`'s. **Stood in for, over the whole range, by `tests/unit/sweep/every_day_number.npk` and `every_civil_date.npk` since cycle 0.1.2** (TM-166) — P-1's property test, and the row P-11 hands over |
 | after `date_to_days` | the result is in `[DAY_MIN, DAY_MAX]` — **written as a comment at 0.1.1 (Q-6, TM-164)**: `ensures answer >= NTIME_DAY_MIN && answer <= NTIME_DAY_MAX`. **Stood in for, over the whole range, by `tests/unit/sweep/every_day_number.npk` and `every_civil_date.npk` since cycle 0.1.2** (TM-166) — P-1's property test, and the row P-11 hands over |
-| after every `Timestamp` construction | `nanos < 1_000_000_000` (P-4) — **written as a comment at 0.2.1 (TM-220)** at `timestamp_of`: `prove((answer.nanos => int64) < NTIME_NANOS_PER_SEC)`. **Stood in for by `tests/unit/timestamp_construct.npk` since cycle 0.2.1**, with the seal's two probes, and **by `tests/unit/civil_to_utc_edges.npk` since 0.2.2** for `civil_to_utc`'s (TM-225); 0.2.3 adds `timestamp_add`'s |
+| after every `Timestamp` construction | `nanos < 1_000_000_000` (P-4) — **written as a comment at 0.2.1 (TM-220)** at `timestamp_of`: `prove((answer.nanos => int64) < NTIME_NANOS_PER_SEC)`. **Stood in for by `tests/unit/timestamp_construct.npk` since cycle 0.2.1**, with the seal's two probes, **by `tests/unit/civil_to_utc_edges.npk` since 0.2.2** for `civil_to_utc`'s (TM-225), and **by `tests/unit/timestamp_add_edges.npk` since 0.2.3** for `timestamp_add`'s (TM-235) |
 | in the transition binary search | the invariant `trans[lo].at_utc <= target < trans[hi].at_utc` holds at every step |
 | after an offset lookup | `|offset| <= 64_800` |
 | after each `int128` narrowing — `timestamp_since`'s, and `period_add`'s nanosecond step's: the rows of `SPAN_MODEL.md` §5's `int128` column that narrow ("the three `int128` narrowings" until cycle 0.2.3a, TM-229) | the value fits (P-5) |

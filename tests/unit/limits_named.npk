@@ -84,6 +84,14 @@ func:main = int32(cstring[]:_~argv) {
     }
     if (digits != NTIME_DIGITS_MAX)                       { exit 21i32; }
 
+    // ---- `SPAN_MODEL.md` N-3: `Duration`'s range is `int64`'s -----------
+    // Both ends held to `int64`'s own, built from its bit pattern (TM-149):
+    // the maximum `~0u64 >> 1`, the minimum one below its negation. A bound
+    // a nanosecond short at either end is red here, where `timestamp_since`
+    // would refuse a difference `Duration` can hold (cycle 0.2.3, TM-236).
+    if (NTIME_DURATION_NS_MAX != (((~0u64) >> 1u64) =>! int64))        { exit 22i32; }
+    if (NTIME_DURATION_NS_MIN != ((0i64 - NTIME_DURATION_NS_MAX) - 1i64)) { exit 23i32; }
+
     exit 0i32;
 };
 

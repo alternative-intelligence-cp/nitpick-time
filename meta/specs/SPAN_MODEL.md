@@ -34,6 +34,12 @@ conversion would be the bug.
 > 25 hours long across a DST transition; `Period{ days: 1 }` is the thing that
 > means "the same wall time tomorrow". §3 is the whole of that distinction.
 
+*(Cycle 0.2.3, TM-233: written in `src/span/span.npk` as stated — each `raw
+duration_secs` of its argument times the unit's seconds, `NTIME_SECS_PER_DAY`
+by name — and held at every argument the hours', the days' and the weeks'
+ranges hold, and every 262nd minute, by `tests/unit/duration_ctors.npk`; the
+trap one past a day's two ends by two programs of their own.)*
+
 **Rule N-3 — the range is ±292.277 years** and it is `Duration`'s, not ours.
 `TIME_MODEL.md` §8 states where it bites and what happens: `timestamp_since`
 returns `ETimeValue`/`Overflow` rather than saturating or trapping.
@@ -197,7 +203,11 @@ the last row: a site in `src/core/bytes.npk` since cycle 0.1.0b that no row
 named, found when cycle 0.2.3 was planned. `timestamp_since`'s row read
 "checked, `ETimeValue`/`Overflow` (M-18)" — M-20 already put its arithmetic in
 `int128`. And the fourth row named the conversion `timestamp_to_civil`, which
-is `timestamp_to_utc` since cycle 0.2.2, TM-222.)*
+is `timestamp_to_utc` since cycle 0.2.2, TM-222.)* *(Cycle 0.2.3, TM-234:
+`timestamp_add`'s check is `timestamp_of`'s, relayed, so the detail its
+refusal would carry, when O-X8 delivers one, is `YearRange` — the range's own
+name for a `secs` outside it; `Overflow` is `timestamp_since`'s, where
+`Duration` cannot hold the answer.)*
 
 **Rule N-20 — the `int128` sites are the rows the table above marks in its
 `int128` column, and no other.** A whole-tree check, `check_int128_sites`,

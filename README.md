@@ -22,7 +22,11 @@ answer on every machine.
 > with one spelling per instant. Since cycle 0.2.2 a `Timestamp` converts
 > to its civil reading in UTC and back, and both directions are checked on
 > every full run, over both sides of every day boundary in the range and every
-> second of 512 days chosen at random. Zones, formats and the clocks are still
+> second of 512 days chosen at random. Since cycle 0.2.3 `ntime` adds the
+> minute, the hour, the day and the week to the prelude's `Duration` — a day
+> exactly 86 400 seconds, not a calendar day — moves a `Timestamp` by one, and
+> gives the span between two, refusing one past `Duration`'s ±292 years rather
+> than wrapping it. Zones, formats and the clocks are still
 > placeholders, each replaced by the cycle
 > [`meta/roadmap/ROADMAP.md`](meta/roadmap/ROADMAP.md) names. The specification
 > set is in [`meta/specs/`](meta/specs/) and the plan in

@@ -11,8 +11,34 @@ safety-critical systems language at `../../nitpick`.
 — the civil calendar, with its exhaustive gate on every run — and cycle 0.2,
 instants and timestamps, is OPEN: its 0.2.0a, the adoption of compiler
 `5fbaf4a`, its 0.2.0b, `Vec<T: Copy>`, its 0.2.0, `Instant`, its 0.2.1,
-`Timestamp`, its 0.2.2, the conversions and the cycle's gate, and its 0.2.3a,
-the instruments, are done, and 0.2.3, the `Duration` interop, is next.**
+`Timestamp`, its 0.2.2, the conversions and the cycle's gate, its 0.2.3a, the
+instruments, and its 0.2.3, the `Duration` interop, are done, and 0.2.4, the
+close, is next.**
+
+**After cycle 0.2.3: the `Duration` interop.** `src/span/` adds four
+constructors to the prelude's `Duration` — `duration_mins`, `duration_hours`,
+`duration_days` and `duration_weeks`, each one line over `duration_secs`,
+`never fails`, the prelude's trap past ±292 years their range check, and a
+day exactly 86 400 × 10⁹ nanoseconds and NOT a calendar day — each held to
+its exact product over its whole range, every 262nd argument for the minutes
+and every one for the rest, and the trap asserted one past a day's two ends
+(TM-233).
+**`timestamp_add`** moves a `Timestamp` by a `Duration`: the truncating `/`
+and `%` split it, one borrow or one carry re-establishes M-7, and
+`timestamp_of` builds the answer, so its range check is the constructor's,
+`ETimeValue`, `YearRange` (TM-234); **P-4's stand-in reaches it** through
+a hundred thousand seeded additions held to an `int128` count of nanoseconds,
+forged inputs and every boundary it decides, the forged the only cases that
+see a `timestamp_add` writing its own `Timestamp` literal behind a range
+check of its own (TM-235). **And
+`timestamp_since`** gives the nominal span between two in `int128`, refused
+past `Duration`'s two ends — `NTIME_DURATION_NS_MAX` and
+`NTIME_DURATION_NS_MIN`, named in `src/core/limits.npk` — and taken at each
+end exactly, from both sides (TM-236; `check_int128_sites` holds it to §5's
+marked row). `timestamp_until` is cycle 0.7.3's, beside `date_until`
+(TM-237). `span` owes **11** arms and the umbrella **13** still, and the
+umbrella re-exports 76 <!-- [[sweep: lib_reexports=76]] --> names. A full
+invocation is **131 units green** at pin `5fbaf4a`.
 
 **After cycle 0.2.3a: the instruments.** The tree checks' family is one list:
 `check_check_registry`, built first, reads `TESTING.md` §2's two tables,
@@ -62,7 +88,7 @@ the map (TM-223). **And a point on the UTC scale is no longer called "a
 wall-clock reading"** — `meta/specs/GLOSSARY.md`'s words for a civil one — at
 the sites that did: six reworded, and TM-215 and TM-216 marked (TM-226).
 `span` owes **11** arms and the umbrella **13** still, and
-the umbrella re-exports 68 <!-- [[sweep: lib_reexports=68]] --> names. A full
+the umbrella re-exports 68 names. A full
 invocation is **126 units green** at pin `5fbaf4a`.
 
 **After cycle 0.2.1: `Timestamp`.** `src/span/` holds `Timestamp` beside

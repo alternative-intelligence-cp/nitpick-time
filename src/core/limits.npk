@@ -124,6 +124,20 @@ pub fixed int64:NTIME_SECS_PER_DAY = 86400i64;
 pub fixed int64:NTIME_NANOS_PER_SEC = 1000000000i64;
 
 // ---------------------------------------------------------------------------
+// `Duration`'s range -- `SPAN_MODEL.md` N-3, `TIME_MODEL.md` M-18 (cycle 0.2.3)
+// ---------------------------------------------------------------------------
+
+// The prelude's `Duration` is `{ int64:ns }`, so its range is `int64`'s:
+// ±292.277 years of nanoseconds. It is `Duration`'s and not ours (N-3), and it
+// is named here because `timestamp_since` checks a difference against it
+// before its one narrowing (M-18, TM-236) -- and a caller checking the same
+// range first reads the same two names. The minimum is built, not spelled:
+// `int64`'s most negative value has no literal (the compiler's D-148), and
+// `tests/unit/limits_named.npk` holds both ends to `int64`'s own.
+pub fixed int64:NTIME_DURATION_NS_MAX = 9223372036854775807i64;
+pub fixed int64:NTIME_DURATION_NS_MIN = (0i64 - 9223372036854775807i64) - 1i64;
+
+// ---------------------------------------------------------------------------
 // Formatting scratch -- `BUILD.md` B-12 (`put_uint` is allocation-free)
 // ---------------------------------------------------------------------------
 

@@ -145,8 +145,8 @@ against the summary line rather than left to review.
   0.0.4 and `src/cal/` since 0.1.0 — the civil types, Hinnant's two algorithms
   since 0.1.1, swept over the whole range since 0.1.2 — and the suite is
   evidence about both — and about `src/span/`'s `Instant` since cycle 0.2.0,
-  its `Timestamp` since 0.2.1 and the conversions between a `Timestamp` and
-  its civil reading since 0.2.2;
+  its `Timestamp` since 0.2.1, the conversions between a `Timestamp` and its
+  civil reading since 0.2.2, and the `Duration` interop since 0.2.3;
   the other three `src/` directories are still placeholders, so nothing here
   converts a time to a zone, or between a time and text. *(It said "a
   timestamp to a date" too until cycle 0.2.2, and four placeholders until
@@ -410,6 +410,20 @@ over 142 files, `97 + 43 + 2`; the defect corpus unchanged at 36; and
 library + repro + suite at 91. `126 = 35 + 91`. A full invocation about
 200 s, as at cycle 0.2.2 within noise: the new plants cost
 milliseconds, and part E's third half one compile and run.
+
+**At cycle 0.2.3, the same pin, 131 units**: five tests added —
+`tests/unit/duration_ctors.npk`, `duration_days_past_max.npk` and
+`duration_days_past_min.npk`, `timestamp_add_edges.npk` and
+`timestamp_since_edges.npk` (TM-233 … TM-236) — and `limits_named.npk`
+changed in place, for `Duration`'s two ends. The self-check unchanged — 12
+of V-14's 13 cases, 82 tree-check violations with 82 clean controls, 4 arm
+specimens and 4 verdict specimens; `check_int128_sites` meets its first site
+it did not find already written, `timestamp_since`; parse over 147 files,
+`102 + 43 + 2`; the defect corpus unchanged at 36; the library reaching 6
+sources and its IR **285 881 B**, the interop's six functions; and library +
+repro + suite at **96** (**57 probe**, **30 unit**, **8 sweep**).
+`131 = 35 + 96`. A full invocation about 205 s; the five units cost a few
+seconds together, both legs, compile included.
 
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the

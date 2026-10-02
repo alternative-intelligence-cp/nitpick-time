@@ -139,7 +139,10 @@ without ever failing. *(Cycle 0.2.1, TM-220: the one constructor,
 `timestamp_of`, establishes it by refusing a `nanos` outside one second rather
 than carrying it, and the seal holds it, refusing a consumer's literal and
 write (TM-219, TM-221). No arithmetic operation exists yet; 0.2.3's
-`timestamp_add` is the first that must re-establish it.)*
+`timestamp_add` is the first that must re-establish it.)* *(Cycle 0.2.3,
+TM-234 and TM-235: it does — one borrow or one carry, the answer built by
+`timestamp_of` — and `tests/unit/timestamp_add_edges.npk` holds a hundred
+thousand seeded additions to it.)*
 
 **Rule M-8 (TM-014) — the supported range** is the civil range of `CALENDAR.md` §2,
 expressed in seconds:
@@ -311,10 +314,18 @@ than proposed repeatedly.
 does not trap, it does not saturate, and it does not silently lose precision.
 A caller differencing two timestamps 500 years apart is asking a question
 `Duration` cannot answer, and the honest response is to say so.
+*(Cycle 0.2.3, TM-236: written as stated — `timestamp_since(later,
+earlier)`, computed in `int128` (M-20) and refused past `Duration`'s two
+ends, which `src/core/limits.npk` names `NTIME_DURATION_NS_MAX` and
+`NTIME_DURATION_NS_MIN`; `tests/unit/timestamp_since_edges.npk` takes each
+end exactly, from both sides.)*
 
 **Rule M-19 — the calendar-scale answer is `Period`, not a wider `Duration`.**
 `timestamp_until(a, b, unit)` yields the difference in whole days, months or
 years, which is what a caller asking about a 500-year span actually wanted.
+*(Cycle 0.2.3, TM-237: moved to cycle 0.7.3, beside `date_until`. A whole
+month between two readings is `Period` addition's clamped month step
+(`SPAN_MODEL.md` N-8, N-9, N-15), and `Period` is cycle 0.7.0's.)*
 
 **Rule M-20 — internal arithmetic that could exceed `int64` nanoseconds
 computes in `int128` and narrows once**, with `=>!` at a point where the value
@@ -351,6 +362,11 @@ normative: a conversion not on it does not exist.
 | `CivilDate` | `int64` days | `date_to_days` | no |
 | `int64` days | `CivilDate` | `days_to_date` | `ETimeValue` outside range |
 | `Period` + `Instant`/`Timestamp` | — | **refused** (M-16) | — |
+
+*(Cycle 0.2.3, TM-234, TM-236 and TM-237: `timestamp_add`'s and
+`timestamp_since`'s rows are code, as they are written — `timestamp_add`'s
+refusal is `timestamp_of`'s, relayed — and `timestamp_until`'s row is cycle
+0.7.3's.)*
 
 *(Amended at cycle 0.2.1, TM-220 and TM-221: the `timestamp_of` row is new;
 `Timestamp` → `Instant` is written out, M-3 refusing both directions where the

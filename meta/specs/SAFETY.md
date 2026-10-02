@@ -87,7 +87,7 @@ import-scoped:
 | `ntime/lib.npk` — **the umbrella**, the import a consumer writes | — (re-exports) | one arm today (`cal`'s) | **13** <!-- [[sweep: arms_lib=13]] --> (—) — generated since cycle 0.1.0b (TM-155): the floor of six, `cal.ETimeValue`, the four arithmetic arms, `DecreasesViolated` from `src/core/bytes.npk`'s measured loops, and — since cycle 0.1.0c (TM-156, TM-159) — `LimitViolated` from the `ListLen` on `src/core/`'s sealed lengths. It was **12** until then |
 | `ntime/core.npk` | — | nothing | **6** <!-- [[sweep: arms_core=6]] --> (4) — the floor; `core` is not yet reachable as its own public module, and its code is billed through the umbrella's row |
 | `ntime/cal.npk` | `ETimeValue` | one arm | **11** <!-- [[sweep: arms_cal=11]] --> (9) — measured 2026-09-06 and 2026-09-25 |
-| `ntime/span.npk` | — (raises `cal`'s) | one arm | **11** <!-- [[sweep: arms_span=11]] --> (—) — since cycle 0.2.0, measured: `cal.ETimeValue`, which `span` raises for two clocks' readings (TM-216), since cycle 0.2.1 for a `secs` outside the range or a `nanos` outside one second handed to `timestamp_of` (TM-220), and since cycle 0.2.2 for a civil reading `civil_to_utc` cannot convert, `timestamp_of`'s refusal relayed (TM-222), the floor of six, and `cal`'s four arithmetic arms, which reach every importer of `span` because `span` imports `cal`. **No new identity**: the umbrella's row stays 13. *(A placeholder until cycle 0.2.0, the row read **6** (4), the floor, "meaningless until cycle 0.2 gives the module a body".)* |
+| `ntime/span.npk` | — (raises `cal`'s) | one arm | **11** <!-- [[sweep: arms_span=11]] --> (—) — since cycle 0.2.0, measured: `cal.ETimeValue`, which `span` raises for two clocks' readings (TM-216), since cycle 0.2.1 for a `secs` outside the range or a `nanos` outside one second handed to `timestamp_of` (TM-220), since cycle 0.2.2 for a civil reading `civil_to_utc` cannot convert, `timestamp_of`'s refusal relayed (TM-222), and since cycle 0.2.3 for a sum `timestamp_add` cannot keep in the range, relayed the same way (TM-234), and a difference `timestamp_since` cannot hold in a `Duration` (TM-236); the floor of six; and `cal`'s four arithmetic arms, which reach every importer of `span` because `span` imports `cal`. **No new identity**: the umbrella's row stays 13. *(A placeholder until cycle 0.2.0, the row read **6** (4), the floor, "meaningless until cycle 0.2 gives the module a body".)* |
 | `ntime/zone.npk` | `ETimeZone` | two arms | placeholder; **6** <!-- [[sweep: arms_zone=6]] --> (4) today (cycle 0.3) |
 | `ntime/fmt.npk` | `ETimeParse` | three arms | placeholder; **6** <!-- [[sweep: arms_fmt=6]] --> (4) today (cycle 0.4) |
 | `ntime/host.npk` | — (forwards errnos) | one arm | placeholder; **6** <!-- [[sweep: arms_host=6]] --> (4) today |
@@ -396,6 +396,10 @@ wrong *answer* for a library: a caller adding a century to a far-future
 timestamp should get `ETimeValue` with `Overflow`, not a trap. Every
 arithmetic entry point checks its operands against the supported range and
 returns the error; the trap remains as the belt for a path the check missed.
+*(Cycle 0.2.3, TM-234: `timestamp_add`, the first arithmetic entry point,
+answers that caller with `ETimeValue` through `timestamp_of`, whose range
+check it relays — so the detail is `YearRange`, the range's own name;
+`Overflow` is `timestamp_since`'s, past `Duration`'s range, TM-236.)*
 
 **Rule S-13 (TM-014) — the supported range is `year −9999 … +9999`**, proleptic
 Gregorian, astronomical year numbering (year 0 exists and is 1 BCE).

@@ -1,0 +1,98 @@
+// expect-exit: 0
+//
+// `ntime`'s four `Duration` constructors at every argument their ranges hold,
+// both ends included -- every one for the hours, the days and the weeks, and
+// every 262nd for the minutes (cycle 0.2.3; `SPAN_MODEL.md` N-2 and §5's first
+// row; `TIME_MODEL.md` M-17).
+//
+// ASKS: does each constructor give exactly its argument's nanoseconds -- a
+// minute 60 x 10^9, an hour 3 600 x 10^9, a day 86 400 x 10^9 and not a
+// calendar day, a week seven such days -- at every argument it accepts?
+//
+// MATTERS BECAUSE `Duration` is the prelude's and the ecosystem's one span type
+// (TM-004): every deadline and every I/O call takes one, so a constructor wrong
+// by a second in a day is wrong in every consumer that asks for a day. And
+// `duration_days` is the one whose name invites the wrong reading -- N-2's
+// note: a day here is 86 400 SI seconds, exactly, and `Period{ days: 1 }` is
+// the thing that means the same wall time tomorrow.
+//
+// THE RANGES are each constructor's largest argument and its negation --
+// `int64`'s maximum nanoseconds over the unit's, truncated: 153 722 867
+// minutes, 2 562 047 hours, 106 751 days, 15 250 weeks -- and every argument
+// visited is held to the product computed in `int128` with the unit's
+// nanoseconds WRITTEN here, apart from the library's names. The minutes'
+// stride, 262, divides their span, 2 x 153 722 867, exactly, so both ends are
+// visited. One past each end traps `IntOverflow` in the prelude's
+// `duration_secs` (D-210, as N-2 says): `duration_days_past_max.npk` and
+// `duration_days_past_min.npk` assert that trap at a day's two ends, and the
+// other three meet it in the same multiplication.
+//
+// EXIT CODES, clear of every arm code (TM-152): 10 a minute's value not its
+// product, 11 an hour's, 12 a day's, 13 a week's; 14 a loop visited other than
+// the arguments it counts. SEEN RED AT PLANNING, on both legs, in a copy of the
+// tree (`meta/roadmap/0.2/0.2.3.md`, step 3): 10 with a minute of 59 seconds,
+// 11 with an hour of 3 599, 12 with a day one second short, 13 with a week of
+// six days. 14 is reached only by editing this file, and was so measured: the
+// days' loop a day short.
+//
+// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
+// `span`: its eleven (`SAFETY.md` S-4).
+mod:duration_ctors;
+
+use "../../src/span/span.npk".*;
+
+fixed int64:MINS_END = 153722867i64;
+fixed int64:HOURS_END = 2562047i64;
+fixed int64:DAYS_END = 106751i64;
+fixed int64:WEEKS_END = 15250i64;
+
+func:main = int32(cstring[]:_~argv) {
+    int64:seen = 0i64;
+    for (int64:k in 0i64..1173457i64) {
+        int64:m = (0i64 - MINS_END) + (k * 262i64);
+        Duration:dm = raw duration_mins(m);
+        if ((dm.ns => int128) != (m => int128) * 60000000000i128) { exit 10i32; }
+        seen = seen + 1i64;
+    }
+    if (seen != 1173458i64) { exit 14i32; }
+    seen = 0i64;
+    for (int64:h in (0i64 - HOURS_END)..HOURS_END) {
+        Duration:dh = raw duration_hours(h);
+        if ((dh.ns => int128) != (h => int128) * 3600000000000i128) { exit 11i32; }
+        seen = seen + 1i64;
+    }
+    if (seen != 5124095i64) { exit 14i32; }
+    seen = 0i64;
+    for (int64:d in (0i64 - DAYS_END)..DAYS_END) {
+        Duration:dd = raw duration_days(d);
+        if ((dd.ns => int128) != (d => int128) * 86400000000000i128) { exit 12i32; }
+        seen = seen + 1i64;
+    }
+    if (seen != 213503i64) { exit 14i32; }
+    seen = 0i64;
+    for (int64:w in (0i64 - WEEKS_END)..WEEKS_END) {
+        Duration:dw = raw duration_weeks(w);
+        if ((dw.ns => int128) != (w => int128) * 604800000000000i128) { exit 13i32; }
+        seen = seen + 1i64;
+    }
+    if (seen != 30501i64) { exit 14i32; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

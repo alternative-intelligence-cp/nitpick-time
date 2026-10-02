@@ -1,0 +1,211 @@
+// expect-exit: 0
+//
+// `timestamp_since` at `Duration`'s two ends exactly, from both sides, at four
+// places in the range; a seeded sample of a hundred thousand pairs held to the
+// `int128` difference of their nanoseconds; and pairs forged past the range
+// answered or refused, never trapped (cycle 0.2.3; `TIME_MODEL.md` M-18 and
+// M-20, `SPAN_MODEL.md` N-3 and §5's third row).
+//
+// ASKS: does `timestamp_since(later, earlier)` give exactly `later - earlier`
+// in nanoseconds whenever `Duration` can hold it, and refuse with `ETimeValue`
+// exactly when it cannot -- at 9 223 372 036 854 775 807 nanoseconds and at one
+// more, and at -9 223 372 036 854 775 808 and one less?
+//
+// MATTERS BECAUSE M-18 is the place the library's ±9999 years and `Duration`'s
+// ±292 years meet, and the cycle README's watch-for says it: "an 'about 292
+// years' check is a check that is wrong by a day". So the ends are COMPUTED
+// here, never approximated: `int64`'s maximum is the bit pattern `~0u64 >> 1`
+// (TM-149), its minimum one below its negation, and each is split into seconds
+// and a non-negative remainder by this file's own arithmetic -- 9 223 372 036 s
+// and 854 775 807 ns, and -9 223 372 037 s and 145 224 192 ns -- so a library
+// whose bound were a second short, or read from the wrong end, meets a value it
+// did not choose. The difference is nominal, not elapsed: a `Timestamp`
+// difference is the scale's, which leap seconds make different from the SI time
+// that passed (`TIME_MODEL.md` M-12, `GLOSSARY.md`).
+//
+// THE CASES, in this order -- each later section asks what the earlier cannot.
+// SEEDED: 100 000 pairs from a 64-bit xorshift begun at the seed this file
+// commits -- an earlier reading anywhere in the range, a later one within six
+// hundred years of it either way -- each answer held to the `int128`
+// difference, its refusal to that difference's place outside `int64`, and each
+// answer added back to the earlier reading by `timestamp_add` to give the
+// later; the counts held to a transcription of the same steps in Python, 48 617
+// answered and 51 383 refused. THE ENDS, which no random pair lands on: each
+// from four earlier readings -- the epoch, the last nanosecond of the epoch's
+// second, and the two readings from which an end lands on the range's last
+// second and on its first -- each pair answered with the end exactly, and the
+// pair one nanosecond further refused. FORGED through `wild` storage: a later
+// reading at `int64`'s largest second, refused rather than trapped, and one
+// with a `nanos` of 2^32 - 1, answered with its exact difference -- `int128`
+// holds every difference two `int64`s and two `uint32`s can make.
+//
+// EXIT CODES, clear of every arm code (TM-152): 50 a sampled pair's verdict not
+// the `int128` difference's; 51 its answer not the difference; 52 an answer
+// added back not the later reading; 53 the counts not the transcription's; 54 a
+// pair at an end refused, or answered other than the end; 55 a pair one
+// nanosecond past an end answered; 56 a forged pair's verdict or answer wrong,
+// or the forge did not read back. SEEN RED AT PLANNING, on both legs, in a copy
+// of the tree (`meta/roadmap/0.2/0.2.3.md`, step 3): 50 with either bound's
+// check deleted; 51 with the operands swapped, and with the nanoseconds
+// dropped; 52 with `timestamp_add`'s carry deleted; 54 with either bound's
+// check at the end itself, with the upper bound a second short, and with either
+// of `limits.npk`'s two ends one inside `int64`'s own; 55 with either bound a
+// nanosecond wide; 56 with a forged `nanos` read through `int32`, which only a
+// value past 2^31 can tell. With the arithmetic in `int64` the program stops at
+// 93, `IntOverflow`, at the first pair past ±292 years. 53 is reached only by
+// editing this file, and was so measured -- the sample a pair short -- and 56
+// by that too, with the forge declaring its two fields the other way round.
+//
+// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
+// `span`: its eleven (`SAFETY.md` S-4).
+mod:timestamp_since_edges;
+
+use "../../src/span/span.npk".*;
+
+// `Timestamp` field for field, unsealed -- the forge's shape.
+struct:RawTs = { int64:secs; uint32:nanos; };
+
+fixed int64:LO_SECS = -377705116800i64;
+fixed int64:HI_SECS = 253402300799i64;
+fixed int64:NANOS = 1000000000i64;
+fixed int64:SIX_CENTURIES = 18934560000i64;       // 600 x 365.25 x 86 400 s
+
+// Four earlier readings for the ends: the epoch, its second's last
+// nanosecond, and the two from which an end lands on the range's last second
+// and on its first.
+fixed int64[4]:BASE_S = [ 0i64, 0i64, 244178928762i64, -368481744763i64 ];
+fixed int64[4]:BASE_N = [ 0i64, 999999999i64, 999999999i64, 0i64 ];
+
+func:main = int32(cstring[]:_~argv) {
+    int64:dmax = ((~0u64) >> 1u64) =>! int64;
+    int64:dmin = (0i64 - dmax) - 1i64;
+    int64:max_s = dmax / NANOS;                    // 9 223 372 036
+    int64:max_n = dmax % NANOS;                    // 854 775 807
+    int64:min_s = (dmin / NANOS) - 1i64;           // floored: -9 223 372 037
+    int64:min_n = (dmin % NANOS) + NANOS;          // 145 224 192
+
+    // ---- the seeded sample ---------------------------------------------------
+    int128:wmax = dmax => int128;
+    int128:wmin = dmin => int128;
+    uint64:span = ((HI_SECS - LO_SECS) + 1i64) =>! uint64;
+    uint64:x = 20261001u64;
+    int64:answered = 0i64;
+    int64:refused = 0i64;
+    for (int64:k in 1i64..100000i64) {
+        x = raw step(x);
+        int64:es = LO_SECS + ((x % span) =>! int64);
+        x = raw step(x);
+        int64:en = (x % (NANOS =>! uint64)) =>! int64;
+        x = raw step(x);
+        int64:off = ((x % ((2i64 * SIX_CENTURIES + 1i64) =>! uint64)) =>! int64) - SIX_CENTURIES;
+        int64:ls = es + off;
+        if (ls < LO_SECS || ls > HI_SECS) { ls = es - off; }
+        x = raw step(x);
+        int64:ln = (x % (NANOS =>! uint64)) =>! int64;
+        Result<Timestamp>:a = timestamp_of(ls, ln);
+        if (a.is_error) { exit 50i32; }
+        Result<Timestamp>:b = timestamp_of(es, en);
+        if (b.is_error) { exit 50i32; }
+        int128:want = (((ls => int128) - (es => int128)) * (NANOS => int128))
+                      + ((ln => int128) - (en => int128));
+        Result<Duration>:d = timestamp_since(a.value, b.value);
+        if (want >= wmin && want <= wmax) {
+            if (d.is_error) { exit 50i32; }
+            Duration:got = d.value;
+            if ((got.ns => int128) != want) { exit 51i32; }
+            Result<Timestamp>:again = timestamp_add(b.value, got);
+            if (again.is_error) { exit 52i32; }
+            if (again.value.secs != ls || (again.value.nanos => int64) != ln) { exit 52i32; }
+            answered = answered + 1i64;
+        } else {
+            if (!(d.is_error)) { exit 50i32; }
+            refused = refused + 1i64;
+        }
+    }
+    if (answered != 48617i64 || refused != 51383i64) { exit 53i32; }
+
+    // ---- the ends, exactly, from both sides --------------------------------
+    for (int64:i in 0i64..3i64) {
+        int32:e = raw check_end(BASE_S[i], BASE_N[i], max_s, max_n, dmax, 1i64);
+        if (e != 0i32) { exit e; }
+        e = raw check_end(BASE_S[i], BASE_N[i], min_s, min_n, dmin, 0i64 - 1i64);
+        if (e != 0i32) { exit e; }
+    }
+
+    // ---- forged pairs: answered or refused, never trapped -------------------
+    wild int8->:mem = alloc(#size_of<Timestamp>());
+    int32:f = raw check_forged(mem, dmax, 0u32, false, 0i64);
+    if (f == 0i32) { f = raw check_forged(mem, 0i64, 4294967295u32, true, 4294967295i64); }
+    dalloc(mem);
+    if (f != 0i32) { exit f; }
+    exit 0i32;
+};
+
+func:step = uint64(uint64:x0) never fails {
+    uint64:x = x0 ^ (x0 << 13u64);
+    x = x ^ (x >> 7u64);
+    pass x ^ (x << 17u64);
+};
+
+// The pair whose difference is `bound` -- `(s, n)` from the base, carried --
+// answered with exactly `bound`, and the pair one nanosecond further, `dir` of
+// +1 or -1, refused.
+func:check_end = int32(int64:bs, int64:bn, int64:s, int64:n, int64:bound, int64:dir) never fails {
+    int64:ls = bs + s;
+    int64:ln = bn + n;
+    if (ln >= NANOS) { ls = ls + 1i64; ln = ln - NANOS; }
+    Result<Timestamp>:b = timestamp_of(bs, bn);
+    if (b.is_error) { pass 54i32; }
+    Result<Timestamp>:a = timestamp_of(ls, ln);
+    if (a.is_error) { pass 54i32; }
+    Result<Duration>:d = timestamp_since(a.value, b.value);
+    if (d.is_error) { pass 54i32; }
+    if (d.value.ns != bound) { pass 54i32; }
+    int64:fs = ls;
+    int64:fnn = ln + dir;
+    if (fnn >= NANOS) { fs = fs + 1i64; fnn = fnn - NANOS; }
+    if (fnn < 0i64) { fs = fs - 1i64; fnn = fnn + NANOS; }
+    Result<Timestamp>:far = timestamp_of(fs, fnn);
+    if (far.is_error) { pass 55i32; }
+    Result<Duration>:past = timestamp_since(far.value, b.value);
+    if (!(past.is_error)) { pass 55i32; }
+    pass 0i32;
+};
+
+// A later reading forged through `wild` storage at `mem`, read back first,
+// against the epoch.
+func:check_forged = int32(wild int8->:mem, int64:ts, uint32:tn, bool:answered, int64:want) never fails {
+    wild RawTs->:w = mem =>! wild RawTs->;
+    <-w = RawTs{ secs: ts, nanos: tn };
+    wild Timestamp->:p = mem =>! wild Timestamp->;
+    Timestamp:t = <-p;
+    if (t.secs != ts || t.nanos != tn) { pass 56i32; }
+    Result<Timestamp>:e = timestamp_of(0i64, 0i64);
+    if (e.is_error) { pass 56i32; }
+    Result<Duration>:d = timestamp_since(t, e.value);
+    if (!answered) {
+        if (!(d.is_error)) { pass 56i32; }
+        pass 0i32;
+    }
+    if (d.is_error) { pass 56i32; }
+    if (d.value.ns != want) { pass 56i32; }
+    pass 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

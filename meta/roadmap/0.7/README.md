@@ -56,6 +56,7 @@ where a date library is actually wrong.
 
 ### 0.7.3 — `until` and rounding
 - [ ] `date_until(a, b, unit)` yielding whole units and a remainder, defined so `a + result == b` **exactly** (N-15) — and a property test over a generated pair corpus asserting it
+- [ ] `timestamp_until(a, b, unit)` in whole days, months or years — `TIME_MODEL.md` M-19's calendar-scale answer, `date_until`'s question asked of two readings in UTC *(moved here from cycle 0.2.3, TM-237: whole months and years are `Period` addition's clamped steps, and `Period` is 0.7.0's)*
 - [ ] `period_between` as the largest-unit-first decomposition, documented as **not** round-tripping through `period_normalise` (N-15)
 - [ ] `truncate_to` and `round_to` over nanosecond … day (N-16)
 - [ ] `RoundMode` with `HalfUp` as the plain `round_to`'s (N-17), and each mode tested at a tie

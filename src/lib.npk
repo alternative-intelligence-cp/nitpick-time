@@ -19,8 +19,10 @@
 // deliberate. Adding a line here is the moment a name becomes public and, by
 // TM-013, a thing a MAJOR version is needed to take away.
 //
-// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 68
-// names now [[sweep: lib_reexports=68]], below -- 66 until cycle 0.2.2 added
+// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 76
+// names now [[sweep: lib_reexports=76]], below -- 68 until cycle 0.2.3 added
+// `Duration`'s two ends and `span`'s six for the `Duration` interop, 66 until
+// cycle 0.2.2 added
 // `timestamp_to_utc` and `civil_to_utc`, 64 until cycle 0.2.1 added
 // `Timestamp` and `timestamp_of`, 58 until cycle 0.2.0 added
 // `span`'s six, 59 until cycle 0.2.0a retired
@@ -154,6 +156,8 @@ pub use "./core/limits.npk".NTIME_OFFSET_MIN;
 pub use "./core/limits.npk".NTIME_OFFSET_MAX;
 pub use "./core/limits.npk".NTIME_SECS_PER_DAY;
 pub use "./core/limits.npk".NTIME_NANOS_PER_SEC;
+pub use "./core/limits.npk".NTIME_DURATION_NS_MAX;
+pub use "./core/limits.npk".NTIME_DURATION_NS_MIN;
 pub use "./core/limits.npk".NTIME_DIGITS_MAX;
 
 // ===========================================================================
@@ -247,9 +251,9 @@ pub use "./cal/cal.npk".iso_weekday;
 pub use "./cal/cal.npk".iso_week_to_date;
 
 // ===========================================================================
-// span -- instants (cycle 0.2.0), timestamps (0.2.1) and the conversions
-// between a timestamp and a civil reading (0.2.2). NO NEW IDENTITY, AND NO NEW
-// ARM.
+// span -- instants (cycle 0.2.0), timestamps (0.2.1), the conversions
+// between a timestamp and a civil reading (0.2.2), and the `Duration`
+// interop (0.2.3). NO NEW IDENTITY, AND NO NEW ARM.
 // ===========================================================================
 //
 // `Instant` and its clock tag, and the four operations (TM-215, TM-216). `span`
@@ -296,3 +300,20 @@ pub use "./span/span.npk".timestamp_of;
 // NAMES, each a MAJOR version to take away (TM-013).
 pub use "./span/span.npk".timestamp_to_utc;
 pub use "./span/span.npk".civil_to_utc;
+
+// The `Duration` interop (cycle 0.2.3; TM-233, TM-234, TM-236). `ntime`
+// declares no `Duration` (TM-004): it adds four constructors to the prelude's,
+// each `never fails`, a day exactly 86 400 x 10^9 nanoseconds and not a
+// calendar day (`SPAN_MODEL.md` N-2); `timestamp_add` moves a `Timestamp` by
+// one, through `timestamp_of`, and `timestamp_since` gives the nominal span
+// between two, refusing one past `Duration`'s ±292 years (`TIME_MODEL.md`
+// M-18) -- each fallible one raising `cal`'s `ETimeValue`, so the bill does
+// not move: 11 for `span` alone [[sweep: arms_span=11]] and 13 here
+// [[sweep: arms_lib=13]], measured. SIX NAMES, each a MAJOR version to take
+// away (TM-013).
+pub use "./span/span.npk".duration_mins;
+pub use "./span/span.npk".duration_hours;
+pub use "./span/span.npk".duration_days;
+pub use "./span/span.npk".duration_weeks;
+pub use "./span/span.npk".timestamp_add;
+pub use "./span/span.npk".timestamp_since;

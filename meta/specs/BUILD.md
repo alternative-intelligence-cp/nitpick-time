@@ -316,15 +316,16 @@ list kept the old code until cycle 0.2.0), `BORROW-001`, `BORROW-012`,
 `RESOLVE-001`, `RESOLVE-002` (since cycle 0.2.0, `probe20b`),
 `REACH-002` and `REACH-003`, and every family
 after the first three runs only on something that parsed. Re-measured at pin
-`5fbaf4a`, cycle 0.2.2: **142 files = 97 parse cleanly + 43
+`5fbaf4a`, cycle 0.2.3: **147 files = 102 parse cleanly + 43
 parse and are refused later + 2 do not parse**
-<!-- [[sweep: npk_total=142]] --> (`127 = 90 + 35 + 2` from cycle 0.1.3c until
+<!-- [[sweep: npk_total=147]] --> (`127 = 90 + 35 + 2` from cycle 0.1.3c until
 `tests/unit/civil_total_edges.npk` joined, `128 = 91 + 35 + 2` from then
 until cycle 0.2.0b retired the churn pair, TM-214, `126 = 89 + 35 + 2`
 until cycle 0.2.0 added `Instant`'s unit, its two refusals and the relay
 specimen, `130 = 91 + 37 + 2` until cycle 0.2.1 added `Timestamp`'s two
-units and six refusals, and `138 = 93 + 43 + 2` until cycle 0.2.2 added the
-conversions' two units and two sweeps), and the two
+units and six refusals, `138 = 93 + 43 + 2` until cycle 0.2.2 added the
+conversions' two units and two sweeps, and `142 = 97 + 43 + 2` until cycle
+0.2.3 added the interop's five units), and the two
 are `probe02d_wide_literal_refused.npk` (LEX-004, PARSE-002) and
 `probe14_error_payload_refused.npk` (PARSE-001, TM-147). It read
 `50 = 36 + 13 + 1` for three subcycles after the tree stopped being that size,

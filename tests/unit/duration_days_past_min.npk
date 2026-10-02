@@ -1,0 +1,54 @@
+// expect-exit: 93
+//
+// `duration_days` at -106 752 days, one past its smallest argument, traps
+// `IntOverflow` -- D-210's trap is the constructor's range check (cycle 0.2.3;
+// `SPAN_MODEL.md` N-2 and §5's first row; `TESTING.md` V-1j: 93 is the arm this
+// file asserts, the trap itself).
+//
+// ASKS: does a day count past `Duration`'s ±292 years stop the program, rather
+// than wrap into a span of the other sign or saturate at the end?
+//
+// MATTERS BECAUSE N-2 makes the four constructors `never fails`, as the
+// prelude's own are, so the trap IS the range check: a constructor that wrapped
+// would hand a deadline a negative span, in silence. The multiplication that
+// traps is the prelude's, `duration_secs`'s times 10^9, which `duration_mins`,
+// `duration_hours` and `duration_weeks` reach the same way; this file and
+// `duration_days_past_max.npk` assert it at a day's two ends, and
+// `duration_ctors.npk` holds every argument inside them.
+//
+// EXIT CODES: 93, `IntOverflow`, the pass; 10 or 11 the call returned -- a span
+// above zero or not -- which is the failure. SEEN RED AT PLANNING, on both
+// legs, in a copy of the tree (`meta/roadmap/0.2/0.2.3.md`, step 3): 11 with a
+// day one second short, which leaves -106 752 days inside `int64`; 10 with the
+// constructor multiplying by the wrapping `*%` itself, where `duration_secs`
+// would have trapped.
+//
+// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
+// `span`: its eleven (`SAFETY.md` S-4).
+mod:duration_days_past_min;
+
+use "../../src/span/span.npk".duration_days;
+
+func:main = int32(cstring[]:_~argv) {
+    Duration:d = raw duration_days((0i64 - 106752i64));
+    if (d.ns > 0i64) { exit 10i32; }
+    exit 11i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

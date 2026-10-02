@@ -7,8 +7,8 @@ that would otherwise be found by writing the wrong code twice.
 **Where it stands:** cycle 0.1, the civil calendar, is closed (2026-09-26);
 cycle 0.2, instants and timestamps, is open. `src/core/`
 and `src/cal/` are real, and `src/span/` holds `Instant` since cycle 0.2.0,
-`Timestamp` since 0.2.1, and the conversions between a `Timestamp` and its
-civil reading since 0.2.2; the
+`Timestamp` since 0.2.1, the conversions between a `Timestamp` and its civil
+reading since 0.2.2, and the `Duration` interop since 0.2.3; the
 other three `src/` directories hold one placeholder each until the cycle
 `meta/roadmap/ROADMAP.md` names replaces it.
 `harness/run.py` is the runner, and it proves first, on every full run, that it

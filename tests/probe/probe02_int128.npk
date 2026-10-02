@@ -44,7 +44,8 @@
 // hand-written `__divti3`/`__modti3` family, so a casual `/` on a wide value
 // would quietly add a libcall to a library whose whole posture is TM-027,
 // no dependencies. The three named sites add, compare and narrow. Nothing
-// divides.
+// divides. (Cycle 0.2.3: and `timestamp_since`, one of them, multiplies too
+// -- inline at the pin, no libcall, measured; still nothing divides.)
 mod:probe02_int128;
 
 // int64's bounds, spelled once. `0i64 - ...` rather than a unary minus so

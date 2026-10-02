@@ -6,9 +6,11 @@ the safety-critical systems language. No dependencies, no libc, no
 compiled in from a pinned IANA release, so the same program gives the same
 answer on every machine.
 
-> **Status: cycle 0.1, the civil calendar, CLOSED on 2026-09-26, archived at
-> [`meta/roadmap/done/0.1/`](meta/roadmap/done/0.1/README.md)** — its code, its
-> gate and its audit done — **and cycle 0.2, instants and timestamps, is open.**
+> **Status: cycle 0.2, instants and timestamps, CLOSED on 2026-10-02, archived at
+> [`meta/roadmap/done/0.2/`](meta/roadmap/done/0.2/README.md)**, as cycle 0.1,
+> the civil calendar, was on 2026-09-26 ([`meta/roadmap/done/0.1/`](meta/roadmap/done/0.1/README.md))
+> — each with its code, its gate and its audit done — **and cycle 0.3, the host
+> boundary, is next.**
 > What exists: `src/core/` — `Vec<T>`, `Bytes` and the named limits — since
 > cycle 0.0, its `Vec` holding only `Copy` elements since cycle 0.2.0b; and
 > `src/cal/` — `CivilDate`,

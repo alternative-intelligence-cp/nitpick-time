@@ -45,7 +45,7 @@
 // pair at an end refused, or answered other than the end; 55 a pair one
 // nanosecond past an end answered; 56 a forged pair's verdict or answer wrong,
 // or the forge did not read back. SEEN RED AT PLANNING, on both legs, in a copy
-// of the tree (`meta/roadmap/0.2/0.2.3.md`, step 3): 50 with either bound's
+// of the tree (`meta/roadmap/done/0.2/0.2.3.md`, step 3): 50 with either bound's
 // check deleted; 51 with the operands swapped, and with the nanoseconds
 // dropped; 52 with `timestamp_add`'s carry deleted; 54 with either bound's
 // check at the end itself, with the upper bound a second short, and with either

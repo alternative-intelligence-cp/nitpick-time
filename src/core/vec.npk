@@ -95,7 +95,7 @@
 // stated where the compiler reads it; and the churn pair is retired, because
 // the `T` it measured cannot be written. At every `T` the type does admit
 // nothing changed: the IR of every program here that compiles before the bound
-// and after it is byte for byte the same (`meta/roadmap/0.2/0.2.0b.md` §1).
+// and after it is byte for byte the same (`meta/roadmap/done/0.2/0.2.0b.md` §1).
 // It is `nitpick-regex`'s answer to the same question (its RX-188), which
 // TM-194 said this library would follow. What `Copy` does not ask -- that an
 // element hold no pointer or slice -- this library has no rule for: `SAFETY.md`

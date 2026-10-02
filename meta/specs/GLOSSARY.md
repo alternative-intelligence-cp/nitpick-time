@@ -36,6 +36,17 @@ monotonic timeline, with no epoch" until then. Since TM-215 an `Instant` is a
 reading of one of two clocks, `Monotonic` or `Boottime`, and a reading of one
 is no point on the other's timeline.)*
 
+*(Cycle 0.2.4, cycle 0.2's close — the workbench's question 22, its
+recommendation applied while the author has not answered otherwise. The
+*instant* row gives the word to the type, and the specifications use it, as the
+time world does, for a point on the UTC timeline: the *zoned* row's "the zone
+that makes it an instant", `TIME_MODEL.md` M-9, M-14 and M-15 among its rules,
+and `ZonedDateTime`'s field `instant`. So **`Instant`**, the type, is a reading
+of one of two clocks; and **an instant**, in prose, is a point on the UTC
+timeline — what a `Timestamp` holds. The field's name is cycle 0.6's, which
+builds `ZonedDateTime`, and its README carries it. No decision records this
+note yet: the decision that names the field records it with the name.)*
+
 ## Words deliberately not used
 
 | Not used | Because |

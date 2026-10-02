@@ -408,7 +408,7 @@ is the one that crosses it**: cycle 0.2.2's round trip over every second of
 512 days, about 44 million cases, whose plan measures it before it lands and
 chooses — the stage whole and this rule amended to its measured cost, the
 member's −O2 leg over a sample, or its domain split across the two legs — with
-the first the default if the stage stays under 60 s. `meta/roadmap/0.2/README.md`
+the first the default if the stage stays under 60 s. `meta/roadmap/done/0.2/README.md`
 carries it.)*
 *(Measured at cycle 0.2.2's planning, compiler `5fbaf4a`, when the round trip's
 two members joined: the eight sweeps cost **43.3 s** together on a full

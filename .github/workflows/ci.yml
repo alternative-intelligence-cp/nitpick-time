@@ -259,7 +259,7 @@ env:
   # emissions state no `target` line for the runner to hold (TM-209), and the
   # unadopted tree is RED at `5fbaf4a`, where fifteen `cstring` copies are
   # refused (TM-208). All of them are pushed together, so CI runs once, on the
-  # adopted tree (`meta/roadmap/0.2/0.2.0a.md` §3).
+  # adopted tree (`meta/roadmap/done/0.2/0.2.0a.md` §3).
   NITPICK_COMMIT: 5fbaf4a40a2f6b213754cd71b6c69700f8aa2c87
   NITPICK_COMMIT_SHORT: 5fbaf4a
   # nitpick.toml [toolchain] llvm. Condition (1) above.

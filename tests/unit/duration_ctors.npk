@@ -30,7 +30,7 @@
 // EXIT CODES, clear of every arm code (TM-152): 10 a minute's value not its
 // product, 11 an hour's, 12 a day's, 13 a week's; 14 a loop visited other than
 // the arguments it counts. SEEN RED AT PLANNING, on both legs, in a copy of the
-// tree (`meta/roadmap/0.2/0.2.3.md`, step 3): 10 with a minute of 59 seconds,
+// tree (`meta/roadmap/done/0.2/0.2.3.md`, step 3): 10 with a minute of 59 seconds,
 // 11 with an hour of 3 599, 12 with a day one second short, 13 with a week of
 // six days. 14 is reached only by editing this file, and was so measured: the
 // days' loop a day short.

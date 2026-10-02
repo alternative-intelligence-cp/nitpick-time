@@ -7488,6 +7488,14 @@ K1 and K6 and the stale S1 (the workbench's
 `5fbaf4a`.
 
 ### TM-241 — `timestamp_add` checks its operand's seconds against the range before it adds, as `SAFETY.md` S-12 asks, so it answers or refuses whatever it is handed and traps on nothing
+> **Corrected 2026-10-02 at cycle 0.2.4, cycle 0.2's close — a dated note, no new
+> decision.** Its *"every forged `secs` within 9 223 372 037 seconds of either end
+> of `int64` traps for some `Duration`"* reads *"less than 9 223 372 037
+> seconds"*. Measured on the code before it, a forged `secs` trapped up to a
+> distance of 9 223 372 036 from an end and never at 9 223 372 037, where the add
+> and its carry or borrow land on the end itself and `timestamp_of` refuses: the
+> cases of `0.2.4b.md` §1.1, 93 at the one distance and refused at the other.
+> Found by 0.2.4b's verifier. The decision stands as decided.
 
 **2026-10-02, cycle 0.2.4b (the plan's PD-86) — the cycle audit's C1 and K1. It
 supersedes TM-234 in part. Dates `SAFETY.md` S-12, `SPAN_MODEL.md` §5's

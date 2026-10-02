@@ -58,7 +58,7 @@
 // same; 43 a forged `Timestamp` did not read back; 44 the epoch refused, or a
 // step's verdict not the `int128` sum's; 45 a step's answer not the sum; 46 the
 // counts not the transcription's. SEEN RED AT PLANNING, on both legs, in a copy
-// of the tree (`meta/roadmap/0.2/0.2.3.md`, step 3, and again at cycle
+// of the tree (`meta/roadmap/done/0.2/0.2.3.md`, step 3, and again at cycle
 // 0.2.4b's, `0.2.4b.md` step 2, each at the same exit): 44 with the borrow
 // deleted, and with the carry; 45 with either keeping its second, with the
 // remainder dropped, and with the seconds; 42 with `timestamp_add` writing its

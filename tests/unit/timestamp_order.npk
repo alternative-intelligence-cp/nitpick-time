@@ -27,7 +27,7 @@
 // `eq` erred; 21 an earlier value is not `Less` than a later; 22 a later one
 // is not `Greater` than an earlier; 23 a value is not `Equal` to itself; 24
 // `eq` disagrees with `cmp`. SEEN RED AT PLANNING, on both legs, in a copy of
-// the tree (`meta/roadmap/0.2/0.2.1.md`, step 4): 10 with the `nanos` bound
+// the tree (`meta/roadmap/done/0.2/0.2.1.md`, step 4): 10 with the `nanos` bound
 // one low; 11 with the two fields declared the other way round; 20 with a
 // negative `secs` refused; 21 with a negative second's remainder stored
 // counted toward zero -- the representation got backwards, which 11 cannot

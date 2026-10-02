@@ -46,7 +46,7 @@
 // not the walk's; 17 a chosen day was not 86 400 seconds long; 20, 21 and 22
 // the `swept` line could not be built, could not be written, or was written
 // short. SEEN RED AT PLANNING, on both legs, in a copy of the tree
-// (`meta/roadmap/0.2/0.2.2.md`, step 3): 10 with `days_to_date` refusing a day
+// (`meta/roadmap/done/0.2/0.2.2.md`, step 3): 10 with `days_to_date` refusing a day
 // before the epoch; 11 with `civil_time` refusing second 59; 12 with
 // `civil_to_utc`'s day number multiplied by 1 000; 13 with its minutes counted
 // as 61 seconds; 15 with the floor's correction taking two days; 16 with the

@@ -35,7 +35,7 @@
 // `timestamp_of` refused a written instant; 15 `timestamp_to_utc`'s date is
 // not the written one; 16 its hour, minute or second is not; 17 its
 // nanoseconds are not. SEEN RED AT PLANNING, on both legs, in a copy of the
-// tree (`meta/roadmap/0.2/0.2.2.md`, step 3): 10 with `civil_date` refusing
+// tree (`meta/roadmap/done/0.2/0.2.2.md`, step 3): 10 with `civil_date` refusing
 // the range's first year; 11 with `civil_to_utc` a second short; 12 with its
 // minutes counted as 61 seconds; 13 with its nanoseconds dropped; 15 with the
 // floor's correction taking two days; 16 with the minute divided by 61; 17

@@ -21,7 +21,12 @@ TM-230 — the one check this paragraph said a question held. Re-derived then,
 **eight** questions are open, three the compiler's — O-N1, O-N2 and O-N3 —
 and five ours — O-X1, O-B1, O-X4, O-X8 and O-X9: O-N25 was answered at cycle
 0.2.0a, TM-208, and O-X3 at 0.2.0, TM-216, and this count was not moved
-with either.)*
+with either.)* *(Re-derived at cycle 0.2's close: **176 decisions are
+settled**, TM-208 … TM-245 the cycle's thirty-eight, the close's eight among
+them; **ten questions are open** — four the compiler's, O-N1, O-N2, O-N3 and
+O-N34, restated at 0.2.4b (TM-245); five ours, O-X1, O-B1, O-X4, O-X8 and O-X9;
+and one the author's, Q-7, raised at the close (TM-243), which blocks nothing
+before cycle 1.0's freeze of the public names.)*
 
 ## How this is organised
 
@@ -80,8 +85,8 @@ sibling libraries.
 |---|---|---|
 | ~~**0.0**~~ | **Foundations** — the language probes, the harness, `src/core/` — **CLOSED 2026-09-06, archived at [`done/0.0/`](done/0.0/README.md)** | — |
 | ~~**0.1**~~ | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **CLOSED 2026-09-26, archived at [`done/0.1/`](done/0.1/README.md)** | 0.0 ✓ |
-| **0.2** | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **IN PROGRESS**: [`0.2/0.2.0a.md`](done/0.2/0.2.0a.md), the adoption of compiler `5fbaf4a`, done; [`0.2/0.2.0b.md`](done/0.2/0.2.0b.md), `Vec<T: Copy>`, done; [`0.2/0.2.0.md`](done/0.2/0.2.0.md), `Instant`, done; [`0.2/0.2.1.md`](done/0.2/0.2.1.md), `Timestamp`, done; [`0.2/0.2.2.md`](done/0.2/0.2.2.md), the conversions and the gate, done; [`0.2/0.2.3a.md`](done/0.2/0.2.3a.md), the instruments, done; [`0.2/0.2.3.md`](done/0.2/0.2.3.md), the `Duration` interop, done; 0.2.4, the close, next | 0.1 ✓ |
-| **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double | 0.2 |
+| ~~**0.2**~~ | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **CLOSED 2026-10-02, archived at [`done/0.2/`](done/0.2/README.md)** | 0.1 ✓ |
+| **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double — **NEXT**: `0.3/0.3.0.md`, the clocks, written at cycle 0.2's close | 0.2 ✓ |
 | **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate | 0.2 |
 | **0.5** | **The zone table** — the generator, the committed tables, the size measurement | 0.1 |
 | **0.6** | **Zoned time** — offset lookup, the four resolution modes, the transition sweep | 0.4, 0.5 |
@@ -168,6 +173,23 @@ moved to cycle 0.7.3 at 0.2.3's planning, beside `date_until`: TM-237.)*
 boundary in the range plus every second of 512 randomly chosen days, and a
 property test that `nanos < 1_000_000_000` after every operation.
 
+**CLOSED 2026-10-02 at compiler `5fbaf4a`, archived at
+[`done/0.2/`](done/0.2/README.md)** — ten subcycles, the close in three. What
+it produced: `src/span/` — `Instant` and its two clocks (TM-215, TM-216),
+`Timestamp` and its one constructor (TM-219, TM-220), the conversions to and
+from the civil scale in UTC (TM-222), and the `Duration` interop (TM-233 …
+TM-236), `timestamp_add` and `instant_since` total since the close (TM-241,
+TM-242); the gate on every full run, both sides of every day boundary and every
+second of 512 days (TM-224), and P-4's stand-in over every operation that yields
+a `Timestamp`; one adoption, to compiler `5fbaf4a` (TM-208 … TM-213);
+`Vec<T: Copy>` (TM-214); the tree checks' family one list, and three checks
+live (TM-227 … TM-232), each read again at the close (TM-238 … TM-240); and 133
+units green. `timestamp_until` moved to cycle 0.7.3 (TM-237); whether
+`instant_of`'s name should say it takes a raw reading is the author's, Q-7.
+The table row read *"IN PROGRESS: …"* with each subcycle's file linked, and
+`done/0.2/README.md` keeps that list. `done/0.2/0.2.4.md`'s record holds what
+the cycle found and taught.
+
 ### 0.3 — The host boundary
 `src/host/`: `clock_gettime` through `sys` with the `timespec` laid out in a
 `buffer`, the three clocks, `host_system_zone`'s four-step discovery, and the
@@ -175,6 +197,11 @@ test double in `tests/`.
 
 **The cycle's gate:** `check_purity` goes live and is green, and has been *seen
 to fail* against a deliberately planted `mono_now()` outside `src/host/`.
+*(Dated at cycle 0.2.4, cycle 0.2's close — its audit's S4: `check_purity` has
+been live since cycle 0.0.3 (TM-126), and its self-check row plants a
+`mono_now()` outside `src/host/` on every run. What cycle 0.3 owes is its ban
+list reviewed against a `src/host/` with a body, and the gate is that check
+green and seen to fail there — cycle 0.3's README, its 0.3.1 note.)*
 
 ### 0.4 — Formatting and parsing
 `src/fmt/`: the named formats in both directions, `FmtPart` and `Layout`,
@@ -267,6 +294,9 @@ the version policy from TM-013 stated where a consumer will read it.
 - **`check_purity` goes live at 0.3**, the cycle that creates the only impure
   module — the compiler's rule that instruments precede the constructs they
   guard, applied to the property this library's reproducibility rests on.
+  *(Dated at cycle 0.2.4 — the cycle audit's S4: it has been live since cycle
+  0.0.3, TM-126, three cycles before the module it guards; the rule held, and
+  cycle 0.3 reviews its ban list against `src/host/`'s body.)*
 - **A decision precedes the cycle that needs it.** Each cycle's README lists
   its open questions; a cycle whose questions are open is not ready to start.
 

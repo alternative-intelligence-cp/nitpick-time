@@ -40,7 +40,7 @@
 // hand it back twice -- `Copy`, TM-219 -- read through both fields, neither
 // of them zero (the workbench `PLAYBOOK.md` §9: a positive test whose expected
 // value is the vacant value tests nothing). SEEN RED AT PLANNING, on both
-// legs, in a copy of the tree (`meta/roadmap/0.2/0.2.1.md`, step 4): 30 with
+// legs, in a copy of the tree (`meta/roadmap/done/0.2/0.2.1.md`, step 4): 30 with
 // the lower `secs` bound one high; 31 with `secs` stored as the bound; 32 with
 // `nanos` stored as 0; 34 with each of the four checks deleted, the `nanos`
 // bound one high, and the two `nanos` checks replaced by one made after the

@@ -38,7 +38,7 @@
 // value's `nanos` not below one second -- M-7 itself, held apart from the
 // tables; 37 a pair out of range accepted; 38 the counts are not 12 and 18.
 // SEEN RED AT PLANNING, on both legs, in a copy of the tree
-// (`meta/roadmap/0.2/0.2.2.md`, step 3): 30 with `civil_time` refusing the
+// (`meta/roadmap/done/0.2/0.2.2.md`, step 3): 30 with `civil_time` refusing the
 // last nanosecond of a second; 33 with `timestamp_of`'s lower bound one high;
 // 34 with `civil_to_utc`'s minutes counted as 59 seconds; 35 with its
 // nanoseconds dropped; 37 with it writing a `Timestamp` literal instead of

@@ -90,7 +90,7 @@ widening, a `raw`, a function that exists, or a body for a `prove` to stand
 in. Rewritten in the syntax a clause takes, all forty-three compile as live
 clauses but the four that call a function, whose callee needs `pure` as well —
 `days_to_date`'s, `ordinal_to_date`'s and `iso_week_to_date`'s two —
-`meta/roadmap/0.2/0.2.4b.md` §1.)*
+`meta/roadmap/done/0.2/0.2.4b.md` §1.)*
 `nitpick-regex` records the same answer as its rule P-1b (its RX-164).
 
 ---

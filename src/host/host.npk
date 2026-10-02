@@ -26,7 +26,10 @@
 // `meta/specs/HOST.md`.
 // WHEN: cycle 0.3 (`meta/roadmap/0.3/README.md`), which is also when
 // `check_purity` goes live and must be SEEN TO FAIL against a planted
-// `mono_now()` outside this directory.
+// `mono_now()` outside this directory. (Dated at cycle 0.2.4, cycle 0.2's
+// close -- its audit's S4: `check_purity` has been live since cycle 0.0.3,
+// TM-126, and the self-check plants a `mono_now()` outside this directory on
+// every run; cycle 0.3 reviews its ban list against this module's body.)
 //
 // WHAT IT MAY IMPORT: `zone` (for the name lookup), `cal` (for the range
 // check) and `core` (`BUILD.md` B-17).

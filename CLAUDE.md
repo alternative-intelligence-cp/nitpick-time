@@ -7,15 +7,39 @@ Guidance for Claude Code sessions working in this repository.
 `ntime` — a date, time and time-zone library for **Nitpick**, the
 safety-critical systems language at `../../nitpick`.
 
-**Status: cycle 0.1 CLOSED (2026-09-26), archived at `meta/roadmap/done/0.1/`
-— the civil calendar, with its exhaustive gate on every run — and cycle 0.2,
-instants and timestamps, is OPEN: its 0.2.0a, the adoption of compiler
-`5fbaf4a`, its 0.2.0b, `Vec<T: Copy>`, its 0.2.0, `Instant`, its 0.2.1,
-`Timestamp`, its 0.2.2, the conversions and the cycle's gate, its 0.2.3a, the
-instruments, and its 0.2.3, the `Duration` interop, are done; and its close is
-under way in three parts, each triaging the cycle audit's findings: 0.2.4a, the
-audit's instruments, and 0.2.4b, the library's findings, are done, and 0.2.4,
-the close itself, is next.**
+**Status: cycle 0.2 CLOSED (2026-10-02), archived at `meta/roadmap/done/0.2/`
+— instants and timestamps: `Instant` and its two clocks, `Timestamp` and its
+one constructor, the conversions to and from the civil scale in UTC with their
+exhaustive gate on every run, and the `Duration` interop — after cycle 0.1, the
+civil calendar, CLOSED 2026-09-26 and archived at `meta/roadmap/done/0.1/`.
+Cycle 0.3, the host boundary, is next: `meta/roadmap/0.3/0.3.0.md`, the
+clocks, was written at the close.**
+
+**After cycle 0.2.4: cycle 0.2's close.** The cycle audit (ACCEPT, twenty-two
+findings: eight contradictions, two dormant, five stale, seven cosmetic; no
+memory fault and no silent wrong answer) was triaged in three subcycles, every
+finding fixed but the two that are the workbench's: **0.2.4a**, the
+instruments (TM-238 … TM-240), **0.2.4b**, the library's findings (TM-241 …
+TM-245), and **0.2.4**, the close — `ROADMAP.md`'s two sentences that said
+`check_purity` goes live at 0.3, and `src/host/host.npk`'s third, dated (the
+audit's S4); cycle 0.2's records
+moved to `meta/roadmap/done/0.2/`, the links the move broke in the move's own
+commit and every plain mention after it; cycle 0.3's README given what cycle
+0.2 hands it — `meta/OPEN_QUESTIONS.md` Q-7, which is the author's, and what
+the next adoption owes; and `meta/roadmap/0.3/0.3.0.md` written. **Three
+items reached the close after the audit, a row of the triage each.**
+`check_int128_sites` reads a wide type's NAME and not a literal's width
+suffix, so `(3i256 * 5i256) =>! int64` passes it — it compiles, and narrows
+a constant in silence; an `int64` beside an `int256` literal is
+`NITPICK-TYPE-007`, so only literals alone widen unnamed, and `src/`'s one
+wide literal stands in a function §5 marks — handed to 0.3.0's first step,
+whose plan drafts the decision. TM-241's *"within 9 223 372 037 seconds"*
+reads *"less than"*, by a dated note. And `meta/specs/GLOSSARY.md` notes
+that *an instant* in prose is a point on the UTC timeline, what a
+`Timestamp` holds — the workbench's question 22 — and leaves
+`ZonedDateTime`'s field `instant` to cycle 0.6. The gate
+stands as 0.2.2 left it, both members on every run. A full invocation is
+**133 units green** at pin `5fbaf4a`.
 
 **After cycle 0.2.4b: the cycle audit's library findings.** **`timestamp_add`
 checks its operand before it adds** — `t.secs` against the range,
@@ -219,7 +243,7 @@ reaches no file here; the hold on `for`, `loop` and `till` is lifted. The
 self-check plants 12 of V-14's 13 cases. A full invocation is **113 units
 green** at pin `5fbaf4a`.
 
-**Before it, cycle 0.1's close:** `meta/roadmap/0.2/0.2.0.md` was written at
+**Before it, cycle 0.1's close:** `meta/roadmap/done/0.2/0.2.0.md` was written at
 the close. **The close's second half triaged the cycle audit's nineteen
 findings**, every one fixed but for the check half of one, which a decision
 places on cycle 0.2.3, and the four the audit asked to be fixed rather than

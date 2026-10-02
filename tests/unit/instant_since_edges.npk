@@ -32,7 +32,7 @@
 // or inside its largest refused, an ordinary pair among them; 13 a pair at or
 // inside its smallest refused; 14 an answer not the exact difference. SEEN
 // RED AT PLANNING, on both legs, in a copy of the tree
-// (`meta/roadmap/0.2/0.2.4b.md`, step 2): 93, the floor's `IntOverflow` arm,
+// (`meta/roadmap/done/0.2/0.2.4b.md`, step 2): 93, the floor's `IntOverflow` arm,
 // with the difference computed in `int64` as it was until cycle 0.2.4b; 10
 // with the upper check deleted, and with its bound a nanosecond wide; 11 with
 // the lower check deleted, and with its bound a nanosecond wide; 12 with the

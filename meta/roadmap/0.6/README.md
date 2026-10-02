@@ -39,6 +39,7 @@ settled.
 
 ### 0.6.2 — `ZonedDateTime`
 - [ ] the type with the instant as **source of truth** and the civil fields as a cache (M-14)
+- [ ] **the field's name** — `ZonedDateTime`'s `instant` (`TIME_MODEL.md` §6, M-14) holds a `Timestamp`, while `meta/specs/GLOSSARY.md` gives *instant* to the `Instant` type, and in prose to a point on the UTC timeline — its note from cycle 0.2's close, the workbench's question 22: the field is named here, where the type is written — `instant` kept, or a name no reader takes for the type — by a decision that records the glossary's note with it *(handed on by cycle 0.2's close, `done/0.2/0.2.4.md`)*
 - [ ] every operation that could make them disagree recomputes them
 - [ ] a property test asserting the invariant after **every** operation the type has
 - [ ] `zone_at(timestamp, zone)` — the always-unique direction

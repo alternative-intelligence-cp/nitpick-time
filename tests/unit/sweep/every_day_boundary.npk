@@ -48,7 +48,7 @@
 // walk did not end on `NTIME_SECS_MAX`'s second; 20, 21 and 22 the `swept`
 // line could not be built, could not be written, or was written short. SEEN
 // RED AT PLANNING, on both legs, in a copy of the tree
-// (`meta/roadmap/0.2/0.2.2.md`, step 3): 10 with `civil_time` refusing the
+// (`meta/roadmap/done/0.2/0.2.2.md`, step 3): 10 with `civil_time` refusing the
 // last nanosecond of a second; 11 with `days_in_month` refusing December; 12
 // with `civil_date` refusing a month's last day; 13 with `civil_to_utc` a
 // second short; 14 with it a second long; 15 with its nanoseconds doubled; 16

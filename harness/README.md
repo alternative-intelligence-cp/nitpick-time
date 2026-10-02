@@ -353,7 +353,7 @@ the tree checks at `11 live`; and the library's IR 226 493 B — 228 227 B at
 `c970483`, 229 041 B for the unchanged tree at `5fbaf4a` (a `target datalayout`
 line and `cstring`'s drop pair), then less `Pod`'s block. The unchanged tree
 had run `RED -- 105 unit(s) of 113`: the eight files holding the fifteen
-`cstring` copies (`meta/roadmap/0.2/0.2.0a.md` §1). No heap figure and no sweep
+`cstring` copies (`meta/roadmap/done/0.2/0.2.0a.md` §1). No heap figure and no sweep
 count moved.
 
 **At cycle 0.2.0b, the same pin, 111 units**: two tests retired — TM-150's

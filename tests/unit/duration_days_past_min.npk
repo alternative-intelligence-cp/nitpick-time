@@ -18,7 +18,7 @@
 //
 // EXIT CODES: 93, `IntOverflow`, the pass; 10 or 11 the call returned -- a span
 // above zero or not -- which is the failure. SEEN RED AT PLANNING, on both
-// legs, in a copy of the tree (`meta/roadmap/0.2/0.2.3.md`, step 3): 11 with a
+// legs, in a copy of the tree (`meta/roadmap/done/0.2/0.2.3.md`, step 3): 11 with a
 // day one second short, which leaves -106 752 days inside `int64`; 10 with the
 // constructor multiplying by the wrapping `*%` itself, where `duration_secs`
 // would have trapped.

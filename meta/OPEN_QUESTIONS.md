@@ -168,7 +168,7 @@ last clause: a live `requires i >= 0 && i < v.count` on `vec_at` adds
 
 **Raised 2026-10-02 by the stream-2 planner at cycle 0.2's close, from the
 cycle audit's C2** (the workbench's `meta/audits/nitpick-time-0.2-2026-10-02.md`;
-planned in [`roadmap/0.2/0.2.4b.md`](roadmap/done/0.2/0.2.4b.md)). `TIME_MODEL.md`
+planned in [`roadmap/done/0.2/0.2.4b.md`](roadmap/done/0.2/0.2.4b.md)). `TIME_MODEL.md`
 M-3 says an `Instant` cannot be converted to a `Timestamp` *"in either
 direction, ever"*, and the public `README.md` says an `Instant` *"cannot be
 built from a number or converted to a point on the UTC scale"*. **Measured at
@@ -1315,7 +1315,7 @@ recorded `bytes_take` and not the language decision it produced
 ### O-N34 — `#unreachable()` ending an `if (r.is_error)` arm is not counted as leaving it, so a read of `r.value` below is `NITPICK-TAINT-001`: a refusal of a correct program
 
 **Raised** from this repository's cycle 0.2.2 planning, 2026-10-01, at pin
-`5fbaf4a` (`roadmap/0.2/0.2.2.md` §1.2): `timestamp_to_utc` wanted the statement
+`5fbaf4a` (`roadmap/done/0.2/0.2.2.md` §1.2): `timestamp_to_utc` wanted the statement
 form for its two refusals that cannot happen. **Numbered O-N34** in the
 workbench registry (`../../meta/OPEN_QUESTIONS.md`), reproduced there at
 `5fbaf4a` and sent to the compiler, whose own registry holds it. **Open at our

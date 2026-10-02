@@ -26,7 +26,7 @@
 // `Vec<T: Copy>` asks it since cycle 0.2.0b); 16 `instant_since` accepted two
 // clocks; 17 `instant_cmp` accepted two clocks. EACH WAS SEEN RED ON A MUTANT
 // AT CYCLE 0.2.1'S PLANNING, on both legs, in a copy of the tree
-// (`meta/roadmap/0.2/0.2.1.md`, step 1): 10 and 12 `instant_since`'s and
+// (`meta/roadmap/done/0.2/0.2.1.md`, step 1): 10 and 12 `instant_since`'s and
 // `instant_cmp`'s clock tests inverted; 11 `instant_since`'s operands swapped;
 // 13 `instant_add` subtracting; 14 `instant_add`'s clock hard-coded, to
 // `Boottime` (the first of its two lines) and to `Monotonic` (the second); 15

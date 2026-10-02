@@ -1,8 +1,8 @@
 diff --git a/CLAUDE.md b/CLAUDE.md
-index 8eb80ed4f3707ee411ab502e66b097059aa84ce8..33c0419413cefdb2e3c745d0cfb59233169141b0 100644
+index 8eb80ed4f3707ee411ab502e66b097059aa84ce8..712653e29b3b4152faec4cda8f393f654a518bc2 100644
 --- a/CLAUDE.md
 +++ b/CLAUDE.md
-@@ -7,15 +7,28 @@ Guidance for Claude Code sessions working in this repository.
+@@ -7,15 +7,39 @@ Guidance for Claude Code sessions working in this repository.
  `ntime` — a date, time and time-zone library for **Nitpick**, the
  safety-critical systems language at `../../nitpick`.
  
@@ -34,7 +34,18 @@ index 8eb80ed4f3707ee411ab502e66b097059aa84ce8..33c0419413cefdb2e3c745d0cfb59233
 +moved to `meta/roadmap/done/0.2/`, the links the move broke in the move's own
 +commit and every plain mention after it; cycle 0.3's README given what cycle
 +0.2 hands it — `meta/OPEN_QUESTIONS.md` Q-7, which is the author's, and what
-+the next adoption owes; and `meta/roadmap/0.3/0.3.0.md` written. The gate
++the next adoption owes; and `meta/roadmap/0.3/0.3.0.md` written. **Three
++items reached the close after the audit, a row of the triage each.**
++`check_int128_sites` reads a wide type's NAME and not a literal's width
++suffix, so `(3i256 * 5i256) =>! int64` passes it — it compiles, and narrows
++a constant in silence; an `int64` beside an `int256` literal is
++`NITPICK-TYPE-007`, so only literals alone widen unnamed, and `src/`'s one
++wide literal stands in a function §5 marks — handed to 0.3.0's first step,
++whose plan drafts the decision. TM-241's *"within 9 223 372 037 seconds"*
++reads *"less than"*, by a dated note. And `meta/specs/GLOSSARY.md` notes
++that *an instant* in prose is a point on the UTC timeline, what a
++`Timestamp` holds — the workbench's question 22 — and leaves
++`ZonedDateTime`'s field `instant` to cycle 0.6. The gate
 +stands as 0.2.2 left it, both members on every run. A full invocation is
 +**133 units green** at pin `5fbaf4a`.
  

@@ -1,0 +1,451 @@
+diff --git a/src/cal/cal.npk b/src/cal/cal.npk
+index a2d7d42f1dad2f731719e2aa664be77b4b5bfca9..9ec1b06ee77bed3338f697c564755ffe2818639d 100644
+--- a/src/cal/cal.npk
++++ b/src/cal/cal.npk
+@@ -290,13 +290,14 @@ pub func:is_leap_year = bool(int64:y) never fails {
+ };
+ 
+ // `requires m >= 1 && m <= 12`
+-// `ensures answer >= 28 && answer <= 31`
++// `ensures result >= 28 && result <= 31`
+ //
+ // (`VERIFICATION.md` P-1b, A': an obligation is a comment in the syntax it
+ // would take unless a numbered decision accepts the arm its live clause costs
+-// every consumer. `answer`, never `result` -- `result` and `old` are
+-// reserved `VerificationKeyword`s, TM-130/B-18, and this library's own contract
+-// syntax is exactly where you meet them as things to write.)
++// every consumer. `result` and `old` are written as the live clause takes them:
++// they are reserved as LOCAL names, TM-130/B-18, and a comment is no local.
++// Until cycle 0.2.4b these comments wrote `answer` for `result`, which the
++// live clause refuses, `NITPICK-RESOLVE-002` -- the cycle audit's C5, TM-244.)
+ //
+ // THE YEAR IS NOT RANGE-CHECKED HERE and that is deliberate: C-3's rule is
+ // defined for every `int64` year, the range is the CONSTRUCTOR's obligation
+@@ -370,12 +371,13 @@ func:days_from_civil = int64(int64:y, int64:m, int64:d) never fails {
+     pass (era * 146097i64) + doe - 719468i64;
+ };
+ 
+-// `ensures answer >= NTIME_DAY_MIN && answer <= NTIME_DAY_MAX`
++// `ensures result >= NTIME_DAY_MIN && result <= NTIME_DAY_MAX`
+ //  (true of every `CivilDate` that `civil_date` can build -- C-8c)
+ //
+ // (`VERIFICATION.md` P-1b -- A', the author's answer to `meta/OPEN_QUESTIONS.md`
+-// Q-6 -- reads it: a comment in the syntax it would take, `answer` for `result`
+-// (TM-130) -- and evidence of NOTHING, since a plain build checks no comment.
++// Q-6 -- reads it: a comment in the syntax it would take, `result` included
++// since cycle 0.2.4b (TM-244; `answer` until then, TM-130's word for a LOCAL)
++// -- and evidence of NOTHING, since a plain build checks no comment.
+ // The live `ensures` would arm `EnsuresViolated` in every consumer;
+ // `0.1.1.md` §6 is that alternative, measured.)
+ //
+@@ -396,9 +398,11 @@ pub func:date_to_days = int64(CivilDate:cd) never fails {
+     pass raw days_from_civil(cd.year => int64, cd.month => int64, cd.day => int64);
+ };
+ 
+-// `ensures answer.month >= 1 && answer.month <= 12`
++// `ensures result.month >= 1 && result.month <= 12`
+ //  -- held by construction: it is `civil_date`'s result
+-// `prove(date_to_days(answer) == n)`      -- `VERIFICATION.md` §6's row
++// `ensures raw date_to_days(result) == n` -- `VERIFICATION.md` §6's row; a
++//  call in a contract needs its callee `pure` too (the compiler's TYPE-060),
++//  which the decision that arms this clause gives `date_to_days` (TM-244)
+ //
+ // THE CIVIL DATE OF A DAY NUMBER -- `civil_from_days`, with the same deviation.
+ //
+@@ -438,7 +442,8 @@ pub func:days_to_date = CivilDate(int64:n) {
+ // The validating constructors -- C-8, and the whole contract of this cycle
+ // ===========================================================================
+ 
+-// `ensures answer.year == y && answer.month == m && answer.day == d`
++// `ensures (result.year => int64) == y && (result.month => int64) == m
++//          && (result.day => int64) == d`
+ //
+ // C-8: VALIDATING CONSTRUCTORS ONLY. There is no unchecked constructor in this
+ // module and there is not to be one. Everything downstream -- every conversion,
+@@ -492,8 +497,8 @@ pub func:civil_date = CivilDate(int64:y, int64:m, int64:d) {
+     pass CivilDate{ year: y =>! int32, month: m =>! uint8, day: d =>! uint8 };
+ };
+ 
+-// `ensures answer.hour == h && answer.minute == mi`
+-// `ensures answer.second == s && answer.nanos == n`
++// `ensures (result.hour => int64) == h && (result.minute => int64) == mi`
++// `ensures (result.second => int64) == s && (result.nanos => int64) == n`
+ //
+ // C-9 (TM-029): `hour in [0,23]`, `minute in [0,59]`, `second in [0,59]`,
+ // `nanos in [0, 999 999 999]`.
+@@ -540,7 +545,7 @@ pub func:civil_time = CivilTime(int64:h, int64:mi, int64:s, int64:n) {
+ // Weekday numbering -- C-7
+ // ===========================================================================
+ 
+-// `ensures answer >= 1 && answer <= 7`
++// `ensures result >= 1 && result <= 7`
+ //
+ // ISO 8601: Monday = 1 ... Sunday = 7. Read off the TAG rather than written as
+ // a seven-arm `pick`, and the reason is that the enum's declaration order is
+@@ -556,7 +561,7 @@ pub func:weekday_number = int64(Weekday:w) never fails {
+     pass ((w =>! int32) => int64) + 1i64;
+ };
+ 
+-// `ensures answer >= 0 && answer <= 6`
++// `ensures result >= 0 && result <= 6`
+ //
+ // C-7: Sunday = 0 ... Saturday = 6, the convention the C library uses. It is
+ // here because a caller porting code will look for it, and the enum's own order
+@@ -595,7 +600,7 @@ pub func:weekday_number_sunday_first = int64(Weekday:w) never fails {
+ // a Thursday, index 3, so the index is `(n + 3) mod 7`, with the modulus made
+ // non-negative because `%` here truncates toward zero.
+ //
+-// `ensures answer >= 0 && answer <= 6` -- `VERIFICATION.md` §6's weekday row,
++// `ensures result >= 0 && result <= 6` -- `VERIFICATION.md` §6's weekday row,
+ // a comment per A' (`VERIFICATION.md` P-1b; TM-164) -- AND THE LINE THAT
+ // CHECKS IT IS CODE, which P-1b admits at no arm cost. The
+ // correction leaves `rem` in 0 ... 6 for every `int64` -- `%` by 7 lies in
+@@ -625,7 +630,7 @@ pub func:weekday = Weekday(CivilDate:cd) never fails {
+     pass ((raw weekday_index(raw date_to_days(cd))) =>! int32) =>! Weekday;
+ };
+ 
+-// `ensures answer >= 1 && answer <= 366`
++// `ensures result >= 1 && result <= 366`
+ //
+ // THE DAY OF THE YEAR, 1 ... 366 (C-15): the day number less 1 January's, plus
+ // one -- from the day number, like every field here, and not from a table of
+@@ -635,7 +640,7 @@ pub func:day_of_year = int64(CivilDate:cd) never fails {
+     pass ((raw date_to_days(cd)) - (raw days_from_civil(cd.year => int64, 1i64, 1i64))) + 1i64;
+ };
+ 
+-// `ensures day_of_year(answer) == doy`
++// `ensures raw day_of_year(result) == doy` -- its callee `pure` when it arms
+ //
+ // THE DATE OF AN ORDINAL DATE -- the round trip's other half (C-15,
+ // `TESTING.md` V-4). A validating constructor: the year against C-4's range,
+@@ -671,7 +676,8 @@ func:iso_week_one = int64(int64:iy) never fails {
+     pass jan4 - (raw weekday_index(jan4));
+ };
+ 
+-// `ensures answer >= cd.year - 1 && answer <= cd.year + 1` --
++// `ensures result >= (cd.year => int64) - 1
++//          && result <= (cd.year => int64) + 1` --
+ // `VERIFICATION.md` §6's "the week-year is within one of the calendar year"
+ //
+ // THE WEEK-YEAR OF A DATE (C-14): the year its ISO week belongs to, which is a
+@@ -685,7 +691,7 @@ pub func:iso_week_year = int64(CivilDate:cd) never fails {
+     pass y;
+ };
+ 
+-// `ensures answer >= 1 && answer <= 53` -- `VERIFICATION.md` §6's ISO row
++// `ensures result >= 1 && result <= 53` -- `VERIFICATION.md` §6's ISO row
+ //
+ // THE WEEK NUMBER, 1 ... 53 (C-14): whole weeks since the week-year's first
+ // Monday, plus one. The difference is 0 ... 370, never negative, so `/`
+@@ -695,7 +701,7 @@ pub func:iso_week_number = int64(CivilDate:cd) never fails {
+     pass ((n - (raw iso_week_one(raw iso_week_year(cd)))) / 7i64) + 1i64;
+ };
+ 
+-// `ensures answer >= 1 && answer <= 7`
++// `ensures result >= 1 && result <= 7`
+ //
+ // THE ISO WEEKDAY, Monday = 1 ... Sunday = 7 (C-14, C-7): what
+ // `weekday_number(weekday(cd))` gives, from the same `weekday_index` and
+@@ -704,8 +710,9 @@ pub func:iso_weekday = int64(CivilDate:cd) never fails {
+     pass (raw weekday_index(raw date_to_days(cd))) + 1i64;
+ };
+ 
+-// `ensures iso_week_year(answer) == iy && iso_week_number(answer) == w`
+-// `ensures iso_weekday(answer) == wd`
++// `ensures raw iso_week_year(result) == iy
++//          && raw iso_week_number(result) == w`
++// `ensures raw iso_weekday(result) == wd` -- the callees `pure` when they arm
+ //
+ // THE DATE OF AN ISO WEEK DATE -- the round trip's other half (C-14,
+ // `TESTING.md` V-4). A validating constructor, each argument checked BEFORE
+diff --git a/src/core/bytes.npk b/src/core/bytes.npk
+index bce62b0b69ad3b0b622c42fcf54d82d36fbeecbf..804cd39b5fb443d352a98bbd9df9c19dfe2c869f 100644
+--- a/src/core/bytes.npk
++++ b/src/core/bytes.npk
+@@ -105,7 +105,7 @@ use "./limits.npk".*;
+ // module but this one names it at all, and `bytes_capacity` reads its `cap`.
+ pub struct:Bytes = { hidden buffer:body; sealed limit<ListLen> int64:len; };
+ 
+-// `ensures answer.len == 0 && answer.body.cap >= 1`
++// `ensures result.len == 0 && result.body.cap >= 1`
+ pub func:bytes_init = Bytes(int64:cap) never fails {
+     int64:n = cap;
+     if (n < 1i64) { n = 1i64; }
+@@ -304,12 +304,12 @@ pub func:bytes_put_int = NIL(Bytes->:b, int64:v) never fails {
+ // READING AND FINISHING
+ // ===========================================================================
+ 
+-// `ensures answer == b.len`
++// `ensures result == b.len`
+ pub func:bytes_len = int64(Bytes->:b) never fails {
+     pass b.len;
+ };
+ 
+-// `ensures answer == b.body.cap`
++// `ensures result == b.body.cap`
+ //
+ // THE CAPACITY, READ HERE BECAUSE NOWHERE ELSE CAN (cycle 0.1.3c, TM-195).
+ // `body` is `hidden`, so outside this module `b.body.cap` is `NITPICK-TYPE-080`
+diff --git a/src/core/vec.npk b/src/core/vec.npk
+index e86b4cd1925a562c1992a296b745e301a367f43f..d1a46821d14288b8663f8bca009ea56d721c9a03 100644
+--- a/src/core/vec.npk
++++ b/src/core/vec.npk
+@@ -264,12 +264,13 @@ mod:vec;
+ // changes no field and no byte: the bound is a fact about `T`.
+ pub struct:Vec<T: Copy> = { hidden wild T->:items; sealed limit<ListLen> int64:count; sealed limit<ListLen> int64:cap; hidden string[0]:move_only; };
+ 
+-// `ensures answer.count == 0 && answer.cap >= 1`
++// `ensures result.count == 0 && result.cap >= 1`
+ //
+ // (`VERIFICATION.md` P-1b: an obligation is a comment in the syntax it would
+ // take unless a numbered decision accepts the arm its live clause costs every
+-// consumer. `answer` and not `result` -- `result` is a reserved
+-// `VerificationKeyword`, TM-130/B-18.)
++// consumer. `result`, as the live clause takes it: it is reserved as a LOCAL
++// name, TM-130/B-18, and a comment is no local -- `answer` until cycle 0.2.4b,
++// which the live clause refuses, the cycle audit's C5, TM-244.)
+ //
+ // A REQUEST OF ZERO OR LESS BECOMES ONE, rather than an error or a null block.
+ // `alloc(0)` would give a block no element can be written to while `cap` said
+@@ -458,7 +459,9 @@ pub func:vec_pop<T: Copy> = T(Vec<T>->:v) never fails {
+     pass answer;
+ };
+ 
+-// `ensures v.count == min(n, old(v.count))`
++// `ensures (n < 0 && v.count == 0)
++//          || (n >= 0 && n < old(v.count) && v.count == n)
++//          || (n >= old(v.count) && v.count == old(v.count))`
+ //
+ // At a non-owning `T` dropping the tail is exactly lowering `count`. At an
+ // owning `T` it would additionally owe a drop per discarded element (S-18c),
+diff --git a/src/span/span.npk b/src/span/span.npk
+index c41388b023054c624ad2d004c3743718caf45456..7c4c44d02ba987087e6fcbf2a7a4b56dcdcc5c62 100644
+--- a/src/span/span.npk
++++ b/src/span/span.npk
+@@ -16,14 +16,22 @@
+ // cycle 0.2.2 this said the conversions were that cycle's, and until cycle
+ // 0.2.3 that the interop was.)
+ //
+-// A TIMEOUT CANNOT BE WRITTEN AGAINST A WALL CLOCK, and this module is half of
+-// why: there is no conversion between an `Instant` and anything else (TM-010),
+-// and a consumer can neither build an `Instant` from a number nor edit one --
+-// both fields are `sealed`, so `Instant{ ns: n, clock: c }` and `a.ns = n` are
+-// `NITPICK-TYPE-079` outside this module (`tests/probe/probe20_instant_literal_refused.npk`;
+-// the missing conversion is `probe20b`). The compiler's runtime says the same
+-// of its own deadline clock -- `runtime/npkrt.ll` at the pin, the block headed
+-// "the monotonic clock (D-176, 1.1.3)", above `npk_chain_reset`:
++// A TIMEOUT CANNOT BE WRITTEN AGAINST A WALL CLOCK BY ACCIDENT, and this
++// module is half of why: this library offers no conversion between an
++// `Instant` and anything else (TM-010), and a consumer can neither write an
++// `Instant` as a literal nor edit one -- both fields are `sealed`, so
++// `Instant{ ns: n, clock: c }` and `a.ns = n` are `NITPICK-TYPE-079` outside
++// this module (`tests/probe/probe20_instant_literal_refused.npk`; the missing
++// conversion is `probe20b`). What a consumer CAN write is a construction:
++// `instant_of` takes any `int64`, so a number computed from a `Timestamp`'s
++// fields becomes an `Instant` that names, in writing, the clock it claims to
++// have read -- TM-216's opt-out in writing, which `probe20g` compiles and
++// runs, so this paragraph is checked (TM-243; `meta/OPEN_QUESTIONS.md` Q-7
++// asks the author whether the constructor's name should say so). (Until cycle
++// 0.2.4b this said a consumer could not build an `Instant` from a number --
++// the cycle audit's C2.) The compiler's runtime says the same of its own
++// deadline clock -- `runtime/npkrt.ll` at the pin, the block headed "the
++// monotonic clock (D-176, 1.1.3)", above `npk_chain_reset`:
+ //
+ //     CLOCK_MONOTONIC nanoseconds since an arbitrary epoch -- the deadline
+ //     substrate's one clock. Wall clocks are excluded from the deadline path:
+@@ -37,7 +45,8 @@
+ // have no values in common. `=>!` does not help" (`probe20e`, `probe20f`) --
+ // though each type is 16 bytes. What remains is `wild` storage reinterpreted
+ // through a pointer cast, the opt-out `CALENDAR.md` C-8c names for every
+-// checked property.
++// checked property -- and the construction from numbers above, which is
++// written, not converted.
+ //
+ // TWO CLOCKS, ONE TYPE, AND THE TAG IS AN ENUM (TM-215). `Boottime` counts
+ // suspend and `Monotonic` does not (`HOST.md` H-6), so a reading of one less a
+@@ -98,7 +107,12 @@
+ // form, `if (r.is_error) { #unreachable(); }`, leaves `r.value` tainted --
+ // `NITPICK-TAINT-001`, measured at planning: the taint analysis does not count
+ // the builtin as leaving the block. `?|`'s fallback is the builtin itself,
+-// which the compiler types as whatever its position expects.)
++// which the compiler types as whatever its position expects.) (Cycle 0.2.4b:
++// that refusal is a compiler defect and not the language's rule -- the
++// workbench registry's O-N34, restated in `meta/OPEN_QUESTIONS.md`, the cycle
++// audit's S2: the compiler's own decisions say an arm that ends in the builtin
++// leaves. At this pin it stands, so `?|` is the spelling, and the adoption that
++// moves the pin re-measures it (TM-245).)
+ //
+ // `civil_to_utc` IS FALLIBLE, AS §9 SAYS, AND THAT IS WHAT MAKES IT TOTAL. It
+ // adds the day number `date_to_days` gives to the second of the day and builds
+@@ -108,7 +122,11 @@
+ // lies in the range -- so the refusal is reached only through C-8c's opt-out:
+ // a forged year of 10 000, or a forged `nanos` of one second, is refused, and
+ // never trapped or carried (`tests/unit/civil_to_utc_edges.npk`, which is
+-// `VERIFICATION.md` P-4's stand-in for this function). That is `CALENDAR.md`
++// `VERIFICATION.md` P-4's stand-in for this function). A forged reading whose
++// sum `timestamp_of` accepts is answered as the arithmetic gives it: an hour of
++// 24, which C-9 refuses and the seal keeps out, is the next day's midnight,
++// measured at cycle 0.2.4b's planning -- a misleading answer and no
++// misbehaviour, which C-8b allows (the cycle audit's K2). That is `CALENDAR.md`
+ // C-8b's second bullet -- total where it can be. And nothing here can trap on
+ // the way: a day number from any `int32` year is at most 7.84e11 in magnitude
+ // (C-12), times 86 400 is 6.8e16, and the second of the day is at most 933 555
+@@ -124,7 +142,14 @@
+ // the prelude's, `never fails`, and `pass duration_ns(...)` inside
+ // `instant_since` is `NITPICK-TYPE-007` without it (measured at planning).
+ // `instant_add` overflows only 292 years past the clock's origin, and traps
+-// there (D-210), as `TIME_MODEL.md` §8 has said since cycle 0.0.
++// there (D-210), as `TIME_MODEL.md` §9's row has said since cycle 0.0 -- `never
++// fails`, the trap its range check (it said §8 until cycle 0.2.4b, and §8's
++// table has no `Instant` row: the cycle audit's S1). `instant_since` does not
++// trap: since cycle 0.2.4b it computes the difference in `int128` and refuses
++// one past `Duration`'s range, `ETimeValue`/`Overflow` (TM-242). M-4's "cannot
++// overflow in practice" is no premise for a library whose `instant_of` takes
++// any `int64`, and a pair it built trapped `IntOverflow` until then -- the
++// cycle audit's C6.
+ //
+ // FOUR CONSTRUCTORS, AND NO TYPE (TM-004, N-2; TM-233). `duration_mins`,
+ // `duration_hours`, `duration_days` and `duration_weeks` multiply in `int64` and
+@@ -142,11 +167,17 @@
+ // one borrow or one carry puts them back in [0, 10^9). The answer is built by
+ // `timestamp_of`, the one constructor, so the range check is its own, and a sum
+ // outside the range is `ETimeValue` -- `ValueFault.YearRange`, as every `secs`
+-// outside the range is. Nothing here can trap for a `Timestamp` the
+-// constructors made: a `Duration` moves the seconds by at most 9.3 x 10^9. A
+-// `Timestamp` forged through the opt-out is answered with a `Timestamp` or
+-// refused, whatever it holds (`tests/unit/timestamp_add_edges.npk`,
+-// `VERIFICATION.md` P-4's stand-in for this function, TM-235).
++// outside the range is. AND IT CHECKS ITS OPERAND FIRST (`SAFETY.md` S-12,
++// TM-241): a `t.secs` outside the range is refused before the arithmetic, with
++// `timestamp_of`'s own answer for that `secs`, so the seconds stay within 3.9 x
++// 10^11 of the epoch through the add, the borrow and the carry -- a `Duration`
++// moves them by at most 9.3 x 10^9 -- and nothing here can trap, whatever `t`
++// holds. A `Timestamp` forged through the opt-out is answered with a
++// `Timestamp` or refused (`tests/unit/timestamp_add_edges.npk`,
++// `VERIFICATION.md` P-4's stand-in for this function, TM-235). (Until cycle
++// 0.2.4b the check was the sum's alone, and a forged `secs` within 292 years of
++// either end of `int64` trapped `IntOverflow` before `timestamp_of` ran -- the
++// cycle audit's C1.)
+ //
+ // `timestamp_since` COMPUTES IN `int128` AND NARROWS ONCE (TM-236; M-18, M-20).
+ // Two readings' seconds differ by as much as the range is wide, about 6.3 x
+@@ -156,8 +187,9 @@
+ // overflow it -- checked against `NTIME_DURATION_NS_MIN` and
+ // `NTIME_DURATION_NS_MAX`, and refused past them, `ETimeValue`/`Overflow`: it
+ // does not trap, saturate or lose precision.
+-// `SPAN_MODEL.md` §5 marks it an `int128` site, and `check_int128_sites` holds
+-// it to that. The difference is nominal -- the scale's, not the SI time that
++// `SPAN_MODEL.md` §5 marks it an `int128` site, as it marks `instant_since`
++// since cycle 0.2.4b, and `check_int128_sites` holds both to that. The
++// difference is nominal -- the scale's, not the SI time that
+ // elapsed between the readings, which leap seconds make different (M-12). The
+ // calendar-scale answer, `timestamp_until`, is cycle 0.7.3's, beside
+ // `date_until` (TM-237).
+@@ -199,13 +231,27 @@ pub enum:InstantClock = { Monotonic; Boottime; };
+ #[derive(Eq, Clone, Debug, Copy)]
+ pub struct:Instant = { sealed int64:ns; sealed InstantClock:clock; };
+ 
++// The one constructor, and it checks nothing: a reading's range is its type's,
++// any `int64` on either clock, so `VERIFICATION.md` P-3 asks no contract of
++// it. A number computed from anything -- a `Timestamp`'s fields included --
++// becomes a reading that names, in writing, the clock it claims to have read
++// (TM-216; `meta/OPEN_QUESTIONS.md` Q-7 asks whether the name should say
++// so).
+ pub func:instant_of = Instant(int64:ns, InstantClock:clock) never fails {
+     pass Instant{ ns: ns, clock: clock };
+ };
+ 
++// The span between two readings of one clock. Computed in `int128` (M-20;
++// `SPAN_MODEL.md` §5 marks the row), refused past `Duration`'s range rather
++// than trapped (`SAFETY.md` S-12), and narrowed once.
+ pub func:instant_since = Duration(Instant:later, Instant:earlier) {
+     if (later.clock != earlier.clock) { fail ETimeValue; }   // ValueFault.ClockMismatch
+-    pass raw duration_ns(later.ns - earlier.ns);
++    int128:ns = (later.ns => int128) - (earlier.ns => int128);
++    if (ns > (NTIME_DURATION_NS_MAX => int128)) { fail ETimeValue; }   // ValueFault.Overflow
++    if (ns < (NTIME_DURATION_NS_MIN => int128)) { fail ETimeValue; }   // ValueFault.Overflow
++    // `prove(ns >= (NTIME_DURATION_NS_MIN => int128)
++    //        && ns <= (NTIME_DURATION_NS_MAX => int128));` -- P-5
++    pass raw duration_ns(ns =>! int64);
+ };
+ 
+ pub func:instant_add = Instant(Instant:t, Duration:d) never fails {
+@@ -222,15 +268,16 @@ pub func:instant_cmp = Ordering(Instant:a, Instant:b) {
+ #[derive(Eq, Ord, Clone, Debug, Copy)]
+ pub struct:Timestamp = { sealed int64:secs; sealed uint32:nanos; };
+ 
+-// `ensures answer.secs == secs && (answer.nanos => int64) == nanos`
+-// `prove((answer.nanos => int64) < NTIME_NANOS_PER_SEC)` -- `VERIFICATION.md`
+-// P-4, the invariant to prove first; a comment until the verified build (P-1b),
+-// and stood in for by `tests/unit/timestamp_construct.npk`.
++// `ensures result.secs == secs && (result.nanos => int64) == nanos` --
++// `VERIFICATION.md` P-3; and P-4, the invariant to prove first, is the `prove`
++// before the narrowing. Comments until the verified build (P-1b), and stood in
++// for by `tests/unit/timestamp_construct.npk`.
+ pub func:timestamp_of = Timestamp(int64:secs, int64:nanos) {
+     if (secs < NTIME_SECS_MIN)        { fail ETimeValue; }   // ValueFault.YearRange
+     if (secs > NTIME_SECS_MAX)        { fail ETimeValue; }   // ValueFault.YearRange
+     if (nanos < 0i64)                 { fail ETimeValue; }   // ValueFault.NanoRange
+     if (nanos >= NTIME_NANOS_PER_SEC) { fail ETimeValue; }   // ValueFault.NanoRange
++    // `prove(nanos >= 0i64 && nanos < NTIME_NANOS_PER_SEC);` -- P-4
+     pass Timestamp{ secs: secs, nanos: nanos =>! uint32 };
+ };
+ 
+@@ -253,6 +300,11 @@ pub func:timestamp_to_utc = CivilDateTime(Timestamp:t) never fails {
+ // The point on the absolute scale a civil reading names, read as UTC (M-11,
+ // §9). Fallible, and only through `timestamp_of`: a reading from the
+ // constructors always converts, and a forged one is refused, not trapped.
++// `ensures result.secs >= NTIME_SECS_MIN && result.secs <= NTIME_SECS_MAX`
++// `ensures (result.nanos => int64) == (c.time.nanos => int64)` --
++// `VERIFICATION.md` P-3, a `Timestamp` constructor's; comments until
++// the verified build (P-1b), and stood in for by
++// `tests/unit/civil_to_utc_edges.npk`.
+ pub func:civil_to_utc = Timestamp(CivilDateTime:c) {
+     int64:days = raw date_to_days(c.date);
+     int64:sod = ((c.time.hour => int64) * 3600i64)
+@@ -281,14 +333,20 @@ pub func:duration_weeks = Duration(int64:w) never fails {
+     pass raw duration_secs(w * 7i64 * NTIME_SECS_PER_DAY);
+ };
+ 
+-// The point `d` from `t` (§9). `/` and `%` truncate, so the remainder keeps
+-// `d`'s sign and the nanoseconds come out in (-10^9, 2 x 10^9): one borrow or
+-// one carry puts them back in [0, 10^9), and `timestamp_of` builds the answer.
+-// `ensures answer.secs >= NTIME_SECS_MIN && answer.secs <= NTIME_SECS_MAX`
+-// `ensures (answer.nanos => int64) < NTIME_NANOS_PER_SEC` -- `VERIFICATION.md`
++// The point `d` from `t` (§9). `t`'s seconds are checked against the range
++// first (`SAFETY.md` S-12), so nothing below can trap whatever `t` holds;
++// then `/` and `%` truncate, so the remainder keeps `d`'s sign and the
++// nanoseconds come out in (-10^9, 2 x 10^9) -- at most 2^32 - 1 + 10^9 for a
++// forged `nanos` -- and one borrow or one carry puts a normalised one back in
++// [0, 10^9), and `timestamp_of` builds the answer, refusing what one carry
++// cannot repair.
++// `ensures result.secs >= NTIME_SECS_MIN && result.secs <= NTIME_SECS_MAX`
++// `ensures (result.nanos => int64) < NTIME_NANOS_PER_SEC` -- `VERIFICATION.md`
+ // P-3; comments until the verified build (P-1b), and stood in for by
+ // `tests/unit/timestamp_add_edges.npk`.
+ pub func:timestamp_add = Timestamp(Timestamp:t, Duration:d) {
++    if (t.secs < NTIME_SECS_MIN) { fail ETimeValue; }    // ValueFault.YearRange
++    if (t.secs > NTIME_SECS_MAX) { fail ETimeValue; }    // ValueFault.YearRange
+     int64:secs = t.secs + (d.ns / NTIME_NANOS_PER_SEC);
+     int64:nanos = (t.nanos => int64) + (d.ns % NTIME_NANOS_PER_SEC);
+     if (nanos < 0i64) {                              // `%` kept `d`'s sign: borrow
+@@ -304,15 +362,15 @@ pub func:timestamp_add = Timestamp(Timestamp:t, Duration:d) {
+ 
+ // The nominal span from `earlier` to `later`, in nanoseconds (M-18). Computed
+ // in `int128` (M-20; `SPAN_MODEL.md` §5 marks the row), checked against
+-// `Duration`'s range, and narrowed once:
+-// `prove(ns >= (NTIME_DURATION_NS_MIN => int128)
+-//        && ns <= (NTIME_DURATION_NS_MAX => int128))` -- P-5, before the
+-// narrowing; a comment until the verified build (P-1b).
++// `Duration`'s range, and narrowed once, after P-5's `prove`; a comment until
++// the verified build (P-1b).
+ pub func:timestamp_since = Duration(Timestamp:later, Timestamp:earlier) {
+     int128:ns = (((later.secs => int128) - (earlier.secs => int128))
+                  * (NTIME_NANOS_PER_SEC => int128))
+                 + ((later.nanos => int128) - (earlier.nanos => int128));
+     if (ns > (NTIME_DURATION_NS_MAX => int128)) { fail ETimeValue; }   // Overflow
+     if (ns < (NTIME_DURATION_NS_MIN => int128)) { fail ETimeValue; }   // Overflow
++    // `prove(ns >= (NTIME_DURATION_NS_MIN => int128)
++    //        && ns <= (NTIME_DURATION_NS_MAX => int128));` -- P-5
+     pass raw duration_ns(ns =>! int64);
+ };

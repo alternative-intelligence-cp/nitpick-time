@@ -1,0 +1,9 @@
+# 0.2.4's omission sweep, block 6b -- one extended regular expression per line, each
+# read by `sweep.py` line by line AND across line breaks, case-insensitive. Each is a
+# fact the close moved: cycle 0.2's state, the next subcycle, `check_purity`'s cycle,
+# and the census.
+(cycle 0\.2|0\.2,|0\.2 is|0\.2 —).{0,60}\b(open|in progress|in its close|under way)\b
+0\.2\.4.{0,40}\b(next|follows|is the close)\b|the close,? (is )?next
+check_purity.{0,40}goes live|goes live at 0\.3
+decisions are settled|questions are open
+cycle 0\.3.{0,40}\b(next|opens|open)\b|0\.3\.0.{0,40}(written|next)

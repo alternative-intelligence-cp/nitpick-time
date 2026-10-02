@@ -1,0 +1,13 @@
+# 0.2.4a's omission sweep, block 3b -- one extended regular expression per line, each
+# read by `sweep.py` line by line AND across line breaks, case-insensitive. Each is a
+# fact steps 1 and 2 moved: an owned number's place; a bound and its value; the
+# named constants' count; what a view is; the wide integer types; V-1's claim; the
+# plant count; and `limits_named.npk`'s purpose.
+outside (the module|its owner|its module|core)|module that owns|in .?core.? (alone|only)|core.s alone|spelled once
+no bound outside|bound.{0,40}declar
+named bounds?|\b(eleven|twelve|thirteen|fifteen|11|13|15) (named )?(bounds|constants)\b
+struct contain|containing one|holds one|type argument|returns? a view
+\bint128\b.{0,60}(only|alone|appears|nowhere|exactly)|wide type|wider than
+silently overflow|does not (silently )?overflow
+\b(82|92|eighty-two|ninety-two)\b.{0,40}(plant|violation|tree-check)|planted violations? across
+arithmetic relations|founding purpose

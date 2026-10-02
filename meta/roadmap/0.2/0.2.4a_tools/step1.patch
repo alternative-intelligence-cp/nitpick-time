@@ -1,0 +1,406 @@
+diff --git a/harness/checks.py b/harness/checks.py
+index bd2ffa08301c585c597b42240c8a5b85f320fe58..7df1b87da9f776359db90c3ac77e89726a815be2 100644
+--- a/harness/checks.py
++++ b/harness/checks.py
+@@ -517,6 +517,16 @@ CONSTANT_OWNER = {
+     1000000000: "core",     # nanoseconds per second, by name -- S-16, TM-232
+ }
+ 
++# AN OWNER IS A PLACE, AND `core`'S PLACE IS ONE FILE (cycle 0.2.4a, the cycle
++# audit's C3). S-16 and the decisions that moved 86 400 and 1 000 000 000 say
++# the one copy is `src/core/limits.npk`'s; the check let a copy stand anywhere
++# in `core` -- the module -- so `86400i64` planted in `src/core/bytes.npk` was
++# silent while the same literal in `span` was a finding, measured. A `core`
++# number is now `limits.npk`'s alone, where it is named; a `cal` number is
++# `src/cal/`'s, where Hinnant's algorithm spells it. (Until then:
++# `if mod not in (owner, "core")`.)
++OWNER_PLACE = {"core": "src/core/limits.npk", "cal": "src/cal/"}
++
+ # B-15: constants are SCREAMING_SNAKE. A *bound* is the subset this rule is
+ # about -- `limits.npk` exists so that every named bound is in one file with the
+ # specification rule that set it beside it (0.0.4's checklist).
+@@ -524,6 +534,90 @@ _BOUND_DECL = re.compile(
+     r"(?<![A-Za-z0-9_.])(?:pub%s+)?fixed%s+[A-Za-z_][A-Za-z0-9_<>\[\]]*%s*:%s*"
+     r"([A-Z][A-Z0-9_]*(?:_MAX|_MIN|_LIMIT|_BOUND))\b" % (_W, _W, _W, _W))
+ 
++# A BOUND IS ALSO ITS VALUE (cycle 0.2.4a, the cycle audit's C8). `TESTING.md`
++# §2 says "no bound outside `src/core/limits.npk`", and until this cycle the
++# check read that as "no bound DECLARED outside": `timestamp_of` comparing
++# against `253402300799i64` in place of `NTIME_SECS_MAX` was 0 findings,
++# measured. So the VALUE of every bound `limits.npk` declares -- its
++# initializer, evaluated: the folded `NTIME_DURATION_NS_MIN` is -2^63, never its
++# `0` and `1` -- is `limits.npk`'s, and a literal of that value anywhere else in
++# `src/`, negated or not, in any spelling the lexer reads, is a finding. BUT
++# NOT A SMALL ONE: the values that are structure as often as policy -- a bit
++# width, a byte, an alignment -- are `nitpick-regex`'s `_SMALL` set (its
++# RX-062), the same list, so the two libraries agree on what "small" means; a
++# bound whose value is one of them is read by name by review, and the headline
++# names it. Today that is `NTIME_PARSE_MAX`'s 128 alone.
++_SMALL = frozenset((0, 1, 2, 3, 4, 7, 8, 15, 16, 24, 31, 32, 63, 64, 100, 127,
++                    128, 255, 256))
++_BOUND_INIT = re.compile(_W + r"*=([^;]*);")
++
++
++def _evaluate(expr):
++    """The value of a `fixed` initializer of literals, parentheses, `+`, `-`
++    and `*` -- the folded shape `limits.npk` writes for `int64`'s minimum,
++    which has no literal (the compiler's D-148) -- or None for anything else."""
++    import ast
++    out, i = [], 0
++    for at, tok, value in literals(expr):
++        if value is None:
++            return None
++        out.append(expr[i:at])
++        out.append(str(value))
++        i = at + len(tok)
++    out.append(expr[i:])
++    text = "".join(out)
++    if re.search(r"[^0-9()+\-* \t\r\n]", text):
++        return None
++    try:
++        tree = ast.parse(text.strip(), mode="eval")
++    except SyntaxError:
++        return None
++    ok = (ast.Expression, ast.BinOp, ast.UnaryOp, ast.Constant, ast.Add,
++          ast.Sub, ast.Mult, ast.USub, ast.UAdd)
++    if not all(isinstance(n, ok) for n in ast.walk(tree)):
++        return None
++    return eval(compile(tree, "<bound>", "eval"))
++
++
++_NAMED_DECL = re.compile(
++    r"(?<![A-Za-z0-9_.])(?:pub%s+)?fixed%s+[A-Za-z_][A-Za-z0-9_<>\[\]]*%s*:%s*"
++    r"([A-Z][A-Z0-9_]*)\b" % (_W, _W, _W, _W))
++
++
++def limits_names(tree):
++    """`(names, held, small, unread)` for `src/core/limits.npk`: `names` maps
++    the absolute value of every named constant it declares to its first name;
++    `held` maps the absolute value of each of its BOUNDS (`_BOUND_DECL`) to
++    every bound that has it, in the file's order -- `NTIME_YEAR_MIN` and
++    `NTIME_YEAR_MAX` share 9999, negated, and a literal 9999 is either -- but
++    for those whose value is in `_SMALL`, which `small` lists; `unread` lists
++    the bounds whose initializer is not literals joined by `+`, `-`, `*` and
++    parentheses. A tree without the file has none of them."""
++    path = os.path.join(tree, "src", "core", "limits.npk")
++    if not os.path.isfile(path):
++        return {}, {}, [], []
++    text = lexical.read(path)
++    code = blank_code(text)
++    bounds = {m.group(1) for m in _BOUND_DECL.finditer(code)}
++    names, held, small, unread = {}, {}, [], []
++    for m in _NAMED_DECL.finditer(code):
++        name = m.group(1)
++        init = _BOUND_INIT.match(code, m.end())
++        # The initializer's TEXT, literals and all, at the blanked span.
++        value = None if init is None else _evaluate(text[init.start(1):init.end(1)])
++        if value is None:
++            if name in bounds:
++                unread.append(name)
++            continue
++        names.setdefault(abs(value), name)
++        if name not in bounds:
++            continue
++        if abs(value) in _SMALL:
++            small.append(name)
++        else:
++            held.setdefault(abs(value), []).append(name)
++    return names, held, small, unread
++
+ # A NUMERIC LITERAL AS THE COMPILER'S LEXER READS ONE -- cycle 0.2.3a, TM-231.
+ # Read at `5fbaf4a` with `git show`: `src/frontend/lexer.npk`'s `lexer_next`,
+ # `src/frontend/numeric.npk`'s `num_scan`, `src/frontend/num_width.npk`'s
+@@ -652,7 +746,8 @@ def literals(text):
+ 
+ 
+ def check_constants_named(tree, **_):
+-    """No bound outside `src/core/limits.npk`; no magic number outside its owner.
++    """No bound outside `src/core/limits.npk` -- declared there, and spelled
++    nowhere else by its value; no magic number outside its owner's place.
+ 
+     The four numbers are the ones a date library gets wrong by copying: 146097
+     and 719468 are Hinnant's era constants, 86400 is a day that is not always
+@@ -665,6 +760,14 @@ def check_constants_named(tree, **_):
+     files = src_files(tree)
+     problems, hits, bounds, read = [], 0, 0, 0
+     limits_rel = "src/core/limits.npk"
++    names, held, small, unread = limits_names(tree)
++    for name in unread:
++        problems.append(
++            "%s declares the bound `%s` with an initializer this check cannot "
++            "evaluate, so its value cannot be held to the file (TESTING.md "
++            "§2). Write it as integer literals joined by `+`, `-`, `*` and "
++            "parentheses, as `NTIME_DURATION_NS_MIN` is: a bound the check "
++            "cannot read is a bound it cannot clear." % (limits_rel, name))
+     for rel in files:
+         mod = module_of(rel)
+         text = lexical.read(os.path.join(tree, rel))
+@@ -689,23 +792,51 @@ def check_constants_named(tree, **_):
+                     "of being a copy of an owned number (TM-231)."
+                     % (rel, _line(text, at), tok))
+                 continue
++            if abs(value) in held and abs(value) not in CONSTANT_OWNER:
++                if rel != limits_rel:
++                    which = " or ".join("`%s`" % n for n in held[abs(value)])
++                    problems.append(
++                        "%s:%d spells %d%s, the value of the bound %s that "
++                        "`%s` declares (TESTING.md §2: no bound outside it). "
++                        "Import %s and read it by name: a bound written "
++                        "inline is one nobody can review against the rule "
++                        "that set it, and the next change to the range "
++                        "misses it."
++                        % (rel, _line(text, at), abs(value),
++                           "" if tok == str(value) else " as `%s`" % tok,
++                           which, limits_rel, which))
++                continue
+             if abs(value) not in CONSTANT_OWNER:
+                 continue
+             hits += 1
+             owner = CONSTANT_OWNER[abs(value)]
+-            if mod not in (owner, "core"):
+-                problems.append(
+-                    "%s:%d spells the magic number %d%s, which belongs to "
+-                    "module `%s` (SAFETY.md S-16, CALENDAR.md §4). Give it "
+-                    "a name in `%s` and import the name: a second literal "
+-                    "copy is how two modules come to disagree about a "
+-                    "constant neither of them owns."
+-                    % (rel, _line(text, at), abs(value),
+-                       "" if tok == str(value) else " as `%s`" % tok,
+-                       owner, limits_rel))
+-    headline = ("%d bound declaration(s) and %d owned-constant occurrence(s) "
+-                "over %d file(s) in src/, %d literal(s) read"
+-                % (bounds, hits, len(files), read))
++            place = OWNER_PLACE[owner]
++            if rel == place or (place.endswith("/") and rel.startswith(place)):
++                continue
++            spelled = "" if tok == str(value) else " as `%s`" % tok
++            if owner == "core" and abs(value) in names:
++                fix = ("Import `%s` from `%s` and read it by name"
++                       % (names[abs(value)], limits_rel))
++            elif owner == "core":
++                fix = "Name it in `%s` and import the name" % limits_rel
++            else:
++                fix = ("Do the arithmetic in `%s` and call it there, or move "
++                       "the number's owner to `%s` by a decision, as 86 400's "
++                       "moved (TM-223), and read it by name"
++                       % (place, limits_rel))
++            problems.append(
++                "%s:%d spells the magic number %d%s, which belongs to module "
++                "`%s` and is spelled in `%s` alone (SAFETY.md S-16, "
++                "CALENDAR.md §4). %s: a second literal copy is how two "
++                "modules come to disagree about a constant neither of them "
++                "owns." % (rel, _line(text, at), abs(value), spelled, owner,
++                           place, fix))
++    headline = ("%d bound declaration(s), %d bound value(s) held to %s "
++                "(%d small, read by review%s), and %d owned-constant "
++                "occurrence(s) over %d file(s) in src/, %d literal(s) read"
++                % (bounds, len(held), limits_rel, len(small),
++                   ": " + ", ".join(small) if small else "", hits,
++                   len(files), read))
+     return Result("check_constants_named", headline, problems)
+ 
+ 
+@@ -1769,6 +1900,12 @@ def functions(tree, files=None):
+ # A pointer, `T->`, is not a view either: S-22 names a slice, a `cstring` and
+ # a struct holding one, and no function in `src/` returned a pointer at cycle
+ # 0.2.3a.
++#
++# AND AN OPTIONAL HOLDS WHAT IT WRAPS (cycle 0.2.4a, the cycle audit's C4).
++# `uint8[]?` -- "the rest, or none", the result a parser wants first -- hands
++# its caller the same view `uint8[]` does when it is not `NIL`, and it compiles
++# at the pin in a consumer; until then `_SLICE`'s `[]$` and the exact `cstring`
++# let `uint8[]?` and `cstring?` pass, measured. `T?` is read as its `T`.
+ _SLICE = re.compile(r"\[\]$")
+ _FIXED_ARRAY = re.compile(r"^(.*)\[[0-9A-Za-z_]+\]$")
+ 
+@@ -1808,6 +1945,9 @@ def _type_args(t):
+ 
+ def _view_in(t, structs, seen=()):
+     """Why the type `t` is or holds a view, in a few words -- or None."""
++    if t.endswith("?"):
++        why = _view_in(t[:-1], structs, seen)
++        return None if why is None else "an optional of a view (%s)" % why
+     if _SLICE.search(t):
+         return "`%s` is a slice" % t
+     if t == "cstring":
+@@ -1940,7 +2080,17 @@ def check_no_view_returns(tree, exempt=None, **_):
+ # run, not failed: §5 is written ahead of the code it governs, and a row for
+ # cycle 0.7's `period_add` is how the check is live before its subject is.
+ INT128_DOC = "meta/specs/SPAN_MODEL.md"
+-_INT128 = re.compile(r"(?<![A-Za-z0-9_])int128(?![A-Za-z0-9_])")
++# EVERY INTEGER WIDER THAN `int64`, NOT `int128` ALONE (cycle 0.2.4a, the cycle
++# audit's D1). N-20's reason -- a wide type used casually is a wide type nobody
++# reasons about -- is the reason for every width past 64 bits, and the language
++# has sixteen: `int128` ... `int4096`, the unsigned six, `tbb128` and `tbb256`
++# (the compiler's `TYPE_REFERENCE.md` §4, at the pin). An `int256` intermediate
++# narrowed by a bare `=>! int64` compiled, ran, and passed every tree check,
++# measured; the same function in `int128` was red. `§5`'s column keeps its
++# name: `int128` is the one width this library computes in.
++# (`(?<![A-Za-z0-9_])int128(?![A-Za-z0-9_])` until then.)
++_INT128 = re.compile(r"(?<![A-Za-z0-9_])(?:u?int(?:128|256|512|1024|2048|4096)"
++                     r"|tbb(?:128|256))(?![A-Za-z0-9_])")
+ _SITE_NAME = re.compile(r"`([A-Za-z_][A-Za-z0-9_]*)")
+ 
+ 
+@@ -1997,7 +2147,8 @@ def int128_sites(tree):
+ 
+ 
+ def check_int128_sites(tree, **_):
+-    """`int128` in `src/` at exactly the sites `SPAN_MODEL.md` §5 marks."""
++    """`int128` -- and every integer wider than `int64` -- in `src/` at exactly
++    the sites `SPAN_MODEL.md` §5 marks."""
+     sites, problems = int128_sites(tree)
+     problems = list(problems)
+     files = src_files(tree)
+@@ -2012,18 +2163,20 @@ def check_int128_sites(tree, **_):
+             owner = next((n for s, e, n in mine if s <= m.start() < e), None)
+             if owner is None:
+                 problems.append(
+-                    "%s:%d spells `int128` outside every function. A site is a "
++                    "%s:%d spells `%s` outside every function. A site is a "
+                     "function §5's table marks (SPAN_MODEL.md N-20), and a "
+                     "module-level wide value is a wide value nobody's "
+-                    "obligation names." % (rel, _line(code, m.start())))
++                    "obligation names: move it into the function that needs "
++                    "it, and mark that function's row."
++                    % (rel, _line(code, m.start()), m.group(0)))
+             elif owner not in sites:
+                 problems.append(
+-                    "%s:%d spells `int128` in `%s`, and §5's table marks no "
++                    "%s:%d spells `%s` in `%s`, and §5's table marks no "
+                     "`int128` site there (SPAN_MODEL.md N-20). A wide type "
+                     "used where nobody reasoned about it is the thing N-20 "
+                     "forbids: compute in `int64` with its own range check, or "
+                     "mark the row -- with its answer -- in the same commit."
+-                    % (rel, _line(code, m.start()), owner))
++                    % (rel, _line(code, m.start()), m.group(0), owner))
+             else:
+                 holders[owner] = holders.get(owner, 0) + 1
+     unwritten = sorted(n for n in sites if n not in declared)
+@@ -2031,9 +2184,11 @@ def check_int128_sites(tree, **_):
+         if name in declared and name not in holders:
+             problems.append(
+                 "§5's table marks `%s` an `int128` site (%s:%d), and src/'s "
+-                "`%s` spells no `int128`: a mark that outlived its reason "
+-                "(V-1c, TM-137)." % (name, INT128_DOC, sites[name], name))
+-    headline = ("%d `int128` over %d file(s) in src/, in %d function(s), "
++                "`%s` spells no `int128` or wider type: a mark that outlived "
++                "its reason (V-1c, TM-137). Mark the row no, or put back the "
++                "arithmetic it was marked for." % (name, INT128_DOC,
++                                                  sites[name], name))
++    headline = ("%d `int128` or wider over %d file(s) in src/, in %d function(s), "
+                 "against %d site(s) §5 marks (%d not yet written%s)"
+                 % (seen, len(files), len(holders), len(sites), len(unwritten),
+                    ": " + ", ".join(unwritten) if unwritten else ""))
+diff --git a/harness/selfcheck.py b/harness/selfcheck.py
+index 02f6f454e8d4c7d023af95a5b992bb514aa5dea6..11869cfe1652b9846608327c1ab0b2238a355eca 100644
+--- a/harness/selfcheck.py
++++ b/harness/selfcheck.py
+@@ -1015,6 +1015,66 @@ PLANTED = [
+      ("src/core/limits.npk",
+       "mod:limits;\npub fixed int64:NTIME_NANOS_PER_SEC = 1_000_000_000i64;\n"),
+      "1000000000 as `1_000_000_000i64`, which belongs to module `core`"),
++    # A `core` NUMBER IN `core` BUT NOT IN `limits.npk` (cycle 0.2.4a, the
++    # cycle audit's C3): the check let a copy stand anywhere in the module,
++    # and S-16 says the one copy is the file's. The control is the one copy.
++    (checks_mod.check_constants_named,
++     ("src/core/bytes.npk", "mod:bytes;\nfunc:f = int64(int64:s) never fails "
++                            "{ pass s / 86400i64; };\n"),
++     ("src/core/limits.npk",
++      "mod:limits;\npub fixed int64:NTIME_SECS_PER_DAY = 86400i64;\n"),
++     "is spelled in `src/core/limits.npk` alone"),
++    # A `cal` NUMBER IN `core`: Hinnant's era constant is `src/cal/`'s.
++    (checks_mod.check_constants_named,
++     ("src/core/vec.npk", "mod:vec;\nfunc:f = int64(int64:z) never fails "
++                          "{ pass z / 146097i64; };\n"),
++     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64(int64:z) never fails "
++                         "{ pass z / 146097i64; };\n"),
++     "is spelled in `src/cal/` alone"),
++    # A BOUND SPELLED BY ITS VALUE (C8): `limits.npk` declares the range's last
++    # second, and `span` compares against the number rather than the name.
++    # The control compares against the second before it, which is no bound.
++    (checks_mod.check_constants_named,
++     [("src/core/limits.npk",
++       "mod:limits;\npub fixed int64:NTIME_SECS_MAX = 253402300799i64;\n"),
++      _div("253402300799i64")],
++     [("src/core/limits.npk",
++       "mod:limits;\npub fixed int64:NTIME_SECS_MAX = 253402300799i64;\n"),
++      _div("253402300798i64")],
++     "the value of the bound `NTIME_SECS_MAX`"),
++    # THE FOLDED MINIMUM IS ITS VALUE, NEVER ITS PARTS: -2^63 spelled in
++    # `int128` is the bound; the `0` and the `1` the fold is written with are
++    # not, and the control holds both.
++    (checks_mod.check_constants_named,
++     [("src/core/limits.npk", "mod:limits;\npub fixed int64:NTIME_DURATION_NS_MIN"
++                              " = (0i64 - 9223372036854775807i64) - 1i64;\n"),
++      _div("9223372036854775808i128")],
++     [("src/core/limits.npk", "mod:limits;\npub fixed int64:NTIME_DURATION_NS_MIN"
++                              " = (0i64 - 9223372036854775807i64) - 1i64;\n"),
++      ("src/span/span.npk", "mod:span;\nfunc:f = int64(int64:s) never fails "
++                            "{ pass (s - 0i64) + 1i64; };\n")],
++     "the value of the bound `NTIME_DURATION_NS_MIN`"),
++    # A SMALL BOUND IS READ BY REVIEW: the GOOD column is the point --
++    # `NTIME_PARSE_MAX`'s 128 is in `nitpick-regex`'s `_SMALL` set (its
++    # RX-062), and a 128 in `span` is structure as often as policy. And the
++    # BAD column's 9999 is two bounds' value, `NTIME_YEAR_MIN` negated, so the
++    # finding names both: a literal does not say which it meant.
++    (checks_mod.check_constants_named,
++     [("src/core/limits.npk",
++       "mod:limits;\npub fixed int64:NTIME_YEAR_MIN = -9999i64;\n"
++       "pub fixed int64:NTIME_YEAR_MAX = 9999i64;\n"),
++      _div("9999i64")],
++     [("src/core/limits.npk",
++       "mod:limits;\npub fixed int64:NTIME_PARSE_MAX = 128i64;\n"),
++      _div("128i64")],
++     "the value of the bound `NTIME_YEAR_MIN` or `NTIME_YEAR_MAX`"),
++    # A BOUND THE CHECK CANNOT EVALUATE is reported, never passed.
++    (checks_mod.check_constants_named,
++     ("src/core/limits.npk",
++      "mod:limits;\npub fixed int64:NTIME_SECS_MAX = NTIME_SECS_MIN + 1i64;\n"),
++     ("src/core/limits.npk",
++      "mod:limits;\npub fixed int64:NTIME_SECS_MAX = 253402300799i64;\n"),
++     "with an initializer this check cannot evaluate"),
+     (checks_mod.check_constants_named,
+      ("src/cal/cal.npk", "mod:cal;\nfixed int64:YEAR_MAX = 9999i64;\n"),
+      ("src/core/limits.npk", "mod:limits;\nfixed int64:YEAR_MAX = 9999i64;\n"),
+@@ -1337,6 +1397,17 @@ PLANTED = [
+      _fmt("pub func:f = Vec<uint8[]>(int64:n) never fails { pass n; };"),
+      _fmt("pub func:f = Vec<int64>(int64:n) never fails { pass n; };"),
+      "its type argument `uint8[]`"),
++    # AN OPTIONAL OF A VIEW (cycle 0.2.4a, the cycle audit's C4): "the rest,
++    # or none" -- the result cycle 0.4's parsers will want first -- each
++    # beside the same optional of an integer, which owns nothing.
++    (checks_mod.check_no_view_returns,
++     _fmt("pub func:f = uint8[]?(uint8[]:src) never fails { pass NIL; };"),
++     _fmt("pub func:f = int64?(uint8[]:src) never fails { pass NIL; };"),
++     "an optional of a view (`uint8[]` is a slice)"),
++    (checks_mod.check_no_view_returns,
++     _fmt("pub func:f = cstring?(cstring:src) never fails { pass NIL; };"),
++     _fmt("pub func:f = int64?(cstring:src) never fails { pass NIL; };"),
++     "an optional of a view (a `cstring`)"),
+     # AN `int128` WHERE §5 MARKS NO SITE -- the control is the same function,
+     # marked.
+     (checks_mod.check_int128_sites,
+@@ -1379,6 +1450,22 @@ PLANTED = [
+       ("src/span/span.npk", "mod:span;\n")],
+      [_span5((("`g`", "**yes**"),)), ("src/span/span.npk", "mod:span;\n")],
+      "no table with an `int128` column"),
++    # A WIDER TYPE WHERE §5 MARKS NO SITE (cycle 0.2.4a, the cycle audit's
++    # D1): an `int256` and a `uint128` intermediate, each narrowed by a bare
++    # `=>!`, beside the same function marked -- N-20's reason is every width
++    # past 64 bits, and the check read `int128` alone.
++    (checks_mod.check_int128_sites,
++     [_span5((("`f`", "**yes**"),)),
++      ("src/span/span.npk", "mod:span;\n" + _wide("g").replace("int128", "int256"))],
++     [_span5((("`g`", "**yes**"),)),
++      ("src/span/span.npk", "mod:span;\n" + _wide("g").replace("int128", "int256"))],
++     "spells `int256` in `g`"),
++    (checks_mod.check_int128_sites,
++     [_span5((("`f`", "**yes**"),)),
++      ("src/span/span.npk", "mod:span;\n" + _wide("g").replace("int128", "uint128"))],
++     [_span5((("`g`", "**yes**"),)),
++      ("src/span/span.npk", "mod:span;\n" + _wide("g").replace("int128", "uint128"))],
++     "spells `uint128` in `g`"),
+     # A DIGIT SEPARATOR -- the dispatch's measured case, `86_400i64`.
+     (checks_mod.check_constants_named, _div("86_400i64"), _div("86_401i64"),
+      "belongs to module `core`"),

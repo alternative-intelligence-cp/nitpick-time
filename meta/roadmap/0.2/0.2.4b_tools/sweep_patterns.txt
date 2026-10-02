@@ -1,0 +1,29 @@
+# 0.2.4b's omission sweep, block 4b -- one extended regular expression per line, each
+# read by `sweep.py` line by line AND across line breaks, case-insensitive. Each is a
+# fact steps 1 to 4 moved: `timestamp_add`'s totality and its check; `instant_since`'s
+# refusals and §5's sites; S-12's rule; M-3's claim and the glossary's instant; the
+# contract comments' syntax, P-1b's switch and P-3's reach; the statement form of
+# `#unreachable()`; §8 for §9; the `int128` site set; S-4's column; TM-234's margin;
+# and the counts.
+whatever (it|t) (holds|is handed)|answered (with a .?Timestamp.? )?or refused|nothing here can trap|can trap for
+(range|its) check is (its own|the constructor|timestamp_of)|check that refuses is
+instant_since.{0,80}(never fails|trap|overflow|in practice|ClockMismatch|two clocks)
+cannot overflow|in practice|since the cretaceous
+every site|enumerated|six sites|no row
+every arithmetic entry point|checks its operands|checked before the trap
+cannot be (built|converted)|from a number|no conversion|in either direction|does not compile|cannot write|cannot be written
+point on the monotonic|monotonic timeline
+`answer`|answer` for|for `result`|`ensures answer|answer\.|\(answer
+mechanical|uncomment
+every constructor|carries its range|carry its range
+taint analysis|TAINT-001|#unreachable\(\);|language.s rule
+§8\b
+rows? (are |is )?marked|marks (three|four|3|4|one|two)|marked rows|(three|four|3|4) (rows|named sites|marked)
+(three|four|3|4) .?int128.? (sites|rows)|int128.{0,30}(three|four) (sites|rows)|in (2|3) function\(s\)
+MEASURED at pin|nine orders
+\b(131|133)\b.{0,30}units?
+\b(147|149)\b.{0,40}(files|\.npk|parse)
+\b(96|98)\b.{0,40}(suite|roots)
+\b(57|58)\b.{0,40}(probe|programs)
+\b(28|29)\b.{0,40}(positive|expect-exit|probes)
+\b(102|104)\b.{0,20}parse

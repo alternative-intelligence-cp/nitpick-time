@@ -164,6 +164,64 @@ last clause: a live `requires i >= 0 && i < v.count` on `vec_at` adds
 `RequiresViolated` to a consumer's bill and makes an index past the end stop at
 116 where the slice guard stops it at 94.)*
 
+### Q-7 — should `Instant`'s constructor say, in its name, that it takes a raw reading — before 1.0?
+
+**Raised 2026-10-02 by the stream-2 planner at cycle 0.2's close, from the
+cycle audit's C2** (the workbench's `meta/audits/nitpick-time-0.2-2026-10-02.md`;
+planned in [`roadmap/0.2/0.2.4b.md`](roadmap/0.2/0.2.4b.md)). `TIME_MODEL.md`
+M-3 says an `Instant` cannot be converted to a `Timestamp` *"in either
+direction, ever"*, and the public `README.md` says an `Instant` *"cannot be
+built from a number or converted to a point on the UTC scale"*. **Measured at
+compiler `5fbaf4a`**: a consumer that imports `span` and writes no `wild` and
+no `=>!` converts both ways in four lines — a `Timestamp`'s two fields,
+multiplied out, handed to `instant_of` with `InstantClock.Monotonic`, and the
+`Instant`'s `ns`, divided, handed back to `timestamp_of` — and it compiles and
+runs, exit 0 at -O0 and after `opt -O2`, the round trip exact.
+
+**What the type refuses is true, and asserted**: no conversion function
+(`probe20b`), no implicit conversion either way (`probe20c`, `probe20d`), no
+`=>!` either way (`probe20e`, `probe20f`), no struct literal and no field write
+(`probe20`, `probe21`, `probe21b`). **What it cannot refuse is a
+CONSTRUCTION from numbers**: `instant_of(ns, clock)` takes any `int64` —
+TM-216 already says *"a caller who hands it a wall-clock reading has opted
+out in writing"* — and `Instant`'s `ns` is readable, the author's answer to the
+workbench's question 15, TM-219. So the README's sentence, as written, is not
+the library's; and **no constructor's name makes it the library's in both
+directions**: the reverse construction, `timestamp_of` over an `Instant`'s
+`ns`, stays writable while `ns` is readable and `timestamp_of` public, and both
+are settled (TM-219, TM-220). What an API change can do is make the forward
+construction say what it is wherever it is written.
+
+**The options:**
+
+- **A — keep `instant_of(ns, clock)`, and the documents claim what the type
+  enforces (RECOMMENDED).** M-3 and the sites that restate it say: no
+  conversion function, no implicit conversion, no cast, no literal, no write;
+  an `Instant` built from a number is a construction that names, in writing,
+  the clock it claims to have read. A probe compiles and runs that
+  construction, so the claim is checked rather than stated. Costs nothing.
+- **B — rename the constructor, before 1.0, so its name says it takes a raw
+  reading of the clock it names** — `instant_from_reading(ns, clock)`, say —
+  while a public name is free to change (TM-013). Gains: every construction
+  from a computed number reads as a claim at its call site, and is found by
+  one search. Costs: one public name and its callers — cycle 0.3's two clocks
+  build their readings through it, and the tests — and the README's sentence
+  is still false of the reverse direction.
+- **C — no public constructor.** Declined as an option to recommend: `host`,
+  cycle 0.3's, is another module and builds its readings through it
+  (`HOST.md` H-6), and a test that needs a reading without the machine — H-10's
+  double — builds one the same way; the language has no visibility between
+  `pub` and the module.
+
+**Recommendation: A.** The guarantee M-3 exists for — a timeout cannot be
+written against the realtime clock BY ACCIDENT — is the type's, and it holds:
+every path that compiles names the clock and the numbers in writing. A name
+cannot close the reverse direction, so B buys a louder call site for one
+direction at the price of a name. **Until the author answers, the documents say
+what the type enforces** — `0.2.4b.md`'s restatement of M-3 and its sites, which
+is true under A and under B, so nothing waits on this question but cycle 1.0's
+freeze of the public names. **Not blocking.**
+
 ### O-N1 — `npkg` cannot build a library, and `[dependencies]` resolves to nothing
 Measured at the compiler's 1.5.0 and recorded in `specs/BUILD.md` §1.
 `npkg build` is the compiler's own bootstrap ladder; `target = "library"` is

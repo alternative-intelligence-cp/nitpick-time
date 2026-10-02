@@ -1,0 +1,42 @@
+diff --git a/meta/roadmap/ROADMAP.md b/meta/roadmap/ROADMAP.md
+index 58e4a5b6e7bf787c4bfda4b4bcf23bb108caf303..cadb54ea9ade0173812e4ce3e41d434687ba6627 100644
+--- a/meta/roadmap/ROADMAP.md
++++ b/meta/roadmap/ROADMAP.md
+@@ -175,6 +175,11 @@ test double in `tests/`.
+ 
+ **The cycle's gate:** `check_purity` goes live and is green, and has been *seen
+ to fail* against a deliberately planted `mono_now()` outside `src/host/`.
++*(Dated at cycle 0.2.4, cycle 0.2's close — its audit's S4: `check_purity` has
++been live since cycle 0.0.3 (TM-126), and its self-check row plants a
++`mono_now()` outside `src/host/` on every run. What cycle 0.3 owes is its ban
++list reviewed against a `src/host/` with a body, and the gate is that check
++green and seen to fail there — cycle 0.3's README, its 0.3.1 note.)*
+ 
+ ### 0.4 — Formatting and parsing
+ `src/fmt/`: the named formats in both directions, `FmtPart` and `Layout`,
+@@ -267,6 +272,9 @@ the version policy from TM-013 stated where a consumer will read it.
+ - **`check_purity` goes live at 0.3**, the cycle that creates the only impure
+   module — the compiler's rule that instruments precede the constructs they
+   guard, applied to the property this library's reproducibility rests on.
++  *(Dated at cycle 0.2.4 — the cycle audit's S4: it has been live since cycle
++  0.0.3, TM-126, three cycles before the module it guards; the rule held, and
++  cycle 0.3 reviews its ban list against `src/host/`'s body.)*
+ - **A decision precedes the cycle that needs it.** Each cycle's README lists
+   its open questions; a cycle whose questions are open is not ready to start.
+ 
+diff --git a/src/host/host.npk b/src/host/host.npk
+index f41800a889a059f3fc651204a3f36501141c0bbc..dda0eb7ce283ecf956f30f5c87e3e4b131f6e315 100644
+--- a/src/host/host.npk
++++ b/src/host/host.npk
+@@ -26,7 +26,10 @@
+ // `meta/specs/HOST.md`.
+ // WHEN: cycle 0.3 (`meta/roadmap/0.3/README.md`), which is also when
+ // `check_purity` goes live and must be SEEN TO FAIL against a planted
+-// `mono_now()` outside this directory.
++// `mono_now()` outside this directory. (Dated at cycle 0.2.4, cycle 0.2's
++// close -- its audit's S4: `check_purity` has been live since cycle 0.0.3,
++// TM-126, and the self-check plants a `mono_now()` outside this directory on
++// every run; cycle 0.3 reviews its ban list against this module's body.)
+ //
+ // WHAT IT MAY IMPORT: `zone` (for the name lookup), `cal` (for the range
+ // check) and `core` (`BUILD.md` B-17).

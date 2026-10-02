@@ -1,0 +1,242 @@
+diff --git a/tests/probe/probe20g_construction_from_numbers.npk b/tests/probe/probe20g_construction_from_numbers.npk
+new file mode 100644
+index 0000000000000000000000000000000000000000..bffd09fc7f42a9d999a3f0a88fb4351f3a3d0908
+--- /dev/null
++++ b/tests/probe/probe20g_construction_from_numbers.npk
+@@ -0,0 +1,64 @@
++// expect-exit: 0
++//
++// PROBE 20g — A CONSUMER CAN BUILD AN `Instant` FROM A `Timestamp`'S NUMBERS,
++// AND A `Timestamp` FROM AN `Instant`'S: A CONSTRUCTION IN WRITING, NOT A
++// CONVERSION (cycle 0.2.4b, TM-243; `TIME_MODEL.md` M-3 as restated, TM-216).
++//
++// ASKS: may a consumer that imports `span` and writes no `wild` storage and no
++// `=>!` hand a `Timestamp`'s two fields, multiplied out, to `instant_of`, and
++// an `Instant`'s `ns`, divided, to `timestamp_of` -- and get every number
++// back exactly?
++//
++// MATTERS BECAUSE M-3 said an `Instant` "cannot be converted to a `Timestamp`,
++// in either direction, ever", and the public README that one "cannot be built
++// from a number", and this program -- the cycle audit's C2 -- compiled and ran
++// against both sentences. What the type refuses is probes 20 ... 21b's: no
++// conversion function, no implicit conversion, no `=>!`, no literal, no write.
++// What it cannot refuse is a CONSTRUCTION from numbers, which names in
++// writing the clock it claims to have read. ANSWER, measured at `5fbaf4a`:
++// YES, exit 0 on both legs. THIS FILE PINS THE PATH, so the restated M-3 is
++// checked rather than stated: if a later change refuses it -- the author's
++// answer to `meta/OPEN_QUESTIONS.md` Q-7 may rename `instant_of` -- this file
++// stops compiling, and M-3 is restated with it.
++//
++// EXIT CODES, clear of every arm code (TM-152): 10 `timestamp_of` refused the
++// reading; 11 the `Instant` holds another number; 12 `instant_since` refused
++// two readings of one clock; 13 their span not five seconds; 14 the
++// `Timestamp` built back refused; 15 it is not the reading it came from.
++mod:probe20g_construction_from_numbers;
++
++use "../../src/span/span.npk".*;
++
++func:main = int32(cstring[]:_~argv) {
++    Result<Timestamp>:rt = timestamp_of(1759363200i64, 250000000i64);
++    if (rt.is_error) { exit 10i32; }
++    Timestamp:t = rt.value;
++    Instant:i = raw instant_of((t.secs * 1000000000i64) + (t.nanos => int64),
++                               InstantClock.Monotonic);
++    if (i.ns != 1759363200250000000i64) { exit 11i32; }
++    Result<Duration>:d = instant_since(raw instant_add(i, raw duration_secs(5i64)), i);
++    if (d.is_error) { exit 12i32; }
++    if (d.value.ns != 5000000000i64) { exit 13i32; }
++    Result<Timestamp>:back = timestamp_of(i.ns / 1000000000i64, i.ns % 1000000000i64);
++    if (back.is_error) { exit 14i32; }
++    if (back.value.secs != t.secs || back.value.nanos != t.nanos) { exit 15i32; }
++    exit 0i32;
++};
++
++func:failsafe = int32(Error:e) {
++    pick (e) {
++        (cal.ETimeValue)    { exit 80i32; },
++        (HeapBadRequest)    { exit 91i32; },
++        (HeapOom)           { exit 92i32; },
++        (IntOverflow)       { exit 93i32; },
++        (OutOfBounds)       { exit 94i32; },
++        (Unreachable)       { exit 95i32; },
++        (WildLeak)          { exit 96i32; },
++        (DivByZero)         { exit 97i32; },
++        (DivOverflow)       { exit 98i32; },
++        (StackExhausted)    { exit 106i32; },
++        (MachineFault)      { exit 107i32; },
++        (*)                 { exit 99i32; }
++    }
++    exit 9i32;
++};
+diff --git a/tests/unit/instant_since_edges.npk b/tests/unit/instant_since_edges.npk
+new file mode 100644
+index 0000000000000000000000000000000000000000..9443611abc8502a69e8598d31013066056e105e8
+--- /dev/null
++++ b/tests/unit/instant_since_edges.npk
+@@ -0,0 +1,112 @@
++// expect-exit: 0
++//
++// `instant_since` at both ends of `Duration`, from both sides, for readings
++// `instant_of` builds (cycle 0.2.4b; `TIME_MODEL.md` M-4 and §9,
++// `SPAN_MODEL.md` §5's `instant_since` row, `SAFETY.md` S-12, TM-242).
++//
++// ASKS: is every pair of one clock whose difference `Duration` holds answered
++// with exactly that difference, and every pair whose difference it cannot
++// hold refused -- never trapped?
++//
++// MATTERS BECAUSE `instant_of` takes any `int64` (TM-216), so a pair whose
++// difference passes `int64` is one a caller builds without the opt-out, and
++// until cycle 0.2.4b the subtraction was `int64`'s and trapped `IntOverflow`
++// there (the cycle audit's C6): `(int64 max) - (-1)` exited 93 on both legs.
++// M-4's footnote -- "cannot overflow in practice" -- is true of a boot
++// clock's readings and of no other number. `tests/unit/instant_ops.npk` holds
++// the rest of `instant_since`, two clocks refused among it.
++//
++// THE CASES, each pair of the monotonic clock: `Duration`'s largest value
++// taken from three pairs -- (max - 1, -1), (max, 0), (0, min + 1) -- and one
++// more from two, (max, -1) and (0, min); its smallest from (min + 1, 1),
++// (min, 0) and (-1, max), and one less from (min, 1) and (-2, max); the two
++// readings furthest apart, both ways; and two ordinary pairs. Each answer is
++// held to the difference computed in `int128` here.
++//
++// THE ORDER is every pair that must be answered first, then every pair that
++// must be refused, so a check that refuses too much is seen before one that
++// refuses too little, and an `int64` subtraction traps at the first refusal.
++//
++// EXIT CODES, clear of every arm code (TM-152): 10 a pair past `Duration`'s
++// largest value answered; 11 a pair past its smallest answered; 12 a pair at
++// or inside its largest refused, an ordinary pair among them; 13 a pair at or
++// inside its smallest refused; 14 an answer not the exact difference. SEEN
++// RED AT PLANNING, on both legs, in a copy of the tree
++// (`meta/roadmap/0.2/0.2.4b.md`, step 2): 93, the floor's `IntOverflow` arm,
++// with the difference computed in `int64` as it was until cycle 0.2.4b; 10
++// with the upper check deleted, and with its bound a nanosecond wide; 11 with
++// the lower check deleted, and with its bound a nanosecond wide; 12 with the
++// upper check at the end itself, and with its bound a nanosecond short; 13
++// with the lower check at the end itself, and with its bound a nanosecond
++// short; 14 with the readings swapped.
++//
++// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
++// `span`: its eleven (`SAFETY.md` S-4).
++mod:instant_since_edges;
++
++use "../../src/span/span.npk".*;
++
++func:main = int32(cstring[]:_~argv) {
++    // `int64`'s two ends, a `Duration`'s: the maximum as a constant bit
++    // pattern (TM-149), the minimum one below its negation.
++    int64:dmax = ((~0u64) >> 1u64) =>! int64;
++    int64:dmin = (0i64 - dmax) - 1i64;
++
++    // ---- answered, exactly -------------------------------------------------
++    int32:e = raw answered(dmax - 1i64, -1i64, 12i32);
++    if (e == 0i32) { e = raw answered(dmax, 0i64, 12i32); }
++    if (e == 0i32) { e = raw answered(0i64, dmin + 1i64, 12i32); }
++    if (e == 0i32) { e = raw answered(dmin + 1i64, 1i64, 13i32); }
++    if (e == 0i32) { e = raw answered(dmin, 0i64, 13i32); }
++    if (e == 0i32) { e = raw answered(-1i64, dmax, 13i32); }
++    if (e == 0i32) { e = raw answered(5i64, 3i64, 12i32); }
++    if (e == 0i32) { e = raw answered(-3i64, 5i64, 12i32); }
++    if (e != 0i32) { exit e; }
++
++    // ---- refused, never trapped --------------------------------------------
++    e = raw refused(dmax, -1i64, 10i32);
++    if (e == 0i32) { e = raw refused(0i64, dmin, 10i32); }
++    if (e == 0i32) { e = raw refused(dmax, dmin, 10i32); }
++    if (e == 0i32) { e = raw refused(dmin, 1i64, 11i32); }
++    if (e == 0i32) { e = raw refused(-2i64, dmax, 11i32); }
++    if (e == 0i32) { e = raw refused(dmin, dmax, 11i32); }
++    if (e != 0i32) { exit e; }
++    exit 0i32;
++};
++
++// 0 when `later - earlier` is answered with exactly that difference; `code`
++// when it is refused; 14 when the answer is another number.
++func:answered = int32(int64:later, int64:earlier, int32:code) never fails {
++    Result<Duration>:r = instant_since(raw instant_of(later, InstantClock.Monotonic),
++                                       raw instant_of(earlier, InstantClock.Monotonic));
++    if (r.is_error) { pass code; }
++    Duration:d = r.value;
++    if ((d.ns => int128) != (later => int128) - (earlier => int128)) { pass 14i32; }
++    pass 0i32;
++};
++
++// 0 when `later - earlier` is refused; `code` when it is answered.
++func:refused = int32(int64:later, int64:earlier, int32:code) never fails {
++    Result<Duration>:r = instant_since(raw instant_of(later, InstantClock.Monotonic),
++                                       raw instant_of(earlier, InstantClock.Monotonic));
++    if (r.is_error) { pass 0i32; }
++    pass code;
++};
++
++func:failsafe = int32(Error:e) {
++    pick (e) {
++        (cal.ETimeValue)    { exit 80i32; },
++        (HeapBadRequest)    { exit 91i32; },
++        (HeapOom)           { exit 92i32; },
++        (IntOverflow)       { exit 93i32; },
++        (OutOfBounds)       { exit 94i32; },
++        (Unreachable)       { exit 95i32; },
++        (WildLeak)          { exit 96i32; },
++        (DivByZero)         { exit 97i32; },
++        (DivOverflow)       { exit 98i32; },
++        (StackExhausted)    { exit 106i32; },
++        (MachineFault)      { exit 107i32; },
++        (*)                 { exit 99i32; }
++    }
++    exit 9i32;
++};
+diff --git a/tests/unit/timestamp_add_edges.npk b/tests/unit/timestamp_add_edges.npk
+index 96ead6aeafb3915e39eefd11052c8bf46759bea0..4ca8cab7d17721cbaeb97e5ac60069df52b0c4c3 100644
+--- a/tests/unit/timestamp_add_edges.npk
++++ b/tests/unit/timestamp_add_edges.npk
+@@ -27,7 +27,15 @@
+ // the opt-out `CALENDAR.md` C-8c names: a `nanos` of one and a half seconds,
+ // which one carry repairs; one of 2^32 - 1, which one carry cannot, and which a
+ // `timestamp_add` writing its own `Timestamp` literal would hand back
+-// denormalised; and a second past the range, moved back into it and not. And
++// denormalised; a second past the range, moved back into it and not; and
++// since cycle 0.2.4b `int64`'s two ends -- its largest `secs` moved on by a
++// second, which the add would overflow, and by a nanosecond from the last
++// nanosecond of a second, which the carry would, and its smallest moved back
++// by a nanosecond, which the borrow would -- each refused by the operand check
++// before any arithmetic (`SAFETY.md` S-12, TM-241), where until then each
++// trapped `IntOverflow` (the cycle audit's C1). The second past the range,
++// moved back into it, is refused by that check too, where until then it was
++// answered: either is an answer, and this file asks only that. And
+ // SEEDED: 100 000 additions from the epoch, the `Duration`s from a 64-bit
+ // xorshift begun at the seed this file commits -- every odd step one over the
+ // whole of `int64`, every even step one within a second either way, so the
+@@ -50,7 +58,8 @@
+ // same; 43 a forged `Timestamp` did not read back; 44 the epoch refused, or a
+ // step's verdict not the `int128` sum's; 45 a step's answer not the sum; 46 the
+ // counts not the transcription's. SEEN RED AT PLANNING, on both legs, in a copy
+-// of the tree (`meta/roadmap/0.2/0.2.3.md`, step 3): 44 with the borrow
++// of the tree (`meta/roadmap/0.2/0.2.3.md`, step 3, and again at cycle
++// 0.2.4b's, `0.2.4b.md` step 2, each at the same exit): 44 with the borrow
+ // deleted, and with the carry; 45 with either keeping its second, with the
+ // remainder dropped, and with the seconds; 42 with `timestamp_add` writing its
+ // own `Timestamp` literal, and with `timestamp_of`'s upper bound deleted; 41
+@@ -60,7 +69,10 @@
+ // past a second, and `timestamp_of`'s lower bound one high. 43 and 46 are
+ // reached only by editing this file, and were so measured: 43 with the forge
+ // declaring its two fields the other way round, 46 with the sequence a step
+-// short.
++// short. AND 93, the floor's `IntOverflow` arm and no code of this file's,
++// since cycle 0.2.4b: `timestamp_add` trapping on a forged `secs` at `int64`'s
++// ends, seen with either of its operand checks deleted (`0.2.4b.md` step 2)
++// -- the upper's deletion traps the add, the lower's the borrow.
+ //
+ // THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
+ // `span`: its eleven (`SAFETY.md` S-4).
+@@ -144,6 +156,10 @@ func:main = int32(cstring[]:_~argv) {
+     if (f == 0i32) { f = raw check_forged(mem, 0i64, 4294967295u32, 0i64); }
+     if (f == 0i32) { f = raw check_forged(mem, HI_SECS + 1i64, 0u32, 0i64 - NANOS); }
+     if (f == 0i32) { f = raw check_forged(mem, HI_SECS + 1i64, 0u32, 0i64); }
++    // `int64`'s ends (cycle 0.2.4b, TM-241): the add, the carry, the borrow.
++    if (f == 0i32) { f = raw check_forged(mem, dmax, 0u32, NANOS); }
++    if (f == 0i32) { f = raw check_forged(mem, dmax, 999999999u32, 1i64); }
++    if (f == 0i32) { f = raw check_forged(mem, dmin, 0u32, 0i64 - 1i64); }
+     dalloc(mem);
+     if (f != 0i32) { exit f; }
+ 

@@ -1,0 +1,185 @@
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 8eb80ed4f3707ee411ab502e66b097059aa84ce8..33c0419413cefdb2e3c745d0cfb59233169141b0 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -7,15 +7,28 @@ Guidance for Claude Code sessions working in this repository.
+ `ntime` — a date, time and time-zone library for **Nitpick**, the
+ safety-critical systems language at `../../nitpick`.
+ 
+-**Status: cycle 0.1 CLOSED (2026-09-26), archived at `meta/roadmap/done/0.1/`
+-— the civil calendar, with its exhaustive gate on every run — and cycle 0.2,
+-instants and timestamps, is OPEN: its 0.2.0a, the adoption of compiler
+-`5fbaf4a`, its 0.2.0b, `Vec<T: Copy>`, its 0.2.0, `Instant`, its 0.2.1,
+-`Timestamp`, its 0.2.2, the conversions and the cycle's gate, its 0.2.3a, the
+-instruments, and its 0.2.3, the `Duration` interop, are done; and its close is
+-under way in three parts, each triaging the cycle audit's findings: 0.2.4a, the
+-audit's instruments, and 0.2.4b, the library's findings, are done, and 0.2.4,
+-the close itself, is next.**
++**Status: cycle 0.2 CLOSED (@@DATE@@), archived at `meta/roadmap/done/0.2/`
++— instants and timestamps: `Instant` and its two clocks, `Timestamp` and its
++one constructor, the conversions to and from the civil scale in UTC with their
++exhaustive gate on every run, and the `Duration` interop — after cycle 0.1, the
++civil calendar, CLOSED 2026-09-26 and archived at `meta/roadmap/done/0.1/`.
++Cycle 0.3, the host boundary, is next: `meta/roadmap/0.3/0.3.0.md`, the
++clocks, was written at the close.**
++
++**After cycle 0.2.4: cycle 0.2's close.** The cycle audit (ACCEPT, twenty-two
++findings: eight contradictions, two dormant, five stale, seven cosmetic; no
++memory fault and no silent wrong answer) was triaged in three subcycles, every
++finding fixed but the two that are the workbench's: **0.2.4a**, the
++instruments (TM-238 … TM-240), **0.2.4b**, the library's findings (TM-241 …
++TM-245), and **0.2.4**, the close — `ROADMAP.md`'s two sentences that said
++`check_purity` goes live at 0.3, and `src/host/host.npk`'s third, dated (the
++audit's S4); cycle 0.2's records
++moved to `meta/roadmap/done/0.2/`, the links the move broke in the move's own
++commit and every plain mention after it; cycle 0.3's README given what cycle
++0.2 hands it — `meta/OPEN_QUESTIONS.md` Q-7, which is the author's, and what
++the next adoption owes; and `meta/roadmap/0.3/0.3.0.md` written. The gate
++stands as 0.2.2 left it, both members on every run. A full invocation is
++**133 units green** at pin `5fbaf4a`.
+ 
+ **After cycle 0.2.4b: the cycle audit's library findings.** **`timestamp_add`
+ checks its operand before it adds** — `t.secs` against the range,
+diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
+index 984c86816a728543c20f455663d2296980c32ba4..faeeb80fca8d66257dad7a56b813e87faecf773c 100644
+--- a/CONTRIBUTING.md
++++ b/CONTRIBUTING.md
+@@ -4,8 +4,9 @@
+ That is unusual and it is deliberate: the specifications catch design mistakes
+ that would otherwise be found by writing the wrong code twice.
+ 
+-**Where it stands:** cycle 0.1, the civil calendar, is closed (2026-09-26);
+-cycle 0.2, instants and timestamps, is open. `src/core/`
++**Where it stands:** cycle 0.2, instants and timestamps, is closed
++(@@DATE@@), as cycle 0.1, the civil calendar, is (2026-09-26); cycle 0.3, the
++host boundary, is next. `src/core/`
+ and `src/cal/` are real, and `src/span/` holds `Instant` since cycle 0.2.0,
+ `Timestamp` since 0.2.1, the conversions between a `Timestamp` and its civil
+ reading since 0.2.2, and the `Duration` interop since 0.2.3; the
+diff --git a/README.md b/README.md
+index 74c6268008f64f0976b9ebf43b5395bfca5def49..2d0b2b1881103fe2a57d6acaf81c003b435265c3 100644
+--- a/README.md
++++ b/README.md
+@@ -6,9 +6,11 @@ the safety-critical systems language. No dependencies, no libc, no
+ compiled in from a pinned IANA release, so the same program gives the same
+ answer on every machine.
+ 
+-> **Status: cycle 0.1, the civil calendar, CLOSED on 2026-09-26, archived at
+-> [`meta/roadmap/done/0.1/`](meta/roadmap/done/0.1/README.md)** — its code, its
+-> gate and its audit done — **and cycle 0.2, instants and timestamps, is open.**
++> **Status: cycle 0.2, instants and timestamps, CLOSED on @@DATE@@, archived at
++> [`meta/roadmap/done/0.2/`](meta/roadmap/done/0.2/README.md)**, as cycle 0.1,
++> the civil calendar, was on 2026-09-26 ([`meta/roadmap/done/0.1/`](meta/roadmap/done/0.1/README.md))
++> — each with its code, its gate and its audit done — **and cycle 0.3, the host
++> boundary, is next.**
+ > What exists: `src/core/` — `Vec<T>`, `Bytes` and the named limits — since
+ > cycle 0.0, its `Vec` holding only `Copy` elements since cycle 0.2.0b; and
+ > `src/cal/` — `CivilDate`,
+diff --git a/meta/roadmap/0.3/README.md b/meta/roadmap/0.3/README.md
+index 465fb03f28618ce7dcab1894beccbaef8a406e86..17528023328079a4be15ca39fbdc07bcb28778f1 100644
+--- a/meta/roadmap/0.3/README.md
++++ b/meta/roadmap/0.3/README.md
+@@ -15,6 +15,14 @@ claim worth making.
+ TM-008 (Linux x86-64), TM-018 (purity), TM-019 (no implicit local time). All
+ settled.
+ 
++**And one open question reaches it, blocking nothing: `meta/OPEN_QUESTIONS.md`
++Q-7**, the author's — whether `instant_of`'s name should say it takes a raw
++reading. `host_now_instant` and `host_now_boot` build their readings through
++`instant_of` (0.3.0's checklist); under the recommended answer nothing here
++changes, and under the other the rename lands first, by a decision of its own,
++and 0.3.0's plan reads it. *(From cycle 0.2's close, `done/0.2/0.2.4.md`;
++the question is the cycle audit's C2, TM-243.)*
++
+ ## Subcycles
+ 
+ | # | Topic | Ends with |
+@@ -62,6 +70,35 @@ settled.
+ - [ ] the harness links whichever host object it is told to, and a test proves the substitution works
+ - [ ] a demonstration that a clock-dependent behaviour is reproducible: the same fake reading twice gives the same answer, and a fixed sequence gives a fixed transcript
+ 
++## The adoption, when the pin moves
++
++**Cycle 0.2 closed at compiler `5fbaf4a`, and the next re-pin is the
++orchestrator's to place**, as an adoption subcycle of its own that measures the
++unchanged tree at both pins before it changes anything, as 0.1.0b, 0.1.4c and
++0.2.0a did. What it owes here, from cycle 0.2's close (`done/0.2/0.2.4.md`):
++
++1. **The statement form of `#unreachable()`** — `if (r.is_error) {
++   #unreachable(); }` before a read of `r.value` — re-measured at the new pin:
++   at `5fbaf4a` it is `NITPICK-TAINT-001`, the compiler's defect the workbench
++   registry holds and `meta/OPEN_QUESTIONS.md` restates (TM-245). If it
++   compiles, a decision keeps `span`'s two `?| #unreachable()` or respells
++   them, and strikes the question with its number.
++2. **`timestamp_since`'s `int128` multiplication and `instant_since`'s `int128`
++   subtraction** linked at both legs against `npkrt.o` alone, as
++   `done/0.2/0.2.3.md` §7 and `done/0.2/0.2.4b.md` §1.7 measured them: at
++   `5fbaf4a` each is inline — `llvm.smul.with.overflow.i128` and
++   `llvm.ssub.with.overflow.i128` — and no libcall is called, `__muloti4`,
++   which `npkrt.o` does not define, among them.
++3. **The compiler's lexer re-read** whatever part E says (TM-202), and
++   `harness/lexical.py` brought to it; part E's third half re-run against the
++   literal reader `check_constants_named` uses (TM-231).
++4. **`src/`'s `#wild_slice` sites** — nine in code, in `bytes.npk` and
++   `vec.npk`, fourteen lines naming it with the comments, measured at cycle
++   0.2's close — are the first to read at a pin that carries the compiler's
++   D-341; cycle 0.2 added none.
++5. **Each CI's pin bump**, and the emission row CI asserts (TM-212), in the
++   adoption's own commit.
++
+ ## Gate
+ 
+ `check_purity` green **and seen to fail**, and every clock test green under
+diff --git a/meta/roadmap/ROADMAP.md b/meta/roadmap/ROADMAP.md
+index 968999324cf36593d34229eb82fa2615520b697f..2f5a13436571b13a47a4ab2a29f5eb0144f66a7f 100644
+--- a/meta/roadmap/ROADMAP.md
++++ b/meta/roadmap/ROADMAP.md
+@@ -21,7 +21,12 @@ TM-230 — the one check this paragraph said a question held. Re-derived then,
+ **eight** questions are open, three the compiler's — O-N1, O-N2 and O-N3 —
+ and five ours — O-X1, O-B1, O-X4, O-X8 and O-X9: O-N25 was answered at cycle
+ 0.2.0a, TM-208, and O-X3 at 0.2.0, TM-216, and this count was not moved
+-with either.)*
++with either.)* *(Re-derived at cycle 0.2's close: **176 decisions are
++settled**, TM-208 … TM-245 the cycle's thirty-eight, the close's eight among
++them; **ten questions are open** — four the compiler's, O-N1, O-N2, O-N3 and
++O-N34, restated at 0.2.4b (TM-245); five ours, O-X1, O-B1, O-X4, O-X8 and O-X9;
++and one the author's, Q-7, raised at the close (TM-243), which blocks nothing
++before cycle 1.0's freeze of the public names.)*
+ 
+ ## How this is organised
+ 
+@@ -80,8 +85,8 @@ sibling libraries.
+ |---|---|---|
+ | ~~**0.0**~~ | **Foundations** — the language probes, the harness, `src/core/` — **CLOSED 2026-09-06, archived at [`done/0.0/`](done/0.0/README.md)** | — |
+ | ~~**0.1**~~ | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **CLOSED 2026-09-26, archived at [`done/0.1/`](done/0.1/README.md)** | 0.0 ✓ |
+-| **0.2** | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **IN PROGRESS**: [`done/0.2/0.2.0a.md`](done/0.2/0.2.0a.md), the adoption of compiler `5fbaf4a`, done; [`done/0.2/0.2.0b.md`](done/0.2/0.2.0b.md), `Vec<T: Copy>`, done; [`done/0.2/0.2.0.md`](done/0.2/0.2.0.md), `Instant`, done; [`done/0.2/0.2.1.md`](done/0.2/0.2.1.md), `Timestamp`, done; [`done/0.2/0.2.2.md`](done/0.2/0.2.2.md), the conversions and the gate, done; [`done/0.2/0.2.3a.md`](done/0.2/0.2.3a.md), the instruments, done; [`done/0.2/0.2.3.md`](done/0.2/0.2.3.md), the `Duration` interop, done; 0.2.4, the close, next | 0.1 ✓ |
+-| **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double | 0.2 |
++| ~~**0.2**~~ | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **CLOSED @@DATE@@, archived at [`done/0.2/`](done/0.2/README.md)** | 0.1 ✓ |
++| **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double — **NEXT**: `0.3/0.3.0.md`, the clocks, written at cycle 0.2's close | 0.2 ✓ |
+ | **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate | 0.2 |
+ | **0.5** | **The zone table** — the generator, the committed tables, the size measurement | 0.1 |
+ | **0.6** | **Zoned time** — offset lookup, the four resolution modes, the transition sweep | 0.4, 0.5 |
+@@ -168,6 +173,23 @@ moved to cycle 0.7.3 at 0.2.3's planning, beside `date_until`: TM-237.)*
+ boundary in the range plus every second of 512 randomly chosen days, and a
+ property test that `nanos < 1_000_000_000` after every operation.
+ 
++**CLOSED @@DATE@@ at compiler `5fbaf4a`, archived at
++[`done/0.2/`](done/0.2/README.md)** — ten subcycles, the close in three. What
++it produced: `src/span/` — `Instant` and its two clocks (TM-215, TM-216),
++`Timestamp` and its one constructor (TM-219, TM-220), the conversions to and
++from the civil scale in UTC (TM-222), and the `Duration` interop (TM-233 …
++TM-236), `timestamp_add` and `instant_since` total since the close (TM-241,
++TM-242); the gate on every full run, both sides of every day boundary and every
++second of 512 days (TM-224), and P-4's stand-in over every operation that yields
++a `Timestamp`; one adoption, to compiler `5fbaf4a` (TM-208 … TM-213);
++`Vec<T: Copy>` (TM-214); the tree checks' family one list, and three checks
++live (TM-227 … TM-232), each read again at the close (TM-238 … TM-240); and 133
++units green. `timestamp_until` moved to cycle 0.7.3 (TM-237); whether
++`instant_of`'s name should say it takes a raw reading is the author's, Q-7.
++The table row read *"IN PROGRESS: …"* with each subcycle's file linked, and
++`done/0.2/README.md` keeps that list. `done/0.2/0.2.4.md`'s record holds what
++the cycle found and taught.
++
+ ### 0.3 — The host boundary
+ `src/host/`: `clock_gettime` through `sys` with the `timespec` laid out in a
+ `buffer`, the three clocks, `host_system_zone`'s four-step discovery, and the

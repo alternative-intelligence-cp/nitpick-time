@@ -33,7 +33,9 @@ column of its own, three rows marked; and the check live, TM-230.)*
 | 0.2.2 | **Conversion** — `timestamp_to_utc`, `civil_to_utc`, and the round trip — **[`0.2.2.md`](0.2.2.md)**, planned and rehearsed 2026-10-01 at `5fbaf4a`; it closes with the glossary misuse 0.2.1's verifier found, in a commit of its own | the second gate |
 | 0.2.3a | **The instruments** — split from 0.2.3 at its planning: `check_check_registry` first, then `check_no_view_returns` and `check_int128_sites` live — O-X6 answered, §5's table the authority — then `check_constants_named` reading every spelling of a literal and the owner of 1 000 000 000, and the GitHub note the workbench's question 17 reworded — **[`0.2.3a.md`](0.2.3a.md)**, planned and rehearsed 2026-10-01 at `5fbaf4a`; it runs FIRST | the family one list, and every spelling of an owned number seen |
 | 0.2.3 | **`Duration` interop** — the added constructors, `timestamp_add`, `timestamp_since` and its ±292-year refusal — **[`0.2.3.md`](0.2.3.md)**, planned and rehearsed 2026-10-01 at `5fbaf4a` over 0.2.3a's tree; it runs after 0.2.3a | the mismatch handled honestly |
-| 0.2.4 | **Close** | `done/0.2/`, `0.3.0.md` written |
+| 0.2.4a | **The cycle audit's instruments** — split from the close at its planning: `check_constants_named` holding an owned number to its owner's file and every bound to its value, `check_no_view_returns` reading an optional, `check_int128_sites` reading every integer wider than `int64`, and V-1 saying what it guards — **[`0.2.4a.md`](0.2.4a.md)**, planned and rehearsed 2026-10-02 at `5fbaf4a`; it runs FIRST | every instrument the audit found silent, red on its plant |
+| 0.2.4b | **The cycle audit's library findings** — `timestamp_add`'s operand checked, `instant_since` in `int128`, M-3 restated with Q-7 for the author, every contract comment in a live clause's syntax, the statement form recorded as the compiler's defect — **[`0.2.4b.md`](0.2.4b.md)**, planned and rehearsed 2026-10-02 at `5fbaf4a` over 0.2.4a's tree; it runs SECOND | nothing in `span` traps on what `instant_of` or `wild` storage can hand it but `instant_add` and the constructors, by decision |
+| 0.2.4 | **Close** — the audit's twenty-two findings triaged, S4 before 0.3.0, the archive, cycle 0.3 opened and `0.3.0.md` written — **[`0.2.4.md`](0.2.4.md)**, planned 2026-10-02 at `5fbaf4a`, its blocks rehearsed over 0.2.4b's tree | `done/0.2/`, `0.3.0.md` written |
 
 ## Checklist
 
@@ -104,6 +106,34 @@ column of its own, three rows marked; and the check live, TM-230.)*
 - [x] `VERIFICATION.md` P-3's `timestamp_add` sample names `SECS_MIN` and `SECS_MAX`, which `src/core/limits.npk` spells `NTIME_SECS_MIN` and `NTIME_SECS_MAX` (`BUILD.md` B-15) — restated when the function is written *(found at 0.2.1's planning)* (PD-80) — TM-235, `4d49c61`: the sample restated — the limits' names, `answer` for the reserved `result`, no `requires` — with a dated note quoting the old one; both `ensures` comments at the function in `span.npk` (blocks 0b and 4)
 - [x] **`timestamp_since` returns `ETimeValue`/`Overflow` past ±292 years** (M-18) — and the test computes the exact boundary rather than approximating it — computed in `int128`, each end taken exactly from both sides (PD-81) — TM-236, `4d49c61`: one `llvm.smul.with.overflow.i128` and no `__muloti4`, `m_since` linked against `npkrt.o` alone on both legs (block 0b); `NTIME_DURATION_NS_MAX` and `_MIN` in `limits.npk`, held to `int64`'s own by `limits_named`'s 22 and 23; `timestamp_since_edges` 0 on both legs — 48 617 answered and 51 383 refused, equal to the transcription, and each end, computed from `int64`'s bit pattern, answered exactly from four readings and refused a nanosecond further; red on its mutants on both legs — either check deleted 50, at the end itself or a second short 54, a nanosecond wide 55, either end in `limits.npk` one inside `int64`'s 54, computed in `int64` 93 (block 3); `check_int128_sites` `9 int128 … in 2 function(s)`, 0 findings; `GREEN -- 131` on block 5's run and in CI run 36959794096's job log on `4d49c61`, with `compiler HEAD == 5fbaf4a40a2f6b213754cd71b6c69700f8aa2c87 (clean)`, `npkc.ll == the pin's emission, 30232291 B / 5630c2b4…` and `12 of V-14's 13`
 - [ ] ~~`timestamp_until(a, b, unit)` in whole days, months or years, as the calendar-scale answer (M-19)~~ — moved to cycle 0.7.3, beside `date_until`: whole months and years are `Period` addition's clamped steps, and `Period` is 0.7.0's (PD-82) — TM-237, `4d49c61`: cycle 0.7's 0.7.3 item (`timestamp_until at cycle 0.7.3: 1`, block 4); M-19 and §9's row dated
+
+### 0.2.4a — the cycle audit's instruments
+*(Split from 0.2.4 at the close's planning, 2026-10-02, with 0.2.4b: the audit — the workbench's `meta/audits/nitpick-time-0.2-2026-10-02.md`, ACCEPT, twenty-two findings — asks four instrument repairs, a library fix, an API question and a rewrite of every contract comment before the archive, and `0.2.4a.md` says why that is three subcycles. Each item names the audit's finding.)*
+- [ ] `check_constants_named` holds an owned number to its owner's PLACE — `core`'s is `src/core/limits.npk` alone — and every bound that file declares by its VALUE, the small structural values excepted by `nitpick-regex`'s list (PD-83) — the audit's C3 and C8
+- [ ] `check_no_view_returns` reads an optional as what it holds, so `uint8[]?` and `cstring?` are views (PD-84) — C4
+- [ ] `check_int128_sites` reads every integer wider than `int64`, sixteen types, and `TESTING.md` V-1 says what the check guards and what no check does (PD-85) — D1
+- [ ] the ten new plants red with this subcycle's checks and each unseen with `HEAD`'s, and seven mutants of `harness/checks.py` each red by the rows it is for
+- [ ] `limits_named.npk`'s header (K3), S-16's note on `timestamp_add`'s division (K4), and "fifteen named bounds" with cycle 0.0.4's "thirteen named bounds" (K5), each corrected
+- [ ] `GREEN` at `5fbaf4a` locally and in CI, read from the job log
+
+### 0.2.4b — the cycle audit's library findings
+*(Split from 0.2.4 at the close's planning, 2026-10-02 — `0.2.4a.md` says why.)*
+- [ ] `timestamp_add` checks its operand's seconds against the range before it adds, and traps on nothing whatever it is handed; three forged cases at `int64`'s ends (PD-86) — C1 and K1
+- [ ] `instant_since` computes in `int128` and refuses past `Duration`'s range; `SPAN_MODEL.md` §5 gains six rows; `SAFETY.md` S-12 names its exceptions (PD-87) — C6, C7 and S1
+- [ ] M-3 and every restatement of it say what the type enforces, `probe20g` runs the construction, and `meta/OPEN_QUESTIONS.md` Q-7 is the author's, nothing about the API decided (PD-88) — C2 and K6
+- [ ] every contract comment written as its live clause would be, and measured: thirty-nine of forty-three compile, the four that call a function waiting on a `pure` callee; P-1b and P-3 restated (PD-89) — C5 and D2
+- [ ] the statement form's refusal recorded as the compiler's defect, the workbench registry's question restated here (PD-90) — S2
+- [ ] a forged hour of 24 (K2) and S-4's column header (K7)
+- [ ] `GREEN` at `5fbaf4a` locally and in CI, read from the job log
+
+### 0.2.4 — the close
+- [ ] every one of the audit's twenty-two findings one row in the record's triage table, in the audit's order — FIXED, with its subcycle and commit, or the orchestrator's (S3, S5)
+- [ ] `ROADMAP.md`'s two sentences that say `check_purity` goes live at 0.3, and `src/host/host.npk`'s third, dated before 0.3.0's plan is written (S4)
+- [ ] the cycle's gate read again and met — both members on both legs, and P-4's stand-in over every operation that yields a `Timestamp`
+- [ ] every checklist item above ticked, or struck with a reason
+- [ ] cycle 0.2 archived to `done/0.2/` — the move and the links it breaks in one commit, the plain mentions after it — `check_refs` clean at each, the full run unchanged
+- [ ] cycle 0.3's README given Q-7 and what the next adoption owes; `0.3.0.md` written execution-grade, saying whether it was rehearsed
+- [ ] the close's texts and `ROADMAP.md`'s rows and census; `GREEN` locally and in CI; `check_record` clean; `DONE`
 
 ## The adoption, when the pin moves
 

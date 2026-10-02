@@ -1,0 +1,448 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 6ce8fa80c25e86c703b970c279d8c7e4e0b72fca..7a9da677033ae7803c9a876f78673bf2f13d8d89 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -39,8 +39,10 @@
+ # ============================================================================
+ #
+ # WHAT A GREEN RUN PROVES TODAY. `src/core/` is real code since cycle 0.0.4 --
+-# `Vec<T>`, `Bytes` and fifteen named bounds, thirteen until 0.2.3 added
+-# `Duration`'s two ends -- and `src/cal/` since 0.1.0 --
++# `Vec<T>`, `Bytes` and fifteen named constants, thirteen bounds and two unit
++# conversions, thirteen in all until 0.2.3 added `Duration`'s two ends (it
++# said "fifteen named bounds" from 0.2.3 to 0.2.4a, the cycle audit's K5) --
++# and `src/cal/` since 0.1.0 --
+ # the civil types and their validating constructors, and since 0.1.1 Hinnant's
+ # `date_to_days` and `days_to_date`, and since 0.1.3 the derived fields --
+ # and `src/span/` since 0.2.0, `Instant` and its four operations, and since
+@@ -152,7 +154,10 @@
+ # `timestamp_add` keeps every answer normalised over a hundred thousand
+ # seeded additions and forged inputs; and `timestamp_since` answers at
+ # `Duration`'s two ends exactly and refuses one nanosecond past them, never
+-# wrapping (TM-233 ... TM-236).
++# wrapping (TM-233 ... TM-236). AND SINCE CYCLE 0.2.4a: an owned number is
++# held to its owner's file and every bound to its value, an optional of a view
++# is a view, and every integer wider than `int64` stands only where §5 marks
++# (TM-238 ... TM-240).
+ #
+ # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
+ # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 1b99c6415ed5681b1aae37dbec67b93bd8a0caa2..3976741d7f42f7926ba0db6d97f606f87b2e471d 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -12,8 +12,28 @@ safety-critical systems language at `../../nitpick`.
+ instants and timestamps, is OPEN: its 0.2.0a, the adoption of compiler
+ `5fbaf4a`, its 0.2.0b, `Vec<T: Copy>`, its 0.2.0, `Instant`, its 0.2.1,
+ `Timestamp`, its 0.2.2, the conversions and the cycle's gate, its 0.2.3a, the
+-instruments, and its 0.2.3, the `Duration` interop, are done, and 0.2.4, the
+-close, is next.**
++instruments, and its 0.2.3, the `Duration` interop, are done; and its close is
++under way in three parts, each triaging the cycle audit's findings: 0.2.4a, the
++audit's instruments, is done, 0.2.4b, the library's findings, is next, and
++0.2.4, the close itself, follows it.**
++
++**After cycle 0.2.4a: the cycle audit's instruments.** Cycle 0.2's audit
++(ACCEPT, twenty-two findings) found instruments that passed a planted violation
++in silence, and each reads what its row says now. **`check_constants_named`
++holds an owned number to its owner's PLACE** — `core`'s is
++`src/core/limits.npk` alone, where `86400i64` in `src/core/bytes.npk` passed it
++— **and every bound that file declares by its VALUE**: `253402300799i64`
++written in place of `NTIME_SECS_MAX` is a finding, the folded
++`NTIME_DURATION_NS_MIN` is read as −2⁶³, and the small values in
++`nitpick-regex`'s `_SMALL` set are excepted — today `NTIME_PARSE_MAX`'s 128
++alone (TM-238). **`check_no_view_returns` reads an optional as what it
++holds**, so `uint8[]?` and `cstring?` are views (TM-239). **`check_int128_sites`
++reads every integer wider than `int64`**, sixteen types, where an `int256`
++intermediate passed it; and `TESTING.md` V-1 says what that check guards and
++what no check does — S-15b's range check before every `=>!` is review's
++(TM-240). The self-check plants 92 tree-check violations, each new one red
++against the check before it, and `src/` changed in comments only. A full
++invocation is **131 units green** at pin `5fbaf4a`.
+ 
+ **After cycle 0.2.3: the `Duration` interop.** `src/span/` adds four
+ constructors to the prelude's `Duration` — `duration_mins`, `duration_hours`,
+@@ -457,8 +477,10 @@ TM-007 stands and O-X2 and O-Z1 close.
+ 
+ **After cycle 0.0.4: the first library code.** `src/core/` holds
+ `vec.npk` (`Vec<T>`, nine functions), `bytes.npk` (`Bytes`, eleven) and
+-`limits.npk` (thirteen named bounds, each with the rule that set it). The
+-umbrella re-exports **35** names, one line each. The other five directories are
++`limits.npk` (thirteen named constants, eleven bounds and two unit
++conversions, each with the rule that set it *("thirteen named bounds" until
++cycle 0.2.4a, the cycle audit's K5)*). The umbrella re-exports **35** names,
++one line each. The other five directories are
+ still placeholders that parse and are **replaced, not deleted**, by the cycle
+ named in each header — and `src/core/core.npk` survives as that directory's
+ LAYER NOTE, which is what the five point at. `harness/` is the runner
+diff --git a/harness/README.md b/harness/README.md
+index cbe3576916818888eb981ca4f4f9be664a60acf1..e722ce93953a1a5ee341546e26da27beec8f7fc6 100644
+--- a/harness/README.md
++++ b/harness/README.md
+@@ -59,10 +59,16 @@ running unlisted since cycle 0.0.6)*:
+   a code named once for two sites and three times for two (TM-210). Case 6
+   (a generator differing by one line) is **pending until 0.5** and prints as
+   pending rather than passing.
+-- **Eighty-two planted violations across the tree checks since cycle 0.2.3a**
+-  (forty-four from cycle 0.1.5's second half, forty after its first half,
+-  twenty-three before it; 0.2.3a's thirty-eight are `check_check_registry`'s
+-  six, `check_no_view_returns`' five and its exemption's five,
++- **Ninety-two planted violations across the tree checks since cycle 0.2.4a**
++  (eighty-two from cycle 0.2.3a, forty-four from cycle 0.1.5's second half,
++  forty after its first half, twenty-three before it; 0.2.4a's ten are
++  `check_constants_named`'s six — a `core` number in `core` outside
++  `limits.npk`, a `cal` number in `core`, a bound spelled by its value, the
++  folded minimum by its value, a small bound left to review, and an
++  initializer it cannot read — and `check_no_view_returns`' two optionals and
++  `check_int128_sites`' two wider types; 0.2.3a's thirty-eight are
++  `check_check_registry`'s six, `check_no_view_returns`' five and its
++  exemption's five,
+   `check_int128_sites`' six, and `check_constants_named`'s sixteen — its
+   literal reader's fifteen and the owner of 1 000 000 000; the 0.1.5 first
+   half's seventeen are V-1k's reader rows and V-1l's token rows, the second
+@@ -425,6 +431,16 @@ repro + suite at **96** (**57 probe**, **30 unit**, **8 sweep**).
+ `131 = 35 + 96`. A full invocation about 205 s; the five units cost a few
+ seconds together, both legs, compile included.
+ 
++**At cycle 0.2.4a, the same pin, 131 units**: no test added, and `src/`
++changed in comments only. The self-check plants 12 of V-14's 13 cases,
++**92** tree-check violations with 92 clean controls — the ten new are
++`check_constants_named`'s six, `check_no_view_returns`' two and
++`check_int128_sites`' two (TM-238 … TM-240) — 4 arm specimens and 4 verdict
++specimens; the tree checks at
++`14 live`, 3 pending; parse over 147 files, `102 + 43 + 2`; the defect corpus
++unchanged at 36; and library + repro + suite at 96. `131 = 35 + 96`. A full
++invocation about 200 s, as at cycle 0.2.3: the new plants cost milliseconds.
++
+ The floor under all of it is still TM-117's: every root re-emits the prelude,
+ so a `npkc` invocation on anything that compiles costs a fixed amount and the
+ run makes about 200 of them. One that does *not* compile costs ~0.03 s.
+diff --git a/harness/run.py b/harness/run.py
+index b769e7360bc51ca139b2cc2dc7438db67ac5ea31..e281fcf90207d3e2d671013646e6fc9ad8c98914 100644
+--- a/harness/run.py
++++ b/harness/run.py
+@@ -26,8 +26,10 @@ WHAT A GREEN RUN HERE IS, AND IS NOT.
+   a SOURCE-level check and is the only thing that answers that question.
+ 
+   IT IS NOT evidence that the WHOLE library works. `src/core/` is real code
+-  since cycle 0.0.4 -- `Vec<T>`, `Bytes` and fifteen named bounds, thirteen
+-  until 0.2.3 added `Duration`'s two ends -- and
++  since cycle 0.0.4 -- `Vec<T>`, `Bytes` and fifteen named constants,
++  thirteen bounds and two unit conversions, thirteen in all until 0.2.3 added
++  `Duration`'s two ends (it said "fifteen named bounds" from 0.2.3 to 0.2.4a,
++  the cycle audit's K5) -- and
+   `src/cal/` since 0.1.0 -- the civil types, Hinnant's two algorithms since
+   0.1.1, swept over the whole range since 0.1.2 -- and the suite is evidence
+   about both, and since 0.2.0 about `src/span/`'s `Instant` -- and since
+diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
+index e59d03347d8839ae6d12f2c9d9d218579c80e117..bb742bd27fef539be8c719b8dc38307aceb2c0b1 100644
+--- a/meta/DECISIONS.md
++++ b/meta/DECISIONS.md
+@@ -6668,6 +6668,11 @@ every member of the gate.
+ > stays `cal`'s"*: cycle 0.2.3a gave it to `core` alone, by this decision's own
+ > reasoning, once `check_constants_named` read a literal in every spelling
+ > (TM-231). The rest stands as decided.
++>
++> **And TM-238 (@@DATE@@, cycle 0.2.4a) reads one clause of it:** *"spelled
++> once, in `src/core/limits.npk`"* — the check held a copy to the module `core`,
++> not to that file, so `86400i64` in `src/core/bytes.npk` passed it until TM-238
++> held it to the file (the cycle audit's C3).
+ 
+ **2026-10-01, cycle 0.2.2 (the plan's PD-68). Amends `harness/checks.py`'s
+ `CONSTANT_OWNER` and `harness/selfcheck.py`'s row for it; dates `SAFETY.md`
+@@ -6904,6 +6909,9 @@ statement** — that is a property of the self-check's own rows, every one of
+ which runs, red and green, on every full invocation.
+ 
+ ### TM-228 — `check_no_view_returns` is live: S-22's view is a slice of any element, a `cstring`, or a type that holds one — a struct's field, a fixed array's element, a type argument — and `bytes_view`'s exemption is re-derived from its reason on every run
++> **TM-239 (@@DATE@@, cycle 0.2.4a) adds a shape it did not read:** an optional
++> holds what it wraps, and `uint8[]?` and `cstring?` passed the check until
++> TM-239 read a `T?` as its `T` (the cycle audit's C4).
+ 
+ **2026-10-01, cycle 0.2.3a (the plan's PD-73). Discharges TM-204; dates
+ `SAFETY.md` S-22; adds `TESTING.md` §2's row and V-14c's.**
+@@ -6987,6 +6995,10 @@ records; **the mark read from the Answer cell's words** — "computed in
+ `int128`" is prose, and a column is a fact.
+ 
+ ### TM-230 — `check_int128_sites` is live: it reads §5's `int128` column, finds every `int128` in `src/` by the function it is in, and fails in both directions; a marked function not yet written is named on every run
++> **TM-240 (@@DATE@@, cycle 0.2.4a) reads one clause of it:** *"finds every
++> `int128` in `src/`"* — since TM-240 every integer wider than `int64`, sixteen
++> types; an `int256` or a `uint128` intermediate passed it (the cycle audit's
++> D1).
+ 
+ **2026-10-01, cycle 0.2.3a (the plan's PD-75). Restates `TESTING.md` §2's row;
+ moves the check from V-1a's pending table to the family's live half.**
+@@ -7080,6 +7092,9 @@ refuses `86__400`, which the compiler accepts: the row for two together is the
+ one that sees the difference.
+ 
+ ### TM-232 — `check_constants_named`'s owner of 1 000 000 000 is `core` alone, by TM-223's reasoning, once the check reads it in every spelling; `SAFETY.md` S-16 moves with the map
++> **TM-238 (@@DATE@@, cycle 0.2.4a) reads one clause of it:** *"spelled once, in
++> `src/core/limits.npk`"* — the check held it to the module `core` until TM-238
++> held it to the file (the cycle audit's C3).
+ 
+ **2026-10-01, cycle 0.2.3a (the plan's PD-77). Amends `harness/checks.py`'s
+ `CONSTANT_OWNER` and the self-check's row for it; dates `SAFETY.md` S-16 and
+@@ -7308,3 +7323,122 @@ type's design is cycle 0.7.0's, and a public name is a major version to take
+ away (TM-013); **an `int64` count of whole units instead of a `Period`** — not
+ M-19's answer, and a public name cycle 0.7 would replace; **whole days only,
+ now** — one function's units split between cycle 0.2 and cycle 0.7.
++
++# Cycle 0.2.4a — the cycle audit's instruments, ratified @@DATE@@
++
++Three decisions, drafted at planning (`meta/roadmap/0.2/0.2.4a.md` §2, PD-83 …
++PD-85, in that order) from the cycle audit's C3, C8, C4 and D1 (the workbench's
++`meta/audits/nitpick-time-0.2-2026-10-02.md`), each measured at compiler
++`5fbaf4a` and each a harness change with its self-check plants. `src/` changes
++in two comments, `limits.npk`'s header and `core.npk`'s.
++
++### TM-238 — `check_constants_named` holds what its row says: an owned number to its owner's PLACE, `core`'s being `src/core/limits.npk` alone, and every bound that file declares by its VALUE, the small structural values excepted
++
++**@@DATE@@, cycle 0.2.4a (the plan's PD-83) — the cycle audit's C3 and C8.
++Restates `TESTING.md` §2's row; dates `SAFETY.md` S-16; reads one clause of
++TM-223 and of TM-232.**
++
++**What was found** (`0.2.4a.md` §1). Two gaps between the row and the
++mechanism, each measured. **The exemption was the MODULE**,
++`if mod not in (owner, "core")`, where TM-223, TM-232 and S-16 say the one copy
++of 86 400 and of 1 000 000 000 is `src/core/limits.npk`'s: `86400i64` and
++`1_000_000_000i64` planted in `src/core/bytes.npk` were 0 findings, the count
++of owned occurrences going from 7 to 9, while the same `86400i64` in `span` is
++a finding. **And "no bound outside `src/core/limits.npk`" was read as no bound
++DECLARED outside**: `timestamp_of` comparing against `253402300799i64` in place
++of `NTIME_SECS_MAX` was 0 findings. Measured as well: no literal in `src/`
++outside `limits.npk` equals a bound's value today, so the tree does not move.
++
++**The decision.** *The owner map names a PLACE: a `core` number is
++`src/core/limits.npk`'s alone, and a `cal` number is `src/cal/`'s; a copy
++anywhere else in `src/` is a finding, and for a `core` number the finding names
++the name `limits.npk` gives it. And the VALUE of every bound `limits.npk`
++declares — its initializer evaluated, so the folded `NTIME_DURATION_NS_MIN` is
++−2⁶³ and never the `0` and the `1` it is written with — belongs to that file: a
++literal of that value anywhere else in `src/`, negated or not, in any spelling
++the compiler's lexer reads (TM-231), is a finding, which names every bound with
++that value — `NTIME_YEAR_MIN` and `NTIME_YEAR_MAX` share 9999, and a literal
++does not say which it meant; a bound whose initializer
++the check cannot evaluate is a finding; and a value in `nitpick-regex`'s
++`_SMALL` set (its RX-062) — the small numbers that are structure as often as
++policy, a bit width, a byte, an alignment — is not keyed, which today excepts
++`NTIME_PARSE_MAX`'s 128 alone, and the headline names it. Six self-check plants,
++each red against the check before this decision.*
++
++*Alternatives declined:* **the row restated to "no bound DECLARED outside"** —
++the audit's alternative for C8: true, and it protects nothing the declaration
++check did not, while a bound written inline is what the row was written
++against; **every bound's value keyed, the small ones included** — 128 and 20
++are bounds here and structure everywhere else, and a check that fires on every
++byte mask is a check that gets switched off; **a small set of this library's
++own** — two libraries disagreeing on what "small" means is the C8 finding's own
++shape; **comparisons only, as `nitpick-regex`'s check reads** — a bound is spent
++at a comparison, and as a loop's limit, and in arithmetic: the value is the
++fact wherever it stands; **S-16, TM-223 and TM-232 restated to say "the
++module"** — the audit's alternative for C3: `core` holds bytes, vectors and the
++limits, and a magic number in `bytes.npk` is the second copy S-16 is about.
++
++### TM-239 — `check_no_view_returns` reads an optional as what it holds: a `T?` is a view when its `T` is
++
++**@@DATE@@, cycle 0.2.4a (the plan's PD-84) — the cycle audit's C4. Restates
++`TESTING.md` §2's row; dates `SAFETY.md` S-22; reads one clause of TM-228.**
++
++**What was found** (`0.2.4a.md` §1). `func:first_word = uint8[]?(uint8[]:src)
++never fails { if (src.len == 0i64) { pass NIL; } pass src; };` compiles in a
++consumer at the pin and hands back a view of its parameter when it is not
++`NIL`; planted in `src/core/bytes.npk` beside a `uint8[]` twin, the check
++reported the twin alone — `_SLICE` anchors on `[]$` and `cstring` is matched
++exactly, so `uint8[]?` and `cstring?` both passed. "The rest, or none" is the
++result cycle 0.4's parsers are likeliest to want first.
++
++**The decision.** *A result type ending `?` is read as the type it wraps, at any
++depth the check already reads — a field, an element, a type argument — so
++`uint8[]?`, `cstring?` and `Vec<uint8[]?>` are views and `int64?` is not. Two
++plants, `uint8[]?` and `cstring?`, each beside the same function returning
++`int64?`.*
++
++*Alternatives declined:* **an optional read as a view whatever it wraps** —
++`int64?` owns nothing and points at nothing; **a list of wrapper spellings
++(`?`, `Result<…>`, …)** — a `Result<T>` is a type argument, which the check has
++read since TM-228, and `?` is the one suffix that wraps; **leaving the check and
++naming the gap in S-22** — the parsers that would meet the gap are the next
++code this check exists for (TM-204).
++
++### TM-240 — `check_int128_sites` reads every integer wider than `int64`, not `int128` alone; `TESTING.md` V-1 says what the check guards, and what no check does
++
++**@@DATE@@, cycle 0.2.4a (the plan's PD-85) — the cycle audit's D1. Restates
++`TESTING.md` §2's row and V-1; dates `SPAN_MODEL.md` N-20; reads one clause of
++TM-230.**
++
++**What was found** (`0.2.4a.md` §1). Two `span` functions appended in a scratch
++copy, one computing in `int256` and one in `uint128`, each narrowed by a bare
++`=>! int64`: every live tree check was silent on both, and the `int256` one
++compiles and runs at the pin; the same function in `int128` is red. N-20's
++reason — a wide type used casually is one nobody reasons about — is the reason
++for every width past 64 bits, and the language has sixteen (the compiler's
++`TYPE_REFERENCE.md` §4 at the pin): `int128` … `int4096`, `uint128` …
++`uint4096`, `tbb128` and `tbb256`. And V-1 credits the check with guarding
++"that its arithmetic does not silently overflow", which no lexical check of
++where a type appears can do: `src/`'s twenty `=>!` are each after a range check
++or at a pointer or by construction in range, by reading (`0.2.4a.md` §1), and
++nothing checks that they stay so.
++
++**The decision.** *The check reads all sixteen: any of them in `src/` outside a
++function §5 marks **yes** is a finding, as `int128` was, and a marked function
++that spells none of them is the stale mark it was. §5's column keeps its name —
++`int128` is the one width this library computes in — and N-20 is dated to say
++the rule is every width past `int64`. V-1 is restated: `check_int128_sites`
++guards that every wide intermediate is at a site §5 states the answer for, and
++the claim that the library's arithmetic does not silently overflow rests on the
++language — a plain `+`, `-` or `*` traps (D-210) — and on S-15b's range check
++before every `=>!`, which is review's and the edge tests', not any check's. Two
++plants, an `int256` and a `uint128`, each beside the same function marked.*
++
++*Alternatives declined:* **N-20 restated to `int128` alone** — the audit's
++alternative: the reason does not stop at 128 bits, and a check narrower than
++its rule's reason is the shape this repository keeps finding; **a check that
++every `=>!` follows its range check** — the guard is a comparison on the same
++path, which a lexical check cannot place, and a check that guessed would be
++believed; **a check for the wrapping operators `+%`, `-%` and `*%`** — none is
++in `src/`, measured, and none was asked for; V-1 now says what nothing checks,
++so the next reader knows where the line is.
+diff --git a/meta/specs/SAFETY.md b/meta/specs/SAFETY.md
+index 0b4f6c44651de93e1b32d63fa23ec95adc9cb651..7e38615dc53ff09bc4bb106daa25a4165e5ca7de 100644
+--- a/meta/specs/SAFETY.md
++++ b/meta/specs/SAFETY.md
+@@ -515,6 +515,16 @@ wherever it stands, every width, a character literal's code point — so
+ `1_000_000_000i64` or `15180hexi64` outside `core` is a finding, where until
+ then each passed.)*
+ 
++*(Cycle 0.2.4a, TM-238 — the cycle audit's C3: "the one copy is
++`src/core/limits.npk`'s" is now what the check holds. Until then it held a copy
++to the module `core`, so `86400i64` in `src/core/bytes.npk` passed it. And the
++record these notes keep, completed — the audit's K4: `timestamp_add` (cycle
++0.2.3) divides a `Duration`'s nanoseconds by `NTIME_NANOS_PER_SEC`, read by
++name, with `/` and `%`; the IR guards each with the compiler's zero check and
++its `MIN / −1` check (`npk_trap` −4097 and −4098, at `5fbaf4a`), and
++`tests/unit/limits_named.npk`'s exit 18 holds the divisor to 10⁹, so neither
++can fire.)*
++
+ **Rule S-17.** Every index into the zone tables goes through one accessor pair,
+ and the accessor is where the bound is checked. Callers do not index raw
+ storage. This makes the bound one obligation to discharge in cycle 1.5 rather
+@@ -1214,6 +1224,11 @@ returning a view, through a pointer to `Bytes`, which that file declares, and
+ named here — so the day any part of it is false, the run is red. At its first
+ run, `src/` declared 46 functions and one returned a view: `bytes_view`.)*
+ 
++*(Cycle 0.2.4a, TM-239 — the cycle audit's C4: and an optional of one.
++`uint8[]?` — "the rest, or none", the result a parser wants first — hands its
++caller a view whenever it is not `NIL`, compiles at the pin in a consumer, and
++passed the check, as `cstring?` did; the check reads a `T?` as its `T` now.)*
++
+ **Why it was written as a belt, and why it stays one.** O-N9 measured that
+ D-004's escape rule was **unenforced for slice views**: `string_bytes` on a
+ local `string` returned a `uint8[]` out of its owning frame at exit 0, and
+diff --git a/meta/specs/SPAN_MODEL.md b/meta/specs/SPAN_MODEL.md
+index 12511bbb7ff61748c0d149d34282ae1bcea644ea..512ec78ee324e64d9e4b3ef01bd913c7eab5e0ac 100644
+--- a/meta/specs/SPAN_MODEL.md
++++ b/meta/specs/SPAN_MODEL.md
+@@ -223,6 +223,13 @@ whole-tree check asserts that `int128` appears nowhere else in `src/`", and
+ marked one. Three rows are marked now: the count came out three, and it is
+ dropped anyway, because a number in a rule goes stale in silence.)*
+ 
++*(Cycle 0.2.4a, TM-240 — the cycle audit's D1: `int128` in this rule is every
++integer wider than `int64` — `int128` … `int4096`, `uint128` … `uint4096`,
++`tbb128` and `tbb256` — because its reason is. An `int256` intermediate
++narrowed by a bare `=>!` compiled, ran and passed every tree check, measured,
++until `check_int128_sites` read all sixteen. The column keeps its name:
++`int128` is the one width this library computes in.)*
++
+ **Rule N-20b (TM-105) — the range check at each of those sites is mandatory
+ library code, because the language provides no checked narrowing.** Measured at
+ cycle 0.0.0: `=>!` at a value that does not fit **truncates silently** (no trap,
+diff --git a/meta/specs/TESTING.md b/meta/specs/TESTING.md
+index 4d9f22e83f40837e3983cbc844fc1012c3df54a3..a2f66693a4ad2214377d1cfc148f15207db8443d 100644
+--- a/meta/specs/TESTING.md
++++ b/meta/specs/TESTING.md
+@@ -43,11 +43,11 @@ them found something on its first run.
+ | `check_failsafe_arms` | the generated per-module arm list against programs that import each module and compile their `failsafe` |
+ | `check_layering` | `BUILD.md` §6's diagram against `src/` — its **edges** (every `use`) and its **nodes** (every layer the diagram names holds at least one module). The node half is D1's repair: cycle 0.0.1's acceptance claimed `run.py` "asserts the count is at least 7" and no such assertion was in the tree, so *"a directory whose placeholder was deleted rather than replaced is invisible to the sweep"* was live for four subcycles inside a ticked box |
+ | `check_no_owning_fields` | **no `fixed` table's element owns — itself, or through a field at any depth** (`SAFETY.md` S-19b). **It could not see a SINGLE-LINE struct until cycle 0.0.6 and both of this repository's structs are one** (TM-138), so neither type's real fields had ever been examined while the check reported `0 of 0`; the self-check now plants the same violation in both spellings. **And until cycle 0.1.3b it could not see an owning ELEMENT (`fixed string[2]`) or an owner two structs down, and it matched owners by substring**, so a field named `string_off` read as one — all three found by re-measuring the premise the check was written on, which was false (TM-177), and all three planted now |
+-| `check_int128_sites` (TM-230) | **`int128` in `src/` only inside a function `SPAN_MODEL.md` §5's table marks yes in its `int128` column**, and every marked function `src/` declares spells one — N-20, as TM-229 restates it; a marked function not written yet is named on every run, not failed. Comments and literals are blanked first, so the type in prose is nothing. Live since cycle 0.2.3a. *(It read "`int128` appears at exactly the three sites `SPAN_MODEL.md` §5 names, and nowhere else" — a count §5's table did not match, `OPEN_QUESTIONS.md` O-X6, so it could not be written until the question was answered.)* |
+-| `check_constants_named` | no bound outside `src/core/limits.npk`; no magic 86400, 146097, 719468 or 1000000000 outside the module that owns it — `core` alone for 86400 since cycle 0.2.2 (TM-223) and for 1000000000 since 0.2.3a (TM-232), "the algorithm module" for all four until 0.2.2. **A literal is read as the compiler's lexer reads it, and held to the map by its VALUE** (TM-231): every base suffix, `_` wherever it stands, every width, a character literal's code point, a bound after `..` — and a float, or a token the lexer refuses, is reported by its text, never passed. *(Until cycle 0.2.3a it read four or more decimal digits as text, and sixteen spellings of the four numbers passed it, measured.)* |
++| `check_int128_sites` (TM-230) | **`int128` — and every other integer wider than `int64`, sixteen types, since cycle 0.2.4a (TM-240) — in `src/` only inside a function `SPAN_MODEL.md` §5's table marks yes in its `int128` column**, and every marked function `src/` declares spells one — N-20, as TM-229 restates it; a marked function not written yet is named on every run, not failed. Comments and literals are blanked first, so the type in prose is nothing. Live since cycle 0.2.3a. *(It read "`int128` appears at exactly the three sites `SPAN_MODEL.md` §5 names, and nowhere else" — a count §5's table did not match, `OPEN_QUESTIONS.md` O-X6, so it could not be written until the question was answered. And until cycle 0.2.4a it read `int128` alone, so an `int256` or a `uint128` intermediate narrowed by a bare `=>!` passed it — the cycle audit's D1.)* |
++| `check_constants_named` | **no bound outside `src/core/limits.npk` — declared there, and spelled nowhere else in `src/` by its value** (TM-238): the value of every bound that file declares, its initializer evaluated, is held to it, but a value in `nitpick-regex`'s `_SMALL` set (its RX-062), which review reads and the headline names — today `NTIME_PARSE_MAX`'s 128; and **no magic 86400, 146097, 719468 or 1000000000 outside its owner's place** — `core`'s is `src/core/limits.npk` alone and `cal`'s is `src/cal/` (TM-238), `core` the owner of 86400 since cycle 0.2.2 (TM-223) and of 1000000000 since 0.2.3a (TM-232), "the algorithm module" for all four until 0.2.2. **A literal is read as the compiler's lexer reads it, and held to the map by its VALUE** (TM-231): every base suffix, `_` wherever it stands, every width, a character literal's code point, a bound after `..` — and a float, or a token the lexer refuses, is reported by its text, never passed. *(Until cycle 0.2.3a it read four or more decimal digits as text, and sixteen spellings of the four numbers passed it, measured. And until cycle 0.2.4a it read a bound as a declaration alone, so `253402300799i64` in place of `NTIME_SECS_MAX` passed it, and held a copy to the module `core`, so `86400i64` in `src/core/bytes.npk` passed it — the cycle audit's C8 and C3.)* |
+ | `check_literal_divisors` (TM-163) | **every `/`, `%`, `/=` and `%=` in `src/cal/` against `CALENDAR.md` C-11**: the divisor must be a positive decimal integer literal with its width suffix, standing alone — nothing after it that binds tighter than `/`, since `256i64 =>! uint8` is 0 — so D-007's divide-by-zero and `MIN / −1` traps are unreachable by construction. It reads code with comments AND strings blanked, because every `use` path in `cal.npk` holds a `/`; `+%`, `-%` and `*%` are the wrapping operators and not divisions. It is C-11's list of divisors, which a list in the rule's text could not be: the one C-11 carried was short by eight the day `civil_from_days` arrived. *(Until cycle 0.1.5 this row said its docstring's limits — block comments, character literals, raw strings and templates "not modelled", `src/cal/` having none — and the docstring called the gap the safe direction. Measured at 0.1.5's planning, a `'"'`, a template's `//` and a lone CR in a `//` comment each HID a division, and a `//` inside a `/* */` hid a clock call and a declaration from the checks beside this one; since then it reads through V-1k's reader, and each shape is planted.)* |
+ | `check_no_format_string` | no function anywhere takes a pattern `string` and interprets it — `FORMAT_MODEL.md` F-5's rule, made checkable. **Pending until cycle 0.4**: nothing enforces F-5 before then, and V-1a's table says why |
+-| `check_no_view_returns` (TM-228) | **no function in `src/` returns a view** (`SAFETY.md` S-22): a slice — `uint8[]` or any other `T[]` — a `cstring`, or a type that holds one: a struct's field at any depth, a fixed array's element, a type argument (`Vec<uint8[]>`), but no type parameter and no pointer. **But S-22's one named exemption, `bytes_view`, whose reason is re-derived on every run** (TM-137): it is declared in `src/core/bytes.npk`, returns a view, takes a pointer to `Bytes`, which that file declares, and S-22's own text names it — any part false fails the run. Live since cycle 0.2.3a, before cycle 0.4's parsers, the first code that could want another view back (TM-204) |
++| `check_no_view_returns` (TM-228) | **no function in `src/` returns a view** (`SAFETY.md` S-22): a slice — `uint8[]` or any other `T[]` — a `cstring`, or a type that holds one: a struct's field at any depth, a fixed array's element, a type argument (`Vec<uint8[]>`), an optional's value (`uint8[]?`, since cycle 0.2.4a — TM-239; it passed until then, the cycle audit's C4), but no type parameter and no pointer. **But S-22's one named exemption, `bytes_view`, whose reason is re-derived on every run** (TM-137): it is declared in `src/core/bytes.npk`, returns a view, takes a pointer to `Bytes`, which that file declares, and S-22's own text names it — any part false fails the run. Live since cycle 0.2.3a, before cycle 0.4's parsers, the first code that could want another view back (TM-204) |
+ | `check_raw_index` | **no index through a bare pointer in `src/`, by FIELD or by BINDING.** `Vec<T>.items` and `Bytes`' buffer body are bare pointers, which the language does not bounds-check (TM-108, `SAFETY.md` S-17b), so the accessor pair is the only bound there is. It was two literal substrings until cycle 0.0.6 and was **evadable in one line** — bind the pointer to a local and index the local, which was built at `aaffb87`, ran, and read four elements past the live prefix while the check reported `0 sites` (TM-144). Every `wild T->:name` in a file is now watched. **The limit is stated: it is lexical and per-file**, so a bare pointer passed to another function and indexed there is still not covered; cycle 0.5 gets the widening |
+ | `check_expect_headers` | **the tree partitioned three ways, with the denominator printed** (TM-115): every `.npk` is under `src/` (judged by "it compiles"), or under `tests/` with an `expect-` marker of its own or a NAMED exemption, or it is unowned — and unowned is a failure. The exemption list is diffed in both directions, so an exemption naming a file that is gone fails too. **It says a marker is WELL-FORMED and nothing about whether it is TRUE**; that is `check_exemptions_live`'s and `run_defect_corpus`'s job, and the gap between the two readings was TM-141 |
+ | `check_exemptions_live` (TM-137) | **every exemption's recorded VERDICT, re-derived from the file on every run.** An exemption's reason is a claim about what the compiler does, and the compiler moves. The superseded mechanism checked only that the named file still existed: O-N17 landed, two files went from stopping at `llc` to running clean, the suite stayed green and nothing said a word |
+@@ -58,8 +58,17 @@ them found something on its first run.
+ 
+ **Rule V-1.** `check_purity` and `check_int128_sites` are the two that matter
+ most, because they guard the two claims this library makes that are easy to
+-break by accident and hard to notice: that it is reproducible, and that its
+-arithmetic does not silently overflow.
++break by accident and hard to notice: that it is reproducible, and that every
++intermediate wider than `int64` is at a site where `SPAN_MODEL.md` §5 states
++what happens at its edges.
++
++*(Restated at cycle 0.2.4a, TM-240 — the cycle audit's D1. The second claim
++read "that its arithmetic does not silently overflow", which no check of where
++a type appears can guard. That claim rests on the language — a plain `+`, `-`
++or `*` traps (D-210) — and on `SAFETY.md` S-15b's range check before every
++`=>!`, which is review's and the edge tests', not a tree check's; and the
++wrapping operators `+%`, `-%` and `*%` are in no file of `src/`, measured at
++0.2.4a's planning, which no check holds either.)*
+ 
+ **Rule V-1a (TM-126) — a check runs from the cycle it can be written, and its
+ pending siblings are PRINTED.** The table above has **20**
+diff --git a/src/core/core.npk b/src/core/core.npk
+index 379bd9566a9fc43087541d91b486b5ee0f66c80c..5aad0c132839a54a3b83495716b489259f857ec7 100644
+--- a/src/core/core.npk
++++ b/src/core/core.npk
+@@ -16,8 +16,10 @@
+ // denominator (D1).
+ //
+ // WHAT FILLED THIS ONE, at cycle 0.0.4: `vec.npk` (`Vec<T>`, nine functions),
+-// `bytes.npk` (`Bytes`, eleven) and `limits.npk` (thirteen named bounds), per
+-// `BUILD.md` §5's rules B-12 and B-13 — one growable sequence, one byte sink,
++// `bytes.npk` (`Bytes`, eleven) and `limits.npk` (thirteen named constants,
++// eleven bounds and two unit conversions -- "thirteen named bounds" here until
++// cycle 0.2.4a, the cycle audit's K5), per `BUILD.md` §5's rules B-12 and
++// B-13 — one growable sequence, one byte sink,
+ // one file of named bounds, and NO second container. **This header said "It is
+ // REPLACED at the cycle below" and "WHEN: cycle 0.0.4" for two subcycles after
+ // 0.0.4 was done** (F3), which reads as work outstanding.
+diff --git a/src/core/limits.npk b/src/core/limits.npk
+index f984a588b030180cb06380ed23f7bd7a62c4a27b..b1913c984c1833c2e14b37c70bed9c2773ab5938 100644
+--- a/src/core/limits.npk
++++ b/src/core/limits.npk
+@@ -6,7 +6,11 @@
+ // module that owns it. The check reads `SAFETY.md` S-16 and `CALENDAR.md` §4
+ // for the ownership, not a copy of them -- so if a later cycle gives another
+ // module its own arithmetic, S-16 and the check's owner map are amended in ONE
+-// commit, which is the whole contract of that check family.
++// commit, which is the whole contract of that check family. (Cycle 0.2.4a,
++// TM-238: and since then the owner is a FILE -- a `core` number is this file's
++// alone, a `cal` number `src/cal/`'s -- and a third half joins the two: the
++// VALUE of every bound declared here, spelled anywhere else under `src/`, is a
++// finding, but for a small structural value `nitpick-regex`'s set names.)
+ //
+ // EVERY CONSTANT CARRIES THE RULE THAT SET IT. A bound whose provenance is not
+ // written beside it is a bound nobody can review against the range it is
+diff --git a/tests/unit/limits_named.npk b/tests/unit/limits_named.npk
+index f0c4009fad6f8770a71e5f36d47856e51391bb97..9a66ba41be8e3b182d3e907b65cb279d08d30f7b 100644
+--- a/tests/unit/limits_named.npk
++++ b/tests/unit/limits_named.npk
+@@ -9,6 +9,13 @@
+ // `CALENDAR.md` §2 states, so a wrong literal is a red run rather than a wrong
+ // date in cycle 0.6.
+ //
++// AND MORE THAN §2's (dated at cycle 0.2.4a -- the cycle audit's K3). It holds
++// `CALENDAR.md` C-4's symmetric years (exits 13 and 14), `ZONE_MODEL.md`
++// Z-19's offset (15 and 16), `SAFETY.md` S-16's two conversion factors (17 and
++// 18), two bounds' own numbers (19 and 20), the digit buffer's width (21), and
++// since cycle 0.2.3 `SPAN_MODEL.md` N-3's two `Duration` ends (22 and 23). The
++// sentence above is the file's founding purpose, not a list of what it holds.
++//
+ // IT IS NOT THE RECOMPUTATION TEST. `limits.npk`'s header and `0.0.4.md` §4
+ // both said cycle 0.1 would add a test that RECOMPUTES the four range
+ // constants from the calendar algorithm, and cycle 0.1.1 did:

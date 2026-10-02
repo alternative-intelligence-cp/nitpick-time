@@ -16,7 +16,7 @@ index 7a9da677033ae7803c9a876f78673bf2f13d8d89..0295e5a2bb8c8103a33411a20c883865
  # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
  # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
 diff --git a/CLAUDE.md b/CLAUDE.md
-index 3976741d7f42f7926ba0db6d97f606f87b2e471d..f0fdf49a9ab6b50b65ddfee71b0404e28be2b88b 100644
+index 3976741d7f42f7926ba0db6d97f606f87b2e471d..9716daa746bc67a065e463517f310a3f5c456cfa 100644
 --- a/CLAUDE.md
 +++ b/CLAUDE.md
 @@ -14,8 +14,31 @@ instants and timestamps, is OPEN: its 0.2.0a, the adoption of compiler
@@ -64,7 +64,19 @@ index 3976741d7f42f7926ba0db6d97f606f87b2e471d..f0fdf49a9ab6b50b65ddfee71b0404e2
  struct literal nor edit one — `NITPICK-TYPE-079`, `probe20` — and there is no
  conversion to a `Timestamp` — `NITPICK-RESOLVE-002`, `probe20b` (TM-218). The
  clock is read as the sealed field, so O-X3 is settled without an accessor.
-@@ -704,7 +729,9 @@ cycle 0.0.4** (TM-130, `BUILD.md` B-18): `prove`, `assert_static`, `requires`,
+@@ -639,7 +664,10 @@ what to do when a cross-stream gate is not ready yet.
+ Full statement in `meta/specs/SAFETY.md` §1. The ones that bite hardest here:
+ 
+ - Plain integer overflow **traps**; division by zero traps; indexing traps.
+-  Every range is checked **before** the trap so the caller gets an answer.
++  Every range is checked **before** the trap so the caller gets an answer —
++  every range but `SAFETY.md` S-12's named exceptions, `never fails` by
++  decision: the four `Duration` constructors and `instant_add`, whose trap is
++  their range check *(cycle 0.2.4b, TM-242)*.
+ - `Ord` derives in **declaration order**, so a struct's field order is
+   semantic (`Timestamp` is seconds-then-nanos for exactly this reason).
+ - **A `cstring` owns what `to_cstring` makes, and is move-only** — since
+@@ -704,7 +732,9 @@ cycle 0.0.4** (TM-130, `BUILD.md` B-18): `prove`, `assert_static`, `requires`,
  All ten measured refused as local names at pin `0dfddac`. The last three are
  the compiler's D-221, and `old` and `result` are the dangerous pair, because
  this library's own contract syntax uses them — `ensures v.count == old(v.count)`
@@ -507,9 +519,18 @@ index 2b0ef21e6b25029fd34c1603ad5e6584670113b7..46571525d7a7313e0ca6645c9c7d6903
  
  | Not used | Because |
 diff --git a/meta/specs/SAFETY.md b/meta/specs/SAFETY.md
-index 7e38615dc53ff09bc4bb106daa25a4165e5ca7de..966b5f4e5200b434e9bbfc328a86dba2b9b402fb 100644
+index 7e38615dc53ff09bc4bb106daa25a4165e5ca7de..cb11f833b0e6f4550f2090beb9beb3c4e9c579e9 100644
 --- a/meta/specs/SAFETY.md
 +++ b/meta/specs/SAFETY.md
+@@ -16,7 +16,7 @@ costs a library that does calendar arithmetic.
+ |---|---|---|
+ | `failsafe`'s `pick` must **name** every error that can reach it | REACH-002 | ~~Every public `error:` we declare is an arm every consuming program owes.~~ **Every identity a REACHABLE `fail` site raises — public OR PRIVATE, qualified by the module that declares it — is an arm every consuming program owes; a declaration never raised costs nothing.** *(Corrected 2026-09-27, cycle 0.2.0a — the ecosystem audit's EC3, TM-213, re-measured at `5fbaf4a`: the arm is owed for every identity a REACHABLE `fail` site raises, PUBLIC OR PRIVATE, named by the module that declares it (`m.E`), and for no declaration nothing raises.)* §2. |
+ | Reachability is **import-scoped** | 1.4.8's `nsys` note | Module decomposition decides what a consumer's `failsafe` owes. §2. |
+-| Plain integer `+ - *` **traps** on overflow | D-210 | Every arithmetic path states its range and checks it **before** the trap fires. §4. |
++| Plain integer `+ - *` **traps** on overflow | D-210 | Every arithmetic path states its range and checks it **before** the trap fires. §4. *(Cycle 0.2.4b, TM-242: every path but S-12's named exceptions — `never fails` by decision, the four `Duration` constructors and `instant_add`, whose trap is their range check.)* |
+ | `/` and `%` by zero trap; signed `MIN / -1` traps | D-007, D-142 | The calendar algorithms divide constantly; every divisor is a nonzero literal or a proven value. §4. |
+ | Indexing **a type that carries a length** is bounds-checked and traps | D-070 | a slice `T[]`, a fixed array `T[N]` and a `simd<T, N>` lane trap; **a bare pointer does not** — and `Vec<T>.items` and `Bytes`' `buffer` body are both reached as one. §4, S-17b. |
+ | Owning values are **move-only** | TYPE-046 | No binding-to-binding copies of a `string` — nor, since cycle 0.1.3c, of a `Vec` or of anything holding one (S-18g), nor, since cycle 0.2.0a at compiler `5fbaf4a`, of a `cstring`, which owns what `to_cstring` makes (the compiler's D-328): an `environ()` element is read in place and `to_cstring`'s answer moved out of its `Result` (TM-208). **No `fixed` table holds an owning value** — the language lets one, then refuses the copy that reads a row out and, since compiler `c970483`, the move too (S-19b; through `c3bdae2` the move compiled and faulted, O-N20). §5. |
 @@ -82,12 +82,12 @@ two clocks. `span` raises `cal`'s identity, so `cal`'s enum carries its variant.
  **Rule S-4 — module decomposition is part of the budget**, because REACH is
  import-scoped:
@@ -910,3 +931,45 @@ index 77b15e74a6efe1e7e917a42ac8b35420738e07a3..a079b1fdc8d2955c69d5704939252ebf
  // `CLOCK_REALTIME` nanosecond count would become one in a line, and every
  // refusal `instant_since` makes would be about a value it cannot trust.
  // `instant_of` is the one constructor, and a caller handing it a reading of
+diff --git a/tests/probe/probe20c_instant_as_timestamp_refused.npk b/tests/probe/probe20c_instant_as_timestamp_refused.npk
+index 81196cfa19367b11571e854e4f5e9b53089b269c..00b0b81f850702e0d9e9102abbcf7e553848cb02 100644
+--- a/tests/probe/probe20c_instant_as_timestamp_refused.npk
++++ b/tests/probe/probe20c_instant_as_timestamp_refused.npk
+@@ -8,14 +8,14 @@
+ // comparison, `t.cmp(a)` -- the two types being 16 bytes each?
+ //
+ // MATTERS BECAUSE comparing a deadline read from one clock with a time read
+-// from the other is the program M-3 exists to make unwritable, and `probe20b`
+-// asks only that no function converts by NAME: a language that took one
+-// struct where another of its size is declared would leave the refusal a
+-// convention. ANSWER, measured at `5fbaf4a`: NO -- `NITPICK-TYPE-007`,
+-// "expected `Timestamp`, found `Instant`", exactly once, at the argument. THE
+-// REFUSAL IS THE ASSERTION (B-7). `probe20d` is the other direction, and
+-// `probe20e` and `probe20f` the language's unchecked cast each way -- one
+-// probe per refusal (TM-218).
++// from the other is the program M-3 exists to make unwritable BY ACCIDENT
++// ("unwritable" until cycle 0.2.4b, TM-243), and `probe20b` asks only that no
++// function converts by NAME: a language that took one struct where another of
++// its size is declared would leave the refusal a convention. ANSWER, measured
++// at `5fbaf4a`: NO -- `NITPICK-TYPE-007`, "expected `Timestamp`, found
++// `Instant`", exactly once, at the argument. THE REFUSAL IS THE ASSERTION
++// (B-7). `probe20d` is the other direction, and `probe20e` and `probe20f` the
++// language's unchecked cast each way -- one probe per refusal (TM-218).
+ mod:probe20c_instant_as_timestamp_refused;
+ 
+ use "../../src/span/span.npk".*;
+diff --git a/tests/unit/instant_ops.npk b/tests/unit/instant_ops.npk
+index f04dec7e6ecb3ace3e9c837bc1f400a0ff50a8c5..f6945043369db9c501e848afe1899d7c75e8c001 100644
+--- a/tests/unit/instant_ops.npk
++++ b/tests/unit/instant_ops.npk
+@@ -1,7 +1,9 @@
+ // expect-exit: 0
+ //
+ // `Instant`'s four operations, and its two refusals (cycle 0.2.0; TM-215,
+-// TM-216; `TIME_MODEL.md` M-2 and M-4, `HOST.md` H-6).
++// TM-216; `TIME_MODEL.md` M-2 and M-4, `HOST.md` H-6). (Since cycle 0.2.4b
++// there is a third, `instant_since`'s of a difference past `Duration`'s
++// range, which `tests/unit/instant_since_edges.npk` holds -- TM-242.)
+ //
+ // ASKS: two readings of one clock, built by `instant_of` -- does
+ // `instant_since` give their distance, does `instant_add` of that distance to

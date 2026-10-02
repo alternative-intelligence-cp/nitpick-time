@@ -664,7 +664,10 @@ what to do when a cross-stream gate is not ready yet.
 Full statement in `meta/specs/SAFETY.md` §1. The ones that bite hardest here:
 
 - Plain integer overflow **traps**; division by zero traps; indexing traps.
-  Every range is checked **before** the trap so the caller gets an answer.
+  Every range is checked **before** the trap so the caller gets an answer —
+  every range but `SAFETY.md` S-12's named exceptions, `never fails` by
+  decision: the four `Duration` constructors and `instant_add`, whose trap is
+  their range check *(cycle 0.2.4b, TM-242)*.
 - `Ord` derives in **declaration order**, so a struct's field order is
   semantic (`Timestamp` is seconds-then-nanos for exactly this reason).
 - **A `cstring` owns what `to_cstring` makes, and is move-only** — since

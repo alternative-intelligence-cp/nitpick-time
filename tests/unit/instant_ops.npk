@@ -1,7 +1,9 @@
 // expect-exit: 0
 //
 // `Instant`'s four operations, and its two refusals (cycle 0.2.0; TM-215,
-// TM-216; `TIME_MODEL.md` M-2 and M-4, `HOST.md` H-6).
+// TM-216; `TIME_MODEL.md` M-2 and M-4, `HOST.md` H-6). (Since cycle 0.2.4b
+// there is a third, `instant_since`'s of a difference past `Duration`'s
+// range, which `tests/unit/instant_since_edges.npk` holds -- TM-242.)
 //
 // ASKS: two readings of one clock, built by `instant_of` -- does
 // `instant_since` give their distance, does `instant_add` of that distance to

@@ -8,14 +8,14 @@
 // comparison, `t.cmp(a)` -- the two types being 16 bytes each?
 //
 // MATTERS BECAUSE comparing a deadline read from one clock with a time read
-// from the other is the program M-3 exists to make unwritable, and `probe20b`
-// asks only that no function converts by NAME: a language that took one
-// struct where another of its size is declared would leave the refusal a
-// convention. ANSWER, measured at `5fbaf4a`: NO -- `NITPICK-TYPE-007`,
-// "expected `Timestamp`, found `Instant`", exactly once, at the argument. THE
-// REFUSAL IS THE ASSERTION (B-7). `probe20d` is the other direction, and
-// `probe20e` and `probe20f` the language's unchecked cast each way -- one
-// probe per refusal (TM-218).
+// from the other is the program M-3 exists to make unwritable BY ACCIDENT
+// ("unwritable" until cycle 0.2.4b, TM-243), and `probe20b` asks only that no
+// function converts by NAME: a language that took one struct where another of
+// its size is declared would leave the refusal a convention. ANSWER, measured
+// at `5fbaf4a`: NO -- `NITPICK-TYPE-007`, "expected `Timestamp`, found
+// `Instant`", exactly once, at the argument. THE REFUSAL IS THE ASSERTION
+// (B-7). `probe20d` is the other direction, and `probe20e` and `probe20f` the
+// language's unchecked cast each way -- one probe per refusal (TM-218).
 mod:probe20c_instant_as_timestamp_refused;
 
 use "../../src/span/span.npk".*;

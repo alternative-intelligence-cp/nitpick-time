@@ -299,7 +299,8 @@ pub func:timestamp_to_utc = CivilDateTime(Timestamp:t) never fails {
 
 // The point on the absolute scale a civil reading names, read as UTC (M-11,
 // §9). Fallible, and only through `timestamp_of`: a reading from the
-// constructors always converts, and a forged one is refused, not trapped.
+// constructors always converts, and a forged one is answered or refused --
+// never trapped ("refused, not trapped" until cycle 0.2.4b: the audit's K2).
 // `ensures result.secs >= NTIME_SECS_MIN && result.secs <= NTIME_SECS_MAX`
 // `ensures (result.nanos => int64) == (c.time.nanos => int64)` --
 // `VERIFICATION.md` P-3, a `Timestamp` constructor's; comments until

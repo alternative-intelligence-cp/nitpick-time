@@ -219,7 +219,7 @@ index e86b4cd1925a562c1992a296b745e301a367f43f..d1a46821d14288b8663f8bca009ea56d
  // At a non-owning `T` dropping the tail is exactly lowering `count`. At an
  // owning `T` it would additionally owe a drop per discarded element (S-18c),
 diff --git a/src/span/span.npk b/src/span/span.npk
-index c41388b023054c624ad2d004c3743718caf45456..7c4c44d02ba987087e6fcbf2a7a4b56dcdcc5c62 100644
+index c41388b023054c624ad2d004c3743718caf45456..a851a6e0ab695c82d6ab8c564da08bc6968217dc 100644
 --- a/src/span/span.npk
 +++ b/src/span/span.npk
 @@ -16,14 +16,22 @@
@@ -391,10 +391,13 @@ index c41388b023054c624ad2d004c3743718caf45456..7c4c44d02ba987087e6fcbf2a7a4b56d
      pass Timestamp{ secs: secs, nanos: nanos =>! uint32 };
  };
  
-@@ -253,6 +300,11 @@ pub func:timestamp_to_utc = CivilDateTime(Timestamp:t) never fails {
+@@ -252,7 +299,13 @@ pub func:timestamp_to_utc = CivilDateTime(Timestamp:t) never fails {
+ 
  // The point on the absolute scale a civil reading names, read as UTC (M-11,
  // §9). Fallible, and only through `timestamp_of`: a reading from the
- // constructors always converts, and a forged one is refused, not trapped.
+-// constructors always converts, and a forged one is refused, not trapped.
++// constructors always converts, and a forged one is answered or refused --
++// never trapped ("refused, not trapped" until cycle 0.2.4b: the audit's K2).
 +// `ensures result.secs >= NTIME_SECS_MIN && result.secs <= NTIME_SECS_MAX`
 +// `ensures (result.nanos => int64) == (c.time.nanos => int64)` --
 +// `VERIFICATION.md` P-3, a `Timestamp` constructor's; comments until
@@ -403,7 +406,7 @@ index c41388b023054c624ad2d004c3743718caf45456..7c4c44d02ba987087e6fcbf2a7a4b56d
  pub func:civil_to_utc = Timestamp(CivilDateTime:c) {
      int64:days = raw date_to_days(c.date);
      int64:sod = ((c.time.hour => int64) * 3600i64)
-@@ -281,14 +333,20 @@ pub func:duration_weeks = Duration(int64:w) never fails {
+@@ -281,14 +334,20 @@ pub func:duration_weeks = Duration(int64:w) never fails {
      pass raw duration_secs(w * 7i64 * NTIME_SECS_PER_DAY);
  };
  
@@ -429,7 +432,7 @@ index c41388b023054c624ad2d004c3743718caf45456..7c4c44d02ba987087e6fcbf2a7a4b56d
      int64:secs = t.secs + (d.ns / NTIME_NANOS_PER_SEC);
      int64:nanos = (t.nanos => int64) + (d.ns % NTIME_NANOS_PER_SEC);
      if (nanos < 0i64) {                              // `%` kept `d`'s sign: borrow
-@@ -304,15 +362,15 @@ pub func:timestamp_add = Timestamp(Timestamp:t, Duration:d) {
+@@ -304,15 +363,15 @@ pub func:timestamp_add = Timestamp(Timestamp:t, Duration:d) {
  
  // The nominal span from `earlier` to `later`, in nanoseconds (M-18). Computed
  // in `int128` (M-20; `SPAN_MODEL.md` §5 marks the row), checked against

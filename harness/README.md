@@ -59,8 +59,11 @@ running unlisted since cycle 0.0.6)*:
   a code named once for two sites and three times for two (TM-210). Case 6
   (a generator differing by one line) is **pending until 0.5** and prints as
   pending rather than passing.
-- **Forty-four planted violations across the tree checks since cycle 0.1.5's
-  second half** (forty after its first half, twenty-three before it; the first
+- **Sixty-six planted violations across the tree checks since cycle 0.2.3a**
+  (forty-four from cycle 0.1.5's second half, forty after its first half,
+  twenty-three before it; 0.2.3a's twenty-two are `check_check_registry`'s six,
+  `check_no_view_returns`' five and its exemption's five, and
+  `check_int128_sites`' six; the 0.1.5 first
   half's seventeen are V-1k's reader rows and V-1l's token rows, the second
   half's four `check_error_budget`'s module-qualified pair (TM-203),
   `check_raw_index`'s line end after the dot (V-1l) and a written arm bill for
@@ -164,13 +167,16 @@ against the summary line rather than left to review.
   in cycle 0.0 and both were found by reading, not by a gate — and a third
   shipped with them, `bytes_take`'s answer, found at cycle 0.1.4b by the heap
   instrument's COUNT (S-18f).
-- **Not that the tree checks have anything to check.** Fourteen are live and
-  several report `0` over a small denominator, which is the right answer and is
-  why the denominator is always printed (V-1b). Four print as `PEND` with the
-  cycle that turns them on. *(Fourteen were live from cycle 0.1.0 to 0.1.0b —
-  `check_civil_literal` — and this said thirteen; thirteen was true again
-  after 0.1.0c retired that check, TM-158; and cycle 0.1.1's
-  `check_literal_divisors`, TM-163, makes fourteen.)*
+- **Not that the tree checks have anything to check.** Seventeen
+  <!-- [[sweep: family_live=17]] --> are live and several report `0` over a
+  small denominator, which is the right answer and is why the denominator is
+  always printed (V-1b). Three <!-- [[sweep: family_pending=3]] --> print as
+  `PEND` with the cycle that turns them on. *(Fourteen were live from cycle
+  0.1.0 to 0.1.0b — `check_civil_literal` — and this said thirteen; thirteen
+  was true again after 0.1.0c retired that check, TM-158; cycle 0.1.1's
+  `check_literal_divisors`, TM-163, made fourteen; and cycle 0.2.3a's
+  `check_check_registry`, `check_no_view_returns` and `check_int128_sites`,
+  TM-227, TM-228 and TM-230, made seventeen, and the four pending three.)*
 - **Not that CI is green.** Until cycle 0.0.6 this repository had never pushed,
   so the workflow had never run; the 0.0 close is its first.
 

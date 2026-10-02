@@ -1190,6 +1190,18 @@ the named exemption re-derived — before cycle 0.4, whose parsers are the first
 code that could want another view back. Until it is built, this sentence and
 that census are the rule's whole enforcement.
 
+*(Cycle 0.2.3a, TM-228: **built, and live.** What it reads as a view: a slice
+of any element — the rule's `uint8[]` is one, and an `int64[]` returned out
+of its owner's frame is the same hazard — a `cstring`, and a type that holds
+one: a struct's field at any depth, a fixed array's element, a type argument
+(`Vec<uint8[]>` — cycle 0.2.0b's question: a `Vec` of slice-holding structs
+hands its caller views). A type parameter is no view at its declaration, and
+a pointer is none: the rule is about slices. `bytes_view`'s exemption is
+re-derived from its reason on every run — declared in `src/core/bytes.npk`,
+returning a view, through a pointer to `Bytes`, which that file declares, and
+named here — so the day any part of it is false, the run is red. At its first
+run, `src/` declared 46 functions and one returned a view: `bytes_view`.)*
+
 **Why it was written as a belt, and why it stays one.** O-N9 measured that
 D-004's escape rule was **unenforced for slice views**: `string_bytes` on a
 local `string` returned a `uint8[]` out of its owning frame at exit 0, and

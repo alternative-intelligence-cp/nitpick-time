@@ -178,22 +178,40 @@ the midpoint?), so the answer is a refusal rather than an arbitrary rule.
 wrong**, so every site is enumerated and each carries a `prove` obligation
 (`VERIFICATION.md` §4).
 
-| Site | Risk | Answer |
-|---|---|---|
-| `duration_days(n)` | `n × 86 400 × 10⁹` overflows `int64` past ±106 751 days | D-210 traps; the constructor is `never fails` and the trap is the range check, as the prelude's own constructors are |
-| `timestamp_add(t, d)` | `secs + d.ns / 10⁹` leaves the supported range | checked, `ETimeValue`/`Overflow` |
-| `timestamp_since(a, b)` | difference exceeds `Duration`'s ±292 y | checked, `ETimeValue`/`Overflow` (M-18) |
-| `timestamp_to_civil` | `secs × 10⁹` for the nanosecond field | never computed — the seconds and nanos are kept apart, which is why `Timestamp` is a pair and not an `int64` of nanoseconds |
-| `period_add` year/month step | `year + years` leaves `int32` or the range | computed in `int64`, checked, narrowed with `=>!` |
-| `period_add` day step | day number leaves the range | checked against C-4's bounds |
-| `period_add` ns step | `ns` sum overflows `int64` | computed in `int128`, checked, narrowed |
-| `date_to_days` | none — C-12 measured the intermediates | inspection |
-| ISO week computation | none — bounded by ±366 | inspection |
+| Site | Risk | Answer | `int128` |
+|---|---|---|---|
+| `duration_days(n)` | `n × 86 400 × 10⁹` overflows `int64` past ±106 751 days | D-210 traps; the constructor is `never fails` and the trap is the range check, as the prelude's own constructors are | no |
+| `timestamp_add(t, d)` | `secs + d.ns / 10⁹` leaves the supported range | checked, `ETimeValue`/`Overflow` | no |
+| `timestamp_since(a, b)` | difference exceeds `Duration`'s ±292 y | computed in `int128` (M-20), checked against `Duration`'s range and narrowed once; past it, `ETimeValue`/`Overflow` (M-18) | **yes** |
+| `timestamp_to_utc` | `secs × 10⁹` for the nanosecond field | never computed — the seconds and nanos are kept apart, which is why `Timestamp` is a pair and not an `int64` of nanoseconds | no |
+| `period_add` year/month step | `year + years` leaves `int32` or the range | computed in `int64`, checked, narrowed with `=>!` | no |
+| `period_add` day step | day number leaves the range | checked against C-4's bounds | no |
+| `period_add` ns step | `ns` sum overflows `int64` | computed in `int128`, checked, narrowed | **yes** |
+| `date_to_days` | none — C-12 measured the intermediates | inspection | no |
+| ISO week computation | none — bounded by ±366 | inspection | no |
+| `bytes_put_int`'s loop measure | `0 − x` overflows `int64` at its minimum, the one input the function exists to get right | the measure is computed in `int128` and compared, never narrowed (TM-151) | **yes** |
 
-**Rule N-20 — the `int128` sites are exactly three**, they are named above,
-and a whole-tree check asserts that `int128` appears nowhere else in `src/`.
-A wide type used casually is a wide type nobody reasons about; used at three
-named sites it is three obligations.
+*(Amended at cycle 0.2.3a, TM-229 — `../OPEN_QUESTIONS.md` O-X6, answered.
+The `int128` column is new, and `check_int128_sites` reads it (TM-230). So is
+the last row: a site in `src/core/bytes.npk` since cycle 0.1.0b that no row
+named, found when cycle 0.2.3 was planned. `timestamp_since`'s row read
+"checked, `ETimeValue`/`Overflow` (M-18)" — M-20 already put its arithmetic in
+`int128`. And the fourth row named the conversion `timestamp_to_civil`, which
+is `timestamp_to_utc` since cycle 0.2.2, TM-222.)*
+
+**Rule N-20 — the `int128` sites are the rows the table above marks in its
+`int128` column, and no other.** A whole-tree check, `check_int128_sites`,
+asserts that `int128` appears in `src/` only inside a marked row's function,
+and that every marked function `src/` declares spells one. A wide type used
+casually is a wide type nobody reasons about; used at named sites, each is an
+obligation the table states beside it.
+
+*(Amended at cycle 0.2.3a, TM-229 — O-X6's recommendation, taken. The rule
+read "the `int128` sites are exactly three, they are named above, and a
+whole-tree check asserts that `int128` appears nowhere else in `src/`", and
+"used at three named sites it is three obligations", against a table that
+marked one. Three rows are marked now: the count came out three, and it is
+dropped anyway, because a number in a rule goes stale in silence.)*
 
 **Rule N-20b (TM-105) — the range check at each of those sites is mandatory
 library code, because the language provides no checked narrowing.** Measured at
@@ -221,6 +239,13 @@ settled here: choosing which three requires designing `period_add` and
 `timestamp_since`, which no cycle has done yet, and a rule invented to make a
 count come out right is worse than an acknowledged gap. **N-20b binds to every
 narrowing site in the table regardless of the count**, so nothing waits on it.
+
+*(Settled at cycle 0.2.3a, TM-229: the table is the authority, in its `int128`
+column, and N-20 states no count. Choosing the sites took less design than
+this paragraph expected — `TIME_MODEL.md` M-20 had already put
+`timestamp_since`'s arithmetic in `int128`, and `period_add`'s row stands as
+the founding table marked it. What it took was a measurement: `src/` held a
+site no row named, `bytes_put_int`'s loop measure.)*
 
 ---
 

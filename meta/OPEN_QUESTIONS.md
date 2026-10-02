@@ -665,7 +665,16 @@ sweep the strongest statement this library makes, so a `--quick` CI run would
 be publishing a green badge for something no run had checked. It is enforced by
 shape rather than by policy — see `BUILD.md` B-9b.
 
-### O-X6 — `SPAN_MODEL.md` N-20 says three `int128` sites and §5's table names one
+### ~~O-X6 — `SPAN_MODEL.md` N-20 says three `int128` sites and §5's table names one~~ — **SETTLED 2026-10-01 (TM-229): §5's table is the authority, in an `int128` column of its own, and N-20 states no count; three rows are marked**
+
+> The recommendation's second shape, taken at cycle 0.2.3a, and
+> `check_int128_sites` reads the column (TM-230). Measured when cycle 0.2.3 was
+> planned, `src/` held one `int128` no row named — `bytes_put_int`'s loop
+> measure, widened at cycle 0.1.0b (TM-151) — so the table gained a row;
+> `timestamp_since`'s row is marked by `TIME_MODEL.md` M-20, which already put
+> its arithmetic in `int128`; and `period_add`'s nanosecond step is marked as
+> the founding table marked it. The question below is left as it was asked.
+
 **Found at cycle 0.0.0, 2026-09-03**, while writing N-20b against §5. N-20 says
 the `int128` sites "are exactly three … named above", and the table above it
 marks exactly **one**: `period_add`'s nanosecond step. The year/month step is

@@ -490,16 +490,19 @@ here; "eight faults" was printed on every run for three cycles and only the
 cycle Gate had it right — C3.)*
 Before it, three of the harness's checks had been commissioned by hand and that
 was three checks, not a runner. Then: the `parse`, `check`, `golden` and `sweep`
-stages; `--quick`; and nine live tree checks — **fourteen today**: plus
+stages; `--quick`; and nine live tree checks — **seventeen today**
+<!-- [[sweep: family_live=17]] -->: plus
 `check_exemptions_live` (0.0.5, TM-137), `check_denominators` and
 `run_defect_corpus` (0.0.6, TM-141/TM-142), `check_expect_headers`, which
 existed all along and **was never in the count** — the row `TESTING.md` V-14c's
 "every check is commissioned" was false about, found by V-1a's own arithmetic
-not closing — and `check_literal_divisors` (0.1.1, TM-163). *(It was FOURTEEN
+not closing — `check_literal_divisors` (0.1.1, TM-163), and
+`check_check_registry`, `check_no_view_returns` and `check_int128_sites` (0.2.3a,
+TM-227, TM-228, TM-230). *(It was FOURTEEN
 from cycle 0.1.0 to 0.1.0b — `check_civil_literal` joined — while this sentence
 said thirteen; it was thirteen again after 0.1.0c retired that check (TM-158);
-and it is fourteen since 0.1.1. Re-derived from the run rather than carried:
-the `[5/9]` line reads `11 live` — `checks.LIVE`'s ten and
+and it was fourteen from 0.1.1 to 0.2.3a. Re-derived from the run rather than
+carried: the `[5/9]` line reads `14 live` — `checks.LIVE`'s thirteen and
 `check_failsafe_arms` — and `run.py` drives the other three outside step 5.)*
 
 ## Before starting a session here

@@ -1470,6 +1470,19 @@ def denominators(tree, extra=None):
     for rel in arms_mod.public_modules(tree):
         d["arms_" + os.path.basename(rel)[:-4]] = len(
             arms_mod.compute_bill(tree, rel)[0])
+    # THE FAMILY'S THREE NUMBERS -- `TESTING.md` V-1a's arithmetic (cycle 0.2.3a,
+    # TM-227): §2's rows, the live ones -- `LIVE` and what `run.py` drives
+    # outside step 5 -- and the pending ones, as `check_check_registry` reads the
+    # four statements. V-1a carried them untagged, and they went stale inside
+    # cycle 0.1 (TM-201); tagged, they are held to the family on every run.
+    # Absent from a tree that holds neither the document nor the harness -- a
+    # self-check plant's.
+    reg = registry(tree)
+    if reg is not None and None not in (reg["rows"], reg["live"],
+                                         reg["pending"], reg["driven"]):
+        d["family_rows"] = len(reg["rows"])
+        d["family_live"] = len(reg["live"]) + len(reg["driven"])
+        d["family_pending"] = len(reg["pending"])
     d.update(extra or {})
     return d
 
@@ -1532,13 +1545,604 @@ def check_denominators(tree, extra=None, **_):
     return res
 
 
+# ---------------------------------------------------------------------------
+# the functions in `src/`, as declared -- for the two checks below
+# ---------------------------------------------------------------------------
+
+_FUNC_DECL = re.compile(r"(?<![A-Za-z0-9_.])func%s*:%s*([A-Za-z_][A-Za-z0-9_]*)"
+                        % (_W, _W))
+
+
+def _close(code, at, open_ch, close_ch):
+    """The offset just past the `close_ch` that closes the `open_ch` at `at`."""
+    depth = 0
+    for j in range(at, len(code)):
+        if code[j] == open_ch:
+            depth += 1
+        elif code[j] == close_ch:
+            depth -= 1
+            if depth == 0:
+                return j + 1
+    return len(code)
+
+
+def functions(tree, files=None):
+    """Every `func` declared in `src/`, as `(rel, lineno, name, result, params,
+    start, end)`: `result` the declared result type with its whitespace
+    removed, `params` the parameter list's text, and `start`/`end` the
+    declaration's extent in the blanked text -- from `func` to the `}` that
+    closes its body, or its `;` when it has none.
+
+    READ FROM BLANKED CODE AND ACROSS LINE ENDS (TM-200), so a comment or a
+    literal holding `func:` or a brace is nothing here. A generic function's
+    `<...>` is skipped; the result type is the text between `=` and the `(` at
+    angle depth 0, where the `>` of a pointer's `->` closes nothing."""
+    out = []
+    for rel in (src_files(tree) if files is None else files):
+        code = blank_code(lexical.read(os.path.join(tree, rel)))
+        for m in _FUNC_DECL.finditer(code):
+            i = m.end()
+            while i < len(code) and code[i] in " \t\r\n":
+                i += 1
+            if i < len(code) and code[i] == "<":
+                i = _close(code, i, "<", ">")
+            eq = code.find("=", i)
+            if eq < 0:
+                continue
+            j, depth = eq + 1, 0
+            while j < len(code):
+                c = code[j]
+                if c == "<":
+                    depth += 1
+                elif c == ">" and depth and code[j - 1] != "-":
+                    depth -= 1
+                elif c == "(" and depth == 0:
+                    break
+                j += 1
+            result = "".join(code[eq + 1:j].split())
+            pend = _close(code, j, "(", ")")
+            params = code[j + 1:pend - 1]
+            semi, brace = code.find(";", pend), code.find("{", pend)
+            if brace < 0 or 0 <= semi < brace:
+                end = len(code) if semi < 0 else semi + 1
+            else:
+                end = _close(code, brace, "{", "}")
+            out.append((rel, _line(code, m.start()), m.group(1), result,
+                        params, m.start(), end))
+    return out
+
+
+# ---------------------------------------------------------------------------
+# check_no_view_returns -- SAFETY.md S-22 (TM-109, TM-110, TM-204)
+# ---------------------------------------------------------------------------
+
+# A VIEW, for S-22: a slice -- `uint8[]`, or a slice of anything, `T[]` --
+# a `cstring`, or a type that holds one: a struct declared in `src/` with such
+# a field at any depth, a fixed array of one, or a type ARGUMENT that is one
+# (`Vec<uint8[]>`). The last is cycle 0.2.0b's question, answered here: a
+# `#[derive(Copy)]` struct holding a slice is a legal `Vec` element under
+# `Vec<T: Copy>`, so a `Vec` of them hands its caller views as surely as a
+# struct holding one does. A type PARAMETER -- `vec_at`'s `T` -- is no view at
+# the declaration: its instantiations are its callers', and a caller that
+# instantiates `Vec` at a view type is S-22's to answer where it is written.
+# A pointer, `T->`, is not a view either: S-22 names a slice, a `cstring` and
+# a struct holding one, and no function in `src/` returned a pointer at cycle
+# 0.2.3a.
+_SLICE = re.compile(r"\[\]$")
+_FIXED_ARRAY = re.compile(r"^(.*)\[[0-9A-Za-z_]+\]$")
+
+# THE ONE NAMED EXEMPTION (TM-204), and what its reason is RE-DERIVED from on
+# every run (TM-137): `name -> (file, container)`. The reason S-22 gives is "a
+# container's own accessor over the container's own storage, reached through a
+# pointer parameter, named here beside the rule that governs its lifetime" --
+# "here" is S-22 -- so the check holds each part of that sentence to the
+# tree: the function is declared in `file`; its result is a view; a parameter
+# is a pointer to `container`; `container` is a struct `file` declares; and
+# S-22's own text names the function. Any part false is a stale exemption, and
+# a stale exemption is a failure (V-1c, TM-145).
+VIEW_RETURN_EXEMPT = {
+    "bytes_view": ("src/core/bytes.npk", "Bytes"),
+}
+_S22 = re.compile(r"^\*\*Rule S-22\b")
+
+
+def _type_args(t):
+    """The type arguments of `Name<A, B>`, split at depth 0; `[]` for none."""
+    i = t.find("<")
+    if i < 0 or not t.endswith(">"):
+        return []
+    args, depth, cur = [], 0, ""
+    for c in t[i + 1:-1]:
+        if c == "<":
+            depth += 1
+        elif c == ">" and cur[-1:] != "-":
+            depth -= 1
+        if c == "," and depth == 0:
+            args.append(cur)
+            cur = ""
+        else:
+            cur += c
+    return args + [cur] if cur else args
+
+
+def _view_in(t, structs, seen=()):
+    """Why the type `t` is or holds a view, in a few words -- or None."""
+    if _SLICE.search(t):
+        return "`%s` is a slice" % t
+    if t == "cstring":
+        return "a `cstring`"
+    if t.endswith("->"):
+        return None
+    m = _FIXED_ARRAY.match(t)
+    if m:
+        why = _view_in(m.group(1), structs, seen)
+        return None if why is None else "an array of %s" % why
+    for arg in _type_args(t):
+        why = _view_in(arg, structs, seen)
+        if why:
+            return "its type argument `%s`: %s" % (arg, why)
+    base = t.split("<", 1)[0]
+    if base in structs and base not in seen:
+        for rel, lineno, ftext in structs[base]:
+            why = _view_in(_field_type(ftext), structs, seen + (base,))
+            if why:
+                return "`%s` holds one -- `%s` at %s:%d, %s" % (
+                    base, ftext, rel, lineno, why)
+    return None
+
+
+def _s22_text(tree):
+    """S-22's own paragraphs in `SAFETY.md`, from its rule line to the next
+    rule or heading -- read as text (V-1k's third way)."""
+    path = os.path.join(tree, "meta", "specs", "SAFETY.md")
+    if not os.path.isfile(path):
+        return ""
+    with open(path, encoding="utf-8") as fh:
+        lines = fh.read().split("\n")
+    out, inside = [], False
+    for line in lines:
+        if _S22.match(line):
+            inside = True
+        elif inside and (line.startswith("**Rule ") or line.startswith("#")):
+            break
+        if inside:
+            out.append(line)
+    return "\n".join(out)
+
+
+def check_no_view_returns(tree, exempt=None, **_):
+    """No function in `src/` returns a view but S-22's named exemption.
+
+    `exempt` is a parameter for the reason `EXPECT_EXEMPT` is (V-14c): the
+    self-check must be able to point the exemption at a tree where its reason
+    is false. By default it is `VIEW_RETURN_EXEMPT` for THIS tree and nothing
+    for any other, as `CITATION_EXEMPT` is.
+    """
+    if exempt is None:
+        exempt = VIEW_RETURN_EXEMPT if os.path.abspath(tree) == REPO else {}
+    files = src_files(tree)
+    structs = _structs(tree, files)
+    funcs = functions(tree, files)
+    problems, views = [], []
+    for rel, lineno, name, result, params, _s, _e in funcs:
+        why = _view_in(result, structs)
+        if why is None:
+            continue
+        views.append(name)
+        if name in exempt:
+            continue
+        problems.append(
+            "%s:%d `%s` returns `%s` -- %s. No function in `src/` returns a "
+            "view (SAFETY.md S-22): a parser takes a `uint8[]` and returns a "
+            "value and an offset. A view out of its owner's frame is what "
+            "O-N9 measured reading freed memory at exit 0. If this one must, "
+            "it is a decision that loosens S-22 and names the function there."
+            % (rel, lineno, name, result, why))
+    sp = _s22_text(tree)
+    for name in sorted(exempt):
+        rel, container = exempt[name]
+        mine = [f for f in funcs if f[2] == name and f[0] == rel]
+        if not mine:
+            problems.append(
+                "stale exemption: S-22's exemption names `%s` in %s, and %s "
+                "declares no function of that name. An exemption that "
+                "outlives its function excuses the next one given its name "
+                "(V-1c, TM-137)." % (name, rel, rel))
+            continue
+        _r, lineno, _n, result, params, _s, _e = mine[0]
+        if _view_in(result, structs) is None:
+            problems.append(
+                "stale exemption: `%s` (%s:%d) no longer returns a view, so "
+                "S-22's exemption excuses nothing (V-1c)." % (name, rel, lineno))
+        if not re.search(r"(?<![A-Za-z0-9_])%s%s*->" % (re.escape(container), _W),
+                         params):
+            problems.append(
+                "stale exemption: `%s` (%s:%d) takes no pointer to `%s`, so "
+                "its view no longer roots at its container through a pointer "
+                "parameter -- S-22's reason for the exemption (TM-204)."
+                % (name, rel, lineno, container))
+        if not any(s[0] == rel for s in structs.get(container, ())):
+            problems.append(
+                "stale exemption: `%s` is excused as `%s`'s own accessor, and "
+                "%s declares no struct `%s` (TM-204)."
+                % (name, container, rel, container))
+        if "`%s`" % name not in sp:
+            problems.append(
+                "stale exemption: S-22's text in meta/specs/SAFETY.md no longer "
+                "names `%s`, and the exemption is S-22's to give (TM-204)."
+                % name)
+    headline = ("%d function(s) over %d file(s) in src/, %d returning a view: "
+                "%d excused by name (S-22, re-derived)"
+                % (len(funcs), len(files), len(views),
+                   len([v for v in views if v in exempt])))
+    return Result("check_no_view_returns", headline, problems)
+
+
+# ---------------------------------------------------------------------------
+# check_int128_sites -- SPAN_MODEL.md N-20 (TESTING.md V-1)
+# ---------------------------------------------------------------------------
+
+# THE SITES ARE §5's TABLE, AND THE TABLE SAYS WHICH (O-X6, cycle 0.2.3a). N-20
+# said "exactly three ... named above" from the founding specification while
+# the table marked one, so a check written against the count could not be
+# written at all; the table is the authority now, in a column of its own --
+# `int128`, **yes** or no -- and this check reads that column. A site is a
+# FUNCTION, the first backticked name in the row's Site cell, because a lexical
+# check can place an `int128` inside a function and no closer: `period_add`'s
+# rows are three steps of one function, and one of them is the site.
+#
+# BOTH DIRECTIONS (V-1c, TM-137). An `int128` in `src/` outside every marked
+# function is a finding -- a wide type used where nobody reasoned about it,
+# which is N-20's whole point -- and so is a marked function that `src/`
+# declares and that spells no `int128`, a mark that outlived its reason. A
+# marked function `src/` does not declare yet is reported by name on every
+# run, not failed: §5 is written ahead of the code it governs, and a row for
+# cycle 0.7's `period_add` is how the check is live before its subject is.
+INT128_DOC = "meta/specs/SPAN_MODEL.md"
+_INT128 = re.compile(r"(?<![A-Za-z0-9_])int128(?![A-Za-z0-9_])")
+_SITE_NAME = re.compile(r"`([A-Za-z_][A-Za-z0-9_]*)")
+
+
+def int128_sites(tree):
+    """`({function: line}, problems)`: §5's rows marked **yes** in its `int128`
+    column, read as text from `SPAN_MODEL.md`. A tree without the document --
+    the self-check's inner runs' -- names no site, so an `int128` in its `src/`
+    still fails; a document without the column is a finding."""
+    path = os.path.join(tree, INT128_DOC)
+    if not os.path.isfile(path):
+        return {}, []                # a scratch tree's: no site, so any `int128` fails
+    with open(path, encoding="utf-8") as fh:
+        lines = fh.read().split("\n")
+    start = next((i for i, l in enumerate(lines) if l.startswith("## 5.")), None)
+    if start is None:
+        return {}, ["%s has no §5, so no `int128` site is named." % INT128_DOC]
+    end = next((i for i in range(start + 1, len(lines))
+                if lines[i].startswith("## ")), len(lines))
+    sites, problems, col = {}, [], None
+    for i in range(start + 1, end):
+        line = lines[i]
+        if not line.startswith("|"):
+            if col is not None:
+                break                          # the table ended
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if col is None:
+            heads = [c.strip("`* ") for c in cells]
+            if "int128" not in heads:
+                continue
+            col = heads.index("int128")
+            continue
+        if not cells[0].strip("-: "):
+            continue
+        mark = cells[col].strip("* ").lower() if col < len(cells) else ""
+        if mark not in ("yes", "no"):
+            problems.append(
+                "%s:%d is a row of §5's table whose `int128` cell is neither "
+                "yes nor no." % (INT128_DOC, i + 1))
+            continue
+        if mark == "yes":
+            m = _SITE_NAME.search(cells[0])
+            if not m:
+                problems.append(
+                    "%s:%d marks an `int128` site and names no function in "
+                    "backticks, so the site cannot be found in src/."
+                    % (INT128_DOC, i + 1))
+                continue
+            sites.setdefault(m.group(1), i + 1)
+    if col is None:
+        problems.append("%s §5 has no table with an `int128` column, so no "
+                        "site is named (O-X6)." % INT128_DOC)
+    return sites, problems
+
+
+def check_int128_sites(tree, **_):
+    """`int128` in `src/` at exactly the sites `SPAN_MODEL.md` §5 marks."""
+    sites, problems = int128_sites(tree)
+    problems = list(problems)
+    files = src_files(tree)
+    funcs = functions(tree, files)
+    declared = {f[2] for f in funcs}
+    holders, seen = {}, 0
+    for rel in files:
+        code = blank_code(lexical.read(os.path.join(tree, rel)))
+        mine = [(f[5], f[6], f[2]) for f in funcs if f[0] == rel]
+        for m in _INT128.finditer(code):
+            seen += 1
+            owner = next((n for s, e, n in mine if s <= m.start() < e), None)
+            if owner is None:
+                problems.append(
+                    "%s:%d spells `int128` outside every function. A site is a "
+                    "function §5's table marks (SPAN_MODEL.md N-20), and a "
+                    "module-level wide value is a wide value nobody's "
+                    "obligation names." % (rel, _line(code, m.start())))
+            elif owner not in sites:
+                problems.append(
+                    "%s:%d spells `int128` in `%s`, and §5's table marks no "
+                    "`int128` site there (SPAN_MODEL.md N-20). A wide type "
+                    "used where nobody reasoned about it is the thing N-20 "
+                    "forbids: compute in `int64` with its own range check, or "
+                    "mark the row -- with its answer -- in the same commit."
+                    % (rel, _line(code, m.start()), owner))
+            else:
+                holders[owner] = holders.get(owner, 0) + 1
+    unwritten = sorted(n for n in sites if n not in declared)
+    for name in sorted(sites):
+        if name in declared and name not in holders:
+            problems.append(
+                "§5's table marks `%s` an `int128` site (%s:%d), and src/'s "
+                "`%s` spells no `int128`: a mark that outlived its reason "
+                "(V-1c, TM-137)." % (name, INT128_DOC, sites[name], name))
+    headline = ("%d `int128` over %d file(s) in src/, in %d function(s), "
+                "against %d site(s) §5 marks (%d not yet written%s)"
+                % (seen, len(files), len(holders), len(sites), len(unwritten),
+                   ": " + ", ".join(unwritten) if unwritten else ""))
+    return Result("check_int128_sites", headline, problems)
+
+
+# ---------------------------------------------------------------------------
+# check_check_registry -- TESTING.md V-14e (TM-201)
+# ---------------------------------------------------------------------------
+
+# THE FAMILY IS STATED FOUR TIMES, AND UNTIL CYCLE 0.2.3a NOTHING DIFFED THEM.
+# `TESTING.md` §2's table, `LIVE` and `PENDING` below, and the checks `run.py`
+# drives outside step 5's loop are four statements of one family (V-14e), and
+# every drift this repository has had in it was between two of them: a check
+# `run.py` drove that V-1a's count left out (`check_expect_headers`, cycle
+# 0.0.6's C2), a mechanism with no row for a whole subcycle
+# (`check_exemptions_live`), and V-1a's arithmetic stale from cycle 0.1.0 to
+# 0.1.0b. TM-201 made the next subcycle that adds or retires a check build this
+# one FIRST; cycle 0.2.3a adds two.
+#
+# ALL FOUR ARE READ FROM THE TREE THE CHECK IS POINTED AT, as text: the
+# document's two tables, and `harness/checks.py`, `harness/arms.py` and
+# `harness/run.py` through Python's own parser, never imported -- so the
+# self-check can plant a drift in any one of the four in a scratch tree, which
+# an imported `LIVE` could not be.
+#
+#   * §2's table: the first backticked name of each row of the table headed
+#     `| Check |` under `## 2.`, and V-1a's pending table, headed
+#     `| Pending |`, its rows' names and their cycles. A row with no backticked
+#     name first is a finding: it is the one shape this reading needs.
+#   * `LIVE`: the names in the tuple. `PENDING`: each entry's name and cycle.
+#   * WHAT `run.py` DRIVES OUTSIDE STEP 5's LOOP: every call in `run.py` whose
+#     callee is named by a row of §2's table, or is a `check_...` function that
+#     `checks.py`, `arms.py` or `run.py` defines -- so a check `run.py` grows
+#     with no row is a finding, while `toolchain.check_target`, the manifest's
+#     target pin (`BUILD.md` B-1a), is a toolchain step and not this family.
+#     What it cannot see is stated: a new check `run.py` drives under a name
+#     that no row holds and that is no `check_...` definition of the three
+#     files -- `run_defect_corpus` is today's one such name, and its row is
+#     what lets this reading see it.
+REGISTRY_DOC = "meta/specs/TESTING.md"
+_REGISTRY_SOURCES = ("harness/checks.py", "harness/arms.py", "harness/run.py")
+_ROW_NAME = re.compile(r"^\|[ \t]*`([a-z_][a-z0-9_]*)`")
+
+
+def _registry_doc(tree):
+    """`(rows, pending, problems)` from `TESTING.md` §2 -- the family table's row
+    names in order, and V-1a's pending table as `{name: cycle}` -- or `None`s
+    when the document or the section is absent. Read as text (V-1k's third
+    way)."""
+    path = os.path.join(tree, REGISTRY_DOC)
+    if not os.path.isfile(path):
+        return None, None, []
+    with open(path, encoding="utf-8") as fh:
+        lines = fh.read().split("\n")
+    start = next((i for i, l in enumerate(lines) if l.startswith("## 2. ")), None)
+    if start is None:
+        return None, None, []
+    end = next((i for i in range(start + 1, len(lines))
+                if lines[i].startswith("## ")), len(lines))
+    rows, pending, problems, table = None, None, [], None
+    for i in range(start + 1, end):
+        line = lines[i]
+        if not line.startswith("|"):
+            table = None
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if table is None:                      # a table's header row
+            table = {"Check": "rows", "Pending": "pending"}.get(cells[0], "other")
+            if table == "rows" and rows is None:
+                rows = []
+            elif table == "pending" and pending is None:
+                pending = {}
+            elif table in ("rows", "pending"):
+                table = "other"                # a second table so headed is not read
+            continue
+        if table == "other" or not cells[0].strip("-: "):
+            continue                           # another table, or a separator row
+        m = _ROW_NAME.match(line)
+        if not m:
+            problems.append(
+                "%s:%d is a row of §2's %s table that names no check first, "
+                "in backticks -- the one shape this check reads a row in."
+                % (REGISTRY_DOC, i + 1, "family" if table == "rows" else "pending"))
+            continue
+        if table == "rows":
+            rows.append(m.group(1))
+        else:
+            pending[m.group(1)] = cells[1] if len(cells) > 1 else ""
+    return rows, pending, problems
+
+
+def _registry_harness(tree):
+    """`(live, pending, calls, defined, problems)` from the harness's SOURCE
+    TEXT: the names in `checks.LIVE`; `checks.PENDING` as `{name: cycle}`; every
+    name `run.py` calls; and every `check_...` function the three files define
+    -- each of the first three `None` when its file is absent."""
+    import ast
+    problems, trees = [], {}
+    for rel in _REGISTRY_SOURCES:
+        path = os.path.join(tree, rel)
+        if not os.path.isfile(path):
+            continue
+        with open(path, encoding="utf-8") as fh:
+            try:
+                trees[rel] = ast.parse(fh.read(), filename=rel)
+            except SyntaxError as err:
+                problems.append("%s does not parse (%s), so it states nothing "
+                                "this check can read." % (rel, err))
+    live = pending = driven = None
+    checks_ast = trees.get("harness/checks.py")
+    if checks_ast is not None:
+        for node in checks_ast.body:
+            if not (isinstance(node, ast.Assign) and len(node.targets) == 1
+                    and isinstance(node.targets[0], ast.Name)
+                    and isinstance(node.value, ast.Tuple)):
+                continue
+            if node.targets[0].id == "LIVE":
+                live = [e.id for e in node.value.elts if isinstance(e, ast.Name)]
+            elif node.targets[0].id == "PENDING":
+                pending = {}
+                for e in node.value.elts:
+                    if (isinstance(e, ast.Tuple) and len(e.elts) >= 2
+                            and all(isinstance(x, ast.Constant)
+                                    and isinstance(x.value, str)
+                                    for x in e.elts[:2])):
+                        pending[e.elts[0].value] = e.elts[1].value
+    defined = set()
+    for t in trees.values():
+        defined |= {n.name for n in ast.walk(t)
+                    if isinstance(n, ast.FunctionDef) and n.name.startswith("check_")}
+    run_ast = trees.get("harness/run.py")
+    calls = None
+    if run_ast is not None:
+        calls = []
+        for n in ast.walk(run_ast):
+            if not isinstance(n, ast.Call):
+                continue
+            f = n.func
+            name = f.id if isinstance(f, ast.Name) else (
+                f.attr if isinstance(f, ast.Attribute) else None)
+            if name and name not in calls:
+                calls.append(name)
+    return live, pending, calls, defined, problems
+
+
+def registry(tree):
+    """The four statements of the family, read from `tree`: a dict, or `None`
+    when the tree holds neither the document nor the harness. `denominators()`
+    reads its counts; `check_check_registry` diffs it."""
+    rows, doc_pending, doc_problems = _registry_doc(tree)
+    live, pending, calls, defined, src_problems = _registry_harness(tree)
+    if rows is None and live is None:
+        return None
+    driven = None if calls is None else [
+        n for n in calls if n in (rows or ()) or n in defined]
+    return {"rows": rows, "doc_pending": doc_pending, "live": live,
+            "pending": pending, "driven": driven,
+            "problems": doc_problems + src_problems}
+
+
+def check_check_registry(tree, **_):
+    """The four statements of `TESTING.md` §2's family are one list (V-14e)."""
+    reg = registry(tree)
+    if reg is None:
+        return Result("check_check_registry",
+                      "0 row(s): the tree holds neither %s nor the harness"
+                      % REGISTRY_DOC, [])
+    problems = list(reg["problems"])
+    missing = [what for what, val in (
+        ("§2's family table in %s" % REGISTRY_DOC, reg["rows"]),
+        ("V-1a's pending table in %s" % REGISTRY_DOC, reg["doc_pending"]),
+        ("`LIVE` in harness/checks.py", reg["live"]),
+        ("`PENDING` in harness/checks.py", reg["pending"]),
+        ("harness/run.py", reg["driven"])) if val is None]
+    for what in missing:
+        problems.append("%s could not be read, so the family has a statement "
+                        "this check cannot diff." % what)
+    if missing:
+        return Result("check_check_registry", "the family could not be read",
+                      problems)
+    rows, doc_pending = reg["rows"], reg["doc_pending"]
+    live, pending, driven = reg["live"], reg["pending"], reg["driven"]
+    # A LIVE check runs through step 5's loop and a driven one by name, so a
+    # LIVE check `run.py` ALSO calls by name is a check stated twice, which the
+    # next block names.
+    statements = (("`checks.LIVE`", live), ("`checks.PENDING`", list(pending)),
+                  ("the checks `run.py` drives outside step 5", driven))
+    seen = {}
+    for label, names in statements:
+        for name in names:
+            seen.setdefault(name, []).append(label)
+    for name in sorted(seen):
+        if len(seen[name]) > 1:
+            problems.append(
+                "`%s` is in %s at once. A check is live in one place or "
+                "pending, never two -- the arithmetic of V-1a counts each "
+                "statement, and a check in two is counted twice."
+                % (name, " and ".join(seen[name])))
+    for dup in sorted({r for r in rows if rows.count(r) > 1}):
+        problems.append("§2's table has %d rows for `%s`." % (rows.count(dup), dup))
+    for name in sorted(seen):
+        if name not in rows:
+            problems.append(
+                "`%s` is in %s and §2's table has no row for it. A check that "
+                "runs with no row is a mechanism nobody can find from the "
+                "document -- `check_exemptions_live`, for a whole subcycle "
+                "(V-14e). Give it a row, in the same commit."
+                % (name, " and ".join(seen[name])))
+    for name in rows:
+        if name not in seen:
+            problems.append(
+                "§2's table has a row for `%s`, and nothing runs it: it is in "
+                "neither `checks.LIVE` nor `checks.PENDING`, and `run.py` "
+                "calls no function of that name. A row nothing drives is a "
+                "check the document promises and the run does not keep."
+                % name)
+    for name in sorted(set(doc_pending) | set(pending)):
+        if name not in pending:
+            problems.append(
+                "V-1a's pending table names `%s` (cycle %s) and "
+                "`checks.PENDING` does not, so the run never prints it as "
+                "`PEND`." % (name, doc_pending[name]))
+        elif name not in doc_pending:
+            problems.append(
+                "`checks.PENDING` names `%s` (cycle %s) and V-1a's pending "
+                "table does not, so the document says it is live."
+                % (name, pending[name]))
+        elif doc_pending[name] != pending[name]:
+            problems.append(
+                "`%s` turns on at cycle %s by V-1a's pending table and at "
+                "cycle %s by `checks.PENDING`." % (name, doc_pending[name],
+                                                    pending[name]))
+    headline = ("%d row(s) in §2 = %d in `checks.LIVE` + %d driven by `run.py`"
+                " + %d pending; V-1a's table %d"
+                % (len(rows), len(live), len(driven), len(pending),
+                   len(doc_pending)))
+    return Result("check_check_registry", headline, problems)
+
+
 LIVE = (
+    check_check_registry,
     check_denominators,
     check_layering,
     check_error_budget,
     check_constants_named,
     check_literal_divisors,
     check_no_owning_fields,
+    check_no_view_returns,
+    check_int128_sites,
     check_raw_index,
     check_purity,
     check_host_isolation,
@@ -1548,13 +2152,10 @@ LIVE = (
 # PENDING: named, with the cycle that turns each on and WHY it cannot run today.
 # PRINTED, NEVER SILENT (P-19). A check nobody can see is missing is a check
 # nobody adds, and this list is the difference between "the family is complete"
-# and "the family is these eight".
+# and "the family is whatever `LIVE` holds". (It said "these eight" -- a
+# count -- until cycle 0.2.3a, when `check_check_registry` began to hold the
+# family's statements to each other, and this one's count was long stale.)
 PENDING = (
-    ("check_int128_sites", "0.2",
-     "`SPAN_MODEL.md` N-20 says three `int128` sites and §5's table marks one "
-     "(O-X6). The sites must be named before they can be counted, and a rule "
-     "invented to make a count come out right is worse than an acknowledged "
-     "gap."),
     ("check_no_format_string", "0.4",
      "F-5's rule is that no function takes a pattern `string` and interprets "
      "it, and the functions it governs are `src/fmt/`'s, which cycle 0.4 "

@@ -229,6 +229,12 @@ place a silent wrong answer would live, and it is exactly the shape Z3
 discharges without effort. What changed is that it is a proof about code that
 checks, rather than a proof standing in for the check.
 
+*(Cycle 0.2.3a, TM-229: the sites are `SPAN_MODEL.md` §5's marked rows, and
+N-20 states no count. The `prove` and the range check are owed where a site
+NARROWS — `timestamp_since` and `period_add`'s nanosecond step;
+`bytes_put_int`'s loop measure, the third marked row, computes in `int128` and
+compares, and narrows nothing.)*
+
 ---
 
 ## 5. `limit<Rules>` — the component types
@@ -275,7 +281,7 @@ the gap is written down here.
 | after every `Timestamp` construction | `nanos < 1_000_000_000` (P-4) — **written as a comment at 0.2.1 (TM-220)** at `timestamp_of`: `prove((answer.nanos => int64) < NTIME_NANOS_PER_SEC)`. **Stood in for by `tests/unit/timestamp_construct.npk` since cycle 0.2.1**, with the seal's two probes, and **by `tests/unit/civil_to_utc_edges.npk` since 0.2.2** for `civil_to_utc`'s (TM-225); 0.2.3 adds `timestamp_add`'s |
 | in the transition binary search | the invariant `trans[lo].at_utc <= target < trans[hi].at_utc` holds at every step |
 | after an offset lookup | `|offset| <= 64_800` |
-| after the three `int128` narrowings | the value fits (P-5) |
+| after each `int128` narrowing — `timestamp_since`'s, and `period_add`'s nanosecond step's: the rows of `SPAN_MODEL.md` §5's `int128` column that narrow ("the three `int128` narrowings" until cycle 0.2.3a, TM-229) | the value fits (P-5) |
 | after weekday computation | the result is `0 … 6` — **written as a comment at 0.1.3 (Q-6, TM-164), and ALSO CHECKED IN CODE**: `weekday_index`'s `#unreachable()` belt stops the program on an index outside it, because `weekday` manufactures a `Weekday` tag from it (`SAFETY.md` S-15c). **Stood in for over the whole range by `tests/unit/sweep/every_civil_date.npk`'s weekday rider since cycle 0.1.3** |
 | after ISO week computation | the week is `1 … 53` and the week-year is within one of the calendar year — **written as comments at 0.1.3 (Q-6, TM-164)**; **stood in for over the whole range by `tests/unit/sweep/every_iso_week_date.npk` since cycle 0.1.3**, which compares every week and week-year with a walk of ISO 8601's rule |
 | in every parser loop | `at` strictly increases, so the loop terminates |

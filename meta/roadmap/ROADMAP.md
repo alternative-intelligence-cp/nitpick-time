@@ -16,7 +16,12 @@ cycle 0.1.5's second half — the cycle audit's S2. From the founding plan to
 that close this paragraph read "One decision batch is settled, TM-001 …
 TM-030" and counted seven open questions "open by design" — 132 decisions and
 ten questions when the audit read it — with O-X6's hold on a check beside
-it.)*
+it.)* *(Cycle 0.2.3a: O-X6 is answered, TM-229, and `check_int128_sites` is live,
+TM-230 — the one check this paragraph said a question held. Re-derived then,
+**eight** questions are open, three the compiler's — O-N1, O-N2 and O-N3 —
+and five ours — O-X1, O-B1, O-X4, O-X8 and O-X9: O-N25 was answered at cycle
+0.2.0a, TM-208, and O-X3 at 0.2.0, TM-216, and this count was not moved
+with either.)*
 
 ## How this is organised
 

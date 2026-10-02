@@ -18,7 +18,9 @@ before `check_int128_sites` goes live** (0.2.3's last item). `OPEN_QUESTIONS.md`
 says cycle 0.3, `checks.PENDING` and this README say 0.2, and the note cycle
 0.1's close added to O-X6 hands the order to this cycle; the recommendation on
 file stands — make §5's table the authority and drop N-20's count. *(From cycle
-0.1's close, `meta/roadmap/done/0.1/0.1.5.md` §8.5.)*
+0.1's close, `meta/roadmap/done/0.1/0.1.5.md` §8.5.)* *(Answered at 0.2.3a,
+where the item went when 0.2.3 was split, TM-229: the table, in an `int128`
+column of its own, three rows marked; and the check live, TM-230.)*
 
 ## Subcycles
 

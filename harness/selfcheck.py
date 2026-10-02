@@ -829,6 +829,77 @@ def _div_tree(expr):
             + expr + "; };\n")
 
 
+# ---- CYCLE 0.2.3a: THE FAMILY'S THREE NEW MEMBERS ---------------------------
+#
+# `check_check_registry` (TM-201) reads four texts -- `TESTING.md` §2's two
+# tables and `harness/checks.py`, `arms.py` and `run.py` -- so each of its rows
+# below plants a STUB of each, never imported, and drifts ONE statement. The
+# consistent family is four checks: `check_a` live in `LIVE`, `check_b` and
+# `check_c` driven by `run.py` (one defined there, one in `arms.py`, called
+# through `arms_mod`), and `check_p` pending at cycle 0.9.
+def _family(rows=("check_a", "check_b", "check_c", "check_p"),
+            doc_pending=(("check_p", "0.9"),), live=("check_a",),
+            pending=(("check_p", "0.9"),), run_defs=("check_b",),
+            run_calls=("check_b", "arms_mod.check_c")):
+    """The four statements as a list of `(rel, text)` stubs."""
+    doc = ("# Testing\n\n## 2. What the harness checks about the tree\n\n"
+           "| Check | Diffs |\n|---|---|\n"
+           + "".join("| `%s` | the stub's %s |\n" % (r, r) for r in rows)
+           + "\n**Rule V-1a.** The pending ones:\n\n"
+           "| Pending | Live from | Why not now |\n|---|---|---|\n"
+           + "".join("| `%s` | %s | nothing to check |\n" % p for p in doc_pending)
+           + "\n## 3. The next section\n")
+    checks = ("".join("def %s(tree, **_):\n    return None\n\n\n" % n
+                      for n in sorted(set(live) | {"check_a"}))
+              + "LIVE = (\n" + "".join("    %s,\n" % n for n in live) + ")\n\n"
+              + "PENDING = (\n"
+              + "".join("    (%r, %r, \"nothing to check\"),\n" % p
+                        for p in pending) + ")\n")
+    run = ("".join("def %s(rep, root):\n    return None\n\n\n" % n
+                   for n in run_defs)
+           + "def run_tree_checks(rep, root):\n    return None\n\n\n"
+           + "def main(argv):\n"
+           + "".join("    %s(None, None)\n" % c for c in run_calls)
+           + "    run_tree_checks(None, None)\n    return 0\n")
+    arms = "def check_c(tree, **_):\n    return None\n"
+    return [("meta/specs/TESTING.md", doc), ("harness/checks.py", checks),
+            ("harness/run.py", run), ("harness/arms.py", arms)]
+
+
+# A FUNCTION IN `src/fmt/`, the first code that could want a view back (cycle
+# 0.4's parsers): `check_no_view_returns` (TM-204) is planted with each shape
+# it reads as a view -- a `uint8[]`, a slice of anything else, a `cstring`, a
+# struct holding a slice, and one handed back inside a `Vec` -- beside the same
+# function returning what owns nothing: a `string`, a fixed array, a struct of
+# integers, a `Vec<int64>`. A fixed `int64[4]` is a value, not a view, which
+# is what the second row's control is for.
+def _fmt(decl):
+    return ("src/fmt/fmt.npk", "mod:fmt;\n" + decl + "\n")
+
+
+# `check_int128_sites` (O-X6) reads `SPAN_MODEL.md` §5's `int128` column, so
+# each row plants a stub of it beside `src/span/span.npk`. `_wide` is a
+# function that computes in `int128`, the shape `probe02`'s `ns_add_checked`
+# has; `_narrow` the same in `int64`.
+def _span5(rows):
+    return ("meta/specs/SPAN_MODEL.md",
+            "# Spans\n\n## 5. Where the arithmetic can overflow\n\n"
+            "| Site | Risk | Answer | `int128` |\n|---|---|---|---|\n"
+            + "".join("| %s | the stub's | the stub's | %s |\n" % r for r in rows)
+            + "\n## 6. Open items\n")
+
+
+def _wide(name):
+    return ("func:%s = int64(int64:a, int64:b) never fails {\n"
+            "    int128:w = (a => int128) + (b => int128);\n"
+            "    pass w =>! int64;\n};\n" % name)
+
+
+def _narrow(name):
+    return ("func:%s = int64(int64:a, int64:b) never fails {\n"
+            "    pass a + b;\n};\n" % name)
+
+
 # Each row: the check, the file that violates it, the file that does not, and a
 # fragment the finding must name. The CLEAN column is not decoration -- several
 # of these checks are one predicate away from failing this repository's own
@@ -1186,7 +1257,156 @@ PLANTED = [
      ("src/zone/zone.npk",
       "mod:zone;\npub fixed int64\n[2]:IDS = [1i64, 2i64];\n"),
      "owning element"),
+    # A ROW NOTHING DRIVES -- the document promising a check the run does not
+    # keep.
+    (checks_mod.check_check_registry,
+     _family(rows=("check_a", "check_b", "check_c", "check_p", "check_d")),
+     _family(), "nothing runs it"),
+    # A LIVE CHECK WITH NO ROW -- `check_exemptions_live`'s shape for a whole
+    # subcycle (V-14e).
+    (checks_mod.check_check_registry,
+     _family(live=("check_a", "check_e")), _family(),
+     "is in `checks.LIVE` and §2's table has no row for it"),
+    # A PENDING CHECK THE DOCUMENT TURNS ON AT ANOTHER CYCLE.
+    (checks_mod.check_check_registry,
+     _family(pending=(("check_p", "0.8"),)), _family(),
+     "turns on at cycle 0.9 by V-1a's pending table and at cycle 0.8"),
+    # A PENDING CHECK THE DOCUMENT CALLS LIVE.
+    (checks_mod.check_check_registry,
+     _family(doc_pending=()), _family(), "the document says it is live"),
+    # A CHECK `run.py` DRIVES WITH NO ROW -- `check_expect_headers`' shape,
+    # the row V-1a's count left out at cycle 0.0.6 (C2).
+    (checks_mod.check_check_registry,
+     _family(run_defs=("check_b", "check_f"),
+             run_calls=("check_b", "arms_mod.check_c", "check_f")),
+     _family(), "the checks `run.py` drives outside step 5 and §2's table has no row"),
+    # ONE CHECK STATED TWICE -- live in `LIVE` and pending at once.
+    (checks_mod.check_check_registry,
+     _family(live=("check_a", "check_p")), _family(), "at once"),
+    (checks_mod.check_no_view_returns,
+     _fmt("pub func:f = uint8[](string:s) never fails { pass string_bytes(s); };"),
+     _fmt("pub func:f = string(string:s) never fails { pass s; };"),
+     "returns `uint8[]`"),
+    (checks_mod.check_no_view_returns,
+     _fmt("pub func:f = int64[](int64:n) never fails { pass n; };"),
+     _fmt("pub func:f = int64[4](int64:n) never fails { pass n; };"),
+     "`int64[]` is a slice"),
+    (checks_mod.check_no_view_returns,
+     _fmt("pub func:f = cstring(string:s) { pass to_cstring(s); };"),
+     _fmt("pub func:f = int64(string:s) never fails { pass 0i64; };"),
+     "a `cstring`"),
+    (checks_mod.check_no_view_returns,
+     _fmt("struct:Span = { uint8[]:text; int64:at; };\n"
+          "pub func:f = Span(int64:n) never fails { pass n; };"),
+     _fmt("struct:Span = { int64:text; int64:at; };\n"
+          "pub func:f = Span(int64:n) never fails { pass n; };"),
+     "`Span` holds one"),
+    (checks_mod.check_no_view_returns,
+     _fmt("pub func:f = Vec<uint8[]>(int64:n) never fails { pass n; };"),
+     _fmt("pub func:f = Vec<int64>(int64:n) never fails { pass n; };"),
+     "its type argument `uint8[]`"),
+    # AN `int128` WHERE §5 MARKS NO SITE -- the control is the same function,
+    # marked.
+    (checks_mod.check_int128_sites,
+     [_span5((("`f`", "**yes**"),)),
+      ("src/span/span.npk", "mod:span;\n" + _wide("g"))],
+     [_span5((("`g`", "**yes**"),)),
+      ("src/span/span.npk", "mod:span;\n" + _wide("g"))],
+     "marks no `int128` site there"),
+    # A MARK THAT OUTLIVED ITS REASON -- the function is there, the wide type
+    # is not.
+    (checks_mod.check_int128_sites,
+     [_span5((("`g`", "**yes**"),)),
+      ("src/span/span.npk", "mod:span;\n" + _narrow("g"))],
+     [_span5((("`g`", "**yes**"),)),
+      ("src/span/span.npk", "mod:span;\n" + _wide("g"))],
+     "spells no `int128`"),
+    # AN `int128` AT MODULE LEVEL. The control holds the same type in prose and
+    # in a string -- blanked, so neither is one.
+    (checks_mod.check_int128_sites,
+     [_span5((("`g`", "**yes**"),)),
+      ("src/span/span.npk", "mod:span;\nfixed int128:WIDE = 1i128;\n" + _wide("g"))],
+     [_span5((("`g`", "**yes**"),)),
+      ("src/span/span.npk", "mod:span;\n// int128 here is prose\n"
+                            "fixed string:WIDE = \"int128\";\n" + _wide("g"))],
+     "outside every function"),
+    (checks_mod.check_int128_sites,
+     [_span5((("`g`", "maybe"),)), ("src/span/span.npk", "mod:span;\n")],
+     [_span5((("`g`", "no"),)), ("src/span/span.npk", "mod:span;\n")],
+     "neither yes nor no"),
+    (checks_mod.check_int128_sites,
+     [_span5((("the nanosecond step", "**yes**"),)),
+      ("src/span/span.npk", "mod:span;\n")],
+     [_span5((("`g`'s nanosecond step", "**yes**"),)),
+      ("src/span/span.npk", "mod:span;\n")],
+     "names no function"),
+    (checks_mod.check_int128_sites,
+     [("meta/specs/SPAN_MODEL.md",
+       "# Spans\n\n## 5. Where\n\n| Site | Risk | Answer |\n|---|---|---|\n"
+       "| `g` | the stub's | the stub's |\n"),
+      ("src/span/span.npk", "mod:span;\n")],
+     [_span5((("`g`", "**yes**"),)), ("src/span/span.npk", "mod:span;\n")],
+     "no table with an `int128` column"),
 ]
+
+
+# S-22'S ONE EXEMPTION, RE-DERIVED (TM-204, TM-137) -- which no `PLANTED` row
+# can express, because the exemption applies to this repository's tree and to
+# no scratch tree unless it is handed one. Each plant falsifies one part of the
+# reason S-22 gives -- the function gone, no view, no pointer to its
+# container, no container, and S-22 silent about it -- beside a control where
+# every part holds, as `bytes_view` holds them today.
+_EXEMPT_VIEW = {"bytes_view": ("src/core/bytes.npk", "Bytes")}
+_S22_TEXT = ("# Safety\n\n## 5. Resources\n\n**Rule S-22 -- a view is a "
+             "parameter, never a return value.** One is named -- %s.\n\n"
+             "## 6. What an application owes\n")
+_BYTES = ("mod:bytes;\npub struct:%s = { hidden buffer:body; sealed int64:len; };\n"
+          "pub func:%s = %s(%s:b) never fails {\n"
+          "    pass #wild_slice<uint8>(b.body.ptr, b.len);\n};\n")
+VIEW_EXEMPT_PLANTS = [
+    ("the function gone",
+     _BYTES % ("Bytes", "bytes_peek", "uint8[]", "Bytes->"), "`bytes_view`",
+     "declares no function of that name"),
+    ("no view returned",
+     _BYTES % ("Bytes", "bytes_view", "int64", "Bytes->"), "`bytes_view`",
+     "no longer returns a view"),
+    ("no pointer to the container",
+     _BYTES % ("Bytes", "bytes_view", "uint8[]", "Bytes"), "`bytes_view`",
+     "takes no pointer to `Bytes`"),
+    ("no container",
+     _BYTES % ("Sink", "bytes_view", "uint8[]", "Bytes->"), "`bytes_view`",
+     "declares no struct `Bytes`"),
+    ("S-22 silent about it",
+     _BYTES % ("Bytes", "bytes_view", "uint8[]", "Bytes->"), "`bytes_peek`",
+     "no longer names `bytes_view`"),
+]
+
+
+def part_b_view_exempt(rep, base):
+    """S-22's exemption, each part of its reason falsified alone."""
+    problems = []
+    good = _mini_tree(os.path.join(base, "planted", "view_exempt_good"), [
+        ("src/core/bytes.npk",
+         _BYTES % ("Bytes", "bytes_view", "uint8[]", "Bytes->")),
+        ("meta/specs/SAFETY.md", _S22_TEXT % "`bytes_view`")])
+    res = checks_mod.check_no_view_returns(good, exempt=_EXEMPT_VIEW)
+    if res.problems:
+        problems.append(
+            "check_no_view_returns fired on an exemption whose every reason "
+            "holds, so its reds below are not evidence.\n      it said: %s"
+            % res.problems[0])
+    for i, (what, bytes_text, named, needle) in enumerate(VIEW_EXEMPT_PLANTS):
+        red = _mini_tree(os.path.join(base, "planted", "view_exempt_%d" % i), [
+            ("src/core/bytes.npk", bytes_text),
+            ("meta/specs/SAFETY.md", _S22_TEXT % named)])
+        res = checks_mod.check_no_view_returns(red, exempt=_EXEMPT_VIEW)
+        if not any(needle in p for p in res.problems):
+            problems.append(
+                "check_no_view_returns did not fail S-22's exemption with %s: "
+                "an exemption whose reason no longer holds excuses the next "
+                "view returned (TM-137).\n      it said: %s"
+                % (what, res.problems[0] if res.problems else "nothing"))
+    return problems
 
 
 # THE COUNTS THIS FILE PRINTS, DERIVED RATHER THAN TYPED (TM-142).
@@ -1207,11 +1427,15 @@ PLANTED = [
 #                 there); the whole-tree walk's nested-repository pruning
 #                 (the subject is the WALK, not a check -- TM-146); and
 #                 `check_specs_current` (which reports and never fails, so it
-#                 is driven separately). Every one has a control beside it,
-#                 which is why the two numbers printed are equal.
+#                 is driven separately). And since cycle 0.2.3a the FIVE
+#                 plants of S-22's exemption (`part_b_view_exempt`,
+#                 TM-228), each one part of its reason falsified, against
+#                 a control where every part holds. Every one has a
+#                 control beside it, which is why the two numbers printed
+#                 are equal.
 V14_CASES = 13
 PLANTED_CASES = 12
-TREE_PLANTS = len(PLANTED) + 3
+TREE_PLANTS = len(PLANTED) + 3 + len(VIEW_EXEMPT_PLANTS)
 
 
 def part_b(rep, base):
@@ -1951,7 +2175,8 @@ def run(rep, root, steps):
                case_12_code_named_once, case_13_silent_site):       # TM-210
         ok = _report_case(rep, fn(root, man, base)) and ok
 
-    problems = part_b(rep, base) + part_b_specs_current(rep, base)
+    problems = (part_b(rep, base) + part_b_specs_current(rep, base)
+                + part_b_view_exempt(rep, base))
     if problems:
         ok = False
         rep.fail("self-check: the tree checks", "%d of them did not behave"

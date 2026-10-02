@@ -11,8 +11,10 @@ WHAT A GREEN RUN HERE IS, AND IS NOT.
   read
   and schema-checked; the three tools held to the pin's exact patch release;
   every `.npk` in the tree put in front of the real parser; the tree diffed
-  against the documents that describe it by nine checks, each of which has
-  itself been seen red on a planted violation (eight until cycle 0.1.1 added
+  against the documents that describe it by twelve checks, each of which has
+  itself been seen red on a planted violation (nine from cycle 0.1.1 until
+  cycle 0.2.3a added `check_check_registry`, `check_no_view_returns` and
+  `check_int128_sites`, TM-227, TM-228 and TM-230; eight until 0.1.1 added
   `check_literal_divisors`, TM-163), and `check_specs_current` beside them,
   which reports; the library emitted, optimised,
   assembled and scanned; the IR proved identical from two working directories;

@@ -111,7 +111,10 @@ it is part of what Q-5 decides, and this dispatch deliberately landed nothing
 that depends on that answer. *(Cycle 0.1.5's second half: it was never built,
 and `SAFETY.md` S-22 said it was on 0.0.3's list until then — the cycle audit's
 C3. It is cycle 0.2.3's now, after `check_check_registry`, and S-22 names the
-one function that returns a view on purpose, `bytes_view` (TM-204).)*
+one function that returns a view on purpose, `bytes_view` (TM-204).)* *(Cycle
+0.2.3a, TM-228: built, and live. It fails a function in `src/` whose result is
+a slice of any element, a `cstring` or a type holding one, but `bytes_view`,
+whose exemption is re-derived from S-22's reason on every run.)*
 
 ## What `ntime` does meanwhile — and what it is NOT doing
 

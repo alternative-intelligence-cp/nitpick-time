@@ -6848,3 +6848,168 @@ words left unmarked** — a settled decision is read for years, and its reader
 meets its words before any other site's; **`README.md`'s *"add a duration to a
 wall-clock reading"*, in the next paragraph, changed too** — there it is a
 civil reading, the glossary's own sense.
+
+# Cycle 0.2.3a — the instruments, ratified 2026-10-01
+
+### TM-227 — `check_check_registry` reads the family's four statements from the tree's text and diffs them as one list, built first; V-1a's three numbers are tagged and held to what it reads
+
+**2026-10-01, cycle 0.2.3a (the plan's PD-72). Discharges TM-201's first
+deferral; amends `TESTING.md` §2, V-1a, V-14c and V-14e.**
+
+**What was found** (`meta/roadmap/0.2/0.2.3a.md` §1). TM-201 made the next
+subcycle that adds or retires a check build `check_check_registry` first, and
+cycle 0.2.3a adds two. It was deferred because §2's table "needed a
+machine-readable shape", and measured at planning the table has one already:
+every row of the family table names its check first, in backticks, and V-1a's
+pending table does the same with the cycle beside it. The harness's two lists
+can be read without importing them — Python's own parser reads `LIVE`'s names
+and `PENDING`'s entries from `harness/checks.py`, and the calls from
+`harness/run.py` — so a scratch tree can plant a drift in any statement. Read
+so at the planning commit, the four agreed: 18 rows = 10 in `checks.LIVE` + 4
+driven by `run.py` (`check_failsafe_arms`, `check_expect_headers`,
+`check_exemptions_live`, `run_defect_corpus`) + 4 pending, the pending table's
+names and cycles `checks.PENDING`'s.
+
+**The decision.** *`check_check_registry`, in `checks.LIVE`, reads four
+statements from the tree it is pointed at: §2's family table and V-1a's pending
+table in `TESTING.md`; `LIVE` and `PENDING` from `harness/checks.py`'s text;
+and what `run.py` drives outside step 5 — every call in `harness/run.py` to a
+function a row names, or that `checks.py`, `arms.py` or `run.py` defines under
+a `check_` name. It fails a row nothing runs, a check that runs with no row, a
+check in two statements at once, and a pending check whose name or cycle the
+two pending lists disagree about. It is built first, in the commit whose later
+steps add `check_no_view_returns` and turn `check_int128_sites` on; the
+self-check plants six drifts — one in each of the four statements, a check
+stated twice, and a pending check the document calls live — each beside the
+consistent family. V-1a's three numbers are tagged — `family_rows`,
+`family_live` and `family_pending`, measured from the same reading — so
+`check_denominators` holds the rule's arithmetic to the family on every run.
+What it cannot see is stated beside it in `checks.py`: a check `run.py` drives
+under a name that is neither a row nor a `check_` definition.*
+
+*Alternatives declined:* **`LIVE` and `PENDING` imported** — the check would
+read the harness that runs it rather than the tree it is pointed at, and the
+self-check could plant a drift in neither without a parameter for each;
+**`run.py`'s driven checks declared in a list of their own** — a fifth
+statement of the family, one more to drift; **a status column in §2's table**
+— the pending table already says which, with the cycle, and is read;
+**V-1a's numbers left untagged** — they went stale once inside a cycle, which
+is TM-201's argument, and a tag is what holds a number to a measurement here
+(TM-142); **which plants commission which check (V-14c) read as a fifth
+statement** — that is a property of the self-check's own rows, every one of
+which runs, red and green, on every full invocation.
+
+### TM-228 — `check_no_view_returns` is live: S-22's view is a slice of any element, a `cstring`, or a type that holds one — a struct's field, a fixed array's element, a type argument — and `bytes_view`'s exemption is re-derived from its reason on every run
+
+**2026-10-01, cycle 0.2.3a (the plan's PD-73). Discharges TM-204; dates
+`SAFETY.md` S-22; adds `TESTING.md` §2's row and V-14c's.**
+
+**What was found** (`0.2.3a.md` §1). `src/`'s ten files declare 46 functions,
+and one declares a view as its result: `bytes_view`, `uint8[]`, its parameter
+`Bytes->`. No struct in `src/` holds a slice or a `cstring` — `Bytes` holds a
+`buffer`, which owns, and `Vec` a `wild T->` pointer and a zero-length `string`
+array. S-22's sentence names `uint8[]`, and the hazard it guards, a view out of
+its owner's frame (O-N9), is every slice's, whatever its element. And cycle
+0.2.0b left this check a question: a `#[derive(Copy)]` struct holding a slice
+is a legal `Vec` element, so a `Vec` of them hands its caller views
+(`0.2.0b.md` §1.5).
+
+**The decision.** *`check_no_view_returns`, in `checks.LIVE`, reads every
+function's declared result type in `src/` and fails one that is or holds a
+view: a slice — `uint8[]` or any `T[]` — a `cstring`, a struct `src/`
+declares with such a field at any depth, a fixed array of one, or a type whose
+type argument is one (`Vec<uint8[]>`). A type parameter is no view at its
+declaration — `vec_at`'s `T` is its callers' to instantiate — and a pointer is
+none: S-22's rule is about slices. Its one exemption, `bytes_view`, is named in
+a table beside the reason S-22 gives, and the reason is re-derived on every
+run, part by part: the function is declared in `src/core/bytes.npk`, returns a
+view, takes a pointer to `Bytes`, which that file declares, and S-22's own text
+names it; any part false is a stale exemption, and fails. The table applies to
+this repository's tree, and the self-check hands it to scratch trees where one
+part at a time is false. The self-check plants five view returns, each beside
+the same function returning what owns nothing, and five false parts of the
+exemption's reason, each beside a control where all hold. S-22 is dated.*
+
+*Alternatives declined:* **`uint8[]` alone, as S-22's sentence lists it** — an
+`int64[]` returned out of its owner's frame is the same hazard, and the rule is
+a belt; **a type argument not reached** — a `Vec` of slice-holding structs
+hands back views as surely as the struct does, and 0.2.0b handed the question
+here; **a type parameter read as a view** — every generic accessor in
+`src/core/` would fire, and the instantiation that makes one a view is written
+at its caller; **the exemption matched by name** — TM-137: an exemption whose
+reason is not re-derived excuses whatever is next given the name; **the
+exemption applied to every tree** — a scratch tree holds none of its facts,
+and every plant of every other row would be red on it.
+
+### TM-229 — O-X6 is answered: `SPAN_MODEL.md` §5's table is the authority on the `int128` sites, in a column of its own, and N-20 states no count; three rows are marked, `bytes_put_int`'s loop measure among them
+
+**2026-10-01, cycle 0.2.3a (the plan's PD-74). Strikes `OPEN_QUESTIONS.md` O-X6;
+amends `SPAN_MODEL.md` N-20 and §5's table; dates `VERIFICATION.md` P-5 and
+§6's row.**
+
+**What was found** (`0.2.3a.md` §1). N-20 said the `int128` sites "are exactly
+three … named above" from the founding specification, and §5's table marked
+one, `period_add`'s nanosecond step; O-X6's recommendation, on file since cycle
+0.0.0, was to make the table the authority and drop the count. Measured at
+planning, `src/` spells `int128` once, at a site no row named: `bytes_put_int`'s
+loop measure, `decreases 0i128 - (x => int128)`, widened at cycle 0.1.0b because
+`0i64 - x` overflows at `int64`'s minimum, the one input that function exists to
+get right (TM-151). A check written against N-20 as it stood would have been red
+on its first run, against code nobody had weighed at §5. `TIME_MODEL.md` M-20
+already settles `timestamp_since`: its difference in nanoseconds passes
+`int64` beyond ±292 years, so it computes in `int128` and narrows once. And
+§5's table named the conversion to a civil reading `timestamp_to_civil`, which
+is `timestamp_to_utc` since cycle 0.2.2 (TM-222).
+
+**The decision.** *§5's table carries an `int128` column, **yes** or no, and its
+marked rows are the `int128` sites, and no other; N-20 says so and states no
+count. Three rows are marked: `timestamp_since` (M-20; written at cycle 0.2.3),
+`period_add`'s nanosecond step (marked since the founding table; cycle 0.7),
+and a new row, `bytes_put_int`'s loop measure (TM-151) — computed in `int128`
+and compared, never narrowed. The count comes out three and is dropped anyway.
+P-5's `prove` and the runtime range check are owed where a site narrows, which
+the measure does not, and §6's row says so. §5's conversion row names
+`timestamp_to_utc`.*
+
+*Alternatives declined:* **the count kept, three rows found to fit it** — O-X6's
+own warning, a rule invented to make a count come out right; that it comes out
+three today is how a number in a rule goes stale in silence; **the sites
+enumerated in N-20's own text** — two lists of one thing; **`bytes_put_int`'s
+measure rewritten without `int128`** — a `uint64` measure through the wrapping
+`-%` would avoid the type and change code measured right since cycle 0.1.0b to
+suit a check; **loop measures exempt from the rule** — a wide type is a wide
+type, and the measure is a site somebody reasoned about, which is what a row
+records; **the mark read from the Answer cell's words** — "computed in
+`int128`" is prose, and a column is a fact.
+
+### TM-230 — `check_int128_sites` is live: it reads §5's `int128` column, finds every `int128` in `src/` by the function it is in, and fails in both directions; a marked function not yet written is named on every run
+
+**2026-10-01, cycle 0.2.3a (the plan's PD-75). Restates `TESTING.md` §2's row;
+moves the check from V-1a's pending table to the family's live half.**
+
+**What was found.** `checks.PENDING` and V-1a's pending table held the check
+at cycle 0.2 behind O-X6, which TM-229 answers. A lexical check can place an
+`int128` inside a function and no closer — `period_add`'s three rows are steps
+of one function — so a site is a function: the first backticked name in a
+marked row's Site cell.
+
+**The decision.** *`check_int128_sites`, in `checks.LIVE`, reads §5's marked
+rows from `SPAN_MODEL.md` and every `int128` in `src/`'s code, comments and
+literals blanked, and fails an `int128` outside every function, one in a
+function no marked row names, and a marked function `src/` declares that spells
+none. A marked function `src/` does not declare yet is named in the headline on
+every run, and not failed: §5 is written ahead of the code it governs, and the
+row is how the check is live before its subject is. The self-check plants six
+faults — an `int128` in an unmarked function, a mark whose function spells
+none, a module-level `int128`, a mark neither yes nor no, a mark naming no
+function, and a table with no `int128` column — each beside a control. At its
+first run: one `int128`, in `bytes_put_int`, against three marked sites, two
+not yet written, `period_add` and `timestamp_since`.*
+
+*Alternatives declined:* **the check pending until `timestamp_since` exists** —
+an instrument precedes what it guards (`ROADMAP.md`'s ordering notes), and
+`bytes_put_int`'s measure is a subject today; **a site as a line of code** — no
+lexical reading can say which of a function's statements is §5's step; **an
+unwritten marked function failed** — every row §5 writes ahead of its cycle
+would be red; **the tests' `int128` read too** — N-20 is about `src/`, and
+`probe02` is a probe of the type itself.

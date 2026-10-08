@@ -245,6 +245,13 @@ narrowed by a bare `=>!` compiled, ran and passed every tree check, measured,
 until `check_int128_sites` read all fourteen. The column keeps its name:
 `int128` is the one width this library computes in.)*
 
+*(Cycle 0.3.0, TM-246: and a numeric literal whose width suffix is one of those
+fourteen — `3i256`, `7u128` — is a site as the type's name is. A computation of
+literals alone widens with no type named, and `(3i256 * 5i256) =>! int64`
+narrowed a constant to its low 64 bits in silence and passed the check until
+then. `bytes_put_int`'s `0i128` is `src/`'s one such literal, in a function
+the table marks.)*
+
 **Rule N-20b (TM-105) — the range check at each of those sites is mandatory
 library code, because the language provides no checked narrowing.** Measured at
 cycle 0.0.0: `=>!` at a value that does not fit **truncates silently** (no trap,

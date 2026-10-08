@@ -7441,6 +7441,11 @@ naming the gap in S-22** — the parsers that would meet the gap are the next
 code this check exists for (TM-204).
 
 ### TM-240 — `check_int128_sites` reads every integer wider than `int64`, not `int128` alone; `TESTING.md` V-1 says what the check guards, and what no check does
+> **TM-246 (2026-10-08, cycle 0.3.0) reads one clause of it:** *"The check reads
+> all fourteen"* — by a type's name; since TM-246 a numeric literal whose width
+> suffix is one of the fourteen as well, because `(3i256 * 5i256) =>! int64`, a
+> computation of literals alone, named no type and passed it (the item cycle
+> 0.2's close deferred).
 
 **2026-10-02, cycle 0.2.4a (the plan's PD-85) — the cycle audit's D1. Restates
 `TESTING.md` §2's row and V-1; dates `SPAN_MODEL.md` N-20; reads one clause of
@@ -7710,3 +7715,56 @@ form there — an item cycle 0.2's close writes into cycle 0.3's README.*
 *Alternatives declined:* **the two sites respelled in the statement form now** —
 refused at our pin; **the note left as the language's rule** — a defect recorded
 as a rule is a rule nobody re-measures.
+
+# Cycle 0.3.0 — the clocks, ratified 2026-10-08
+
+Four decisions, drafted at planning (`meta/roadmap/0.3/0.3.0.md` §2, PD-91 …
+PD-94, in that order), accepted by the orchestrator on 2026-10-05 and each
+measured at compiler `5fbaf4a`: the first is the instrument cycle 0.2's close
+handed on (`meta/roadmap/done/0.2/0.2.4.md`, its item (a) after the audit),
+recorded with a commit of its own; the other three are the clocks.
+
+### TM-246 — `check_int128_sites` reads a numeric literal's width suffix as it reads a type's name: a literal of one of the fourteen widths past `int64` is a site of the function it stands in
+
+**2026-10-08, cycle 0.3.0 (the plan's PD-91) — the item cycle 0.2's close
+deferred, found by cycle 0.2.4a's verifier after the cycle audit. Restates
+`TESTING.md` §2's row; dates V-1 and `SPAN_MODEL.md` N-20; reads one clause of
+TM-240.**
+
+**What was found** (`0.3.0.md` §1.2). In a consumer, `(3i256 * 5i256) =>!
+int64` compiles and runs at the pin, and `(10000000000i256 * 10000000000i256)
+=>! int64` is 7 766 279 631 452 241 920 on both legs — 10²⁰ narrowed to its
+low 64 bits, a constant wrong in silence. Planted in a copy's `span.npk` as a
+function §5 marks no row for, it compiles in `span` and every live check is
+silent, `check_int128_sites` among them: TM-240's check read a TYPE's name,
+and TESTING.md's row said *"Comments and literals are blanked first"*. A
+runtime value cannot widen so — an `int64` beside an `int256` literal is
+`NITPICK-TYPE-007`, *"a widening would decide which width this operation
+happens in, and that decision must be visible in the source rather than
+following from the operands"* — so a computation of literals alone is the
+whole gap. `src/`'s 235 numeric literals
+hold one wide width, `0i128`, in `bytes_put_int`'s loop measure, a function §5
+marks.
+
+**The decision.** *The check reads every numeric literal in `src/` through
+`checks.literals`, the reader `check_constants_named` trusts (TM-231), and a
+literal whose width suffix is one of the fourteen — `i128` … `i4096`, `u128` …
+`u4096`, `tbb128` and `tbb256`, the suffix read as the compiler's
+`strip_type_suffix` reads it — counts as a site of the function it stands in,
+exactly as the type's name does: outside every function §5 marks it is a
+finding, and inside one it keeps the mark live. Comments, strings and
+characters are still blanked first, so a width in prose is nothing. TESTING.md
+§2's row is restated, with a dated note quoting what it read; V-1 and N-20 are
+dated. Two plants: `(3i256 * 5i256) =>! int64` in a function §5 does not mark,
+beside the same function marked; and `7u128` at module level, beside `7i64`.
+Over the tree the check stays silent, its headline's count one higher — the
+`0i128` — and against the check before it both plants pass, and the first's
+control, a marked function whose one wide item is a literal, reads as a stale
+mark.*
+
+*Alternatives declined:* **V-1 narrowed to intermediates whose type is named**
+— a check narrower than its rule's reason, the shape this repository keeps
+finding; **the IR's wide arithmetic read instead** — every `i256` operation
+the emission holds, but a claim about the lowering and the optimiser, which may
+fold a literal product away; **every wide literal a finding** —
+`bytes_put_int`'s `0i128` is a marked site's correct literal.

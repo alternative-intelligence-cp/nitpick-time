@@ -2088,10 +2088,39 @@ INT128_DOC = "meta/specs/SPAN_MODEL.md"
 # narrowed by a bare `=>! int64` compiled, ran, and passed every tree check,
 # measured; the same function in `int128` was red. `§5`'s column keeps its
 # name: `int128` is the one width this library computes in.
-# (`(?<![A-Za-z0-9_])int128(?![A-Za-z0-9_])` until then.)
+# (`(?<![A-Za-z0-9_])int128(?![A-Za-z0-9_])` until then.) And since cycle
+# 0.3.0 a literal of one of those widths too -- `_WIDE_LITERAL`, below (TM-246).
 _INT128 = re.compile(r"(?<![A-Za-z0-9_])(?:u?int(?:128|256|512|1024|2048|4096)"
                      r"|tbb(?:128|256))(?![A-Za-z0-9_])")
 _SITE_NAME = re.compile(r"`([A-Za-z_][A-Za-z0-9_]*)")
+# AND A LITERAL'S WIDTH, AS A TYPE'S NAME (cycle 0.3.0, TM-246). A numeric
+# literal whose width suffix is one of the fourteen -- `3i256`, `7u128` -- is a
+# site of the function it stands in, exactly as the type's name is, because a
+# computation of literals alone widens with no type named: `(3i256 * 5i256)
+# =>! int64` compiled, ran, narrowed a constant to its low 64 bits in silence,
+# and passed this check, measured at compiler `5fbaf4a`. A runtime value cannot
+# widen so -- an `int64` beside an `int256` literal is `NITPICK-TYPE-007`, "a
+# widening would decide which width this operation happens in, and that
+# decision must be visible in the source rather than following from the
+# operands" -- so the literal was the whole gap.
+# The width is read off `literals`' tokens, the reader `check_constants_named`
+# trusts (TM-231), so a width in a comment, a string or a character literal is
+# nothing, as it is to the compiler; and `bytes_put_int`'s `0i128` is a hit in
+# a function §5 marks. (Until then this read the type's name alone: TESTING.md
+# §2's row said "comments and literals are blanked first".)
+_WIDE_LITERAL = frozenset(("i128", "i256", "i512", "i1024", "i2048", "i4096",
+                           "u128", "u256", "u512", "u1024", "u2048", "u4096",
+                           "tbb128", "tbb256"))
+
+
+def _literal_width(tok):
+    """A numeric literal's width suffix as the lexer's `strip_type_suffix`
+    strips it -- the longest of the thirty-seven `num_width_of` knows, with
+    something left before it -- or '' for none."""
+    for n in range(6, 1, -1):
+        if len(tok) > n and tok[-n:] in _WIDTHS:
+            return tok[-n:]
+    return ""
 
 
 def int128_sites(tree):
@@ -2147,8 +2176,9 @@ def int128_sites(tree):
 
 
 def check_int128_sites(tree, **_):
-    """`int128` -- and every integer wider than `int64` -- in `src/` at exactly
-    the sites `SPAN_MODEL.md` §5 marks."""
+    """`int128` -- and every integer wider than `int64`, a literal of one of
+    those widths included -- in `src/` at exactly the sites `SPAN_MODEL.md` §5
+    marks."""
     sites, problems = int128_sites(tree)
     problems = list(problems)
     files = src_files(tree)
@@ -2156,11 +2186,15 @@ def check_int128_sites(tree, **_):
     declared = {f[2] for f in funcs}
     holders, seen = {}, 0
     for rel in files:
-        code = blank_code(lexical.read(os.path.join(tree, rel)))
+        text = lexical.read(os.path.join(tree, rel))
+        code = blank_code(text)
         mine = [(f[5], f[6], f[2]) for f in funcs if f[0] == rel]
-        for m in _INT128.finditer(code):
+        hits = [(m.start(), m.group(0)) for m in _INT128.finditer(code)]
+        hits += [(off, tok) for off, tok, _v in literals(text)
+                 if _literal_width(tok) in _WIDE_LITERAL]
+        for start, what in sorted(hits):
             seen += 1
-            owner = next((n for s, e, n in mine if s <= m.start() < e), None)
+            owner = next((n for s, e, n in mine if s <= start < e), None)
             if owner is None:
                 problems.append(
                     "%s:%d spells `%s` outside every function. A site is a "
@@ -2168,15 +2202,15 @@ def check_int128_sites(tree, **_):
                     "module-level wide value is a wide value nobody's "
                     "obligation names: move it into the function that needs "
                     "it, and mark that function's row."
-                    % (rel, _line(code, m.start()), m.group(0)))
+                    % (rel, _line(code, start), what))
             elif owner not in sites:
                 problems.append(
                     "%s:%d spells `%s` in `%s`, and §5's table marks no "
-                    "`int128` site there (SPAN_MODEL.md N-20). A wide type "
-                    "used where nobody reasoned about it is the thing N-20 "
-                    "forbids: compute in `int64` with its own range check, or "
-                    "mark the row -- with its answer -- in the same commit."
-                    % (rel, _line(code, m.start()), m.group(0), owner))
+                    "`int128` site there (SPAN_MODEL.md N-20). A wide type or "
+                    "literal used where nobody reasoned about it is the thing "
+                    "N-20 forbids: compute in `int64` with its own range check, "
+                    "or mark the row -- with its answer -- in the same commit."
+                    % (rel, _line(code, start), what, owner))
             else:
                 holders[owner] = holders.get(owner, 0) + 1
     unwritten = sorted(n for n in sites if n not in declared)

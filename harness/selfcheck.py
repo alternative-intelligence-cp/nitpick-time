@@ -1466,6 +1466,26 @@ PLANTED = [
      [_span5((("`g`", "**yes**"),)),
       ("src/span/span.npk", "mod:span;\n" + _wide("g").replace("int128", "uint128"))],
      "spells `uint128` in `g`"),
+    # A WIDE LITERAL WHERE §5 MARKS NO SITE (cycle 0.3.0, TM-246): a
+    # computation of literals alone widens with no type's name and narrows in
+    # silence -- `(3i256 * 5i256) =>! int64` compiles and runs at the pin -- so
+    # the check reads a literal's width as it reads a type's name. The first
+    # row is the function unmarked beside the same function marked; the second
+    # a wide literal at module level, beside the same constant in `int64`.
+    (checks_mod.check_int128_sites,
+     [_span5((("`f`", "**yes**"),)),
+      ("src/span/span.npk", "mod:span;\nfunc:g = int64() never fails {\n"
+                            "    pass (3i256 * 5i256) =>! int64;\n};\n")],
+     [_span5((("`g`", "**yes**"),)),
+      ("src/span/span.npk", "mod:span;\nfunc:g = int64() never fails {\n"
+                            "    pass (3i256 * 5i256) =>! int64;\n};\n")],
+     "spells `3i256` in `g`"),
+    (checks_mod.check_int128_sites,
+     [_span5((("`g`", "**yes**"),)),
+      ("src/span/span.npk", "mod:span;\nfixed int64:K = 7u128 =>! int64;\n" + _wide("g"))],
+     [_span5((("`g`", "**yes**"),)),
+      ("src/span/span.npk", "mod:span;\nfixed int64:K = 7i64;\n" + _wide("g"))],
+     "spells `7u128` outside every function"),
     # A DIGIT SEPARATOR -- the dispatch's measured case, `86_400i64`.
     (checks_mod.check_constants_named, _div("86_400i64"), _div("86_401i64"),
      "belongs to module `core`"),

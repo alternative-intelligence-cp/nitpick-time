@@ -161,7 +161,10 @@
 # forged operand at `int64`'s ends rather than trapping; `instant_since`
 # answers at `Duration`'s two ends exactly and refuses one nanosecond past
 # them; and a consumer's construction of an `Instant` from a `Timestamp`'s
-# numbers compiles and runs, which M-3 now says (TM-241 ... TM-243).
+# numbers compiles and runs, which M-3 now says (TM-241 ... TM-243). AND
+# SINCE CYCLE 0.3.0: a literal of a width past `int64` -- `3i256` -- is held to
+# §5's sites as the type's name is, where a computation of literals alone
+# narrowed a constant in silence and passed every check (TM-246).
 #
 # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
 # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,

@@ -59,9 +59,11 @@ running unlisted since cycle 0.0.6)*:
   a code named once for two sites and three times for two (TM-210). Case 6
   (a generator differing by one line) is **pending until 0.5** and prints as
   pending rather than passing.
-- **Ninety-two planted violations across the tree checks since cycle 0.2.4a**
-  (eighty-two from cycle 0.2.3a, forty-four from cycle 0.1.5's second half,
-  forty after its first half, twenty-three before it; 0.2.4a's ten are
+- **Ninety-four planted violations across the tree checks since cycle 0.3.0**
+  (ninety-two from cycle 0.2.4a, eighty-two from cycle 0.2.3a, forty-four from
+  cycle 0.1.5's second half, forty after its first half, twenty-three before
+  it; 0.3.0's two are `check_int128_sites`' wide literals, one in a function
+  and one at module level; 0.2.4a's ten are
   `check_constants_named`'s six — a `core` number in `core` outside
   `limits.npk`, a `cal` number in `core`, a bound spelled by its value, the
   folded minimum by its value, a small bound left to review, and an

@@ -1,5 +1,5 @@
 diff --git a/harness/checks.py b/harness/checks.py
-index 145bd10e72ecd8c55588297b7faac044983a0431..69bdbf09bd4234787e6619b909b054e463340441 100644
+index 5a6c898382f6d98c9683f0c3230fa5615f902bbf..f526eac0d5c7ede6c02c1b3acb61ddcf64923119 100644
 --- a/harness/checks.py
 +++ b/harness/checks.py
 @@ -178,13 +178,15 @@ class Result:

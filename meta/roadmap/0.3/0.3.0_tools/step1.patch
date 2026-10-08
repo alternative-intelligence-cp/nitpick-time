@@ -34,7 +34,7 @@ index ed2b7c82e9afac7ee8008a3015a0920d3aeeb745..8408334cadcc360c67b1c7ceefc7195d
    `limits.npk`, a `cal` number in `core`, a bound spelled by its value, the
    folded minimum by its value, a small bound left to review, and an
 diff --git a/harness/checks.py b/harness/checks.py
-index acd6f55940c85d167d381c5be67ef64227618848..145bd10e72ecd8c55588297b7faac044983a0431 100644
+index acd6f55940c85d167d381c5be67ef64227618848..5a6c898382f6d98c9683f0c3230fa5615f902bbf 100644
 --- a/harness/checks.py
 +++ b/harness/checks.py
 @@ -2088,10 +2088,39 @@ INT128_DOC = "meta/specs/SPAN_MODEL.md"
@@ -109,7 +109,7 @@ index acd6f55940c85d167d381c5be67ef64227618848..145bd10e72ecd8c55588297b7faac044
              if owner is None:
                  problems.append(
                      "%s:%d spells `%s` outside every function. A site is a "
-@@ -2168,7 +2202,7 @@ def check_int128_sites(tree, **_):
+@@ -2168,15 +2202,15 @@ def check_int128_sites(tree, **_):
                      "module-level wide value is a wide value nobody's "
                      "obligation names: move it into the function that needs "
                      "it, and mark that function's row."
@@ -118,11 +118,15 @@ index acd6f55940c85d167d381c5be67ef64227618848..145bd10e72ecd8c55588297b7faac044
              elif owner not in sites:
                  problems.append(
                      "%s:%d spells `%s` in `%s`, and §5's table marks no "
-@@ -2176,7 +2210,7 @@ def check_int128_sites(tree, **_):
-                     "used where nobody reasoned about it is the thing N-20 "
-                     "forbids: compute in `int64` with its own range check, or "
-                     "mark the row -- with its answer -- in the same commit."
+-                    "`int128` site there (SPAN_MODEL.md N-20). A wide type "
+-                    "used where nobody reasoned about it is the thing N-20 "
+-                    "forbids: compute in `int64` with its own range check, or "
+-                    "mark the row -- with its answer -- in the same commit."
 -                    % (rel, _line(code, m.start()), m.group(0), owner))
++                    "`int128` site there (SPAN_MODEL.md N-20). A wide type or "
++                    "literal used where nobody reasoned about it is the thing "
++                    "N-20 forbids: compute in `int64` with its own range check, "
++                    "or mark the row -- with its answer -- in the same commit."
 +                    % (rel, _line(code, start), what, owner))
              else:
                  holders[owner] = holders.get(owner, 0) + 1

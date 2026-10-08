@@ -247,7 +247,7 @@ index 8408334cadcc360c67b1c7ceefc7195d3466dbe5..4769bfdd3193638c059ad2a0dba2c053
  so a `npkc` invocation on anything that compiles costs a fixed amount and the
  run makes about 200 of them. One that does *not* compile costs ~0.03 s.
 diff --git a/harness/checks.py b/harness/checks.py
-index 69bdbf09bd4234787e6619b909b054e463340441..1c52266eea5971fa32007ad4410432c956c7b1f0 100644
+index f526eac0d5c7ede6c02c1b3acb61ddcf64923119..d8813ba03f02a2ca12c98e76b688dceb8caa4c58 100644
 --- a/harness/checks.py
 +++ b/harness/checks.py
 @@ -277,10 +277,11 @@ def check_layering(tree, **_):

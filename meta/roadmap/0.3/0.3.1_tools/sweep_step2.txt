@@ -1,0 +1,14 @@
+# 0.3.1's omission sweep for step 2, block 2b -- one extended regular expression per
+# line, each read by `sweep.py` line by line AND across line breaks, case-insensitive.
+# Each is a fact step 2 moved: `check_purity`'s list and how it matches, the names it
+# held, what `check_host_isolation` reads, `HostClock`, the subcycle and what is next,
+# the plant count in words and digits, and the counts of decisions and questions.
+ban list|banned (name|form|builtin|call)
+mono_now.{0,40}environ.{0,40}read_file|read_file.{0,30}open.{0,30}write|six (names|banned)
+host_.{0,3}(symbol|prefix|mention)|names? a .?host_
+HostClock
+0\.3\.1
+(is|are|comes) next
+one hundred and (six|twelve)|\b(106|112)\b.{0,30}(plant|tree-check|violation)
+\b(180|184)\b.{0,20}decision|(eight|nine|ten) questions
+seen to fail

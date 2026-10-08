@@ -31,14 +31,16 @@ name, and its decision for the clocks records it and strikes Q-7.)*
 spellings, so a wide value no width is spelled for, a call's result, passes
 it. It is dormant and older than this cycle, and 0.3.1's planner decides
 whether a check that reads types rather than spellings is in scope, and when
-(`0.3.0.md` §7).
+(`0.3.0.md` §7). *(Decided at 0.3.1's planning, 2026-10-08: in scope, at
+0.3.1 — `0.3.1.md`'s PD-96, a second reading of the library's emission
+beside `check_int128_sites`, over the reader O-X9's scan is built on.)*
 
 ## Subcycles
 
 | # | Topic | Ends with |
 |---|---|---|
 | 0.3.0 | **The clocks** — `clock_gettime` through `sys`, the three readings — **[`0.3.0.md`](0.3.0.md)**, written at cycle 0.2's close, measured at `5fbaf4a`, and rehearsed from its blocks in its real position on 2026-10-07 and 2026-10-08 (its §8); it opens with the instrument the close handed on | a `Timestamp` from the machine, range-checked |
-| 0.3.1 | **`check_purity` goes live** — the dormant check from 0.0.3, turned on | the library's reproducibility claim, enforced |
+| 0.3.1 | **`check_purity` goes live** — the dormant check from 0.0.3, turned on — **[`0.3.1.md`](0.3.1.md)**: its ban list and `check_host_isolation`'s reviewed against the language at the pin and `src/host/`'s body, each seen to fail in a real module, and two readings of the library's emission beside the spelling checks, the calls (O-X9) and the wide values (O-X11) — planned at `5fbaf4a` and rehearsed from its blocks in its real position on 2026-10-08 (its §8) | the library's reproducibility claim, enforced |
 | 0.3.2 | **The system zone** — the four-step discovery, and what it reports | a program can ask, and is told which mechanism answered |
 | 0.3.3 | **The double** — the test host module, in `tests/` | every clock-dependent behaviour reproducible |
 | 0.3.4 | **Close** | `done/0.3/`, `0.4.0.md` written |
@@ -66,6 +68,14 @@ whether a check that reads types rather than spellings is in scope, and when
 - [ ] **seen to fail**: a deliberately planted `mono_now()` in `src/cal/` fails the build, by name
 - [ ] `check_host_isolation` likewise: a planted `host_now_utc()` call in `src/fmt/` fails
 - [ ] both checks' ban lists reviewed against what `src/` actually contains now, rather than what 0.0.3 guessed
+
+*(Four more, from 0.3.1's planning on 2026-10-08 — `0.3.1.md`: the two
+questions handed on, which share one reader of the library's emission, and
+the two ban lists' decisions. The four above keep their words.)*
+- [ ] **O-X9**: the call-edge scan — every call a function of `src/` outside `src/host/` makes, read from `npkc`'s emission of the umbrella and held to a reviewed allowlist (PD-95)
+- [ ] **O-X11**: the wide values — every integer wider than `i64` in that emission held to §5's sites, spelled or not (PD-96)
+- [ ] `check_purity`'s list: every builtin and prelude function at the pin that reaches past the program's own memory, matched as a call with an identifier boundary on its left (PD-97)
+- [ ] `check_host_isolation`'s: every name `src/host/` makes public, `HostClock` among them, beside the `host_` prefix (PD-98)
 
 ### 0.3.2 — the system zone
 - [ ] `SystemZone` and `ZoneSource` as `HOST.md` §4 defines them

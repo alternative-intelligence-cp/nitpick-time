@@ -1,0 +1,1159 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 6a7c3d9acba44209ea50d655ebaece0b3a1c360d..7c68737831c7bdfac2e13a196be14252504a67ab 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -172,7 +172,13 @@
+ # and since 0.3.0 a literal's width: a wide value no width is spelled for, a
+ # call's result multiplied in a function §5 does not mark, passes this run, and
+ # always has (`meta/OPEN_QUESTIONS.md` O-X11, dormant; found by 0.3.0's
+-# verification, 2026-10-08).
++# verification, 2026-10-08). AND SINCE CYCLE 0.3.1, WHAT IS EMITTED AS WELL:
++# every integer wider than `i64` in `npkc`'s emission of a function of the
++# umbrella stands where §5 marks, spelled or not, so that call's result is a
++# finding (TM-251, O-X11 answered); and no function of `src/` outside
++# `src/host/` reaches, in that emission, a runtime symbol outside a reviewed
++# allowlist -- the kernel, the clock, the environment, a descriptor -- whatever
++# name it reaches it through (TM-250, O-X9 answered).
+ #
+ # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
+ # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 1b7fba34594e8afed5ae76cf402823e7e32abd58..5798eb4d67b1b592df17c414796b0b6a2a519421 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -41,7 +41,8 @@ literals alone, which narrowed a constant in silence — is a finding outside
+ §5's sites (TM-246). *(What it reads is spellings: a wide value no width is
+ spelled for — a call's result — passes it, as it always has, and
+ `meta/OPEN_QUESTIONS.md` O-X11 holds that, dormant, for 0.3.1's planner — the
+-subcycle's verification, 2026-10-08.)* The self-check plants 95 tree-check
++subcycle's verification, 2026-10-08. Answered at cycle 0.3.1: `check_wide_types`
++reads the emission's types, TM-251.)* The self-check plants 95 tree-check
+ violations. A full invocation is **134 units green** at pin `5fbaf4a`.
+ 
+ **After cycle 0.2.4: cycle 0.2's close.** The cycle audit (ACCEPT, twenty-two
+@@ -640,20 +641,23 @@ here; "eight faults" was printed on every run for three cycles and only the
+ cycle Gate had it right — C3.)*
+ Before it, three of the harness's checks had been commissioned by hand and that
+ was three checks, not a runner. Then: the `parse`, `check`, `golden` and `sweep`
+-stages; `--quick`; and nine live tree checks — **seventeen today**
+-<!-- [[sweep: family_live=17]] -->: plus
++stages; `--quick`; and nine live tree checks — **nineteen today**
++<!-- [[sweep: family_live=19]] -->: plus
+ `check_exemptions_live` (0.0.5, TM-137), `check_denominators` and
+ `run_defect_corpus` (0.0.6, TM-141/TM-142), `check_expect_headers`, which
+ existed all along and **was never in the count** — the row `TESTING.md` V-14c's
+ "every check is commissioned" was false about, found by V-1a's own arithmetic
+ not closing — `check_literal_divisors` (0.1.1, TM-163), and
+ `check_check_registry`, `check_no_view_returns` and `check_int128_sites` (0.2.3a,
+-TM-227, TM-228, TM-230). *(It was FOURTEEN
++TM-227, TM-228, TM-230), and `check_call_edges` and `check_wide_types`, which
++read the library's emission (0.3.1, TM-250, TM-251). *(It was FOURTEEN
+ from cycle 0.1.0 to 0.1.0b — `check_civil_literal` joined — while this sentence
+ said thirteen; it was thirteen again after 0.1.0c retired that check (TM-158);
+-and it was fourteen from 0.1.1 to 0.2.3a. Re-derived from the run rather than
+-carried: the `[5/9]` line reads `14 live` — `checks.LIVE`'s thirteen and
+-`check_failsafe_arms` — and `run.py` drives the other three outside step 5.)*
++and it was fourteen from 0.1.1 to 0.2.3a, and seventeen from 0.2.3a to 0.3.1.
++Re-derived from the run rather than carried: the `[5/9]` line reads `14 live`
++— `checks.LIVE`'s thirteen and `check_failsafe_arms` — and `run.py` drives
++the other five outside step 5, two of them over the library's emission at
++step 7.)*
+ 
+ ## Before starting a session here
+ 
+@@ -851,7 +855,10 @@ and carries the cost table.
+   runtime's own and is in the allowlist by construction. The scan supports
+   B-2's "no C, ever" and nothing wider. **`check_purity` is SOURCE-level and is
+   the only thing here that answers "did this module touch the kernel"** — never
+-  cite a green symbol scan for it (B-2c, S-10b, RX-120).
++  cite a green symbol scan for it (B-2c, S-10b, RX-120). *(One of two since
++  cycle 0.3.1: `check_call_edges` reads the calls in the library's emission,
++  TM-250 — every call a function outside `src/host/` makes, through the
++  prelude, against a reviewed allowlist. Neither is the symbol scan.)*
+ - **The `parse` stage asks `npkc`, not the compiler's `tools/parse_check`**
+   (TM-123): those are `.npk` source files, and building one is building the
+   compiler from a tree ahead of our pin. It reads the diagnostic's code
+diff --git a/harness/README.md b/harness/README.md
+index 4769bfdd3193638c059ad2a0dba2c053a6bbf443..0d14719faff8caf46b4f82e7c15751a5b8c214e4 100644
+--- a/harness/README.md
++++ b/harness/README.md
+@@ -59,10 +59,17 @@ running unlisted since cycle 0.0.6)*:
+   a code named once for two sites and three times for two (TM-210). Case 6
+   (a generator differing by one line) is **pending until 0.5** and prints as
+   pending rather than passing.
+-- **Ninety-five planted violations across the tree checks since cycle 0.3.0**
+-  (ninety-two from cycle 0.2.4a, eighty-two from cycle 0.2.3a, forty-four from
+-  cycle 0.1.5's second half, forty after its first half, twenty-three before
+-  it; 0.3.0's three are `check_int128_sites`' wide literals, one in a function
++- **One hundred and six planted violations across the tree checks since cycle
++  0.3.1's first step** (ninety-five from cycle 0.3.0, ninety-two from cycle
++  0.2.4a, eighty-two from cycle 0.2.3a, forty-four from cycle 0.1.5's second
++  half, forty after its first half, twenty-three before it; 0.3.1's eleven
++  are `check_call_edges`' eight — a runtime symbol outside the allowlist
++  called directly and through the prelude, a call into `host`, inline
++  assembly, a call through a value, a declared function the emission lacks,
++  a stale row and the reader's own control — and `check_wide_types`' three,
++  a call's wide result, a wide module-level value and a generic's wide
++  instance, each plant an emission's text;
++  0.3.0's three are `check_int128_sites`' wide literals, one in a function
+   and one at module level, and `check_layering`'s `host` importing `fmt`
+   beside `host` importing `span`; 0.2.4a's ten are
+   `check_constants_named`'s six — a `core` number in `core` outside
+@@ -134,7 +141,9 @@ program at compiler `c970483`, both legs, and it is printed rather than hidden.
+ construction. The scan supports B-2's claim — no C, ever — and nothing wider.
+ **`check_purity` is a SOURCE-level check and is the only thing in this
+ repository that answers "did this module touch the kernel".** Do not cite one
+-for the other.
++for the other. *(One of two since cycle 0.3.1: `check_call_edges` reads the
++calls in the library's emission at step 7, TM-250 — the sentence said "the
++only thing" until then. Neither is the symbol scan.)*
+ 
+ **The `parse` stage asks `npkc`, not `tools/parse_check`** (TM-123). Those
+ frontend tools are `.npk` source files; building one is building the compiler,
+@@ -182,8 +191,8 @@ against the summary line rather than left to review.
+   in cycle 0.0 and both were found by reading, not by a gate — and a third
+   shipped with them, `bytes_take`'s answer, found at cycle 0.1.4b by the heap
+   instrument's COUNT (S-18f).
+-- **Not that the tree checks have anything to check.** Seventeen
+-  <!-- [[sweep: family_live=17]] --> are live and several report `0` over a
++- **Not that the tree checks have anything to check.** Nineteen
++  <!-- [[sweep: family_live=19]] --> are live and several report `0` over a
+   small denominator, which is the right answer and is why the denominator is
+   always printed (V-1b). Three <!-- [[sweep: family_pending=3]] --> print as
+   `PEND` with the cycle that turns them on. *(Fourteen were live from cycle
+@@ -191,7 +200,9 @@ against the summary line rather than left to review.
+   was true again after 0.1.0c retired that check, TM-158; cycle 0.1.1's
+   `check_literal_divisors`, TM-163, made fourteen; and cycle 0.2.3a's
+   `check_check_registry`, `check_no_view_returns` and `check_int128_sites`,
+-  TM-227, TM-228 and TM-230, made seventeen, and the four pending three.)*
++  TM-227, TM-228 and TM-230, made seventeen, and the four pending three; and
++  cycle 0.3.1's `check_call_edges` and `check_wide_types`, TM-250 and TM-251,
++  which `run.py` drives over the library's emission, nineteen.)*
+ - **Not that CI is green.** Until cycle 0.0.6 this repository had never pushed,
+   so the workflow had never run; the 0.0 close is its first.
+ 
+diff --git a/harness/checks.py b/harness/checks.py
+index b67027ab6b7eebd92ac424ba6f256dbb4c825885..fc7c423161c8f1ca495195ac1a483762e9cf7e61 100644
+--- a/harness/checks.py
++++ b/harness/checks.py
+@@ -37,6 +37,14 @@ WHAT check_purity IS, AND WHAT NOTHING ELSE CAN BE READ AS.
+   purity result is the failure mode this paragraph exists to prevent, and it is
+   stated again in `elf.py`, `harness/README.md`, `BUILD.md` B-2c and
+   `TESTING.md` §2 so that no reader meets one description without the other.
++
++  AND SINCE CYCLE 0.3.1 IT IS ONE OF TWO READINGS (TM-250, `OPEN_QUESTIONS.md`
++  O-X9). `check_call_edges` reads the CALLS in `npkc`'s emission of the
++  umbrella, so a call through a name no ban list knows -- a prelude function
++  that reads the clock -- is a finding there; `check_purity` reads the
++  source's spellings, which reach a generic function nobody instantiates,
++  where no emission does. The symbol scan still answers neither. The
++  paragraph above said "the ONLY thing" until then.
+ """
+ 
+ import os
+@@ -1302,6 +1310,10 @@ def check_purity(tree, **_):
+     "did this module touch the kernel", and a green symbol scan must never be
+     cited for it.
+ 
++    AND SINCE CYCLE 0.3.1 IT IS ONE OF TWO READINGS (TM-250): `check_call_edges`
++    reads the calls `npkc` emitted, and this check the spellings `src/` holds.
++    The paragraph above said "the only thing in the repository" until then.
++
+     WHAT IT CANNOT SEE, stated so nobody over-reads this one either: a syscall
+     reached through a name it does not know -- an alias, or a helper in a file
+     it is not scanning. The defence against that is `check_host_isolation` plus
+@@ -1371,6 +1383,388 @@ def check_host_isolation(tree, **_):
+     return Result("check_host_isolation", headline, problems)
+ 
+ 
++# ---------------------------------------------------------------------------
++# the library's EMISSION, read -- for `check_call_edges` and `check_wide_types`
++# ---------------------------------------------------------------------------
++
++# WHAT THE SOURCE DOES NOT SPELL, THE EMISSION HOLDS (cycle 0.3.1, TM-250 and
++# TM-251). The checks above read SPELLINGS, through `lexical.py`; the two below
++# read `npkc`'s own emission of the umbrella -- `build/ntime.ll`, written by
++# `run.py`'s step 7 -- so a call made through a name no ban list knows, and a
++# wide value no width is spelled for, are each seen where the compiler wrote
++# them. It is the emission BEFORE `opt`: `opt -O2` folds a call's wide product
++# and a literal one alike to a constant (the workbench `PLAYBOOK.md` §9). Read
++# as text, V-1k's third way: every `define`, its name and its body to the `}`
++# that ends it; every `declare`, which is a runtime symbol or an LLVM intrinsic
++# -- the emitter opens every module with the runtime's whole table, so a
++# `declare` says nothing about a use; and every global's initializer, which is
++# where a vtable names its functions.
++#
++# A FUNCTION OF A MODULE OF `src/` is named `npk.<module>.<name>` at the pin --
++# `npk.cal.weekday`, `npk.vec.vec_push<int64>` for a generic's instance,
++# `npk.cal.CivilDate:Ord.cmp` for a derived impl -- and a module's name is its
++# file's basename (B-14). The prelude's are `npk.prelude.*`, the drop glue's
++# `npk.drop.<n>` and `npk.vacant.<n>`. Measured at compiler `5fbaf4a`
++# (`meta/roadmap/0.3/0.3.1.md` §1): the umbrella's emission defines every
++# function `src/` declares but the nine generic ones of `src/core/vec.npk`,
++# which a module holds only where a caller instantiates them.
++EMISSION = "build/ntime.ll"
++_IR_NAME = r'@("[^"]+"|[A-Za-z0-9_.$]+)'
++_IR_DEFINE = re.compile(r"^define [^\n]*?" + _IR_NAME + r"\(.*?^}$", re.S | re.M)
++_IR_DECLARE = re.compile(r"^declare [^\n]*?" + _IR_NAME + r"\(", re.M)
++_IR_GLOBAL = re.compile(r"^" + _IR_NAME + r" = ([^\n]*)$", re.M)
++_IR_REF = re.compile(_IR_NAME)
++_IR_MODULE = re.compile(r"npk\.([A-Za-z_][A-Za-z0-9_]*)\.")
++# A call whose callee is a VALUE -- `call { i64, i32 } %t3()` -- and inline
++# assembly, `call i64 asm sideeffect "..."`: the two calls a reading of names
++# cannot follow. A named type in a call's result, `{ %"npk.prelude.Duration",
++# i32 }`, is followed by `,` and never by `(`. Every instruction that calls is
++# read -- `call`, `invoke` and `callbr` -- though `npkc` emits only the first at
++# the pin.
++_IR_CALL = r"\b(?:call|invoke|callbr)\b"
++_IR_INDIRECT = re.compile(_IR_CALL + r'[^\n]*?%(?:"[^"]+"|[A-Za-z0-9_.$]+)\(')
++_IR_ASM = re.compile(_IR_CALL + r'[^@\n]*?\basm\s+(?:[a-z]+\s+)*"')
++
++
++def read_emission(path):
++    """`(defines, declares, globals)` from an emitted `.ll`: `{name: body}`,
++    `{name}` and `{name: initializer}` -- or `None` when there is no file."""
++    if not os.path.isfile(path):
++        return None
++    with open(path, encoding="utf-8", errors="replace") as fh:
++        ir = fh.read()
++    defines = {m.group(1).strip('"'): m.group(0) for m in _IR_DEFINE.finditer(ir)}
++    declares = {m.group(1).strip('"') for m in _IR_DECLARE.finditer(ir)}
++    globs = {m.group(1).strip('"'): m.group(2) for m in _IR_GLOBAL.finditer(ir)}
++    return defines, declares, globs
++
++
++def _ir_refs(name, text):
++    """Every symbol `text` names, but `name` itself."""
++    return {r.strip('"') for r in _IR_REF.findall(text)} - {name}
++
++
++def _ir_module(name):
++    m = _IR_MODULE.match(name)
++    return m.group(1) if m else None
++
++
++def _ir_source_name(name):
++    """`npk.span.timestamp_since` -> `timestamp_since`; a generic's instance,
++    `npk.vec.vec_push<int128>`, -> `vec_push`."""
++    return name[len("npk.%s." % _ir_module(name)):].split("<", 1)[0]
++
++
++def _src_modules(tree):
++    """`(modules, host)`: the module names of `src/`'s files, and of
++    `src/host/`'s -- each its file's basename (B-14)."""
++    files = src_files(tree)
++    mods = {os.path.basename(rel)[:-len(".npk")] for rel in files}
++    host = {os.path.basename(rel)[:-len(".npk")] for rel in files
++            if rel.startswith(HOST_DIR)}
++    return mods, host
++
++
++def _no_emission(name, path):
++    return Result(name, "no emission at %s" % path, [
++        "%s read no emission at %s. The library's emission is written by "
++        "`run.py`'s step 7, and a check that read nothing has checked nothing "
++        "(V-1b)." % (name, path)])
++
++
++# ---------------------------------------------------------------------------
++# check_call_edges -- `OPEN_QUESTIONS.md` O-X9, answered (TM-250)
++# ---------------------------------------------------------------------------
++
++# THE SECOND READING OF S-7, FROM THE EMISSION. `check_purity` reads SPELLINGS
++# and was widened at cycle 0.1.5 for two it missed -- `mono_now ()`, and a call
++# after a `//` inside a `/* */`; this reads the CALLS. From every function the
++# emission defines in a module of `src/` outside `src/host/`, every symbol its
++# body names is followed -- through the prelude, the drop glue and every
++# global, never through another function of `src/`, which is read as a start
++# of its own -- and each runtime symbol reached is held to the list below.
++#
++# IT IS AN ALLOW-LIST, so a symbol the runtime gains at a re-pin is a finding
++# until a row reviews it, and a row naming a symbol the emission no longer
++# declares is a finding too (V-1c). Its rows are what S-7 and S-18 permit a
++# pure function: an allocation that depends on its inputs alone, the string
++# floor, which makes its answer from its arguments, the error route the
++# language imposes (D-142's trap and the origin chain an error carries), and
++# LLVM's arithmetic, which is instructions. Everything else the runtime offers
++# -- its syscall trampoline, its clock, the environment, descriptors,
++# processes, the executor, executable memory, arenas, the allocator's live
++# count and the in-flight error's chain -- is `src/host/`'s, or no part of
++# `ntime`'s (S-18, S-20, S-21).
++CALL_EDGE_ALLOW = {
++    # the allocator, at S-18's places: a `string` returned, `Vec`'s block and
++    # `Bytes`' buffer; `npk_alloc_managed` is the prelude's `List<T>`'s
++    "npk_alloc": "allocation", "npk_aalloc": "allocation",
++    "npk_calloc": "allocation", "npk_ralloc": "allocation",
++    "npk_dalloc": "allocation", "npk_alloc_managed": "allocation",
++    "npk_buffer_new": "allocation", "memcpy": "allocation",
++    "memmove": "allocation", "memset": "allocation",
++    # the string floor: each answer made from its arguments alone
++    "npk_string_concat": "string", "npk_int_to_string": "string",
++    "npk_string_slice": "string", "npk_string_equals": "string",
++    "npk_string_from_bytes": "string", "npk_to_cstring": "string",
++    # the error route
++    "npk_trap": "error", "npk_raise": "error",
++    "npk_chain_push": "error", "npk_chain_reset": "error",
++}
++# LLVM's arithmetic, by family. An intrinsic outside these -- a cycle
++# counter's, a random number's -- is a finding like any symbol.
++CALL_EDGE_INTRINSICS = (r"llvm\.[su](?:add|sub|mul)\.with\.overflow\.i[0-9]+",
++                        r"llvm\.assume", r"llvm\.sqrt\.f(?:32|64)")
++_INTRINSIC = re.compile("(?:%s)$" % "|".join(CALL_EDGE_INTRINSICS))
++
++
++def _allowed(sym):
++    return sym in CALL_EDGE_ALLOW or bool(_INTRINSIC.match(sym))
++
++
++def _path(via, name):
++    out = [name]
++    while via[out[-1]] is not None:
++        out.append(via[out[-1]])
++    return " -> ".join("`%s`" % n for n in reversed(out))
++
++
++def _reach(start, defines, declares, globs, mods):
++    """`(symbols, src, odd)` reached from `start`, each with its shortest path:
++    the runtime symbols, the functions of `src/` it names, and the bodies it
++    passes through that hold an indirect call or inline assembly. The walk
++    goes through the prelude, the glue and every global, and stops at a
++    function of `src/`, which is a start of its own."""
++    symbols, src, odd = {}, {}, []
++    via = {start: None}
++    todo = [start]
++    while todo:
++        x = todo.pop(0)
++        body = defines.get(x)
++        if body is not None:
++            if _IR_ASM.search(body):
++                odd.append((x, "inline assembly"))
++            elif _IR_INDIRECT.search(body):
++                odd.append((x, "a call through a value"))
++            refs = _ir_refs(x, body)
++        else:
++            refs = _ir_refs(x, globs.get(x, ""))
++        for r in sorted(refs):
++            if r in via:
++                continue
++            via[r] = x
++            if r in declares:
++                symbols[r] = _path(via, r)
++            elif _ir_module(r) in mods:
++                src[r] = _path(via, r)
++            elif r in defines or r in globs:
++                todo.append(r)
++    return symbols, src, odd
++
++
++def _declared_functions(tree):
++    """`[(rel, module, name, generic)]` for every `func` `src/` declares."""
++    out, codes = [], {}
++    for f in functions(tree):
++        rel, name, start = f[0], f[2], f[5]
++        if rel not in codes:
++            codes[rel] = blank_code(lexical.read(os.path.join(tree, rel)))
++        generic = re.match(r"func%s*:%s*%s%s*<" % (_W, _W, re.escape(name), _W),
++                           codes[rel][start:]) is not None
++        out.append((rel, os.path.basename(rel)[:-len(".npk")], name, generic))
++    return out
++
++
++def check_call_edges(tree, emission=None, **_):
++    """No function of `src/` outside `src/host/` reaches, in `npkc`'s emission,
++    a runtime symbol the reviewed allowlist does not hold, a function of
++    `src/host/`, a call through a value, or inline assembly (S-7, H-2, TM-250).
++
++    WHAT IT READS: the CALLS the compiler emitted for the umbrella, before
++    `opt` -- every function of `src/` the umbrella reaches, and the run holds
++    that to every function `src/` declares, so a module the umbrella stops
++    reaching, or a re-pin that names functions otherwise, is a finding here
++    and not a smaller denominator. A call is direct, and followed; or through
++    a value, or inline assembly, and refused, since nobody can read what it
++    calls. WHAT IT CANNOT READ: a generic function nobody instantiates in the
++    umbrella -- `src/core/vec.npk`'s nine -- which an emission holds only
++    where a caller instantiates it, and which `check_purity` reads as spelled;
++    and what an allowed symbol does inside the runtime, which is what its
++    row's review says. And it reads calls: a read of memory through an address
++    made from an integer (`#wild_ptr`, which no file of `src/` writes) calls
++    nothing, and is not this check's question.
++
++    AND A POSITIVE CONTROL ON EVERY RUN: where the emission defines a function
++    of `src/host/`, one of them reaches a symbol outside the allowlist --
++    H-1's clocks read the kernel -- or this reader is not reading the calls."""
++    path = emission or os.path.join(tree, EMISSION)
++    got = read_emission(path)
++    if got is None:
++        return _no_emission("check_call_edges", path)
++    defines, declares, globs = got
++    mods, host = _src_modules(tree)
++    fns = sorted(n for n in defines if _ir_module(n) in mods)
++    starts = [n for n in fns if _ir_module(n) not in host]
++    problems, reached = [], set()
++    for n in starts:
++        symbols, src, odd = _reach(n, defines, declares, globs, mods)
++        for sym in sorted(symbols):
++            reached.add(sym)
++            if not _allowed(sym):
++                problems.append(
++                    "`%s` reaches `%s` outside `src/host/`, and the reviewed "
++                    "allowlist does not hold it: %s. Every function of `ntime` "
++                    "outside `src/host/` is a pure function of its arguments "
++                    "(S-7, TM-018). If `%s` touches the kernel, the clock, the "
++                    "environment or a descriptor, the call belongs in "
++                    "`src/host/`; if it only allocates from its inputs, review "
++                    "it and give it a row of `CALL_EDGE_ALLOW`, with its "
++                    "reason, in the same commit." % (n, sym, symbols[sym], sym))
++        for f in sorted(src):
++            if _ir_module(f) in host:
++                problems.append(
++                    "`%s` calls into `src/host/`: %s. Nothing outside "
++                    "`src/host/` calls a function of `host` (HOST.md H-2, "
++                    "B-17): a function that needs \"now\" takes it as a "
++                    "parameter (S-9)." % (n, src[f]))
++        for where, what in odd:
++            problems.append(
++                "`%s` holds %s%s, and nobody can read what it calls. A "
++                "function of `ntime` outside `src/host/` takes no callback (a "
++                "layout is data, not a callback: SAFETY.md §1, D-018) and "
++                "writes no assembly, so S-7's claim is about every call it "
++                "makes; call the function by its name."
++                % (n, what, "" if where == n
++                   else " (in `%s`, which it reaches)" % where))
++    host_reach = set()
++    for n in fns:
++        if _ir_module(n) in host:
++            symbols, _src, _odd = _reach(n, defines, declares, globs, mods)
++            host_reach |= {s for s in symbols if not _allowed(s)}
++    if any(_ir_module(n) in host for n in fns) and not host_reach:
++        problems.append(
++            "check_call_edges read the emission's `src/host/` and found it "
++            "reaching nothing outside the allowlist. H-1's clocks read the "
++            "kernel, so this reader is not reading the emission's calls, and "
++            "its silence above is evidence of nothing.")
++    for sym in sorted(CALL_EDGE_ALLOW):
++        if sym not in declares:
++            problems.append(
++                "`CALL_EDGE_ALLOW` holds `%s`, which the emission does not "
++                "declare: a row that outlived its symbol (V-1c). Remove it, or "
++                "name the symbol the pinned runtime calls it now." % sym)
++    for pat in CALL_EDGE_INTRINSICS:
++        if not any(re.match("(?:%s)$" % pat, d) for d in declares):
++            problems.append(
++                "`CALL_EDGE_INTRINSICS` holds `%s`, which matches nothing the "
++                "emission declares: a row that outlived its family (V-1c)."
++                % pat)
++    declared = _declared_functions(tree)
++    emitted = {(_ir_module(n), n[len("npk.%s." % _ir_module(n)):]) for n in fns}
++    plain = [d for d in declared if not d[3]]
++    for rel, mod, name, _generic in plain:
++        if (mod, name) not in emitted:
++            problems.append(
++                "%s declares `%s`, and the emission defines no `npk.%s.%s`: "
++                "the umbrella does not reach it, or the pinned compiler names "
++                "its functions otherwise. Either way this reading has not read "
++                "it, and a function no reading reaches is one the purity claim "
++                "says nothing about." % (rel, name, mod, name))
++    outside = sorted(s for s in reached if not _allowed(s))
++    headline = ("%d function(s) of src/'s modules in the emission, %d outside "
++                "src/host/, reaching %d runtime symbol(s), %d outside the "
++                "reviewed allowlist; src/host/ reaches %s; %d of %d non-generic "
++                "function(s) src/ declares in it, %d generic read by spelling "
++                "alone"
++                % (len(fns), len(starts), len(reached), len(outside),
++                   ", ".join(sorted(host_reach)) or "nothing outside it",
++                   sum(1 for d in plain if (d[1], d[2]) in emitted), len(plain),
++                   len(declared) - len(plain)))
++    return Result("check_call_edges", headline, problems)
++
++
++# ---------------------------------------------------------------------------
++# check_wide_types -- `OPEN_QUESTIONS.md` O-X11, answered (TM-251)
++# ---------------------------------------------------------------------------
++
++# THE SECOND READING OF N-20, FROM THE SAME EMISSION. `check_int128_sites`
++# reads a wide type's name and a literal's width, so a wide value no width is
++# spelled for passes it -- a call's result: in a function §5 does not mark,
++# `((raw wide()) * (raw wide())) =>! int64`, `wide` a marked `int256()`,
++# multiplies in `int256` and spells neither (O-X11, measured at cycle 0.3.0's
++# verification). The emission spells every type: `npkc` writes that product
++# as `llvm.smul.with.overflow.i256` of the two calls' results. So this reads
++# every integer type wider than `i64` in each function of a module of `src/`
++# the emission defines -- a value, an operand, a parameter, a result -- and
++# holds it to the functions §5 marks, read by `int128_sites` as
++# `check_int128_sites` reads them; and every global of `src/`'s modules, where
++# a wide value is one nobody's obligation names.
++#
++# BESIDE THE SPELLING CHECK, NEVER INSTEAD OF IT (TM-246's reason): the
++# emission is a claim about the lowering, which a later `npkc` may change -- a
++# literal product folded at emission would vanish from here and stay spelled
++# there. What this one cannot read is `check_call_edges`' limit: a generic
++# function nobody instantiates in the umbrella. And a mark that outlived its
++# reason is the spelling check's to fail; here a marked function the emission
++# defines with no wide type is named in the headline.
++_IR_WIDE = re.compile(r"(?<![A-Za-z0-9_.%@$\"])i([0-9]+)(?![A-Za-z0-9_])")
++
++
++def _ir_widths(text):
++    """The integer widths past 64 an IR text holds, sorted."""
++    return sorted({int(w) for w in _IR_WIDE.findall(text) if int(w) > 64})
++
++
++def check_wide_types(tree, emission=None, **_):
++    """Every integer type wider than `i64` in `npkc`'s emission of a function
++    of `src/` stands in a function `SPAN_MODEL.md` §5 marks, and in no global
++    of `src/`'s modules -- N-20's wide values, spelled or not (TM-251)."""
++    path = emission or os.path.join(tree, EMISSION)
++    got = read_emission(path)
++    if got is None:
++        return _no_emission("check_wide_types", path)
++    defines, _declares, globs = got
++    sites, problems = int128_sites(tree)
++    problems = list(problems)
++    mods, _host = _src_modules(tree)
++    fns = sorted(n for n in defines if _ir_module(n) in mods)
++    holders = set()
++    for n in fns:
++        widths = _ir_widths(defines[n])
++        if not widths:
++            continue
++        name = _ir_source_name(n)
++        holders.add(name)
++        if name not in sites:
++            problems.append(
++                "`%s` holds %s in npkc's emission, and §5's table marks no "
++                "`int128` site in `%s` (SPAN_MODEL.md N-20). A wide value "
++                "nobody reasoned about is the thing N-20 forbids, spelled or "
++                "not -- a call's result is wide with no width written: compute "
++                "in `int64` with its own range check, or mark the row -- with "
++                "its answer -- in the same commit."
++                % (n, ", ".join("`i%d`" % w for w in widths), name))
++    for g in sorted(globs):
++        if _ir_module(g) in mods and _ir_widths(globs[g]):
++            problems.append(
++                "`%s` is a module-level value of %s in npkc's emission: a "
++                "wide value nobody's obligation names (N-20). Move it into "
++                "the function that needs it, and mark that function's row."
++                % (g, ", ".join("`i%d`" % w for w in _ir_widths(globs[g]))))
++    emitted = {_ir_source_name(n) for n in fns}
++    quiet = sorted(s for s in sites if s in emitted and s not in holders)
++    absent = sorted(s for s in sites if s not in emitted)
++    headline = ("%d of %d function(s) of src/'s modules in the emission hold an "
++                "integer wider than i64%s; %d site(s) §5 marks, %d not in the "
++                "emission%s%s"
++                % (len(holders), len(fns),
++                   " (" + ", ".join(sorted(holders)) + ")" if holders else "",
++                   len(sites), len(absent),
++                   " (" + ", ".join(absent) + ")" if absent else "",
++                   "; marked and holding none: " + ", ".join(quiet) if quiet else ""))
++    return Result("check_wide_types", headline, problems)
++
++
+ # ---------------------------------------------------------------------------
+ # check_specs_current -- REPORTS, DOES NOT FAIL
+ # ---------------------------------------------------------------------------
+@@ -2116,7 +2510,12 @@ _SITE_NAME = re.compile(r"`([A-Za-z_][A-Za-z0-9_]*)")
+ # 0.2.4a (measured at the subcycle's verification, 2026-10-08). No function in
+ # `src/` returns or takes a wide type, or calls one that returns one, so the
+ # hole is dormant, and `meta/OPEN_QUESTIONS.md` O-X11 holds it. (Until then
+-# this paragraph ended "so the literal was the whole gap".)
++# this paragraph ended "so the literal was the whole gap".) SINCE CYCLE
++# 0.3.1 IT IS SEEN, by a second reading: `check_wide_types` reads every type
++# `npkc` emitted for a function of `src/`, so that product is a finding there
++# (TM-251, O-X11 answered). This check stays, beside it: the emission is a
++# claim about the lowering, and a literal product a later `npkc` folded at
++# emission would be spelled here still.
+ # The width is read off `literals`' tokens, the reader `check_constants_named`
+ # trusts (TM-231), so a width in a comment, a string or a character literal is
+ # nothing, as it is to the compiler; and `bytes_put_int`'s `0i128` is a hit in
+@@ -2193,7 +2592,8 @@ def check_int128_sites(tree, **_):
+     """`int128` -- and every integer wider than `int64`, a literal of one of
+     those widths included -- SPELLED in `src/` at exactly the sites
+     `SPAN_MODEL.md` §5 marks. A wide value no width is spelled for -- a call's
+-    result -- is not seen (O-X11)."""
++    result -- is not seen here, and `check_wide_types` reads it from the
++    emission (O-X11, TM-251)."""
+     sites, problems = int128_sites(tree)
+     problems = list(problems)
+     files = src_files(tree)
+diff --git a/harness/elf.py b/harness/elf.py
+index 01b231fe6497bba824b59690caae1c0c20c9efad..466df0eb0cf25d7e6a8f305d892d12f148eb6a9b 100644
+--- a/harness/elf.py
++++ b/harness/elf.py
+@@ -32,7 +32,9 @@ WHAT THE SCAN CAN AND CANNOT SEE -- READ THIS BEFORE CITING IT AS A GUARANTEE.
+   PURITY IS A DIFFERENT CHECK: `check_purity` (`TESTING.md` §2, `SAFETY.md`
+   S-10) is a SOURCE-level ban list over `src/` outside `src/host/`, and it is
+   the only thing that answers "did this module touch the kernel". Do not read a
+-  green symbol scan as a purity result.
++  green symbol scan as a purity result. (One of two since cycle 0.3.1:
++  `checks.check_call_edges` reads the calls in the library's emission,
++  TM-250. Neither is this scan.)
+ 
+ WHERE THE ALLOWLIST COMES FROM, AND WHY IT IS NOT WHAT THE PLAN SAID.
+ 
+diff --git a/harness/run.py b/harness/run.py
+index 5196c9c3cb25637b2426eb3ce3089dec199a494b..4b90aaace232fb1a2a396478fc35798fb7ac52db 100644
+--- a/harness/run.py
++++ b/harness/run.py
+@@ -16,7 +16,10 @@ WHAT A GREEN RUN HERE IS, AND IS NOT.
+   cycle 0.2.3a added `check_check_registry`, `check_no_view_returns` and
+   `check_int128_sites`, TM-227, TM-228 and TM-230; eight until 0.1.1 added
+   `check_literal_divisors`, TM-163), and `check_specs_current` beside them,
+-  which reports; the library emitted, optimised,
++  which reports; the library emitted -- and since cycle 0.3.1 its emission
++  read for every call a function of `src/` outside `src/host/` makes and
++  every wide value a function holds, by `check_call_edges` and
++  `check_wide_types` (TM-250, TM-251) -- optimised,
+   assembled and scanned; the IR proved identical from two working directories;
+   and every test file held to its own header at -O0 and again under `opt -O2`.
+ 
+@@ -24,6 +27,8 @@ WHAT A GREEN RUN HERE IS, AND IS NOT.
+   CANNOT FLAG A SYSCALL -- `npk_sys6` is the runtime's own and is in the
+   allowlist by construction (`elf.py`, B-2c, TM-118, TM-153, RX-120). `check_purity` is
+   a SOURCE-level check and is the only thing that answers that question.
++  (One of two since cycle 0.3.1: `check_call_edges` reads the calls in the
++  library's emission, TM-250. Neither is the symbol scan.)
+ 
+   IT IS NOT evidence that the WHOLE library works. `src/core/` is real code
+   since cycle 0.0.4 -- `Vec<T>`, `Bytes` and fifteen named constants,
+@@ -724,6 +729,20 @@ def run_parse(rep, root, bld):
+                  % (total, len(files)))
+ 
+ 
++def _report_check(rep, res):
++    """A tree check's verdict, printed as step 5 prints one."""
++    if res.problems:
++        rep.fail(res.name, res.headline)
++        for p in res.problems:
++            rep.note("")
++            for line in str(p).rstrip().splitlines():
++                rep.note(line)
++    else:
++        rep.say("  ok    %-24s %s" % (res.name, res.headline))
++    for r in res.reports:
++        rep.note("report: %s" % r)
++
++
+ # ---------------------------------------------------------------------------
+ # 7. the library
+ # ---------------------------------------------------------------------------
+@@ -736,6 +755,13 @@ def build_library(rep, root, bld):
+     step asserts is that the library's entry point emits, survives `opt -O2`,
+     assembles at both optimisation levels, and needs no symbol the runtime does
+     not define.
++
++    AND SINCE CYCLE 0.3.1 ITS EMISSION IS READ, before `opt` (TM-250, TM-251):
++    `check_call_edges` for every call a function of `src/` outside
++    `src/host/` makes, and `check_wide_types` for every integer wider than
++    `i64` a function holds -- what the source does not spell, the emission
++    holds. Each is a tree check over this step's own output, and reports as
++    step 5's do.
+     """
+     entry = bld.manifest["build"]["entry"]
+     reached = build_mod.reachable_sources(os.path.join(root, entry))
+@@ -745,6 +771,8 @@ def build_library(rep, root, bld):
+     try:
+         bld.emit(entry, ll)
+         rep.say("  ok    npkc            %9d B of IR" % os.path.getsize(ll))
++        _report_check(rep, checks_mod.check_call_edges(root, emission=ll))
++        _report_check(rep, checks_mod.check_wide_types(root, emission=ll))
+         obj = os.path.join(bld.out_dir, "ntime.o")
+         bld.assemble(ll, obj)
+         bld.scan(obj)
+diff --git a/harness/selfcheck.py b/harness/selfcheck.py
+index 2ce09f35bec7de9ee25fcc8121d62b2fa61844df..2c58724521092382a0acfafbaf4ebbbf0419a798 100644
+--- a/harness/selfcheck.py
++++ b/harness/selfcheck.py
+@@ -922,6 +922,38 @@ def _loop(hi):
+             "    pass last;\n};\n" % hi)
+ 
+ 
++# THE EMISSION'S PLANTS (cycle 0.3.1, TM-250 and TM-251): `build/ntime.ll` as
++# text, never compiled. `_ir` declares every symbol `CALL_EDGE_ALLOW` holds
++# and one intrinsic of each family it allows -- the emitter declares the
++# runtime's whole table in every module, so a plant without them would read
++# every row as stale -- then the two symbols the plants reach outside it,
++# and the functions and globals given.
++def _ir(*parts, omit=()):
++    decl = "".join("declare ptr @%s()\n" % s
++                   for s in sorted(checks_mod.CALL_EDGE_ALLOW) if s not in omit)
++    decl += ("declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64)\n"
++             "declare void @llvm.assume(i1)\n"
++             "declare double @llvm.sqrt.f64(double)\n"
++             "declare i64 @npk_sys6(i64, i64, i64, i64, i64, i64, i64)\n"
++             "declare i64 @npk_mono_now()\n")
++    return ("build/ntime.ll", decl + "".join(parts))
++
++
++def _fn(name, body):
++    return ('define { i64, i32 } @"%s"() {\nentry:\n%s'
++            "  ret { i64, i32 } zeroinitializer\n}\n" % (name, body))
++
++
++_CALL = "  %%r = call %s\n"
++_HOST_FN = _fn("npk.host.h", _CALL % ("i64 @npk_sys6(i64 228, i64 0, i64 0, "
++                                     "i64 0, i64 0, i64 0, i64 0)"))
++_WIDE_FN = _fn("npk.span.wide", "  %w = add i256 7, 0\n")
++_G_FN = _fn("npk.span.g",
++            "  %a = call { i256, i32 } @\"npk.span.wide\"()\n"
++            "  %p = call { i256, i1 } @llvm.smul.with.overflow.i256(i256 %x, "
++            "i256 %y)\n  %n = trunc i256 %v to i64\n")
++
++
+ # Each row: the check, the file that violates it, the file that does not, and a
+ # fragment the finding must name. The CLEAN column is not decoration -- several
+ # of these checks are one predicate away from failing this repository's own
+@@ -1538,6 +1570,90 @@ PLANTED = [
+     # here: `0x15180` is `NITPICK-LEX-003`, "digit is not valid for this base".
+     (checks_mod.check_constants_named, _div("0x15180"), _div("0FFhex"),
+      "a literal this check does not read"),
++    # ---- CYCLE 0.3.1: THE EMISSION, READ (TM-250, TM-251). Each row plants
++    # `build/ntime.ll` -- text the two checks read as `npkc`'s output, never
++    # compiled -- built by `_ir`, which declares every symbol the allowlist
++    # holds, so a plant is red for its own reason and no row reads as stale.
++    #
++    # A RUNTIME SYMBOL OUTSIDE THE ALLOWLIST, called directly: the syscall
++    # trampoline, beside the allocator.
++    (checks_mod.check_call_edges,
++     _ir(_fn("npk.cal.f", _CALL % "i64 @npk_sys6(i64 39, i64 0, i64 0, i64 0,"
++                                  " i64 0, i64 0, i64 0)")),
++     _ir(_fn("npk.cal.f", _CALL % "ptr @npk_alloc(i64 8)")),
++     "reaches `npk_sys6` outside `src/host/`"),
++    # THROUGH THE PRELUDE -- the shape no ban list of names reads: `cal` calls a
++    # prelude function, which reads the clock. The control's prelude function
++    # traps, which is the error route.
++    (checks_mod.check_call_edges,
++     _ir(_fn("npk.cal.f", _CALL % '{ i64, i32 } @"npk.prelude.p"()'),
++         _fn("npk.prelude.p", _CALL % "i64 @npk_mono_now()")),
++     _ir(_fn("npk.cal.f", _CALL % '{ i64, i32 } @"npk.prelude.p"()'),
++         _fn("npk.prelude.p", _CALL % "void @npk_trap(i32 -4097)")),
++     "`npk.cal.f` -> `npk.prelude.p` -> `npk_mono_now`"),
++    # INTO `src/host/` (H-2) -- beside `host`'s own call of the kernel, which is
++    # not a finding: `host` is the one module that may.
++    (checks_mod.check_call_edges,
++     _ir(_fn("npk.cal.f", _CALL % '{ i64, i32 } @"npk.host.h"()'), _HOST_FN),
++     _ir(_fn("npk.cal.f", _CALL % "ptr @npk_alloc(i64 8)"), _HOST_FN),
++     "calls into `src/host/`"),
++    # INLINE ASSEMBLY, which no name reads -- beside the same function adding.
++    (checks_mod.check_call_edges,
++     _ir(_fn("npk.cal.f", '  %r = call i64 asm sideeffect "syscall", "=r"()\n')),
++     _ir(_fn("npk.cal.f", "  %r = add i64 1, 2\n")),
++     "holds inline assembly"),
++    # A CALL THROUGH A VALUE, whose callee nobody can name -- beside the same
++    # call made by name.
++    (checks_mod.check_call_edges,
++     _ir(_fn("npk.cal.f", "  %fp = load ptr, ptr %slot\n"
++                          + _CALL % "{ i64, i32 } %fp()"),
++         _fn("npk.cal.g", "")),
++     _ir(_fn("npk.cal.f", _CALL % '{ i64, i32 } @"npk.cal.g"()'),
++         _fn("npk.cal.g", "")),
++     "holds a call through a value"),
++    # A FUNCTION `src/` DECLARES THAT THE EMISSION DOES NOT HOLD: unread, and
++    # not a smaller denominator.
++    (checks_mod.check_call_edges,
++     [("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() never fails { pass 1i64; };\n"),
++      _ir(_fn("npk.cal.g", ""))],
++     [("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() never fails { pass 1i64; };\n"),
++      _ir(_fn("npk.cal.f", ""))],
++     "declares `f`, and the emission defines no `npk.cal.f`"),
++    # A ROW OF THE ALLOWLIST THE EMISSION DOES NOT DECLARE -- a row that
++    # outlived its symbol, which V-1c's both directions fail.
++    (checks_mod.check_call_edges,
++     _ir(_fn("npk.cal.f", ""), omit=("npk_string_slice",)),
++     _ir(_fn("npk.cal.f", "")),
++     "`CALL_EDGE_ALLOW` holds `npk_string_slice`"),
++    # THE POSITIVE CONTROL: a `src/host/` that reaches nothing outside the
++    # allowlist is a reader that is not reading -- beside one that reads the
++    # kernel.
++    (checks_mod.check_call_edges,
++     _ir(_fn("npk.host.h", _CALL % "ptr @npk_alloc(i64 8)")),
++     _ir(_HOST_FN),
++     "this reader is not reading the emission's calls"),
++    # A WIDE VALUE NO WIDTH IS SPELLED FOR (O-X11, TM-251): `g` multiplies
++    # two calls' `i256` results, as `((raw wide()) * (raw wide())) =>! int64`
++    # emits, and §5 marks `wide` alone -- beside §5 marking `g` too.
++    (checks_mod.check_wide_types,
++     [_span5((("`wide`", "**yes**"),)), _ir(_WIDE_FN, _G_FN)],
++     [_span5((("`wide`", "**yes**"), ("`g`", "**yes**"))), _ir(_WIDE_FN, _G_FN)],
++     "`npk.span.g` holds `i256`"),
++    # A WIDE MODULE-LEVEL VALUE, beside the same constant in `i64`.
++    (checks_mod.check_wide_types,
++     [_span5((("`wide`", "**yes**"),)),
++      _ir(_WIDE_FN, '@"npk.span.K" = internal constant i128 7\n')],
++     [_span5((("`wide`", "**yes**"),)),
++      _ir(_WIDE_FN, '@"npk.span.K" = internal constant i64 7\n')],
++     "`npk.span.K` is a module-level value of `i128`"),
++    # A GENERIC'S WIDE INSTANCE, named by its source name -- beside the
++    # instance in `i64`.
++    (checks_mod.check_wide_types,
++     [_span5((("`wide`", "**yes**"),)), ("src/core/vec.npk", "mod:vec;\n"),
++      _ir(_fn("npk.vec.vec_push<int128>", "  %s = add i128 %a, 1\n"))],
++     [_span5((("`wide`", "**yes**"),)), ("src/core/vec.npk", "mod:vec;\n"),
++      _ir(_fn("npk.vec.vec_push<int64>", "  %s = add i64 %a, 1\n"))],
++     "§5's table marks no `int128` site in `vec_push`"),
+ ]
+ 
+ 
+diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
+index 9649169f3f05deb0b56f6a42b253016c0e21c535..d7b6747988bdefdcf561857fcc5d5678a62af526 100644
+--- a/meta/DECISIONS.md
++++ b/meta/DECISIONS.md
+@@ -1585,6 +1585,11 @@ missing feature rather than a defect.
+   a harness that cannot run until they land is not a harness.
+ 
+ ### TM-118 — the runtime allowlist is derived from `npkrt.o`, not from `npkrt.ll`, and the scan cannot see a syscall
++> **SUPERSEDED IN PART by TM-250 (@@DATE@@, cycle 0.3.1)**: `check_purity` is
++> one of TWO readings that answer "did this module touch the kernel" —
++> `check_call_edges` reads the calls in `npkc`'s emission (`OPEN_QUESTIONS.md`
++> O-X9, answered). The symbol scan still answers neither.
++>
+ > **SUPERSEDED IN PART by TM-153 (2026-09-25).** Its "what the scan cannot
+ > see" paragraph says a module issuing a raw syscall has an *identical*
+ > undefined set to one that does not, 29 symbols each way. At compiler
+@@ -1997,6 +2002,11 @@ what it is.
+   that depends on nobody reaching for it under deadline is not a rule.
+ 
+ ### TM-126 — a tree check is COMMISSIONED, not merely written; `check_purity` and `check_host_isolation` go live now
++> **SUPERSEDED IN PART by TM-250 (@@DATE@@, cycle 0.3.1)**: `check_purity` is
++> one of TWO readings that answer "did this module touch the kernel" —
++> `check_call_edges` reads the calls in `npkc`'s emission (`OPEN_QUESTIONS.md`
++> O-X9, answered). The symbol scan still answers neither.
++>
+ > **SUPERSEDED IN PART by TM-153 (2026-09-25).** Its closing evidence — *"an
+ > identical undefined set … 29 symbols each way, diff empty, and reproduced
+ > here"* — is false at compiler `c3bdae2` (5 and 8) and was at `aaffb87` (2 and
+@@ -3790,6 +3800,11 @@ was a test's encoding, not the code; leaving 107 — a verdict that cannot tell
+ trap from the answer is not a verdict.
+ 
+ ### TM-153 — the undefined-symbol scan still never FLAGS a syscall; at `c3bdae2` it SEES one
++> **SUPERSEDED IN PART by TM-250 (@@DATE@@, cycle 0.3.1)**: its *"`check_purity`
++> (S-10b) is still the only thing here that answers"* — one of two since then;
++> and its declined alternative, the IR call-edge scan, is built: BESIDE the
++> symbol scan, which it does not replace, and beside `check_purity`. The text
++> below is left exactly as written.
+ 
+ **2026-09-25, cycle 0.1.0b (PD-5). Supersedes TM-118 and TM-126 in part.** Both
+ said a module that issues a raw syscall has an **identical** undefined set to one
+@@ -7441,6 +7456,11 @@ naming the gap in S-22** — the parsers that would meet the gap are the next
+ code this check exists for (TM-204).
+ 
+ ### TM-240 — `check_int128_sites` reads every integer wider than `int64`, not `int128` alone; `TESTING.md` V-1 says what the check guards, and what no check does
++> **And TM-251 (@@DATE@@, cycle 0.3.1) answers what the note below holds
++> open:** a second check, `check_wide_types`, reads every wide type in
++> `npkc`'s emission, so a wide value no width is spelled for is held to §5's
++> sites too.
++>
+ > **TM-246 (2026-10-08, cycle 0.3.0) reads one clause of it:** *"The check reads
+ > all fourteen"* — by a type's name; since TM-246 a numeric literal whose width
+ > suffix is one of the fourteen as well, because `(3i256 * 5i256) =>! int64`, a
+@@ -7754,6 +7774,9 @@ recorded with a commit of its own; the other three are the clocks.
+ > takes a wide type, or calls one that returns one, so nothing in the tree does
+ > it, and `meta/OPEN_QUESTIONS.md` O-X11 holds the hole for cycle 0.3.1's
+ > planner. Found by 0.3.0's verifier. The decision stands as decided.
++>
++> **Answered @@DATE@@ by TM-251 (cycle 0.3.1):** `check_wide_types` reads the
++> emission's types, and the plant above is 1 finding to it.
+ 
+ **2026-10-08, cycle 0.3.0 (the plan's PD-91) — the item cycle 0.2's close
+ deferred, found by cycle 0.2.4a's verifier after the cycle audit. Restates
+@@ -7923,3 +7946,114 @@ suspends the machine** to tell `BOOTTIME` from `MONOTONIC` — not a unit; **a
+ double for the kernel's broken answers now** — the double is cycle 0.3.3's, and
+ it replaces `host`, so it cannot test `host`'s own refusals either; the honest
+ statement is the note.
++
++# Cycle 0.3.1 — `check_purity`, its second reading and the wide values, ratified @@DATE@@
++
++Four decisions, drafted at planning (`meta/roadmap/0.3/0.3.1.md` §2, PD-95 …
++PD-98, in that order), accepted by the orchestrator before the subcycle's
++dispatch, and each measured at compiler `5fbaf4a`. The first two answer the
++two questions cycle 0.3.0 handed on, `meta/OPEN_QUESTIONS.md` O-X9 and O-X11,
++with one reader of the library's emission, and are recorded with a commit of
++their own; the other two are the review of the two ban lists the cycle README
++names.
++
++### TM-250 — O-X9 answered: `check_call_edges` reads every call a function of `src/` outside `src/host/` makes in `npkc`'s emission of the umbrella, and holds what it reaches to a reviewed allowlist — a second reading of S-7, beside `check_purity` and never instead of it
++
++**@@DATE@@, cycle 0.3.1 (the plan's PD-95). Strikes `meta/OPEN_QUESTIONS.md`
++O-X9; adds `TESTING.md` §2's row and moves V-1a's counts; dates `SAFETY.md`
++S-10b, `BUILD.md` B-2c and every sentence that called `check_purity` the only
++thing that answers "did this module touch the kernel"; supersedes TM-118,
++TM-126 and TM-153 in that clause.**
++
++**What was found** (`0.3.1.md` §1). A function planted in a copy's
++`src/cal/cal.npk` calling `hardware_concurrency()`, `read_stdin()`,
++`chain_depth()`, `wild_live_count()`, `arena_make()`, `path_exists()` or the
++prelude's `std_out()` compiles in the umbrella, and `check_purity` passes each:
++none of their names was on its list of six. The umbrella's emission shows each
++reaching the runtime's own symbol — `std_out` through `npk.prelude.std_out` and
++`npk.prelude.std_dup` to `npk_sys6`, and through its drop glue to
++`npk_ofd_close`. Over the tree, the emission defines 90 functions of `src/`'s
++modules, 81 outside `src/host/`, and those reach fifteen runtime symbols —
++the allocator's `npk_dalloc` and `npk_buffer_new`, the string floor's
++`npk_string_concat`, `npk_string_from_bytes` and `npk_int_to_string`, the error
++route's `npk_trap`, `npk_chain_push` and `npk_chain_reset`, and seven of
++LLVM's overflow intrinsics — while `src/host/`'s reach `npk_mono_now` and
++`npk_sys6`. Every function `src/` declares is in the emission but the nine
++generic ones of `src/core/vec.npk`, which a module holds only where a caller
++instantiates them. No function of the emission calls through a value or holds
++inline assembly; `asm<int64>(…)` is `NITPICK-PARSE-002` at the pin; and a
++builtin bound to a function-typed local, or passed as an argument, is
++`NITPICK-EMIT-002` — the emitter's own words, *"a defect in the compiler rather
++than in this program"* — while an ordinary function as a value runs on both
++legs.
++
++**The decision.** *`check_call_edges` reads `build/ntime.ll`, the emission
++`run.py`'s step 7 writes, before `opt`: every `define`, `declare` and global.
++From each function of a module of `src/` outside `src/host/` — named
++`npk.<module>.…`, a module's name its file's basename (B-14) — every symbol its
++body names is followed, through the prelude, the drop glue and every global,
++and never through another function of `src/`, which is a start of its own. A
++finding is a runtime symbol reached that `CALL_EDGE_ALLOW` does not hold, a
++function of `src/host/` reached (H-2), a call through a value, or inline
++assembly, each named with its path. The allowlist is reviewed, row by row: the
++allocator at S-18's places, the string floor, the error route and LLVM's
++arithmetic intrinsics by family. It is an ALLOW-list — a symbol a re-pin adds is
++a finding until a row reviews it — checked both ways (V-1c): a row the
++emission does not declare is a finding too. The run holds the reading to the
++tree: every non-generic function `src/` declares must be in the emission, and
++`src/host/`'s must reach past the allowlist, the reader's own positive control.
++`run.py` drives it at step 7; `TESTING.md` §2 gains its row; eight plants, each
++an emission's text. `check_purity` stays — it reads a generic function nobody
++instantiates, which no emission holds — and the sentences that called it "the
++only thing" are dated, not rewritten.*
++
++*Alternatives declined:* **the ban list alone, widened** — a list of names is
++read against the names it holds; a prelude function that reaches the kernel, a
++builtin a re-pin adds and a call through a value each pass it, and its
++completeness cannot be checked by itself (it is widened anyway, by the
++decisions after this one, because it reads what no emission holds); **an
++allowlist of each function's DIRECT callees** — every prelude function a module
++calls a row, and what the prelude reaches unread; **every test program's
++emission read too, for the generics** — two hundred roots' emissions, for nine
++functions `check_purity` reads as spelled; **the undefined-symbol scan made to
++flag `npk_sys6`** — `host` calls it, and an object's undefined set cannot say
++which function does (B-2c); **declined until a module other than `host` names
++a syscall** — O-X9's own reason for waiting was a scan with nothing to check,
++and `host` names two.
++
++### TM-251 — O-X11 answered: `check_wide_types` reads every integer type wider than `i64` in `npkc`'s emission of a function of `src/`, and holds it to §5's sites — a second reading of N-20, beside `check_int128_sites`
++
++**@@DATE@@, cycle 0.3.1 (the plan's PD-96). Strikes `meta/OPEN_QUESTIONS.md`
++O-X11; adds `TESTING.md` §2's row; dates `TESTING.md` V-1 and `SPAN_MODEL.md`
++N-20, whose notes held the question open; marks TM-240 and TM-246.**
++
++**What was found** (`0.3.1.md` §1). O-X11's counter-example — `wide`, a marked
++`int256()`, and an unmarked `g` returning `((raw wide()) * (raw wide())) =>!
++int64` — appended to a copy's `src/span/span.npk` with a §5 row marking `wide`:
++the umbrella compiles, `check_int128_sites` reports 0 findings, and the
++emission's `npk.span.g` holds `i256`, the two calls' results multiplied by
++`llvm.smul.with.overflow.i256`. Over the tree, three of the emission's 90
++functions of `src/`'s modules hold an integer wider than `i64` —
++`bytes_put_int`, `instant_since` and `timestamp_since`, the three §5 marks —
++and `period_add`, marked, is not written.
++
++**The decision.** *`check_wide_types` reads the same emission through the same
++reader, and every integer type wider than `i64` in a function of a module of
++`src/` — a value, an operand, a parameter, a result — must stand in a function
++§5's table marks, read as `check_int128_sites` reads it; a global of `src/`'s
++modules holding one is a finding. A generic's instance is held by its source
++name. The spelling check stays, beside it, for TM-246's reason: the emission is
++a claim about the lowering, and a literal product a later `npkc` folded at
++emission would vanish from it while staying spelled. `run.py` drives it at step
++7; `TESTING.md` §2 gains its row; three plants, each an emission's text.*
++
++*Alternatives declined:* **a call to a `src/` function whose declared result is
++wide, counted as a site of its caller** — O-X11's own first alternative, lexical
++again and blind to the next shape; **V-1 and N-20 restated to what the spelling
++check sees** — a check narrower than its rule's reason, which TM-240 and TM-246
++each declined; **nothing until a function of `src/` returns or takes a wide
++type** — the day the hole opens would be a day the run stays green; **the
++optimised IR read instead** — `opt -O2` folds the counter-example's product to
++a constant, the workbench `PLAYBOOK.md` §9's rule; **later, at its own
++subcycle** — the reader is O-X9's, built here, and the check over it is a few
++lines.
+diff --git a/meta/OPEN_QUESTIONS.md b/meta/OPEN_QUESTIONS.md
+index 2e18904df69cf08fa16391e76081577a830a3d10..490a1498e96caf557192e575bae5d63720912e04 100644
+--- a/meta/OPEN_QUESTIONS.md
++++ b/meta/OPEN_QUESTIONS.md
+@@ -909,7 +909,22 @@ probe changes either way, and the entry in the manifest is true about the 29
+ is normally frozen, but this sentence is in the PRESENT tense about the tree as
+ it is now, so it is a claim and not a record. TM-142.)*
+ 
+-### O-X9 — should an IR call-edge scan answer "did this module touch the kernel"?
++### ~~O-X9 — should an IR call-edge scan answer "did this module touch the kernel"?~~ — **SETTLED @@DATE@@ (TM-250): yes, beside `check_purity` and never instead of it — `check_call_edges` reads every call a function of `src/` outside `src/host/` makes in `npkc`'s emission of the umbrella**
++
++> The recommendation, taken at cycle 0.3.1 once `src/host/` named the kernel
++> (`meta/roadmap/0.3/0.3.1.md` §1). Measured at compiler `5fbaf4a`: a
++> function in a copy's `src/cal/` calling `hardware_concurrency()`,
++> `read_stdin()`, `chain_depth()` or the prelude's `std_out()` compiles, and
++> `check_purity` passed each — none of their names was on its list — while
++> the emission shows each reaching the runtime's own symbol, `std_out` through
++> `npk.prelude.std_dup` to `npk_sys6`. So the scan reads the CALLS, from every
++> function of `src/` outside `src/host/`, through the prelude and the glue,
++> against a reviewed allowlist of runtime symbols; a call into `src/host/`, a
++> call through a value and inline assembly are findings, and `src/host/`'s
++> own reach is the reader's positive control. What it cannot read is a generic
++> function nobody instantiates in the umbrella, which `check_purity` reads as
++> spelled, and which the same subcycle widens, by the decision after this
++> one. The question below is left as it was asked.
+ 
+ **Raised 2026-09-25 by the stream-2 planner**, from the board's RX-120 entry,
+ which recommends the call-edge scan for every library. At compiler `c3bdae2`
+@@ -992,7 +1007,17 @@ be `.clone()` — (b)'s spelling, enforced by the compiler rather than
+ remembered — and Z-4's `pub` binding hands a consumer nothing that compiles
+ but a lend or a clone.
+ 
+-### O-X11 — `check_int128_sites` reads SPELLINGS: should a check read TYPES, so that a wide value no width is spelled for is seen?
++### ~~O-X11 — `check_int128_sites` reads SPELLINGS: should a check read TYPES, so that a wide value no width is spelled for is seen?~~ — **SETTLED @@DATE@@ (TM-251): yes, at cycle 0.3.1 — `check_wide_types` reads every integer type wider than `i64` in `npkc`'s emission of a function of `src/`, beside the spelling check**
++
++> The recommendation, taken at cycle 0.3.1 over the reader O-X9's scan is
++> built on (TM-250). Measured at compiler `5fbaf4a`: the counter-example below,
++> planted in a copy with a §5 row marking `wide`, is 0 findings to
++> `check_int128_sites` and 1 to `check_wide_types` — *"`npk.span.g` holds
++> `i256`"* — and over the tree the new check names exactly the three
++> functions §5 marks and finds them in the emission, `period_add` not yet
++> written. The spelling check stays beside it, for TM-246's reason: the
++> emission is a claim about the lowering. The question below is left as it
++> was asked.
+ 
+ **Raised 2026-10-08 by cycle 0.3.0's verification**
+ (`s2-ntime-0.3.0-verify-work`), and registered by the subcycle's worker on the
+diff --git a/meta/roadmap/0.3/README.md b/meta/roadmap/0.3/README.md
+index f44c2c18263b352b4480b03a6ded42a1fbe0a97e..8ae5e61f5e59830283ed96c853ce65d1a1068d76 100644
+--- a/meta/roadmap/0.3/README.md
++++ b/meta/roadmap/0.3/README.md
+@@ -72,8 +72,8 @@ beside `check_int128_sites`, over the reader O-X9's scan is built on.)*
+ *(Four more, from 0.3.1's planning on 2026-10-08 — `0.3.1.md`: the two
+ questions handed on, which share one reader of the library's emission, and
+ the two ban lists' decisions. The four above keep their words.)*
+-- [ ] **O-X9**: the call-edge scan — every call a function of `src/` outside `src/host/` makes, read from `npkc`'s emission of the umbrella and held to a reviewed allowlist (PD-95)
+-- [ ] **O-X11**: the wide values — every integer wider than `i64` in that emission held to §5's sites, spelled or not (PD-96)
++- [x] **O-X9**: the call-edge scan — every call a function of `src/` outside `src/host/` makes, read from `npkc`'s emission of the umbrella and held to a reviewed allowlist (PD-95) — **TM-250**, `check_call_edges`: eight plants caught and eight controls silent; over the tree 0 findings, `src/host/` reaching `npk_mono_now` and `npk_sys6`, every non-generic function `src/` declares in the emission
++- [x] **O-X11**: the wide values — every integer wider than `i64` in that emission held to §5's sites, spelled or not (PD-96) — **TM-251**, `check_wide_types`: three plants caught; over the tree exactly §5's three marked functions hold one
+ - [ ] `check_purity`'s list: every builtin and prelude function at the pin that reaches past the program's own memory, matched as a call with an identifier boundary on its left (PD-97)
+ - [ ] `check_host_isolation`'s: every name `src/host/` makes public, `HostClock` among them, beside the `host_` prefix (PD-98)
+ 
+diff --git a/meta/specs/BUILD.md b/meta/specs/BUILD.md
+index 12c3ae2fef201945b6a0c06f5d27ccd03f02ca21..7cf494085f248222533857d3ebb2a7be971b9abe 100644
+--- a/meta/specs/BUILD.md
++++ b/meta/specs/BUILD.md
+@@ -149,6 +149,14 @@ that is the whole of what it supports. **`check_purity` (`TESTING.md` §2,
+ > **5**, so the sentence had been false here since that re-pin. The scan SEES
+ > the call and allows it. The IR call-edge scan that could flag one is
+ > `../OPEN_QUESTIONS.md` O-X9.
++>
++> **Cycle 0.3.1 (TM-250): O-X9 is answered, and `check_purity` is no longer the
++> only reading.** `check_call_edges` reads `npkc`'s emission of the umbrella —
++> every call a function of `src/` outside `src/host/` makes, followed through
++> the prelude, held to a reviewed allowlist of runtime symbols — so it FLAGS
++> `npk_sys6` where this scan allows it: by the function that reaches it, which
++> an object's undefined set cannot name. This scan's boundary is unchanged: it
++> cannot flag a syscall, and is no purity result.
+ 
+ **Rule B-3.** The optimised leg runs on every program, every time: the same
+ program re-emitted through `opt -O2` + `llc -O2` must produce the **same exit
+diff --git a/meta/specs/SAFETY.md b/meta/specs/SAFETY.md
+index 593b9dfdc0dc3fa5c6cedac2cc93a9b6511868d3..36510d2f41c8cedc47766459178dfd37a829349f 100644
+--- a/meta/specs/SAFETY.md
++++ b/meta/specs/SAFETY.md
+@@ -370,7 +370,12 @@ SEEN TO FAIL.** Three separate claims, and each was missing:
+   each way, "reproduced here". At compiler `c3bdae2` they are 5 and 8, the call
+   adding `npk_chain_push`, `npk_raise` and `npk_sys6`, and at `aaffb87` they
+   were already 2 and 5. The scan sees the call; it can never flag it, which is
+-  the half the rule rests on.)*
++  the half the rule rests on.)* *(Cycle 0.3.1, TM-250: a second reading
++  stands BESIDE it, never in for it. `check_call_edges` reads `npkc`'s
++  emission of the umbrella for every call a function outside `src/host/`
++  makes — a call through a name no ban list knows is a call like any other
++  there — and cannot read a generic function nobody instantiates in it, which
++  this check reads as spelled. The symbol scan still answers neither.)*
+ - **Live from cycle 0.0.3**, not from 0.3. It runs over the six non-`host`
+   files today and reports `0` findings with the denominator printed, which is
+   the same answer `check_no_owning_fields` gives over an empty set and is
+diff --git a/meta/specs/SPAN_MODEL.md b/meta/specs/SPAN_MODEL.md
+index 7048c7b5abfd6788c4b0260d42721c21bcfb71eb..459353bc606648821269ed913bd9ab56a54b36b1 100644
+--- a/meta/specs/SPAN_MODEL.md
++++ b/meta/specs/SPAN_MODEL.md
+@@ -260,6 +260,13 @@ forbids, and the check passes it, as it has since it went live. No function in
+ `src/` returns or takes a wide type, or calls one that returns one, so nothing
+ does it today.)*
+ 
++*(Cycle 0.3.1, TM-251 — O-X11 answered: a second check holds this rule from
++`npkc`'s emission, `check_wide_types` — every integer type wider than `i64` in
++a function of the umbrella's emission, spelled or not, stands in a function
++the table marks — so the call's result above is a finding there. Two
++readings hold the rule, of the spelling and of the emission; a generic
++function nobody instantiates in the umbrella is read by spelling alone.)*
++
+ **Rule N-20b (TM-105) — the range check at each of those sites is mandatory
+ library code, because the language provides no checked narrowing.** Measured at
+ cycle 0.0.0: `=>!` at a value that does not fit **truncates silently** (no trap,
+diff --git a/meta/specs/TESTING.md b/meta/specs/TESTING.md
+index c5ba2eadeba5d4d1593453707199e14f2a76e069..a5ecd5035b069851a43296976bdf7ed8550b48a0 100644
+--- a/meta/specs/TESTING.md
++++ b/meta/specs/TESTING.md
+@@ -35,15 +35,17 @@ them found something on its first run.
+ 
+ | Check | Diffs |
+ |---|---|
+-| `check_purity` | `src/` outside `src/host/` against a ban list — `sys`, `mono_now`, `environ`, `read_file`, `open`, `write`, each matched as a CALL: the name, the lexer's whitespace, a newline included, and `(` (V-1l; until cycle 0.1.5 the spelling `name(`, which `mono_now ()` passed). **`SAFETY.md` S-10, and the most important check in the suite.** It is also the **only** one that answers the question: the build's undefined-symbol scan cannot FLAG a syscall, because `npk_sys6` is the runtime's own and is in its allowlist by construction (`BUILD.md` B-2c, TM-118, TM-153, `nitpick-regex`'s RX-120) |
++| `check_purity` | `src/` outside `src/host/` against a ban list — `sys`, `mono_now`, `environ`, `read_file`, `open`, `write`, each matched as a CALL: the name, the lexer's whitespace, a newline included, and `(` (V-1l; until cycle 0.1.5 the spelling `name(`, which `mono_now ()` passed). **`SAFETY.md` S-10, and the most important check in the suite.** It is also the **only** one that answers the question: the build's undefined-symbol scan cannot FLAG a syscall, because `npk_sys6` is the runtime's own and is in its allowlist by construction (`BUILD.md` B-2c, TM-118, TM-153, `nitpick-regex`'s RX-120) *(One of two that answer it since cycle 0.3.1: `check_call_edges`, below, reads the calls in the library's emission, TM-250. The row said "the **only** one" until then.)* |
+ | `check_host_isolation` | no module outside `src/host/` and `src/lib.npk` names a `host_` symbol |
++| `check_call_edges` (TM-250) | **no function of `src/` outside `src/host/` reaches, in `npkc`'s emission of the umbrella, a runtime symbol the reviewed allowlist does not hold, a function of `src/host/`, a call through a value or inline assembly** — `SAFETY.md` S-7 and `HOST.md` H-2 read from the CALLS the compiler emitted, before `opt`, where `check_purity` reads the source's spellings. From each function every symbol it names is followed, through the prelude, the drop glue and every global; the allowlist is the allocator at S-18's places, the string floor, the error route and LLVM's arithmetic, and it is an ALLOW-list — a symbol a re-pin adds is a finding until a row reviews it, and a row the emission no longer declares is a finding too (V-1c). Every non-generic function `src/` declares must be in the emission, and `src/host/`'s must reach past the allowlist — the reader's own control, on every run. **What it cannot read**: a generic function nobody instantiates in the umbrella — `src/core/vec.npk`'s nine — which `check_purity` reads as spelled. `run.py` drives it at step 7, over the library's emission. *(`../OPEN_QUESTIONS.md` O-X9, raised 2026-09-25 and answered at cycle 0.3.1, once `src/host/` named the kernel.)* |
++| `check_wide_types` (TM-251) | **every integer type wider than `i64` in `npkc`'s emission of a function of `src/` stands in a function `SPAN_MODEL.md` §5 marks, and in no global of `src/`'s modules** — N-20 read from the TYPES the compiler emitted, before `opt`, beside `check_int128_sites`, which reads spellings: a call's result, wide with no width written, is a finding here (`../OPEN_QUESTIONS.md` O-X11). A generic's instance is held by its source name. **What it cannot read** is `check_call_edges`' limit; a mark that outlived its reason is `check_int128_sites`' to fail, and this one names it. `run.py` drives it at step 7. |
+ | `check_tables_regenerate` | every committed generated file against a fresh run of its generator, byte for byte: the zone tables from cycle 0.5, and the civil cross-oracle's corpus (V-6), which exists from cycle 0.1.4 and joins the check when it goes live (TM-183) |
+ | `check_table_invariants` | every transition slice sorted and strictly increasing; every type index in range; every name-pool offset in range; the zone-name index lexicographically sorted |
+ | `check_error_budget` | the count and names of the `error:` declarations in `src/`, public AND private (*"public"* until 2026-09-27, though the check has counted both since TM-203 — TM-213), against `SAFETY.md` §2's table — each identity QUALIFIED BY ITS DECLARING MODULE, as `NITPICK-REACH-003` counts it, and held to the module S-4's table names for it (TM-203): a budgeted name declared in two modules, or outside its module, is a second arm in every consumer. *(Until cycle 0.1.5's second half the count was keyed by the bare name, and `cal.ETimeValue` beside `zone.ETimeValue` read as one identity — the cycle audit's C2.)* |
+ | `check_failsafe_arms` | the generated per-module arm list against programs that import each module and compile their `failsafe` |
+ | `check_layering` | `BUILD.md` §6's diagram against `src/` — its **edges** (every `use`) and its **nodes** (every layer the diagram names holds at least one module). The node half is D1's repair: cycle 0.0.1's acceptance claimed `run.py` "asserts the count is at least 7" and no such assertion was in the tree, so *"a directory whose placeholder was deleted rather than replaced is invisible to the sweep"* was live for four subcycles inside a ticked box |
+ | `check_no_owning_fields` | **no `fixed` table's element owns — itself, or through a field at any depth** (`SAFETY.md` S-19b). **It could not see a SINGLE-LINE struct until cycle 0.0.6 and both of this repository's structs are one** (TM-138), so neither type's real fields had ever been examined while the check reported `0 of 0`; the self-check now plants the same violation in both spellings. **And until cycle 0.1.3b it could not see an owning ELEMENT (`fixed string[2]`) or an owner two structs down, and it matched owners by substring**, so a field named `string_off` read as one — all three found by re-measuring the premise the check was written on, which was false (TM-177), and all three planted now |
+-| `check_int128_sites` (TM-230) | **`int128` — and every other integer wider than `int64`, fourteen types, since cycle 0.2.4a (TM-240) — in `src/` only inside a function `SPAN_MODEL.md` §5's table marks yes in its `int128` column**, and every marked function `src/` declares spells one — N-20, as TM-229 restates it; a marked function not written yet is named on every run, not failed. **A numeric literal of one of those widths — `3i256`, `7u128` — is read as the type's name is, since cycle 0.3.0 (TM-246)**: comments, strings and characters are blanked first, so the type in prose is nothing, and a numeric literal is read for its width suffix. Live since cycle 0.2.3a. *(It read "`int128` appears at exactly the three sites `SPAN_MODEL.md` §5 names, and nowhere else" — a count §5's table did not match, `OPEN_QUESTIONS.md` O-X6, so it could not be written until the question was answered. And until cycle 0.2.4a it read `int128` alone, so an `int256` or a `uint128` intermediate narrowed by a bare `=>!` passed it — the cycle audit's D1. And until cycle 0.3.0 it read "Comments and literals are blanked first, so the type in prose is nothing", and so the check did: a literal's width was never read, and `(3i256 * 5i256) =>! int64` — a computation of literals alone, which widens with no type named — passed it, found by cycle 0.2.4a's verifier and deferred by cycle 0.2's close.)* *(And what it reads is SPELLINGS, as it always has: a wide value no width is spelled for — a call's result — is not seen. `../OPEN_QUESTIONS.md` O-X11, raised by cycle 0.3.0's verification, 2026-10-08; V-1's note below.)* |
++| `check_int128_sites` (TM-230) | **`int128` — and every other integer wider than `int64`, fourteen types, since cycle 0.2.4a (TM-240) — in `src/` only inside a function `SPAN_MODEL.md` §5's table marks yes in its `int128` column**, and every marked function `src/` declares spells one — N-20, as TM-229 restates it; a marked function not written yet is named on every run, not failed. **A numeric literal of one of those widths — `3i256`, `7u128` — is read as the type's name is, since cycle 0.3.0 (TM-246)**: comments, strings and characters are blanked first, so the type in prose is nothing, and a numeric literal is read for its width suffix. Live since cycle 0.2.3a. *(It read "`int128` appears at exactly the three sites `SPAN_MODEL.md` §5 names, and nowhere else" — a count §5's table did not match, `OPEN_QUESTIONS.md` O-X6, so it could not be written until the question was answered. And until cycle 0.2.4a it read `int128` alone, so an `int256` or a `uint128` intermediate narrowed by a bare `=>!` passed it — the cycle audit's D1. And until cycle 0.3.0 it read "Comments and literals are blanked first, so the type in prose is nothing", and so the check did: a literal's width was never read, and `(3i256 * 5i256) =>! int64` — a computation of literals alone, which widens with no type named — passed it, found by cycle 0.2.4a's verifier and deferred by cycle 0.2's close.)* *(And what it reads is SPELLINGS, as it always has: a wide value no width is spelled for — a call's result — is not seen. `../OPEN_QUESTIONS.md` O-X11, raised by cycle 0.3.0's verification, 2026-10-08; V-1's note below.)* *(Read beside it since cycle 0.3.1: `check_wide_types` reads the emission's types, so such a value is a finding there — TM-251.)* |
+ | `check_constants_named` | **no bound outside `src/core/limits.npk` — declared there, and spelled nowhere else in `src/` by its value** (TM-238): the value of every bound that file declares, its initializer evaluated, is held to it, but a value in `nitpick-regex`'s `_SMALL` set (its RX-062), which review reads and the headline names — today `NTIME_PARSE_MAX`'s 128; and **no magic 86400, 146097, 719468 or 1000000000 outside its owner's place** — `core`'s is `src/core/limits.npk` alone and `cal`'s is `src/cal/` (TM-238), `core` the owner of 86400 since cycle 0.2.2 (TM-223) and of 1000000000 since 0.2.3a (TM-232), "the algorithm module" for all four until 0.2.2. **A literal is read as the compiler's lexer reads it, and held to the map by its VALUE** (TM-231): every base suffix, `_` wherever it stands, every width, a character literal's code point, a bound after `..` — and a float, or a token the lexer refuses, is reported by its text, never passed. *(Until cycle 0.2.3a it read four or more decimal digits as text, and sixteen spellings of the four numbers passed it, measured. And until cycle 0.2.4a it read a bound as a declaration alone, so `253402300799i64` in place of `NTIME_SECS_MAX` passed it, and held a copy to the module `core`, so `86400i64` in `src/core/bytes.npk` passed it — the cycle audit's C8 and C3.)* |
+ | `check_literal_divisors` (TM-163) | **every `/`, `%`, `/=` and `%=` in `src/cal/` against `CALENDAR.md` C-11**: the divisor must be a positive decimal integer literal with its width suffix, standing alone — nothing after it that binds tighter than `/`, since `256i64 =>! uint8` is 0 — so D-007's divide-by-zero and `MIN / −1` traps are unreachable by construction. It reads code with comments AND strings blanked, because every `use` path in `cal.npk` holds a `/`; `+%`, `-%` and `*%` are the wrapping operators and not divisions. It is C-11's list of divisors, which a list in the rule's text could not be: the one C-11 carried was short by eight the day `civil_from_days` arrived. *(Until cycle 0.1.5 this row said its docstring's limits — block comments, character literals, raw strings and templates "not modelled", `src/cal/` having none — and the docstring called the gap the safe direction. Measured at 0.1.5's planning, a `'"'`, a template's `//` and a lone CR in a `//` comment each HID a division, and a `//` inside a `/* */` hid a clock call and a declaration from the checks beside this one; since then it reads through V-1k's reader, and each shape is planted.)* |
+ | `check_no_format_string` | no function anywhere takes a pattern `string` and interprets it — `FORMAT_MODEL.md` F-5's rule, made checkable. **Pending until cycle 0.4**: nothing enforces F-5 before then, and V-1a's table says why |
+@@ -88,10 +90,19 @@ type, or calls one that returns one, so nothing does this today; whether a
+ check that reads types rather than spellings is in scope, and when, is cycle
+ 0.3.1's planner's.)*
+ 
++*(Cycle 0.3.1, TM-250 and TM-251: each of the two claims has a second
++reading since, from `npkc`'s emission of the umbrella. Beside `check_purity`,
++`check_call_edges` reads every call a function outside `src/host/` makes;
++beside `check_int128_sites`, `check_wide_types` reads every integer type wider
++than `i64` in a function of the emission, spelled or not — O-X11 answered —
++so the call's result above is a finding. A generic function nobody
++instantiates in the umbrella is read by spelling alone, and `src/` holds none
++with a wide type.)*
++
+ **Rule V-1a (TM-126) — a check runs from the cycle it can be written, and its
+-pending siblings are PRINTED.** The table above has **20**
+-<!-- [[sweep: family_rows=20]] --> rows: **17 are live**
+-<!-- [[sweep: family_live=17]] --> as of cycle 0.2.3a and **3 print on
++pending siblings are PRINTED.** The table above has **22**
++<!-- [[sweep: family_rows=22]] --> rows: **19 are live**
++<!-- [[sweep: family_live=19]] --> as of cycle 0.3.1 and **3 print on
+ every run as `PEND`** <!-- [[sweep: family_pending=3]] -->, and the two sum
+ to the rows. Several of the live ones run over a subject that is currently
+ empty — which is the right answer, and is what makes the check exist on the
+@@ -142,6 +153,13 @@ the `[5/9]` line reads `14 live` — `checks.LIVE`'s 13 and
+ 17. The sentence above read "**18** rows: **14 are live** as of cycle 0.1.1
+ and **4 print on every run as `PEND`**, and `14 + 4 = 18` closes".)*
+ 
++*(**And at cycle 0.3.1 it moved by two**, `check_call_edges` and
++`check_wide_types` (TM-250, TM-251), which `run.py` drives at step 7 over the
++library's emission: 20 rows and 17 live became 22 and 19. Re-derived from the
++run: the `[5/9]` line still reads `14 live` — `checks.LIVE`'s 13 and
++`check_failsafe_arms` — and `run.py` drives the other five outside step 5. The
++sentence above read "**20** rows: **17 are live** as of cycle 0.2.3a".)*
++
+ The three pending each name **the cycle that turns it on and why it cannot run
+ today**, because a family whose gaps are invisible is a family nobody
+ completes:
+@@ -602,7 +620,7 @@ been driven. Cycle 0.0.6 made the sentence true rather than softening it:
+ 
+ | Commissioned by | What it drives |
+ |---|---|
+-| `selfcheck.PLANTED` | the tree checks of `checks.LIVE` that fail a run — 12 of its 13 since cycle 0.2.3a (`check_check_registry`, `check_no_view_returns` and `check_int128_sites` joined, with six, five and six rows; 9 of 10 since cycle 0.1.1, when `check_literal_divisors` joined with four) — at least one planted violation and one clean control each |
++| `selfcheck.PLANTED` | the tree checks of `checks.LIVE` that fail a run — 12 of its 13 since cycle 0.2.3a (`check_check_registry`, `check_no_view_returns` and `check_int128_sites` joined, with six, five and six rows; 9 of 10 since cycle 0.1.1, when `check_literal_divisors` joined with four); and since cycle 0.3.1 the two `run.py` drives over the library's emission, `check_call_edges` with eight rows and `check_wide_types` with three (TM-250, TM-251), each plant an emission's text, never compiled — at least one planted violation and one clean control each |
+ | `selfcheck.part_b` directly | `check_layering`'s **node** half — the fault is a file that is NOT there, which no `PLANTED` row can express |
+ | `selfcheck.part_b_specs_current` | `check_specs_current`, which reports and never fails, so it is shown REPORTING |
+ | `selfcheck.part_b_view_exempt` (cycle 0.2.3a) | `check_no_view_returns`' one named exemption, which applies to this repository's tree and to a scratch tree only when handed one: five plants, each falsifying one part of S-22's reason for it — the function gone, no view returned, no pointer to its container, no container, S-22 silent about it — beside a control where every part holds (TM-228) |

@@ -1,0 +1,12 @@
+# 0.3.1's omission sweep for step 1, block 1b -- one extended regular expression per
+# line, each read by `sweep.py` line by line AND across line breaks, case-insensitive.
+# Each is a fact step 1 moved: that `check_purity` is the only reading of the kernel's
+# boundary, the two questions it answers, what the emission is and what reads it, what
+# a check of spellings sees of a wide value, and the counts the two checks move.
+only (thing|one|check|reading)[^.]{0,80}(answer|kernel)|nothing else can stand|(touch|touched) the kernel
+O-X9|O-X11
+call.edge|IR scan|(read|reads|reading)[^.]{0,30}(the )?(emission|emitted IR|IR\b)|(emission|\bIR\b)[^.]{0,30}\b(is|are) (not )?read
+(spell|spelled|spelling|spellings)[^.]{0,60}(wide|int128|value)|(wide|int128)[^.]{0,60}(spell|spelled|spellings)
+ninety-five|\b95\b.{0,30}(plant|tree-check|violation)
+seventeen|\b17\b.{0,20}live|\b20\b.{0,20}rows?
+symbol scan

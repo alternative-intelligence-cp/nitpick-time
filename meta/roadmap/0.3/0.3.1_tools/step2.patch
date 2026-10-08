@@ -1,0 +1,619 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 7c68737831c7bdfac2e13a196be14252504a67ab..5e802a7f9be2fe8c3e7d476f6c8b1a161546b51d 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -178,7 +178,10 @@
+ # finding (TM-251, O-X11 answered); and no function of `src/` outside
+ # `src/host/` reaches, in that emission, a runtime symbol outside a reviewed
+ # allowlist -- the kernel, the clock, the environment, a descriptor -- whatever
+-# name it reaches it through (TM-250, O-X9 answered).
++# name it reaches it through (TM-250, O-X9 answered). And `check_purity`'s list
++# is every builtin and prelude function at the pin that reaches past the
++# program's own memory, where it was six names, and `check_host_isolation`
++# reads every name `src/host/` makes public (TM-252, TM-253).
+ #
+ # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
+ # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 5798eb4d67b1b592df17c414796b0b6a2a519421..e02f04246314b2dab3e67105befe8b41d53b5952 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -8,14 +8,41 @@ Guidance for Claude Code sessions working in this repository.
+ safety-critical systems language at `../../nitpick`.
+ 
+ **Status: cycle 0.3, the host boundary, IN PROGRESS — 0.3.0, the clocks,
+-DONE (2026-10-08): `src/host/` reads the machine's clocks, and 0.3.1, the review
+-of `check_purity`'s ban list against that body, is next. Cycle 0.2 CLOSED
++DONE (2026-10-08): `src/host/` reads the machine's clocks; 0.3.1, the purity
++boundary's instruments, DONE (@@DATE@@): `check_purity`'s ban list reviewed, and
++the library's emission read beside the spelling checks; and 0.3.2, the system
++zone, is next. Cycle 0.2 CLOSED
+ (2026-10-02), archived at `meta/roadmap/done/0.2/` — instants and timestamps:
+ `Instant` and its two clocks, `Timestamp` and its one constructor, the
+ conversions to and from the civil scale in UTC with their exhaustive gate on
+ every run, and the `Duration` interop — after cycle 0.1, the civil calendar,
+ CLOSED 2026-09-26 and archived at `meta/roadmap/done/0.1/`.**
+ 
++**After cycle 0.3.1: the purity boundary's instruments.** `check_purity`'s ban
++list is the review's (TM-252): every bare-name builtin and public prelude
++function of the pinned compiler that reaches past the program's own memory —
++forty-three names in seven classes, where cycle 0.0.3 guessed six, which a
++function calling `hardware_concurrency()`, `read_stdin()`, `chain_depth()`,
++`arena_make()` or the prelude's `std_out()` passed — each matched as a whole
++name called, so a pure `reopen` is no call of `open`. `check_host_isolation`
++reads every name `src/host/` makes public, `HostClock` among them (TM-253).
++And **the library's emission is read beside the spelling checks**, before
++`opt`: `check_call_edges` follows every call a function of `src/` outside
++`src/host/` makes in `npkc`'s output for the umbrella, through the prelude,
++and holds what it reaches to a reviewed allowlist — the allocator, the string
++floor, the error route and LLVM's arithmetic — so `check_purity` is no longer
++the only thing that answers "did this module touch the kernel" (TM-250,
++`meta/OPEN_QUESTIONS.md` O-X9 answered); and `check_wide_types` holds every
++integer wider than `i64` in that emission to `SPAN_MODEL.md` §5's sites,
++spelled or not, so a call's wide result is a finding (TM-251, O-X11
++answered). Neither reads a generic function nobody instantiates in the
++umbrella — `src/core/vec.npk`'s nine — which the spelling checks read. The
++cycle README's two plants, a `mono_now()` in `src/cal/cal.npk` and a
++`host_now_utc()` in `src/fmt/fmt.npk`, fail by name: a full run over a copy
++holding both is RED, four checks naming them. The self-check plants 112
++tree-check violations. A full invocation is **134 units green** at pin
++`5fbaf4a`.
++
+ **After cycle 0.3.0: the clocks.** `src/host/` has a body. `host_now_utc`
+ reads `CLOCK_REALTIME` through `sys` into a 16-byte `timespec` and builds its
+ `Timestamp` through `timestamp_of`, whose refusal of a `secs` outside the range
+@@ -703,7 +730,8 @@ what to do when a cross-stream gate is not ready yet.
+   differently from all three — and it is a **major** version (TM-013).
+ - **Only `src/host/` is impure** (TM-018). No syscall, no clock, no environment
+   read, no file read anywhere else. `check_purity` enforces it, and it is the
+-  single most important check in the suite.
++  single most important check in the suite — with `check_call_edges` beside it
++  since cycle 0.3.1, reading the calls in the library's emission (TM-250).
+ - **`ntime` declares no `Duration`** (TM-004). The prelude's is the ecosystem's
+   one span type. A second would immediately become the type everybody converts
+   to and from.
+diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
+index 682693d13cc6a77eee58dbcb8faa5a5a6a03a2d5..083f6eed8248902134973fb9cb903af489596443 100644
+--- a/CONTRIBUTING.md
++++ b/CONTRIBUTING.md
+@@ -5,7 +5,8 @@ That is unusual and it is deliberate: the specifications catch design mistakes
+ that would otherwise be found by writing the wrong code twice.
+ 
+ **Where it stands:** cycle 0.3, the host boundary, is in progress, its first
+-subcycle, the clocks, done (2026-10-08); cycle 0.2, instants and timestamps, is
++two subcycles done — the clocks (2026-10-08) and the purity boundary's
++instruments (@@DATE@@); cycle 0.2, instants and timestamps, is
+ closed (2026-10-02), as cycle 0.1, the civil calendar, is (2026-09-26).
+ `src/core/` and `src/cal/` are real, `src/span/` holds `Instant` since cycle
+ 0.2.0, `Timestamp` since 0.2.1, the conversions between a `Timestamp` and its
+@@ -15,8 +16,8 @@ placeholder each until the cycle `meta/roadmap/ROADMAP.md` names replaces it.
+ `harness/run.py` is the runner, and it proves first, on every full run, that it
+ can fail (`meta/specs/TESTING.md` V-14, V-15). *(This paragraph described cycle
+ 0.0.1's skeleton — "no self-check yet" — until cycle 0.1.5, said the cycle
+-"is in its close" between the close's two halves, and said cycle 0.3 "is next"
+-until cycle 0.3.0.)*
++"is in its close" between the close's two halves, said cycle 0.3 "is next"
++until cycle 0.3.0, and its first subcycle alone done until cycle 0.3.1.)*
+ 
+ ## Before you write anything
+ 
+diff --git a/README.md b/README.md
+index 5b97dfcdee8452630799e5396c35a6fb83329b6d..54f63ab1ee6cb8fa54f08ba6185a7bf6b1dc13a9 100644
+--- a/README.md
++++ b/README.md
+@@ -33,7 +33,9 @@ answer on every machine.
+ > than wrapping it. Since cycle 0.3.0 `src/host/`, the one module that touches
+ > the machine, reads its clocks: the realtime clock as a `Timestamp`,
+ > range-checked, the monotonic and boot clocks as `Instant`s, and each
+-> clock's resolution. Zones and formats are still
++> clock's resolution; and since cycle 0.3.1 two readings hold the rest of
++> the library pure, of its source and of the compiler's own output for it.
++> Zones and formats are still
+ > placeholders, each replaced by the cycle
+ > [`meta/roadmap/ROADMAP.md`](meta/roadmap/ROADMAP.md) names. The specification
+ > set is in [`meta/specs/`](meta/specs/) and the plan in
+diff --git a/harness/README.md b/harness/README.md
+index 0d14719faff8caf46b4f82e7c15751a5b8c214e4..466606ae71b6b456f28a62e81daa2a1c3b676163 100644
+--- a/harness/README.md
++++ b/harness/README.md
+@@ -59,10 +59,14 @@ running unlisted since cycle 0.0.6)*:
+   a code named once for two sites and three times for two (TM-210). Case 6
+   (a generator differing by one line) is **pending until 0.5** and prints as
+   pending rather than passing.
+-- **One hundred and six planted violations across the tree checks since cycle
+-  0.3.1's first step** (ninety-five from cycle 0.3.0, ninety-two from cycle
+-  0.2.4a, eighty-two from cycle 0.2.3a, forty-four from cycle 0.1.5's second
+-  half, forty after its first half, twenty-three before it; 0.3.1's eleven
++- **One hundred and twelve planted violations across the tree checks since
++  cycle 0.3.1** (one hundred and six after its first step, ninety-five from
++  cycle 0.3.0, ninety-two from cycle 0.2.4a, eighty-two from cycle 0.2.3a,
++  forty-four from cycle 0.1.5's second half, forty after its first half,
++  twenty-three before it; 0.3.1's second step's six are `check_purity`'s
++  five — a thread count, an error's chain and a standard stream, which its six
++  names passed, `open` beside a pure `reopen`, and a method of a banned name —
++  and `check_host_isolation`'s `HostClock`; its first step's eleven
+   are `check_call_edges`' eight — a runtime symbol outside the allowlist
+   called directly and through the prelude, a call into `host`, inline
+   assembly, a call through a value, a declared function the emission lacks,
+@@ -484,6 +488,20 @@ unchanged at 36; the library reaching **7** sources and its IR **309 729 B**,
+ **32 unit**, **8 sweep**). `134 = 35 + 99`. A full invocation about 211 s;
+ the unit costs under a second, both legs and eighty runs, compile included.
+ 
++**At cycle 0.3.1, the same pin, 134 units**: no test added and `src/`
++unchanged. The self-check plants 12 of V-14's 13 cases, **112** tree-check
++violations with 112 clean controls — `check_call_edges`' eight and
++`check_wide_types`' three, each an emission's text, and `check_purity`'s five
++and `check_host_isolation`'s one —
++4 arm specimens and 4 verdict specimens; step 7 reads the library's
++emission twice, **90** functions of `src/`'s modules, 81 outside
++`src/host/`, reaching 15 runtime symbols, every one in the allowlist, and 3
++holding an integer wider than `i64`, the three §5 marks; parse over 150 files,
++`105 + 43 + 2`; the defect corpus unchanged at 36; the library reaching 7
++sources and its IR **309 729 B**; and library + repro + suite at **99**.
++`134 = 35 + 99`. A full invocation about 210 s; the two readings of the
++emission cost milliseconds.
++
+ The floor under all of it is still TM-117's: every root re-emits the prelude,
+ so a `npkc` invocation on anything that compiles costs a fixed amount and the
+ run makes about 200 of them. One that does *not* compile costs ~0.03 s.
+diff --git a/harness/checks.py b/harness/checks.py
+index fc7c423161c8f1ca495195ac1a483762e9cf7e61..a57262c31be6029cc04050c87870ad8a9635891d 100644
+--- a/harness/checks.py
++++ b/harness/checks.py
+@@ -1279,19 +1279,56 @@ def check_raw_index(tree, **_):
+ # check_purity -- SAFETY.md S-10. THE MOST IMPORTANT CHECK IN THE SUITE.
+ # ---------------------------------------------------------------------------
+ 
+-# S-10's ban list, verbatim. Each is matched CALL-SHAPED (`name(`) rather than
+-# as a bare word, because `open` and `write` are ordinary English and this check
+-# reads code, not prose -- see `strip_comments` above for the other half of that
+-# argument, which this tree needed on its first run.
+-PURITY_BAN = ("sys(", "mono_now(", "environ(", "read_file(", "open(", "write(")
++# S-10's ban list, REVIEWED AT CYCLE 0.3.1 (TM-252). Each is matched
++# CALL-SHAPED (`name(`) rather than as a bare word, because `open` and `write`
++# are ordinary English and this check reads code, not prose -- see
++# `strip_comments` above for the other half of that argument, which this tree
++# needed on its first run. The list is every bare-name builtin of the pinned
++# compiler -- fifty-seven at `5fbaf4a`, its `src/frontend/builtins.npk`,
++# generated from `BUILTIN_REFERENCE.md`'s marked rows -- and every public
++# function of its prelude, that reaches past the program's own memory. What
++# it leaves answers from its arguments and what they point at: the allocator,
++# the string floor, `buffer_new`, `to_cstring`, `atomic_from_ptr`, and the
++# site tables' `site_line` and `site_path`. Until then it was cycle 0.0.3's
++# six -- `sys`, `mono_now`, `environ`, `read_file`, `open`, `write` -- and a
++# function in a copy's `src/cal/` calling `hardware_concurrency()`,
++# `read_stdin()`, `chain_depth()`, `arena_make()` or the prelude's `std_out()`
++# compiled and passed it, measured (`meta/roadmap/0.3/0.3.1.md` §1).
++PURITY_BAN = (
++    # the kernel, the clock and the machine (S-7)
++    "sys(", "mono_now(", "environ(", "hardware_concurrency(",
++    # descriptors and files (S-7, S-20)
++    "open(", "close(", "read(", "write(", "read_file(", "write_file(",
++    "read_stdin(", "path_exists(", "own_fd(", "release_fd(",
++    # the executor -- readiness, suspension -- and what threads share (S-21)
++    "io_watch(", "io_unwatch(", "suspend_io(", "suspend_until(", "channel(",
++    "mutex(", "rwlock(", "condvar(", "barrier(",
++    # processes, and memory the kernel makes executable (S-21, S-7)
++    "clone_exec(", "driver_retire(", "wildx_alloc(", "wildx_seal(",
++    "wildx_call(", "wildx_free(",
++    # state no argument names: the allocator's live count, the in-flight
++    # error's chain (S-7: a pure function of its ARGUMENTS)
++    "wild_live_count(", "wild_release_all(", "chain_depth(", "chain_site(",
++    # arenas: an allocation S-18 does not place
++    "arena_make(", "shared_arena_make(",
++    # the prelude's: a standard stream, a file, a wait -- each reaching the
++    # kernel through the floor, and none by a name above
++    "std_in(", "std_out(", "std_err(", "byte_reader_open(",
++    "byte_writer_create(", "sleep(", "io_ready(", "io_ready2(",
++)
+ HOST_DIR = "src/host/"
+ # THE CALL SHAPE IS THE LEXER'S, NOT A SPELLING (TM-200): a banned name, then the
+ # lexer's whitespace -- a newline included -- then `(`. `mono_now ()`, and a
+ # `sys` whose `(` begins the next line, are calls to the compiler (measured at
+ # `c970483`, `0.1.5.md` section 1.4) and neither contains `sys(`; so each entry
+ # above is matched over the file's WHOLE comment-blanked text, never a line.
++# AND A NAME IS A WHOLE NAME (cycle 0.3.1, TM-252): no identifier character
++# before it, so `reopen(` is no call of `open` -- it was, for a pure function
++# so named, measured -- while a method of a banned name, `w.read(`, is read
++# as the call it may be: a `.` is no identifier character.
+ _PURITY_CALL = re.compile(
+-    "(%s)%s*\\(" % ("|".join(re.escape(b[:-1]) for b in PURITY_BAN), _W))
++    "(?<![A-Za-z0-9_])(%s)%s*\\("
++    % ("|".join(re.escape(b[:-1]) for b in PURITY_BAN), _W))
+ 
+ 
+ def check_purity(tree, **_):
+@@ -1318,6 +1355,15 @@ def check_purity(tree, **_):
+     reached through a name it does not know -- an alias, or a helper in a file
+     it is not scanning. The defence against that is `check_host_isolation` plus
+     B-17's layering, which together make `host` a leaf nothing may import.
++    Since cycle 0.3.1 the list holds every name the pinned compiler and its
++    prelude offer that reaches past the program's own memory (TM-252), so what
++    is left is a name a later pin adds -- the adoption re-reads the builtin
++    table and the prelude against this list -- and an alias: a banned builtin
++    bound to a function-typed local, or passed as an argument, is admitted by
++    the frontend and refused by the emitter at the pin, `NITPICK-EMIT-002`, the
++    compiler's own "a defect in the compiler"; a local NAMED after one is
++    `NITPICK-RESOLVE-001` (its D-296). Both are `check_call_edges`' to read: it
++    follows every call the emission holds, and refuses one through a value.
+     """
+     files = [f for f in src_files(tree) if not f.startswith(HOST_DIR)]
+     total = len(src_files(tree))
+@@ -1348,10 +1394,30 @@ def check_purity(tree, **_):
+ 
+ _HOST_SYMBOL = re.compile(r"\bhost_[A-Za-z0-9_]*")
+ HOST_ISOLATION_EXEMPT = ("src/lib.npk",)
++# AND EVERY NAME `src/host/` MAKES PUBLIC (cycle 0.3.1, TM-253). The prefix
++# reads H-1's five functions, and `host` has declared `HostClock` since cycle
++# 0.3.0, which no `host_` pattern reads. So the names are read from
++# `src/host/`'s own code -- every `pub` declaration of a function, an enum, a
++# struct, a trait, an error or a `fixed` binding -- and a name 0.3.2 adds,
++# `SystemZone` or `ZoneSource`, is held the day it is written.
++_HOST_PUB = re.compile(
++    r"(?<![A-Za-z0-9_.])pub%s+(?:(?:func|enum|struct|trait|error)%s*|fixed%s[^:;]*)"
++    r":%s*([A-Za-z_][A-Za-z0-9_]*)" % (_W, _W, _W, _W))
++
++
++def host_public_names(tree):
++    """Every name `src/host/` declares `pub`, read from its code, sorted."""
++    names = set()
++    for rel in src_files(tree):
++        if rel.startswith(HOST_DIR):
++            code = blank_code(lexical.read(os.path.join(tree, rel)))
++            names |= set(_HOST_PUB.findall(code))
++    return sorted(names)
+ 
+ 
+ def check_host_isolation(tree, **_):
+-    """No module outside `src/host/` and `src/lib.npk` names a `host_` symbol.
++    """No module outside `src/host/` and `src/lib.npk` names a `host_` symbol,
++    or any name `src/host/` makes public (TM-253).
+ 
+     The second half of the purity boundary. `check_purity` catches a module
+     that reaches the kernel ITSELF; this catches one that reaches it through
+@@ -1366,9 +1432,21 @@ def check_host_isolation(tree, **_):
+     files = [f for f in src_files(tree)
+              if not f.startswith(HOST_DIR) and f not in HOST_ISOLATION_EXEMPT]
+     total = len(src_files(tree))
++    public = [n for n in host_public_names(tree) if not n.startswith("host_")]
++    named = (re.compile(r"(?<![A-Za-z0-9_])(%s)(?![A-Za-z0-9_])"
++                        % "|".join(re.escape(n) for n in public))
++             if public else None)
+     problems = []
+     for rel in files:
+         for lineno, line in code_lines(os.path.join(tree, rel)):
++            for m in (named.finditer(line) if named else ()):
++                problems.append(
++                    "%s:%d names `%s`, which `src/host/` makes public. Nothing "
++                    "outside `src/host/` and `src/lib.npk` may name what `host` "
++                    "declares (B-17, H-2): to name it a module imports the one "
++                    "impure module, which no pure one may. A function that "
++                    "needs \"now\" takes a `Timestamp` as a parameter (S-9)."
++                    % (rel, lineno, m.group(1)))
+             for m in _HOST_SYMBOL.finditer(line):
+                 problems.append(
+                     "%s:%d names `%s`. Nothing outside `src/host/` and "
+@@ -1377,9 +1455,11 @@ def check_host_isolation(tree, **_):
+                     "transitive import. A function that needs `now` takes a "
+                     "`Timestamp` as a parameter (S-9)."
+                     % (rel, lineno, m.group(0)))
+-    headline = ("%d `host_` mention(s) over %d of %d file(s) in src/ (%s and "
+-                "%s exempt)" % (len(problems), len(files), total, HOST_DIR,
+-                                ", ".join(HOST_ISOLATION_EXEMPT)))
++    headline = ("%d mention(s) of `src/host/`'s names -- the `host_` prefix, and "
++                "%d public name(s) beside it (%s) -- over %d of %d file(s) in "
++                "src/ (%s and %s exempt)"
++                % (len(problems), len(public), ", ".join(public) or "none",
++                   len(files), total, HOST_DIR, ", ".join(HOST_ISOLATION_EXEMPT)))
+     return Result("check_host_isolation", headline, problems)
+ 
+ 
+diff --git a/harness/selfcheck.py b/harness/selfcheck.py
+index 2c58724521092382a0acfafbaf4ebbbf0419a798..0410dbfe463fd597ebd6a1db204a293273090efa 100644
+--- a/harness/selfcheck.py
++++ b/harness/selfcheck.py
+@@ -1654,6 +1654,59 @@ PLANTED = [
+      [_span5((("`wide`", "**yes**"),)), ("src/core/vec.npk", "mod:vec;\n"),
+       _ir(_fn("npk.vec.vec_push<int64>", "  %s = add i64 %a, 1\n"))],
+      "§5's table marks no `int128` site in `vec_push`"),
++    # ---- CYCLE 0.3.1: THE TWO BAN LISTS, REVIEWED (TM-252, TM-253). The
++    # first five rows are the new classes and the pattern's left boundary, each a
++    # plant cycle 0.0.3's six names passed beside a control a check matching
++    # by prefix or substring fires on.
++    #
++    # A BUILTIN THE LIST DID NOT HOLD: the machine's thread count.
++    (checks_mod.check_purity,
++     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() never fails "
++                         "{ pass hardware_concurrency(); };\n"),
++     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() never fails "
++                         "{ pass hardware_concurrency_hint(); };\n"),
++     "calls `hardware_concurrency` outside `src/host/`"),
++    # STATE NO ARGUMENT NAMES: the in-flight error's chain.
++    (checks_mod.check_purity,
++     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int32() never fails "
++                         "{ pass chain_depth(); };\n"),
++     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int32() never fails "
++                         "{ pass chain_depths(); };\n"),
++     "calls `chain_depth` outside `src/host/`"),
++    # THE PRELUDE'S: a standard stream, which reaches `sys` through a helper
++    # no ban list of builtins names.
++    (checks_mod.check_purity,
++     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() "
++                         "{ discard(relay std_out()); pass 0i64; };\n"),
++     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() "
++                         "{ discard(relay std_outline()); pass 0i64; };\n"),
++     "calls `std_out` outside `src/host/`"),
++    # A NAME IS A WHOLE NAME: the GOOD column is the point -- `reopen` is no
++    # call of `open`, and the pattern without its left boundary fired on it.
++    (checks_mod.check_purity,
++     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() "
++                         "{ pass relay open(c, 0i64, 0i64); };\n"),
++     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() "
++                         "{ pass relay reopen(c, 0i64, 0i64); };\n"),
++     "calls `open` outside `src/host/`"),
++    # A METHOD OF A BANNED NAME is read as the call it may be -- a reader's
++    # `read` -- beside a method whose name only ends in one.
++    (checks_mod.check_purity,
++     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() "
++                         "{ pass relay w.read(b, d); };\n"),
++     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() "
++                         "{ pass relay w.reread(b, d); };\n"),
++     "calls `read` outside `src/host/`"),
++    # EVERY NAME `src/host/` MAKES PUBLIC (TM-253): `HostClock`, which no
++    # `host_` pattern reads, beside a name that only begins with it.
++    (checks_mod.check_host_isolation,
++     [("src/host/host.npk", "mod:host;\npub enum:HostClock = { Realtime; };\n"),
++      ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64(HostClock:c) never fails "
++                          "{ pass 0i64; };\n")],
++     [("src/host/host.npk", "mod:host;\npub enum:HostClock = { Realtime; };\n"),
++      ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64(HostClocks:c) never fails "
++                          "{ pass 0i64; };\n")],
++     "names `HostClock`, which `src/host/` makes public"),
+ ]
+ 
+ 
+diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
+index d7b6747988bdefdcf561857fcc5d5678a62af526..23ff7deb41e474a373e55d0ae51a0803d185247f 100644
+--- a/meta/DECISIONS.md
++++ b/meta/DECISIONS.md
+@@ -320,6 +320,11 @@ a programming error and the other is data); seven or eight, one per fault class
+ fields carry it at no cost to any consumer).
+ 
+ ### TM-018 — purity: only `src/host/` is impure, and a check enforces it
++> **SUPERSEDED IN PART by TM-252 (@@DATE@@, cycle 0.3.1)**: its list of the
++> names `check_purity` greps for is forty-three since then — every bare-name
++> builtin and public prelude function at the pin that reaches past the
++> program's own memory — and TM-250 reads the rule a second way, from the
++> library's emission. The text below is left exactly as written.
+ **2026-09-03.** Every function in `ntime` outside `src/host/` is a pure
+ function of its arguments — no syscall, no clock, no environment read, no file
+ read. `src/host/` contains exactly five functions and nothing else calls them.
+@@ -8057,3 +8062,94 @@ optimised IR read instead** — `opt -O2` folds the counter-example's product to
+ a constant, the workbench `PLAYBOOK.md` §9's rule; **later, at its own
+ subcycle** — the reader is O-X9's, built here, and the check over it is a few
+ lines.
++
++### TM-252 — `check_purity`'s ban list, reviewed against the pinned compiler: every bare-name builtin and prelude function that reaches past the program's own memory, matched as a whole name called — forty-three where cycle 0.0.3 guessed six
++
++**@@DATE@@, cycle 0.3.1 (the plan's PD-97). Supersedes TM-018 in its list of
++names; dates `SAFETY.md` S-10 and S-10b; restates `TESTING.md` §2's row; the
++cycle README's adoption list gains the list's re-reading.**
++
++**What was found** (`0.3.1.md` §1). The pinned compiler admits fifty-seven
++bare-name builtins (`src/frontend/builtins.npk` at `5fbaf4a`, generated from
++`BUILTIN_REFERENCE.md`'s marked rows), and its prelude, in scope in every
++module, offers public functions that reach the kernel through them —
++`std_in`, `std_out` and `std_err` through a private `std_dup` that calls
++`sys(72, …)`, `byte_reader_open` and `byte_writer_create` through `open`, and
++the asynchronous `sleep`, `io_ready` and `io_ready2`. `check_purity`'s six
++names — `sys`, `mono_now`, `environ`, `read_file`, `open`, `write` — passed a
++function in a copy's `src/cal/` calling `hardware_concurrency()`,
++`read_stdin()`, `chain_depth()`, `wild_live_count()`, `arena_make()`,
++`path_exists()` or `std_out()`, each compiling in the umbrella. And its
++pattern had no left boundary: a pure function named `reopen`, called in the
++same copy, was a finding — *"calls `open`"* — while the emission's reading
++had none. `src/` outside `src/host/` calls seven builtins, every one the
++allocator's or the string floor's, and two prelude functions,
++`duration_ns` and `duration_secs`; of the builtins, `src/host/` calls `sys`,
++`mono_now` and `buffer_new`.
++
++**The decision.** *The ban list is every bare-name builtin and every public
++prelude function at the pin that reaches past the program's own memory, in
++seven classes, each with the rule that bans it: the kernel, the clock and the
++machine — `sys`, `mono_now`, `environ`, `hardware_concurrency` (S-7);
++descriptors and files — `open`, `close`, `read`, `write`, `read_file`,
++`write_file`, `read_stdin`, `path_exists`, `own_fd`, `release_fd` (S-7, S-20);
++the executor and what threads share — `io_watch`, `io_unwatch`, `suspend_io`,
++`suspend_until`, `channel`, `mutex`, `rwlock`, `condvar`, `barrier` (S-21);
++processes and executable memory — `clone_exec`, `driver_retire`,
++`wildx_alloc`, `wildx_seal`, `wildx_call`, `wildx_free` (S-21, S-7); state no
++argument names — `wild_live_count`, `wild_release_all`, `chain_depth`,
++`chain_site` (S-7's "a pure function of its arguments"); arenas —
++`arena_make`, `shared_arena_make` (S-18 places none); and the prelude's —
++`std_in`, `std_out`, `std_err`, `byte_reader_open`, `byte_writer_create`,
++`sleep`, `io_ready`, `io_ready2`. What it leaves answers from its arguments
++and what they point at: the allocator, the string floor, `buffer_new`,
++`to_cstring`, `atomic_from_ptr` and the site tables' `site_line` and
++`site_path`. Each name is matched as a call with no identifier character on
++its left — `reopen(` is no call of `open`, and `w.read(`, a method of a banned
++name, is read as the call it may be. Five plants: three of the new classes,
++the boundary and a method. And the cycle README's `mono_now()`, appended to
++`src/cal/cal.npk` in a copy, makes a full run RED, naming it. The adoption
++that moves the pin re-reads the builtin table and the prelude against the
++list, and `check_call_edges`' allowlist beside it, in its own commit.*
++
++*Alternatives declined:* **the six kept, the emission's reading trusted for the
++rest** — the emission holds no generic function nobody instantiates, and those
++are read by this check alone; **the list derived at each run from the
++compiler's tree** — the harness reads the pinned binaries and never the
++compiler's tree, which moves ahead of the pin (TM-118's reason, and B-10's);
++**every builtin the compiler's own `Pure` column marks `effect`** — that
++column marks every allocation `effect`, and S-7 permits an allocation that
++depends on its inputs alone, so `src/core/` would be red on its own `alloc`;
++**an allow-list of names at the source** — every call `src/` makes, its own
++functions' and its methods' included, held to a list, where the emission's
++reading already holds the calls to one.
++
++### TM-253 — `check_host_isolation` reads every name `src/host/` makes public, beside the `host_` prefix: `HostClock`, public since cycle 0.3.0, passed it
++
++**@@DATE@@, cycle 0.3.1 (the plan's PD-98). Restates `TESTING.md` §2's row;
++dates `HOST.md` H-2.**
++
++**What was found** (`0.3.1.md` §1). The check reads `\bhost_[A-Za-z0-9_]*`,
++which holds H-1's five functions, and `src/host/` declares a sixth public
++name, `HostClock`, the argument `host_clock_res` takes (TM-248). A function in
++a copy's `src/cal/` taking a `HostClock` is silent to the check. It does not
++compile without an import of `host`, which `check_layering` refuses — so the
++gap is the second reading's and not the rule's — and `check_call_edges` reads
++a call into `src/host/` from the emission (TM-250).
++
++**The decision.** *The check reads `src/host/`'s own code for every name it
++declares `pub` — a function, an enum, a struct, a trait, an error or a `fixed`
++binding — and holds each, as a whole name, to the rule the prefix is held to:
++no module outside `src/host/` and `src/lib.npk` names it. `SystemZone` and
++`ZoneSource`, cycle 0.3.2's, are held the day they are written. Its headline
++names the public names it read. One plant, `HostClock` named in `cal`, beside a
++name that only begins with it; and the cycle README's `host_now_utc()`,
++appended to `src/fmt/fmt.npk` in the same copy, is named by the same RED run.*
++
++*Alternatives declined:* **the prefix kept, `HostClock` renamed `host_clock`** —
++a type named for a check, against the library's naming of types, and the next
++public type of `host` would need the same; **a list of `host`'s names written
++in the check** — a list that goes stale the day 0.3.2 adds two; **the check
++retired, `check_layering` and `check_call_edges` standing for it** — a third
++reading of B-17's boundary costs nothing, and it is the one that reads a file
++the umbrella does not reach, such as `src/fmt/fmt.npk` today.
+diff --git a/meta/roadmap/0.3/README.md b/meta/roadmap/0.3/README.md
+index 8ae5e61f5e59830283ed96c853ce65d1a1068d76..410c0f110daa7cd6cbaa3686e42665d051444ee9 100644
+--- a/meta/roadmap/0.3/README.md
++++ b/meta/roadmap/0.3/README.md
+@@ -64,18 +64,18 @@ beside `check_int128_sites`, over the reader O-X9's scan is built on.)*
+ 
+ ### 0.3.1 — `check_purity` goes live
+ *(Stale in its title, found at cycle 0.2.0's planning: `check_purity` has been live since cycle 0.0.3, TM-126. What this subcycle owes is the review of its ban list against a `src/` with a real `host/` — the last item below — and the two plants. `done/0.2/0.2.0.md` §7.)*
+-- [ ] the dormant check from 0.0.3 turned on and green
+-- [ ] **seen to fail**: a deliberately planted `mono_now()` in `src/cal/` fails the build, by name
+-- [ ] `check_host_isolation` likewise: a planted `host_now_utc()` call in `src/fmt/` fails
+-- [ ] both checks' ban lists reviewed against what `src/` actually contains now, rather than what 0.0.3 guessed
++- [x] the dormant check from 0.0.3 turned on and green — live since cycle 0.0.3 (TM-126), and green over `src/host/`'s body: 0 findings over the eight files outside `src/host/` and `src/lib.npk`, at 0.3.1 as at 0.3.0
++- [x] **seen to fail**: a deliberately planted `mono_now()` in `src/cal/` fails the build, by name — TM-252: a full run over a copy with `mono_now()` appended to `src/cal/cal.npk` is RED, `check_purity` naming the file, the line and `mono_now`, and `check_call_edges` the function and `npk_mono_now` (`0.3.1.md`'s record)
++- [x] `check_host_isolation` likewise: a planted `host_now_utc()` call in `src/fmt/` fails — TM-253: the same run names `src/fmt/fmt.npk`'s `host_now_utc`, and `check_layering` its import of `host`
++- [x] both checks' ban lists reviewed against what `src/` actually contains now, rather than what 0.0.3 guessed — and against what the language offers at the pin: the two items below
+ 
+ *(Four more, from 0.3.1's planning on 2026-10-08 — `0.3.1.md`: the two
+ questions handed on, which share one reader of the library's emission, and
+ the two ban lists' decisions. The four above keep their words.)*
+ - [x] **O-X9**: the call-edge scan — every call a function of `src/` outside `src/host/` makes, read from `npkc`'s emission of the umbrella and held to a reviewed allowlist (PD-95) — **TM-250**, `check_call_edges`: eight plants caught and eight controls silent; over the tree 0 findings, `src/host/` reaching `npk_mono_now` and `npk_sys6`, every non-generic function `src/` declares in the emission
+ - [x] **O-X11**: the wide values — every integer wider than `i64` in that emission held to §5's sites, spelled or not (PD-96) — **TM-251**, `check_wide_types`: three plants caught; over the tree exactly §5's three marked functions hold one
+-- [ ] `check_purity`'s list: every builtin and prelude function at the pin that reaches past the program's own memory, matched as a call with an identifier boundary on its left (PD-97)
+-- [ ] `check_host_isolation`'s: every name `src/host/` makes public, `HostClock` among them, beside the `host_` prefix (PD-98)
++- [x] `check_purity`'s list: every builtin and prelude function at the pin that reaches past the program's own memory, matched as a call with an identifier boundary on its left (PD-97) — **TM-252**: forty-three names in seven classes; five plants red against the six names before it and caught after, and `reopen(` a finding before and none after
++- [x] `check_host_isolation`'s: every name `src/host/` makes public, `HostClock` among them, beside the `host_` prefix (PD-98) — **TM-253**: its plant unseen before and caught after
+ 
+ ### 0.3.2 — the system zone
+ - [ ] `SystemZone` and `ZoneSource` as `HOST.md` §4 defines them
+@@ -121,6 +121,15 @@ unchanged tree at both pins before it changes anything, as 0.1.0b, 0.1.4c and
+    D-341; cycle 0.2 added none.
+ 5. **Each CI's pin bump**, and the emission row CI asserts (TM-212), in the
+    adoption's own commit.
++6. **The compiler's builtin table and prelude re-read against
++   `check_purity`'s list** (TM-252) — `src/frontend/builtins.npk` and
++   `src/prelude/prelude.npk` at the new pin: a name that reaches past the
++   program's own memory joins the list, and a runtime symbol
++   `check_call_edges` finds unreviewed joins `CALL_EDGE_ALLOW` or is refused,
++   in the adoption's own commit (TM-250). And the emission's names —
++   `npk.<module>.<name>` at `5fbaf4a` — read again: `check_call_edges` holds
++   every non-generic function `src/` declares to it, so a re-pin that renames
++   them is a red run.
+ 
+ ## Gate
+ 
+diff --git a/meta/roadmap/ROADMAP.md b/meta/roadmap/ROADMAP.md
+index 1675b3b7cdaa979f2076c182d1a586b4e8cb1867..0e8400f3c9d4ca9e7b8eb711dee69d545e1f40e4 100644
+--- a/meta/roadmap/ROADMAP.md
++++ b/meta/roadmap/ROADMAP.md
+@@ -33,7 +33,10 @@ answered A, `instant_of` keeping its name, TM-248.)* *(And at 0.3.0's
+ verification, 2026-10-08: **ten questions are open** — the compiler's four, and
+ six ours, O-X11 raised: `check_int128_sites` reads spellings, and a wide value
+ no width is spelled for passes it, dormant, for 0.3.1's planner. The decisions
+-stand at 180.)*
++stand at 180.)* *(Re-derived at cycle 0.3.1: **184 decisions are settled**,
++the subcycle's four, TM-250 … TM-253; **eight questions are open** — the
++compiler's four, O-N1, O-N2, O-N3 and O-N34, and four ours, O-X1, O-B1, O-X4
++and O-X8: O-X9 and O-X11 are answered, TM-250 and TM-251.)*
+ 
+ ## How this is organised
+ 
+@@ -93,7 +96,7 @@ sibling libraries.
+ | ~~**0.0**~~ | **Foundations** — the language probes, the harness, `src/core/` — **CLOSED 2026-09-06, archived at [`done/0.0/`](done/0.0/README.md)** | — |
+ | ~~**0.1**~~ | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **CLOSED 2026-09-26, archived at [`done/0.1/`](done/0.1/README.md)** | 0.0 ✓ |
+ | ~~**0.2**~~ | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **CLOSED 2026-10-02, archived at [`done/0.2/`](done/0.2/README.md)** | 0.1 ✓ |
+-| **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double — **IN PROGRESS**: [`0.3/0.3.0.md`](0.3/0.3.0.md), the clocks, DONE 2026-10-08; 0.3.1, `check_purity`'s review against the clocks' body, next | 0.2 ✓ |
++| **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double — **IN PROGRESS**: [`0.3/0.3.0.md`](0.3/0.3.0.md), the clocks, DONE 2026-10-08; [`0.3/0.3.1.md`](0.3/0.3.1.md), `check_purity` reviewed and the library's emission read beside it, DONE @@DATE@@; 0.3.2, the system zone, next | 0.2 ✓ |
+ | **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate | 0.2 |
+ | **0.5** | **The zone table** — the generator, the committed tables, the size measurement | 0.1 |
+ | **0.6** | **Zoned time** — offset lookup, the four resolution modes, the transition sweep | 0.4, 0.5 |
+diff --git a/meta/specs/HOST.md b/meta/specs/HOST.md
+index 1238767f03207f5db45e646c1bbe776d47990aa3..f77597c063406f99c7b98df05ddff6483a78f45d 100644
+--- a/meta/specs/HOST.md
++++ b/meta/specs/HOST.md
+@@ -34,6 +34,11 @@ the converse — that no syscall appears outside this module — and a second ch
+ enforces this one: no module outside `src/host/` names a `host_` symbol except
+ `src/lib.npk`'s re-export.
+ 
++*(Cycle 0.3.1: or any name `src/host/` makes public — `HostClock` since cycle
++0.3.0 — read from its own declarations, TM-253; and a third reading holds
++this rule from the library's emission, `check_call_edges`, which refuses a
++call into `src/host/` from any function outside it, TM-250.)*
++
+ **Rule H-3 — this module has no state.** No cached clock, no memoised zone, no
+ lazy initialisation. Two calls to `host_now_utc()` are two syscalls, which is
+ what the caller asked for.
+diff --git a/meta/specs/SAFETY.md b/meta/specs/SAFETY.md
+index 36510d2f41c8cedc47766459178dfd37a829349f..ae34e7abe96ea13cd4ae45d8f9e525642f7605bc 100644
+--- a/meta/specs/SAFETY.md
++++ b/meta/specs/SAFETY.md
+@@ -357,6 +357,15 @@ outside `src/host/` for `sys(`, `mono_now`, `environ`, `read_file`, `open` and
+ `write`, and fails on any hit. The rule is not a convention if nothing checks
+ it, and this is the check.
+ 
++*(Cycle 0.3.1, TM-252: the list is the review's — every bare-name builtin
++and public prelude function at the pin that reaches past the program's own
++memory, forty-three names in seven classes, each matched as a call with no
++identifier character on its left; `TESTING.md` §2's row lists them. The six
++above were cycle 0.0.3's guess, and a function calling
++`hardware_concurrency()` or the prelude's `std_out()` passed them. And since
++TM-250 a second reading holds the rule from the library's emission,
++`check_call_edges`.)*
++
+ **Rule S-10b (TM-126) — it is a SOURCE-LEVEL check, it is LIVE, and it has been
+ SEEN TO FAIL.** Three separate claims, and each was missing:
+ 
+@@ -386,7 +395,11 @@ SEEN TO FAIL.** Three separate claims, and each was missing:
+   is not decoration: `src/host/host.npk`'s own header names `mono_now()` while
+   explaining this rule, and `src/lib.npk`'s names `host_now_utc` while showing
+   the shape of a re-export line, so a check that read prose would fail this
+-  repository on its own documentation — and the first draft did.
++  repository on its own documentation — and the first draft did. *(And at
++  cycle 0.3.1 in the real module, once: a full run over a copy with a
++  `mono_now()` appended to `src/cal/cal.npk` is RED, this check naming the
++  file, the line and the name, and `check_call_edges` the function and
++  `npk_mono_now` — `meta/roadmap/0.3/0.3.1.md`'s record; TM-252.)*
+ 
+ The matching statement for `check_host_isolation` is the same three, with
+ `src/lib.npk` as its one **named** exemption (V-1c) rather than a pattern.
+diff --git a/meta/specs/TESTING.md b/meta/specs/TESTING.md
+index a5ecd5035b069851a43296976bdf7ed8550b48a0..490d4ffb81bb709ebeca4f9b5521894bff2e13d4 100644
+--- a/meta/specs/TESTING.md
++++ b/meta/specs/TESTING.md
+@@ -35,8 +35,8 @@ them found something on its first run.
+ 
+ | Check | Diffs |
+ |---|---|
+-| `check_purity` | `src/` outside `src/host/` against a ban list — `sys`, `mono_now`, `environ`, `read_file`, `open`, `write`, each matched as a CALL: the name, the lexer's whitespace, a newline included, and `(` (V-1l; until cycle 0.1.5 the spelling `name(`, which `mono_now ()` passed). **`SAFETY.md` S-10, and the most important check in the suite.** It is also the **only** one that answers the question: the build's undefined-symbol scan cannot FLAG a syscall, because `npk_sys6` is the runtime's own and is in its allowlist by construction (`BUILD.md` B-2c, TM-118, TM-153, `nitpick-regex`'s RX-120) *(One of two that answer it since cycle 0.3.1: `check_call_edges`, below, reads the calls in the library's emission, TM-250. The row said "the **only** one" until then.)* |
+-| `check_host_isolation` | no module outside `src/host/` and `src/lib.npk` names a `host_` symbol |
++| `check_purity` | `src/` outside `src/host/` against a ban list — since cycle 0.3.1 (TM-252) every bare-name builtin and public prelude function at the pin that reaches past the program's own memory: the kernel, the clock and the machine (`sys`, `mono_now`, `environ`, `hardware_concurrency`); descriptors and files (`open`, `close`, `read`, `write`, `read_file`, `write_file`, `read_stdin`, `path_exists`, `own_fd`, `release_fd`); the executor and what threads share (`io_watch`, `io_unwatch`, `suspend_io`, `suspend_until`, `channel`, `mutex`, `rwlock`, `condvar`, `barrier`); processes and executable memory (`clone_exec`, `driver_retire`, `wildx_alloc`, `wildx_seal`, `wildx_call`, `wildx_free`); state no argument names (`wild_live_count`, `wild_release_all`, `chain_depth`, `chain_site`); arenas (`arena_make`, `shared_arena_make`); and the prelude's (`std_in`, `std_out`, `std_err`, `byte_reader_open`, `byte_writer_create`, `sleep`, `io_ready`, `io_ready2`) — each matched as a CALL: the name, with no identifier character on its left, the lexer's whitespace, a newline included, and `(` (V-1l; until cycle 0.1.5 the spelling `name(`, which `mono_now ()` passed). *(Until cycle 0.3.1 the list was cycle 0.0.3's six — `sys`, `mono_now`, `environ`, `read_file`, `open`, `write` — which a function calling `hardware_concurrency()`, `read_stdin()`, `chain_depth()`, `arena_make()` or the prelude's `std_out()` passed, measured, and its pattern read `reopen(` as a call of `open`.)* **`SAFETY.md` S-10, and the most important check in the suite.** It is also the **only** one that answers the question: the build's undefined-symbol scan cannot FLAG a syscall, because `npk_sys6` is the runtime's own and is in its allowlist by construction (`BUILD.md` B-2c, TM-118, TM-153, `nitpick-regex`'s RX-120) *(One of two that answer it since cycle 0.3.1: `check_call_edges`, below, reads the calls in the library's emission, TM-250. The row said "the **only** one" until then.)* |
++| `check_host_isolation` | no module outside `src/host/` and `src/lib.npk` names a `host_` symbol, or any name `src/host/` makes public — since cycle 0.3.1 (TM-253), read from `src/host/`'s own `pub` declarations, `HostClock` today, so a name cycle 0.3.2 adds is held the day it is written *(the row named the prefix alone until then, and `HostClock`, public since cycle 0.3.0, passed it)* |
+ | `check_call_edges` (TM-250) | **no function of `src/` outside `src/host/` reaches, in `npkc`'s emission of the umbrella, a runtime symbol the reviewed allowlist does not hold, a function of `src/host/`, a call through a value or inline assembly** — `SAFETY.md` S-7 and `HOST.md` H-2 read from the CALLS the compiler emitted, before `opt`, where `check_purity` reads the source's spellings. From each function every symbol it names is followed, through the prelude, the drop glue and every global; the allowlist is the allocator at S-18's places, the string floor, the error route and LLVM's arithmetic, and it is an ALLOW-list — a symbol a re-pin adds is a finding until a row reviews it, and a row the emission no longer declares is a finding too (V-1c). Every non-generic function `src/` declares must be in the emission, and `src/host/`'s must reach past the allowlist — the reader's own control, on every run. **What it cannot read**: a generic function nobody instantiates in the umbrella — `src/core/vec.npk`'s nine — which `check_purity` reads as spelled. `run.py` drives it at step 7, over the library's emission. *(`../OPEN_QUESTIONS.md` O-X9, raised 2026-09-25 and answered at cycle 0.3.1, once `src/host/` named the kernel.)* |
+ | `check_wide_types` (TM-251) | **every integer type wider than `i64` in `npkc`'s emission of a function of `src/` stands in a function `SPAN_MODEL.md` §5 marks, and in no global of `src/`'s modules** — N-20 read from the TYPES the compiler emitted, before `opt`, beside `check_int128_sites`, which reads spellings: a call's result, wide with no width written, is a finding here (`../OPEN_QUESTIONS.md` O-X11). A generic's instance is held by its source name. **What it cannot read** is `check_call_edges`' limit; a mark that outlived its reason is `check_int128_sites`' to fail, and this one names it. `run.py` drives it at step 7. |
+ | `check_tables_regenerate` | every committed generated file against a fresh run of its generator, byte for byte: the zone tables from cycle 0.5, and the civil cross-oracle's corpus (V-6), which exists from cycle 0.1.4 and joins the check when it goes live (TM-183) |

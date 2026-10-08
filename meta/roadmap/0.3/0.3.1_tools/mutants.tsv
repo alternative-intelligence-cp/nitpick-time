@@ -1,0 +1,24 @@
+# 0.3.1 -- the mutants of harness/checks.py, one row each: the step whose checks they
+# mutate, a name, the text, its replacement, TAB-separated, "\n" a newline. `env.sh`'s
+# `mutants <step>` swaps each ONCE in a copy of the repository's harness/ and runs the
+# self-check's plants against it; the problems each is seen by are the plan's §3 table.
+1	allowlist_everything	    return sym in CALL_EDGE_ALLOW or bool(_INTRINSIC.match(sym))	    return True
+1	prelude_not_walked	            elif r in defines or r in globs:\n                todo.append(r)	            elif r in defines or r in globs:\n                pass
+1	host_reach_allowed	            if _ir_module(f) in host:\n                problems.append(	            if False:\n                problems.append(
+1	asm_unread	_IR_ASM = re.compile(_IR_CALL + r'	_IR_ASM = re.compile(r"(?!)" + _IR_CALL + r'
+1	indirect_unread	_IR_INDIRECT = re.compile(_IR_CALL + r'	_IR_INDIRECT = re.compile(r"(?!)" + _IR_CALL + r'
+1	coverage_off	        if (mod, name) not in emitted:	        if False:
+1	stale_rows_off	        if sym not in declares:	        if False:
+1	control_off	    if any(_ir_module(n) in host for n in fns) and not host_reach:	    if False:
+1	host_scanned	    starts = [n for n in fns if _ir_module(n) not in host]	    starts = list(fns)
+1	width_128_unread	    return sorted({int(w) for w in _IR_WIDE.findall(text) if int(w) > 64})	    return sorted({int(w) for w in _IR_WIDE.findall(text) if int(w) > 128})
+1	wide_globals_off	        if _ir_module(g) in mods and _ir_widths(globs[g]):	        if False:
+1	instance_name_kept	    return name[len("npk.%s." % _ir_module(name)):].split("<", 1)[0]	    return name[len("npk.%s." % _ir_module(name)):]
+1	marks_unread	        if name not in sites:\n            problems.append(\n                "`%s` holds	        if True:\n            problems.append(\n                "`%s` holds
+2	left_boundary_dropped	    "(?<![A-Za-z0-9_])(%s)%s*\\("	    "(%s)%s*\\("
+2	machine_dropped	"environ(", "hardware_concurrency(",	"environ(",
+2	chain_dropped	"chain_depth(", "chain_site(",	"chain_site(",
+2	prelude_dropped	    "std_in(", "std_out(", "std_err(", "byte_reader_open(",	    "byte_reader_open(",
+2	read_dropped	"open(", "close(", "read(", "write(",	"open(", "close(", "write(",
+2	write_file_dropped	"read_file(", "write_file(",	"read_file(",
+2	public_names_off	    public = [n for n in host_public_names(tree) if not n.startswith("host_")]	    public = []

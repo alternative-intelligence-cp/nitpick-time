@@ -13,7 +13,9 @@
 # own tree -- what §1 says: the four generic shapes 0.3.1's fix found (§1.2) and step
 # 1's reading of them (§1.3), the arms a truncation of descriptors brings (§1.4), the
 # machine and a namespace of the program's own (§1.5, §1.6), the language's shapes the
-# system zone needs (§1.7), and the module, its bills and its units (§1.8).
+# system zone and its units meet (§1.7), the module, its bills and its units (§1.8),
+# and where the allocator's guard stands past a buffer (§1.9, beside its tables, which
+# are blocks 1m, 3m and 3e).
 : "${REPO:?}" "${NPKC:?}" "${NPKRT:?}" "${W:?}" "${T:?}" "${NTIME_RUN_DATE:?}"
 P=$W/facts; rm -rf "${P:?}"; mkdir -p "$P/bin" "$A/legs"
 fresh() {   # fresh <name> [<step>...]: the working tree as it stands at $P/<name>, then each step
@@ -121,8 +123,11 @@ echo "§1.6 probe22, a program's own /etc: $(legs2 "$P/three/tests/probe" probe2
 
 # ---- §1.7 the language's shapes ------------------------------------------------------
 mkdir -p "$P/shape"
-for n in uid gid; do
-  printf 'mod:sh_%s;\nfunc:main = int32(cstring[]:_~argv) {\n    int64:%s = 1i64;\n    exit 0i32;\n};\n' "$n" "$n" > "$P/shape/sh_$n.npk"
+for n in uid gid pid tid fd thread cfg arena ppid; do
+  { printf 'mod:sh_%s;\nfunc:main = int32(cstring[]:_~argv) {\n    int64:%s = 1i64;\n    exit 0i32;\n};\n' "$n" "$n"
+    printf 'func:failsafe = int32(Error:e) {\n    pick (e) {\n        (HeapBadRequest) { exit 91i32; },\n        (HeapOom) { exit 92i32; },\n'
+    printf '        (Unreachable) { exit 95i32; },\n        (WildLeak) { exit 96i32; },\n        (StackExhausted) { exit 106i32; },\n'
+    printf '        (MachineFault) { exit 107i32; },\n        (*) { exit 99i32; }\n    }\n    exit 9i32;\n};\n'; } > "$P/shape/sh_$n.npk"
   echo "§1.7 a local named $n: $(codes "$PIN" "$P/shape/sh_$n.npk")"
 done
 { printf 'mod:sh_for;\nfunc:main = int32(cstring[]:_~argv) {\n    int64:trips = 0i64;\n'
@@ -145,6 +150,16 @@ for old, new in (("    for (int64:k in 0i64..(env.len - 1i64)) {",
 open(p, "w").write(s); print("§1.7 the TZ step's for loop, written as a while loop: %d replaced" % n)
 PY
 echo "§1.7 host with that while loop: $(reach "$P/while" src/host/host.npk | cut -d: -f1)"
+{ printf 'mod:sh_exit;\nerror:EBoom;\nfunc:may = int32(int64:k) {\n    if (k > 5i64) { fail EBoom; }\n    pass 7i32;\n};\n'
+  printf 'func:main = int32(cstring[]:argv) {\n    exit may(argv.len);\n};\n'
+  printf 'func:failsafe = int32(Error:e) {\n    pick (e) {\n        (EBoom) { exit 80i32; },\n        (HeapBadRequest) { exit 91i32; },\n'
+  printf '        (HeapOom) { exit 92i32; },\n        (Unreachable) { exit 95i32; },\n        (WildLeak) { exit 96i32; },\n'
+  printf '        (StackExhausted) { exit 106i32; },\n        (MachineFault) { exit 107i32; },\n        (*) { exit 99i32; }\n    }\n    exit 9i32;\n};\n'; } > "$P/shape/sh_exit.npk"
+( cd "$P/shape" && "$NPKC" sh_exit.npk -o sh_exit.ll > /dev/null 2>&1 ); rc=$?
+lerr=$(cd "$P/shape" && llc -O0 -filetype=obj sh_exit.ll -o /dev/null 2>&1 | grep -oE "defined with type '[^']*' but expected '[^']*'" | head -1)
+echo "§1.7 exit of a fallible call: npkc exit $rc; llc: ${lerr:-accepts it}"
+sed 's/    exit may(argv.len);/    int32:v = may(argv.len);\n    exit v;/; s/mod:sh_exit;/mod:sh_exitv;/' "$P/shape/sh_exit.npk" > "$P/shape/sh_exitv.npk"
+echo "§1.7 the same call assigned to an int32: $(codes "$PIN" "$P/shape/sh_exitv.npk")"
 
 # ---- §1.8 the module, its bills, its readings, and its units -------------------------
 echo "§1.8 the module as a root: $(codes "$PIN" "$P/three/src/host/host.npk")"
@@ -156,7 +171,20 @@ echo "§1.8 $(check check_host_isolation "$P/three" "$P/three" | head -1)"
 echo "§1.8 $(check check_call_edges "$P/three" "$P/three" | head -1 | cut -c1-300)"
 DESC='ByteReader|ByteWriter|OwnedFd|TextReader|TextWriter|LineBufWriter'
 echo "§1.8 the six descriptor-owning prelude names, in src/ outside src/host/: $(grep -rwE "$DESC" "$P/three/src" --exclude-dir=host | wc -l) line(s); in src/host/: $(grep -rwE "$DESC" "$P/three/src/host" | wc -l), naming $(grep -rhowE "$DESC" "$P/three/src/host" | sort -u | tr '\n' ' ' | sed 's/ $//')"
-for u in system_zone_etc system_zone_tz system_zone_tz_colon system_zone_tz_empty; do
+for u in system_zone_etc system_zone_tz system_zone_tz_colon system_zone_tz_colon_bare system_zone_tz_path system_zone_tz_empty system_zone_tz_raw; do
   echo "§1.8 $u, once a leg: $(legs2 "$P/three/tests/unit" "$u") (-O0/-O2)"
+done
+rm -rf "${A:?}/legs"
+
+# ---- §1.9 the allocator's guard past a buffer of 4 095 bytes, the buffer freed ----------
+mkdir -p "$A/legs"
+for off in 4095 4096; do
+  { printf 'mod:sh_ovf_%s;\nfunc:touch = int64() {\n    buffer:a = buffer_new(4095i64);\n' "$off"
+    printf '    (<-(#ptr_add<uint8>(a.ptr, %si64))) = 97u8;\n    pass 1i64;\n};\n' "$off"
+    printf 'func:main = int32(cstring[]:_~argv) {\n    int64:k = touch() ?| 0i64;\n    exit 0i32;\n};\n'
+    printf 'func:failsafe = int32(Error:e) {\n    pick (e) {\n        (HeapBadRequest) { exit 91i32; },\n        (HeapOom) { exit 92i32; },\n'
+    printf '        (Unreachable) { exit 95i32; },\n        (WildLeak) { exit 96i32; },\n        (StackExhausted) { exit 106i32; },\n'
+    printf '        (MachineFault) { exit 107i32; },\n        (*) { exit 99i32; }\n    }\n    exit 9i32;\n};\n'; } > "$P/shape/sh_ovf_$off.npk"
+  echo "§1.9 a byte written at offset $off of a 4 095-byte buffer, the buffer freed: $(legs2 "$P/shape" sh_ovf_$off) (-O0/-O2)"
 done
 rm -rf "${A:?}/legs"

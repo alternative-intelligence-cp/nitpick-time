@@ -1,5 +1,5 @@
 diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
-index 057921c1dc0d27cccb5b5f267a1c7069d703e763..64b03e8644e64b8e0523f74443a9ca265f4d4429 100644
+index 057921c1dc0d27cccb5b5f267a1c7069d703e763..59b48f523f83f967def63a4142c6616f1bf2ba13 100644
 --- a/.github/workflows/ci.yml
 +++ b/.github/workflows/ci.yml
 @@ -49,9 +49,10 @@
@@ -11,7 +11,7 @@ index 057921c1dc0d27cccb5b5f267a1c7069d703e763..64b03e8644e64b8e0523f74443a9ca26
 -# compiler `5fbaf4a` since cycle 0.3.0 (133 at cycles 0.2.4b and 0.2.4, 131 at cycles 0.2.3 and 0.2.4a, 126 at cycles 0.2.2 and 0.2.3a, 122 at cycle 0.2.1, 114 at cycle 0.2.0, 111 at 0.2.0b, 113 at 0.2.0a and at
 +# re-exported together as 84 public names [[sweep: lib_reexports=84]] (81
 +# until cycle 0.3.2 added the system zone's three),
-+# so this IS evidence about behaviour, of the 140 units the runner reports at
++# so this IS evidence about behaviour, of the 143 units the runner reports at
 +# compiler `5fbaf4a` since cycle 0.3.2 (134 at cycles 0.3.0 and 0.3.1, 133 at cycles 0.2.4b and 0.2.4, 131 at cycles 0.2.3 and 0.2.4a, 126 at cycles 0.2.2 and 0.2.3a, 122 at cycle 0.2.1, 114 at cycle 0.2.0, 111 at 0.2.0b, 113 at 0.2.0a and at
  # `c970483` at cycle 0.1.5's second half; 62 at cycle 0.0.6, 67 at 0.1.0,
  # 70 at 0.1.0b, 75 at 0.1.0c, 78 at 0.1.1, 81 at 0.1.2, 86 at 0.1.3, 90 at
@@ -24,18 +24,18 @@ index 057921c1dc0d27cccb5b5f267a1c7069d703e763..64b03e8644e64b8e0523f74443a9ca26
 +# Ubuntu 24.04's restriction on the namespace (TM-255, `TESTING.md` V-1m). AND
 +# SINCE CYCLE 0.3.2 THE SYSTEM ZONE: `host_system_zone` answers the zone's name
 +# and the mechanism that gave it -- `$TZ`, `/etc/localtime`'s link or
-+# `/etc/timezone` -- or that none did, never UTC, asserted over nineteen
++# `/etc/timezone` -- or that none did, never UTC, asserted over thirty
 +# machines a unit makes in a namespace of its own, the lowest free descriptor
-+# held across every call, and over three `TZ` values, forty runs a leg each
-+# (TM-256, TM-257).
++# held across every call, over five `TZ` values, and over two environments a
++# unit makes by `execve` of itself, forty runs a leg each (TM-256, TM-257).
  #
  # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
  # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
 diff --git a/CLAUDE.md b/CLAUDE.md
-index eed0d80b009732bfc3d8301da0d59362a0ae15ad..b9170abb6bd324e0070399e771d984204637e05f 100644
+index eed0d80b009732bfc3d8301da0d59362a0ae15ad..b643168f0ac20782251878f6a686187c431e808d 100644
 --- a/CLAUDE.md
 +++ b/CLAUDE.md
-@@ -10,14 +10,47 @@ safety-critical systems language at `../../nitpick`.
+@@ -10,14 +10,51 @@ safety-critical systems language at `../../nitpick`.
  **Status: cycle 0.3, the host boundary, IN PROGRESS — 0.3.0, the clocks,
  DONE (2026-10-08): `src/host/` reads the machine's clocks; 0.3.1, the purity
  boundary's instruments, DONE (2026-10-08): `check_purity`'s ban list reviewed, and
@@ -67,11 +67,15 @@ index eed0d80b009732bfc3d8301da0d59362a0ae15ad..b9170abb6bd324e0070399e771d98420
 +names (TM-256). **Its tests make their own machine** (TM-255, `TESTING.md`
 +V-1m): `tests/unit/system_zone_etc.npk` enters a user and a mount namespace of
 +its own and mounts an empty `tmpfs` over `/etc`, by its own syscalls, and asks
-+nineteen machines in one run — none of the three, a dangling link, a regular
-+file, a link of 4 095 bytes, a `/etc/timezone` that is a directory or a link
-+to `/dev/zero` — holding the lowest free descriptor across every call; three
-+units set `$TZ`; every exit seen red on a mutant, and the four no test can see
-+named under H-15 and H-16 (TM-257). `probe22` measures the shape, and CI lifts
++thirty machines in one run — none of the three, a dangling link, a regular
++file, a link of 4 095 bytes, a `/etc/timezone` that is a directory, a link to
++`/dev/zero` or a FIFO under the unit's own alarm, a read-only `/etc` — holding
++the lowest free descriptor across every call; five units set `$TZ`, and one
++makes by `execve` the environments no harness line can. Every single-site
++mutant of the section was run — 293: 28 refused by the compiler, 237 red, 28
++exit 0 and each named with why — and every exit is seen red but the belts:
++three in the namespace unit, each `$TZ` unit's 11 and the raw unit's 14 and 15
++(TM-257). `probe22` measures the shape, and CI lifts
 +Ubuntu 24.04's restriction on the namespace in a step before the harness. And
 +first, in a commit of its own, **every generic function of `src/` is read in
 +an emission**: `tests/unit/generic_instances.npk` instantiates each, step 7
@@ -80,12 +84,12 @@ index eed0d80b009732bfc3d8301da0d59362a0ae15ad..b9170abb6bd324e0070399e771d98420
 +0.3.1's fix measured passing a full run in a generic nobody instantiated are
 +red (TM-254, `meta/OPEN_QUESTIONS.md` O-X12 answered); TM-252's note reads
 +"any of" where it said "and". The self-check plants 116 tree-check
-+violations. A full invocation is **140 units green** at pin `5fbaf4a`.
++violations. A full invocation is **143 units green** at pin `5fbaf4a`.
 +
  **After cycle 0.3.1: the purity boundary's instruments.** `check_purity`'s ban
  list is the review's (TM-252): every bare-name builtin and every synchronous
  public prelude function of the pinned compiler that reaches past the
-@@ -67,7 +100,7 @@ no file of the compiler names and the kernel's table does — about the clock a
+@@ -67,7 +104,7 @@ no file of the compiler names and the kernel's table does — about the clock a
  `HostClock` names, `host`'s own enum, since `InstantClock` must not gain a
  realtime clock (TM-248). The kernel's errno is forwarded verbatim, so `host`
  declares no error: it owes **11** arms and the umbrella **13** still,
@@ -94,6 +98,18 @@ index eed0d80b009732bfc3d8301da0d59362a0ae15ad..b9170abb6bd324e0070399e771d98420
  draws `host` → `span`**, because both readings' types are sealed and only
  `span` builds them (TM-247). **`tests/unit/host_clocks.npk` reads every clock
  under `// stress: 40`** and asserts each reading ADVANCES — H-3's "two calls
+@@ -820,7 +857,10 @@ disagrees with an artefact is the tell.
+ `meta/specs/BUILD.md` §7 has the table. The ones this domain wants most:
+ `unit` (a rounding granularity), `end` (a range's upper bound), `limit` (a
+ bound), `in`, `on`, `mod` (a modulus), `fixed` (as in "fixed offset"), `range`,
+-`error`, `buffer`, `raw`, `move`, `any`, `is`, `never`, `fails`.
++`error`, `buffer`, `raw`, `move`, `any`, `is`, `never`, `fails`. And since
++cycle 0.3.2, measured: `uid` and `gid`, which a user namespace's maps want,
++and `pid`, `tid`, `fd`, `thread`, `cfg` and `arena` — `NITPICK-PARSE-002` at
++the declaration; this library writes `me` and `mg`.
+ 
+ The substitutes this library uses, so the tree stays consistent: **`gran`** for
+ a rounding granularity, **`hi`**/**`lo`** for range bounds, **`rem`** for a
 diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
 index 111f0373bc966b952ca0fedf95fe303f470eb6f5..e4ca795e616d53ee5cc188979b0d73d56e940a67 100644
 --- a/CONTRIBUTING.md
@@ -153,18 +169,18 @@ index 54f63ab1ee6cb8fa54f08ba6185a7bf6b1dc13a9..f4269736292421c8be40bdaabc07ac95
  ---
  
 diff --git a/harness/README.md b/harness/README.md
-index d17154f4c48e5c7b04f2633e87b71101eaecf93e..c9cc9dd3d4140fa82b1288b7906c8a41345450f0 100644
+index d17154f4c48e5c7b04f2633e87b71101eaecf93e..360e98785d5665fc90c28ad568e5b3347fe2a479 100644
 --- a/harness/README.md
 +++ b/harness/README.md
 @@ -507,6 +507,24 @@ sources and its IR **309 729 B**; and library + repro + suite at **99**.
  `134 = 35 + 99`. A full invocation about 210 s; the two readings of the
  emission cost milliseconds.
  
-+**At cycle 0.3.2, the same pin, 140 units**: six tests added —
++**At cycle 0.3.2, the same pin, 143 units**: nine tests added —
 +`tests/unit/generic_instances.npk`, every generic function of `src/`
 +instantiated (TM-254); `tests/probe/probe22_private_etc.npk`, a program's own
-+`/etc` (TM-255); and the system zone's four, `system_zone_etc` and three of
-+`$TZ`, forty runs a leg (TM-257) — and `src/host/` given its fifth function
++`/etc` (TM-255); and the system zone's seven, `system_zone_etc`, five of `$TZ`
++and `system_zone_tz_raw`, forty runs a leg (TM-257) — and `src/host/` given its fifth function
 +(TM-256). The self-check plants 12 of V-14's 13 cases, **116** tree-check
 +violations with 116 clean controls — `check_call_edges`' three and
 +`check_wide_types`' one over the instances' emission — 4 arm specimens and 4
@@ -172,11 +188,11 @@ index d17154f4c48e5c7b04f2633e87b71101eaecf93e..c9cc9dd3d4140fa82b1288b7906c8a41
 +both, **108** functions of `src/`'s modules, 90 outside `src/host/`, reaching
 +17 runtime symbols, every one in the allowlist, `src/host/` reaching
 +`npk_environ`, `npk_mono_now`, `npk_ofd_close`, `npk_open`, `npk_read` and
-+`npk_sys6`; parse over 156 files, `111 + 43 + 2`; the defect corpus unchanged
++`npk_sys6`; parse over 159 files, `114 + 43 + 2`; the defect corpus unchanged
 +at 36; the library reaching 7 sources and its IR **366 527 B**; and library +
-+repro + suite at **105**. `140 = 35 + 105`. A full invocation about 230 s; the
-+namespace unit's eighty runs cost about 7.5 s of it, each run a namespace,
-+nineteen machines and the 4 095-byte link built byte by byte.
++repro + suite at **108**. `143 = 35 + 108`. A full invocation about 230 s; the
++namespace unit's eighty runs cost about 11 s of it, each run a namespace,
++thirty machines, the 4 095-byte link and file built byte by byte.
 +
  The floor under all of it is still TM-117's: every root re-emits the prelude,
  so a `npkc` invocation on anything that compiles costs a fixed amount and the
@@ -199,7 +215,7 @@ index a2c7d35d2d0b145e70d81b4866030c2ac067043d..8323031163f78b5efa669442df42feae
      """
      files = [f for f in src_files(tree)
 diff --git a/harness/run.py b/harness/run.py
-index ce4fe886e51a2ab11fed675078ec0b2cc711ad0f..5e3ca17d34f8870afe984fe53a42670d993b6942 100644
+index ce4fe886e51a2ab11fed675078ec0b2cc711ad0f..cb5e0f9a6269d7c2932953403157f86e599071a9 100644
 --- a/harness/run.py
 +++ b/harness/run.py
 @@ -636,9 +636,9 @@ def run_parse(rep, root, bld):
@@ -209,9 +225,9 @@ index ce4fe886e51a2ab11fed675078ec0b2cc711ad0f..5e3ca17d34f8870afe984fe53a42670d
 -    COST. Re-measured at cycle 0.3.2's second step: of the 152 `.npk` files
 -    here [[sweep: npk_total=152]] the library build roots 7
 -    [[sweep: lib_reach=7]], the suite roots 101 [[sweep: suite_roots=101]]
-+    COST. Re-measured at cycle 0.3.2: of the 156 `.npk` files
-+    here [[sweep: npk_total=156]] the library build roots 7
-+    [[sweep: lib_reach=7]], the suite roots 105 [[sweep: suite_roots=105]]
++    COST. Re-measured at cycle 0.3.2: of the 159 `.npk` files
++    here [[sweep: npk_total=159]] the library build roots 7
++    [[sweep: lib_reach=7]], the suite roots 108 [[sweep: suite_roots=108]]
      (127 and 77 from cycle 0.1.3c until `tests/unit/civil_total_edges.npk`
      joined; 128 and 78 from then until cycle 0.2.0b retired the churn pair,
      TM-214; 126 and 76 until cycle 0.2.0 added `span`'s body to the
@@ -223,25 +239,28 @@ index ce4fe886e51a2ab11fed675078ec0b2cc711ad0f..5e3ca17d34f8870afe984fe53a42670d
 -    added `probe22`, TM-255; 149, 6
 +    every generic function, TM-254, 151 and 100 until its second step added
 +    `probe22`, TM-255, and 152 and 101 until its third added the system
-+    zone's four units, TM-257; 149, 6
++    zone's seven units, TM-257; 149, 6
      and 98 until cycle 0.3.0 gave `host` a body the library reaches and added
      its unit), and of the 4
      support modules [[sweep: support_total=4]] 3 are reached by `use` from
 diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
-index aacc225bdb9722a695a96d189fe7836a4648def9..b8fef392ed6788c84270e253f6b63b38d85fe621 100644
+index aacc225bdb9722a695a96d189fe7836a4648def9..a8d4f6791257211233bd756259fe22241d8cb4c2 100644
 --- a/meta/DECISIONS.md
 +++ b/meta/DECISIONS.md
-@@ -8359,3 +8359,132 @@ test can call, or a switch in the shipped module, H-10's objection to a
+@@ -8359,3 +8359,174 @@ test can call, or a switch in the shipped module, H-10's objection to a
  second code path; **`sudo` in the harness** — it runs as the user, on the
  workbench and in CI alike, and a step of CI's own lifts what the runner
  restricts.
 +
 +### TM-256 — the system zone: `host_system_zone = SystemZone() never fails` answers the zone's NAME and the mechanism that gave it — `SystemZone = { string:name; ZoneSource:source; bool:found; }`, `ZoneSource = { TzEnvironment; EtcLocaltime; EtcTimezone; NotFound; }` — by H-13's four steps, each made exact, and the lookup is the caller's
 +
-+**@@RUN_DATE@@, cycle 0.3.2 (the plan's PD-101). Amends `HOST.md` H-1 and H-12;
-+dates H-13 … H-16, `SAFETY.md` S-8, S-18, S-20 and §2's "`ETimeZone` (0.3)",
-+and `BUILD.md` B-17's `zone` arrow; restates the cycle README's 0.3.2 items; and
-+notes cycle 0.6's `zone_by_name` item.**
++**@@RUN_DATE@@, cycle 0.3.2 (the plan's PD-101) — the author's decision: his answer
++to the workbench's question 26, 2026-10-08 — "i read the recommendations. they
++look fine." Amends `HOST.md` H-1 and H-12, and H-13.1: its refusal of a
++POSIX rule string moves to cycle 0.6's lookup, `zone_by_name`, and here the
++string is reported verbatim. Dates H-13 … H-16, `SAFETY.md` S-8, S-18, S-20
++and §2's "`ETimeZone` (0.3)", and `BUILD.md` B-17's `zone` arrow; restates the
++cycle README's 0.3.2 items; and notes cycle 0.6's `zone_by_name` item.**
 +
 +**What was found** (`0.3.2.md` §1). H-12's `SystemZone` holds a `ZoneId`, and
 +H-13's first step looks a name up "in the compiled table" — and `ZoneId` is
@@ -272,7 +291,9 @@ index aacc225bdb9722a695a96d189fe7836a4648def9..b8fef392ed6788c84270e253f6b63b38
 +steps in order, stopping at the first that answers, each a private function:
 +(1) `$TZ` — the first entry of `environ()` that begins `TZ=`, read in place,
 +one leading `:` stripped, the rest the name verbatim, the empty value
-+included: a set `TZ` answers; (2) `/etc/localtime` — `readlink` (89) into
++included: a set `TZ` answers, and a POSIX rule string is reported as its text
++— H-13.1's refusal of it is the lookup's, at cycle 0.6, and not this step's;
++(2) `/etc/localtime` — `readlink` (89) into
 +`NTIME_PATH_MAX` bytes, the target and never the file, its length the
 +syscall's answer and no NUL looked for, a result that fills the buffer not an
 +answer, the name the tail after the last `zoneinfo/` that begins the target or
@@ -315,55 +336,92 @@ index aacc225bdb9722a695a96d189fe7836a4648def9..b8fef392ed6788c84270e253f6b63b38
 +**`O_NOCTTY`** — the prelude's own stream open passes the three flags above,
 +and a terminal at `/etc/timezone` is a machine past what this library guards;
 +**H-1's fallible signature kept** — nothing in it can fail, and `never fails`
-+says so where it is called.
++says so where it is called; **`while` loops for the steps' scans** — each
++`while … decreases` arms `DecreasesViolated` in every program that imports
++`host`, which owes twelve arms where a `for` over a range leaves it eleven
++(`0.3.2.md` §1.7).
 +
-+### TM-257 — the system zone's tests: one unit in a namespace of its own, nineteen machines in one run and the lowest free descriptor held across every call; three units of `$TZ`; every exit but the belts seen red on a mutant of `host`, and the four mutants no test can see named
++### TM-257 — the system zone's tests: one unit in a namespace of its own, thirty machines in one run and the lowest free descriptor held across every call; five units of `$TZ`, and one that makes by `execve` the environments the harness cannot; every exit but the belts seen red on a mutant of `host`; every single-site mutant of the system zone's section run, and each that exits 0 named with why
 +
-+**@@RUN_DATE@@, cycle 0.3.2 (the plan's PD-102). Dates `HOST.md` H-3, H-14,
-+H-15 and H-16.**
++**@@RUN_DATE@@, cycle 0.3.2 (the plan's PD-102). Dates `HOST.md` H-3, H-13,
++H-14, H-15 and H-16 and `SAFETY.md` S-21; extends `TESTING.md` V-1m to an
++environment.**
 +
 +**What was found** (`0.3.2.md` §1). In a namespace of its own (TM-255),
-+`tests/unit/system_zone_etc.npk` asks `host_system_zone` nineteen times,
-+`/etc` written between each, with no `TZ` and two variables a careless step 1
++`tests/unit/system_zone_etc.npk` asks `host_system_zone` thirty times, `/etc`
++written between each, with no `TZ` and seven variables a careless step 1
 +would read as one: each case's source, name and `found`, and the lowest free
 +descriptor — what `open` hands out next — the same after the call as before
-+it. Three units set `TZ` through the harness (V-1e): a POSIX rule string, a
-+name behind a `:`, and the empty value. All exit 0 on both legs, forty runs a
-+leg. Of thirty-four mutants of `src/host/host.npk`, each a text replaced once,
-+thirty are red at the exits each is aimed at, on both legs, and four exit 0:
-+step 2's refusal of a result that fills the buffer, deleted — the kernel
-+refuses a link of 4 096 bytes, so none does; the target's length read by a
-+scan for a NUL — the buffer is born zeroed, so the scan stops where the
-+syscall's answer does; and step 3's `O_NONBLOCK` and `O_CLOEXEC`, each
-+dropped — a FIFO with no writer would block the open, and this harness has no
-+timeout to see a hang with, and the second needs an `exec`.
++it. Five units set `TZ` through the harness (V-1e): a POSIX rule string, a
++name behind a `:`, a `:` alone, a path, and the empty value; and
++`tests/unit/system_zone_tz_raw.npk` makes, by `execve` of itself, the two
++environments no harness line can — `TZ` the first entry and a second `TZ=`
++after it, and entries of no, one and two bytes before the first `TZ=`. All
++exit 0 on both legs, forty runs a leg. **Every single-site mutant of the
++section was run**: 293, fourteen operators at every site each matches (the
++plan's `mutate.py`). The compiler refuses 28; 237 are red on both legs; and
++28 exit 0, none of which a unit here can tell from the section. Twenty are
++equivalent — the same answer for every input, as `n == NTIME_PATH_MAX` beside
++`n >= NTIME_PATH_MAX`, where no syscall returns more than it was asked for.
++Six differ only on a link target of 4 096 bytes or more, which the kernel
++refuses to make (`probe22`): the truncation refusal deleted or weakened,
++three, and step 2's buffer or `readlink`'s cap a byte off, three. And two no
++exit shows: step 3's `O_CLOEXEC` dropped, which only an `exec` during the
++call could see, and step 3's buffer a byte short of its read, whose one-byte
++overrun on a read of 4 096 bytes lands in the allocator's rounding, short of
++its guard — measured. Of thirty-five named shapes of a careless
++implementation, thirty-two are red and three exit 0: the truncation refusal
++deleted, the target's length read by a scan for a NUL — the buffer is born
++zeroed, so the scan stops where the syscall's answer does — and `O_CLOEXEC`
++dropped. *(The plan's first draft claimed every case a careless
++implementation gets wrong was a machine the unit writes, and named four
++mutants no test could see; its verifier generated the section's single-site
++mutants, and found ones a machine kills unseen, and one of the four,
++`O_NONBLOCK` dropped, seen by a FIFO under an alarm. This decision's machines
++are the ones that enumeration asked for.)*
 +
 +**The decision.** *`tests/unit/system_zone_etc.npk`, `// stress: 40`, in a
 +user and a mount namespace of its own with an empty `/etc` (TM-255): nothing;
 +`/etc/timezone` alone; a link beside it — step 2 before step 3; a relative
 +link; a dangling link — the target, never the file; `zoneinfo/` not at a
 +component's start; two, the last; an empty tail; a regular file; the mark at
-+the target's start; a link of 4 095 bytes; and `/etc/timezone` with no
-+newline, two lines, a CR before the newline, an empty first line, empty, a
-+link to `/dev/zero`, a directory, and 4 096 bytes — each its exit, and each
-+with the lowest free descriptor held. `tests/unit/system_zone_tz.npk`,
-+`system_zone_tz_colon.npk` and `system_zone_tz_empty.npk`, `// stress: 40`,
-+each a `TZ` the harness sets. Every exit was seen red on a mutant of `host`
-+but three belts — 47, a directory, whose failed read is an empty file's path,
-+which a mutant reddens at 45 first; 48, a file of 4 096 bytes, passed by as
-+`/dev/zero` is, which a mutant reddens at 46 first; and the `$TZ` units' 11,
-+not found beside `TzEnvironment`, which no one-text mutant writes. The four no
-+test can see are named in the unit's header and in dated notes under H-15 and
-+H-16, with what holds each — the `?|` that takes the length from the
-+syscall's answer, the view built from it, and the open's one line.*
++the target's start; a link of 4 095 bytes; `/etc/timezone` with no newline,
++two lines, a CR before the newline, an empty first line, empty, a link to
++`/dev/zero`, a directory, and 4 096 bytes; six more shapes of the mark — two,
++the last ending the target; `.zoneinfo/`; `xzoneinfo/`, the mark at the
++second byte; `Zoneinfo/`; `zoneinfo-leaps/`; `zoneinfo2/` — and five more of
++step 3 — one byte; 4 095 bytes; a tab before the newline; a FIFO nothing
++writes, under the unit's own `alarm` of five seconds, so an open that blocks
++ends the process by `SIGALRM`, which the harness reads as red; and a
++read-only `/etc` — each its exit, and each with the lowest free descriptor
++held. Its environment holds seven names that a step 1 comparing a byte of
++`TZ=` by anything but equality, or looking past an entry's start, reads as
++`TZ`. `tests/unit/system_zone_tz.npk`, `system_zone_tz_colon.npk`,
++`system_zone_tz_colon_bare.npk`, `system_zone_tz_path.npk` and
++`system_zone_tz_empty.npk`, `// stress: 40`, each a `TZ` the harness sets; and
++`tests/unit/system_zone_tz_raw.npk`, `// stress: 40`, its two environments by
++`execve` (V-1m). Every exit was seen red on a mutant of `host` but the belts:
++47, a directory, whose failed read is an empty file's path, which a mutant
++reddens at 45 first; 48, a file of 4 096 bytes, passed by as `/dev/zero` is,
++which a mutant reddens at 46 first; 58, the FIFO's answer, which the mutant it
++is there for never reaches, the alarm ending the process first; each `$TZ`
++unit's 11, the raw unit's too, not found beside `TzEnvironment`, which no single
++site writes; and the raw unit's 14 and 15, whose misreadings a mutant makes in
++its first image first, at 12. Every mutant that exits 0 is named with why in
++the plan's §1.9; the six of the kernel's limit and the two no exit shows, in
++dated notes under H-15 and H-16, with what holds each.*
 +
-+*Alternatives declined:* **one unit per machine** — nineteen files and
-+nineteen namespaces for what one process asks in sequence, and the descriptor
-+held across all of them; **the cases built by the harness** — TM-255's
-+declined marker; **a FIFO at `/etc/timezone`** — the open it tests blocks
-+forever under the mutant it is there to see, and a hang is no verdict this
-+harness reads; **asserting the close's verdict** — `OwnedFd`'s drop does not
-+report it, and the lowest free descriptor is what a leak moves.
++*Alternatives declined:* **one unit per machine** — thirty files and thirty
++namespaces for what one process asks in sequence, and the descriptor held
++across all of them; **the cases built by the harness** — TM-255's declined
++marker; **a timeout in the harness, to see the FIFO's hang** — machinery in the
++runner, where the unit's own `alarm` turns a hang into a signal the runner
++already reports; **a marker for an environment the harness cannot make** — a
++second spelling, in the runner, of what `execve` takes in one call;
++**asserting the close's verdict** — `OwnedFd`'s drop does not report it, and
++the lowest free descriptor is what a leak moves; **no `// stress:`** — V-11
++counts `host`'s five functions, and forty runs a leg cost the namespace unit
++about 11 s of a full run.
 diff --git a/meta/research/CURRENCY.md b/meta/research/CURRENCY.md
 index f0b56d5eb5dd771f98c8ead337dbaadaeae2d87a..b9dbd84751c24d50d3246eebbc78ab4b5804e486 100644
 --- a/meta/research/CURRENCY.md
@@ -450,7 +508,7 @@ index 0000000000000000000000000000000000000000..4f85fff8c977fe6e5497e925f57b1adc
 +lines are old and the behaviour long-standing. Other C libraries were not
 +read, so the plan's claims name glibc alone.
 diff --git a/meta/roadmap/0.3/README.md b/meta/roadmap/0.3/README.md
-index f0c13e4d5558ae117fa4465196d14697cb4ba3d3..c1fca856f6a59ff10c4131724b40428d076d910c 100644
+index d6966b4d966c0d197547862e1f70ea2e5fa401c9..58219f6198d314d772658c23876428c99cc62a51 100644
 --- a/meta/roadmap/0.3/README.md
 +++ b/meta/roadmap/0.3/README.md
 @@ -93,14 +93,14 @@ the lookup — a rule string's refusal with it — is the caller's, at 0.6
@@ -467,12 +525,12 @@ index f0c13e4d5558ae117fa4465196d14697cb4ba3d3..c1fca856f6a59ff10c4131724b40428d
 -- [ ] the descriptor closed on every path (S-20)
 +- [x] `SystemZone` and `ZoneSource` as `HOST.md` §4 defines them — *as PD-101 amends §4: the name, where H-12 held a `ZoneId`, and `EtcTimezone`, where it named `TzDirLink`* — **TM-256**, H-12 amended; both re-exported, and read by `check_host_isolation` among `src/host/`'s public names
 +- [x] the four steps in order, stopping at the first that answers (H-13) — each a private function, `host_system_zone` `never fails`; `tests/unit/system_zone_etc.npk`'s exit 32 sees step 2 answer before step 3, and every `$TZ` unit sees step 1 answer before the machine's `/etc/localtime`
-+- [x] `$TZ` with a leading `:` stripped; **a POSIX rule string refused** with `ETimeZone`/`Unknown` (H-13.1), not parsed — *as PD-101 places it: reported as the text it is, never parsed, and refused by the lookup, cycle 0.6's `zone_by_name`* — `tests/unit/system_zone_tz.npk`, `_colon.npk` and `_empty.npk`; cycle 0.6's item noted
++- [x] `$TZ` with a leading `:` stripped; **a POSIX rule string refused** with `ETimeZone`/`Unknown` (H-13.1), not parsed — *as PD-101 places it: reported as the text it is, never parsed, and refused by the lookup, cycle 0.6's `zone_by_name`* — `tests/unit/system_zone_tz.npk`, `_colon.npk`, `_colon_bare.npk`, `_path.npk` and `_empty.npk`, and `_raw.npk`'s two environments by `execve`; cycle 0.6's item noted
 +- [x] `/etc/localtime` read as a **symlink target**, never as bytes (H-14) — `readlink`, 89; exits 34 (a dangling link answers) and 38 (a regular file is passed by)
 +- [x] `readlink`'s four facts honoured (H-15): the length is the authority, the result is not NUL-terminated, `NTIME_PATH_MAX` bounds it, a truncated result is not-found — each kept where H-15's dated note says; a link of 4 095 bytes read whole (exit 40), and the two no test can see named: the kernel never makes a link that fills the buffer, and a zeroed buffer hides a NUL scan
-+- [x] `/etc/timezone` as step 3 — its first line; exits 31 and 41 … 48
++- [x] `/etc/timezone` as step 3 — its first line; exits 31, 41 … 48 and 55 … 59
 +- [x] **not-found is `found: false`, not UTC** (H-13.4) — a test asserts it on a machine with none of the three — exit 30, an empty `/etc` in the unit's own namespace (TM-255)
-+- [x] the descriptor closed on every path (S-20) — an `OwnedFd`, closed by its drop; the lowest free descriptor held across all nineteen calls
++- [x] the descriptor closed on every path (S-20) — an `OwnedFd`, closed by its drop; the lowest free descriptor held across all thirty calls
  
  *(Four more, from 0.3.2's planning on 2026-10-08 — `0.3.2.md`: the question
  0.3.1's fix raised and its verifier's nit, in a commit before the zone; the
@@ -480,11 +538,11 @@ index f0c13e4d5558ae117fa4465196d14697cb4ba3d3..c1fca856f6a59ff10c4131724b40428d
  - [x] **O-X12**: every generic function `src/` declares instantiated in `tests/unit/generic_instances.npk`, its emission read by `check_call_edges` and `check_wide_types` beside the umbrella's, and a generic no instance holds a finding (PD-99) — **TM-254**: four plants caught and four controls silent, each unseen by the checks before it; over the tree `vec.npk`'s nine, at `int64`, reach the allocator, the error route and LLVM's arithmetic, every symbol in the allowlist
  - [x] the 0.3.1 verifier's nit: `check_purity`'s docstring and TM-252's note say a truncation of descriptors is red "only where the `DecreasesViolated` and `LimitViolated` it arms are new" — it is *any of* them, `DecreasesViolated` alone in `src/core/vec.npk` — corrected by dated notes, not rewritten — the docstring in place, recording its words, and TM-252's note by a further dated sentence
  - [x] a unit makes its own `/etc` — a user and a mount namespace and an empty `tmpfs`, by its own syscalls; `probe22` measures the shape and the kernel's longest link, and CI lifts Ubuntu 24.04's restriction on the namespace (PD-100) — **TM-255**: `probe22` exit 0 on both legs, here and in CI after the step that lifts the restriction; `TESTING.md` V-1m
--- [ ] the tests: one unit of nineteen machines in a namespace of its own, the lowest free descriptor held across every call; three units of `$TZ`; every exit seen red on a mutant of `host`, and the mutants no test can see named (PD-102)
-+- [x] the tests: one unit of nineteen machines in a namespace of its own, the lowest free descriptor held across every call; three units of `$TZ`; every exit seen red on a mutant of `host`, and the mutants no test can see named (PD-102) — **TM-257**: four units, forty runs a leg; the mutants in `0.3.2.md`'s record
+-- [ ] the tests: one unit of thirty machines in a namespace of its own, the lowest free descriptor held across every call; five units of `$TZ`, and one that makes by `execve` the environments no harness line can; every exit seen red on a mutant of `host` but the belts, each named; every single-site mutant of the system zone's section run; and each no test can see named, with why (PD-102)
++- [x] the tests: one unit of thirty machines in a namespace of its own, the lowest free descriptor held across every call; five units of `$TZ`, and one that makes by `execve` the environments no harness line can; every exit seen red on a mutant of `host` but the belts, each named; every single-site mutant of the system zone's section run; and each no test can see named, with why (PD-102) — **TM-257**: seven units, forty runs a leg; of 293 single-site mutants, 28 stillborn, 237 red and 28 named; the mutants in `0.3.2.md`'s record
  
- ### 0.3.3 — the double
- - [ ] the fake host module in `tests/`, **not** in `src/` (H-10)
+ *(The fourth was restated at the plan's revision, 2026-10-08, after its
+ verifier measured what it claimed. It said "one unit of nineteen machines …;
 diff --git a/meta/roadmap/0.6/README.md b/meta/roadmap/0.6/README.md
 index a155bf3290bdbe99c8a17aedec1b2074a667f45a..e762ec9e5f2acab8612d368aca0bee9a063922ba 100644
 --- a/meta/roadmap/0.6/README.md
@@ -524,7 +582,7 @@ index b94ab5f91a296077c6b6f586a379ba09e558cf69..092208cb46143f93e1ac8671ae0ac60c
  | **0.5** | **The zone table** — the generator, the committed tables, the size measurement | 0.1 |
  | **0.6** | **Zoned time** — offset lookup, the four resolution modes, the transition sweep | 0.4, 0.5 |
 diff --git a/meta/specs/BUILD.md b/meta/specs/BUILD.md
-index 42741ec0a5a1f4c5ac4d3a8a576b763666cdc8f2..a9a5ccd1e28cab28f5dd5dc233b1f0c5b7ac061c 100644
+index 42741ec0a5a1f4c5ac4d3a8a576b763666cdc8f2..f48193b3dc2f17c5d75cec26eb21e7cb7ad31868 100644
 --- a/meta/specs/BUILD.md
 +++ b/meta/specs/BUILD.md
 @@ -324,9 +324,10 @@ list kept the old code until cycle 0.2.0), `BORROW-001`, `BORROW-012`,
@@ -532,11 +590,11 @@ index 42741ec0a5a1f4c5ac4d3a8a576b763666cdc8f2..a9a5ccd1e28cab28f5dd5dc233b1f0c5
  `REACH-002` and `REACH-003`, and every family
  after the first three runs only on something that parsed. Re-measured at pin
 -`5fbaf4a`, cycle 0.3.2's second step: **152 files = 107 parse cleanly + 43
-+`5fbaf4a`, cycle 0.3.2: **156 files = 111 parse cleanly + 43
++`5fbaf4a`, cycle 0.3.2: **159 files = 114 parse cleanly + 43
  parse and are refused later + 2 do not parse**
 -<!-- [[sweep: npk_total=152]] --> (`151 = 106 + 43 + 2` from cycle 0.3.2's
-+<!-- [[sweep: npk_total=156]] --> (`152 = 107 + 43 + 2` from its second step
-+until its third added the system zone's four units, TM-257; `151 = 106 + 43 + 2` from cycle 0.3.2's
++<!-- [[sweep: npk_total=159]] --> (`152 = 107 + 43 + 2` from its second step
++until its third added the system zone's seven units, TM-257; `151 = 106 + 43 + 2` from cycle 0.3.2's
  first step, which added `tests/unit/generic_instances.npk`, TM-254, until its
  second added `probe22`, TM-255; `150 = 105 + 43 + 2` from cycle 0.3.0 until
  then; `127 = 90 + 35 + 2` from cycle 0.1.3c until
@@ -552,8 +610,16 @@ index 42741ec0a5a1f4c5ac4d3a8a576b763666cdc8f2..a9a5ccd1e28cab28f5dd5dc233b1f0c5
  
  A `use` cycle is legal in the language (D-086) and is still a decomposition
  mistake; `ntime`'s layers are acyclic and the harness says so.
+@@ -630,6 +634,7 @@ these reads like an ordinary local name and is not:
+ | `prove`, `assert_static`, `requires`, `ensures`, `acquires`, `gives`, `invariant` | the rest of the same production |
+ | `decreases`, `unbounded` | **the loop clause's two words** (D-304), in the same production since compiler `c3bdae2` — and "unbounded" is what an open range wants to be called (TM-151) |
+ | `sealed`, `hidden` | **field qualifiers** (D-313, D-314) since compiler `c3bdae2` — and "hidden" is what a flag wants to be called |
++| `uid`, `gid`, `pid`, `tid`, `fd`, `thread`, `cfg`, `arena` | **refused as local names**, `NITPICK-PARSE-002` at the declaration — measured at pin `5fbaf4a` (cycle 0.3.2), each by declaring `int64:<name> = 1i64;`, with `ppid` compiling beside them. The first two are what a user namespace's maps want: `probe22` and the system zone's unit write `me` and `mg`; `fd` is the prelude's descriptor type |
+ 
+ **Rule B-18 (TM-130) — the ten `VerificationKeyword` spellings are reserved as
+ ordinary names, and the diagnostic will not tell you.** Measured one at a time
 diff --git a/meta/specs/HOST.md b/meta/specs/HOST.md
-index f77597c063406f99c7b98df05ddff6483a78f45d..358f6869569d8aa65ec1f07041b725f816c1173f 100644
+index f77597c063406f99c7b98df05ddff6483a78f45d..149bb2365d8d9d471f5e3dde7e0e9e925dd33f42 100644
 --- a/meta/specs/HOST.md
 +++ b/meta/specs/HOST.md
 @@ -16,7 +16,7 @@ pub func:host_now_utc        = Timestamp();          // CLOCK_REALTIME
@@ -584,7 +650,7 @@ index f77597c063406f99c7b98df05ddff6483a78f45d..358f6869569d8aa65ec1f07041b725f8
  breaks its contract. A green run is not evidence about these four.)*
  
 +*(Cycle 0.3.2, TM-257: and no memoised zone, observed —
-+`tests/unit/system_zone_etc.npk` asks `host_system_zone()` nineteen times in
++`tests/unit/system_zone_etc.npk` asks `host_system_zone()` thirty times in
 +one process, `/etc` rewritten between each, and every answer is that
 +`/etc`'s.)*
 +
@@ -619,7 +685,7 @@ index f77597c063406f99c7b98df05ddff6483a78f45d..358f6869569d8aa65ec1f07041b725f8
  **Rule H-13 — the discovery order**, and it stops at the first that answers:
  
  1. **`$TZ`**, from `environ()`. A bare name (`Europe/London`) is looked up in
-@@ -199,20 +221,63 @@ pub enum:ZoneSource = { TzEnvironment; EtcLocaltime; TzDirLink; NotFound; };
+@@ -199,20 +221,78 @@ pub enum:ZoneSource = { TzEnvironment; EtcLocaltime; TzDirLink; NotFound; };
     decide what to do, and a library that quietly substitutes UTC has made that
     decision badly on its behalf.
  
@@ -631,7 +697,8 @@ index f77597c063406f99c7b98df05ddff6483a78f45d..358f6869569d8aa65ec1f07041b725f8
 +GNU C library reads an empty one as UTC, and moving on to `/etc/localtime`
 +would answer a question the environment did not ask. A rule string is reported
 +as the text it is, never parsed; "**refused** — `ETimeZone`/`Unknown`" is the
-+lookup's, at cycle 0.6, as a name no table holds, and not this step's.
++lookup's, at cycle 0.6, as a name no table holds, and not this step's — the
++author's decision, his answer to the workbench's question 26, 2026-10-08.
 +**Step 2**'s name is the tail after the LAST `zoneinfo/` that begins the
 +target or follows a `/`; none, or an empty tail, and the step does not
 +answer. **Step 3**'s name is the bytes before the file's first newline, every
@@ -639,6 +706,13 @@ index f77597c063406f99c7b98df05ddff6483a78f45d..358f6869569d8aa65ec1f07041b725f8
 +read that fills its buffer of `NTIME_PATH_MAX` bytes, and the step does not
 +answer. And **in every step an error is that step's not answering**: nothing
 +is forwarded, so `host_system_zone` is `never fails` (H-1).)*
++
++*(Cycle 0.3.2, TM-257: step 1 asserted — five units set `TZ`, a rule string,
++a name behind a `:`, a `:` alone, a path and the empty value; one makes by
++`execve` an environment whose first entry is `TZ`, a second after it, and
++one whose entries of no, one and two bytes come before its `TZ=`; and the
++namespace unit's environment holds seven names that begin like `TZ=` and are
++not it.)*
 +
  **Rule H-14 — the file that is never read is `/etc/localtime` itself.** Step 2
  reads the *link target*, not the TZif content. If `/etc/localtime` is a regular
@@ -662,9 +736,11 @@ index f77597c063406f99c7b98df05ddff6483a78f45d..358f6869569d8aa65ec1f07041b725f8
 +truncated result does not answer: `n >= NTIME_PATH_MAX` passes it by. **Two of
 +the four are held by reading, not by a test**: the kernel refuses a link
 +target of 4 096 bytes and holds one of 4 095 (`tests/probe/probe22_private_etc.npk`),
-+so no link it made fills the buffer, and the refusal deleted is unseen; and a
-+scan for the first NUL in place of `n` stops where `n` does, because the buffer
-+is born zeroed — unseen too. A green run is not evidence about these two.)*
++so no link it made fills the buffer — the refusal deleted or weakened is
++unseen, and so are step 2's buffer and `readlink`'s cap a byte off, which
++differ only on such a link; and a scan for the first NUL in place of `n` stops
++where `n` does, because the buffer is born zeroed — unseen too. A green run is
++not evidence about these.)*
 +
  **Rule H-16 — the descriptor is closed on every path.** `SAFETY.md` S-20: the
  module holds nothing across a call.
@@ -676,15 +752,20 @@ index f77597c063406f99c7b98df05ddff6483a78f45d..358f6869569d8aa65ec1f07041b725f8
 +could use. Opened `O_NONBLOCK`, so a FIFO there never blocks the open
 +(`SAFETY.md` S-21), and `O_CLOEXEC`, so it never outlives the call into an
 +`exec`. TM-257: the lowest free descriptor is the same after every call as
-+before it, through each path step 3 takes. **The two flags are held by
-+reading**: a FIFO with no writer would block the open, and the harness has no
-+timeout to see a hang with; the second needs an `exec`.)*
++before it, through each path step 3 takes. **`O_NONBLOCK` is seen**: a FIFO
++nothing writes, at `/etc/timezone`, under the unit's own alarm of five seconds
++— without the flag the open blocks, and `SIGALRM` ends the process, red; and
++opened read-only, the step answers from a read-only `/etc`. **`O_CLOEXEC` is
++held by reading**: the descriptor lives only inside the call, so only an
++`exec` during it — another thread's — could see it. And so is step 3's buffer
++a byte short of its read: the byte a read of 4 096 bytes writes past it lands
++in the allocator's rounding, short of its guard, measured.)*
 +
  ---
  
  ## 5. What is deliberately absent
 diff --git a/meta/specs/SAFETY.md b/meta/specs/SAFETY.md
-index 8e50f8febc4c4ee10b3ba526d7ba88378811b49c..cbf4c09b56fe21c0247f8812b8e345a43eafa43c 100644
+index 8e50f8febc4c4ee10b3ba526d7ba88378811b49c..a6ef7a7daf8c831ea550d479bcf2e34f57be8b94 100644
 --- a/meta/specs/SAFETY.md
 +++ b/meta/specs/SAFETY.md
 @@ -88,7 +88,7 @@ import-scoped:
@@ -727,7 +808,7 @@ index 8e50f8febc4c4ee10b3ba526d7ba88378811b49c..cbf4c09b56fe21c0247f8812b8e345a4
  Growable storage is the library's own `Vec<T>` (`BUILD.md` §5), whose block is
  `wild` and whose lifetime is its owner's scope; every `wild` byte is released
  on every path, so `exit 0` never trips D-151.
-@@ -1236,7 +1242,10 @@ measured false on 2026-09-25, and re-measured here.)*
+@@ -1236,10 +1242,16 @@ measured false on 2026-09-25, and re-measured here.)*
  
  **Rule S-20.** `ntime` opens **no descriptor** except in `host_system_zone()`,
  which reads `/etc/localtime`'s *link target*, closes what it opened before
@@ -738,9 +819,16 @@ index 8e50f8febc4c4ee10b3ba526d7ba88378811b49c..cbf4c09b56fe21c0247f8812b8e345a4
 +its drop on every path — `HOST.md` H-16.)*
  
  **Rule S-21.** `ntime` spawns no processes, installs no signal handler, starts
- no thread, and blocks on nothing.
+-no thread, and blocks on nothing.
++no thread, and blocks on nothing. *(Cycle 0.3.2, TM-257: asserted for the
++system zone's one `open` — a FIFO nothing writes, at `/etc/timezone`, is passed
++by, where an `open` without `O_NONBLOCK` would block until the unit's own alarm
++ended it.)*
+ 
+ **Rule S-22 (TM-109, amended by TM-110) — a view is a parameter, never a return
+ value; and this rule is a BELT, deliberately stricter than the language.** §1's
 diff --git a/meta/specs/TESTING.md b/meta/specs/TESTING.md
-index 65c85959a3a4f1c26ba72c5ade871c2bba4fd64d..3565773632534ac72a9f655b3e201569b7d5af14 100644
+index 65c85959a3a4f1c26ba72c5ade871c2bba4fd64d..192c16fec76d114502af696230fa7b51f31b8c91 100644
 --- a/meta/specs/TESTING.md
 +++ b/meta/specs/TESTING.md
 @@ -17,7 +17,7 @@ than sampled. Where that is possible it is the gate, and §3 says where.
@@ -748,12 +836,38 @@ index 65c85959a3a4f1c26ba72c5ade871c2bba4fd64d..3565773632534ac72a9f655b3e201569
  | Stage | Answers |
  |---|---|
 -| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **40 files of 152 that no other stage roots** <!-- [[sweep: npk_total=152]] --> *(40 of 151 until cycle 0.3.2's second step added a probe, and of 150 until its first added a unit; 41 of 149 until cycle 0.3.0, when the library build began to reach `src/host/host.npk`)* |
-+| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **40 files of 156 that no other stage roots** <!-- [[sweep: npk_total=156]] --> *(40 of 152 until cycle 0.3.2's third step added four units, of 151 until its second added a probe, and of 150 until its first added a unit; 41 of 149 until cycle 0.3.0, when the library build began to reach `src/host/host.npk`)* |
++| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **40 files of 159 that no other stage roots** <!-- [[sweep: npk_total=159]] --> *(40 of 152 until cycle 0.3.2's third step added seven units, of 151 until its second added a probe, and of 150 until its first added a unit; 41 of 149 until cycle 0.3.0, when the library build began to reach `src/host/host.npk`)* |
  | `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
  | `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
  | `check` | every documented refusal actually refuses, with exactly its code |
+@@ -358,8 +358,8 @@ so it allows the whitespace on both sides now, and a plant spells it across a
+ line end. No exposure: outside their modules `items` and `body` are `hidden`,
+ `NITPICK-TYPE-080`.)*
+ 
+-**Rule V-1m (TM-255) — what the runner cannot construct, a unit makes: an
+-`/etc` of its own.** V-1e builds each program's environment; `/etc` is the
++**Rule V-1m (TM-255, TM-257) — what the runner cannot construct, a unit makes:
++an `/etc` of its own, and an environment.** V-1e builds each program's environment; `/etc` is the
+ machine's, and `src/host/` reads it — `/etc/localtime`'s link and
+ `/etc/timezone` (`HOST.md` H-13) — so a test of what the system zone answers
+ on a machine with none of the three, a link no distribution ships, or a
+@@ -376,7 +376,13 @@ machine must allow it**: Ubuntu 24.04 lets an unprivileged process create the
+ namespace and denies it the capabilities inside unless
+ `kernel.apparmor_restrict_unprivileged_userns` is 0
+ (`../research/user-namespaces.md`), and CI lifts the restriction in a step of
+-its own before the harness, on a runner that lives for one job.
++its own before the harness, on a runner that lives for one job. **And an
++environment** (TM-257): V-1e's are `NAME=VALUE` entries after
++`NTIME_HARNESS=1`, each name once, so `TZ` as the first entry, two `TZ=`
++entries, or an entry with no `=` comes from no marker. A unit that needs one
++`execve`s itself — `/proc/self/exe`, an `argv` naming the image, an `envp` it
++lays out — and asks in the image the kernel starts; a refused `execve` is the
++precondition's, with a code no assertion uses.
+ 
+ ## 3. The exhaustive gates
+ 
 diff --git a/nitpick.toml b/nitpick.toml
-index 0f2d1857cf0a5136eea1ce5a3e563d3e18b792fe..cd7d26b07bc72f90e69915d4a1b4d48bde78cc2c 100644
+index 0f2d1857cf0a5136eea1ce5a3e563d3e18b792fe..7db9fd4bfede2c4f6d909f9ab0aedc884d79d885 100644
 --- a/nitpick.toml
 +++ b/nitpick.toml
 @@ -136,8 +136,8 @@ path  = "tests/probe"
@@ -762,7 +876,7 @@ index 0f2d1857cf0a5136eea1ce5a3e563d3e18b792fe..cd7d26b07bc72f90e69915d4a1b4d48b
  #             "every `.npk` in the tree", and that is where its value is — of
 -#             the 152 files here [[sweep: npk_total=152]] (151 and 150 until
 -#             cycle 0.3.2's two first steps, 149 until 0.3.0, 147 until 0.2.4b), 40 are put in front of the compiler
-+#             the 156 files here [[sweep: npk_total=156]] (152, 151 and 150
++#             the 159 files here [[sweep: npk_total=159]] (152, 151 and 150
 +#             until cycle 0.3.2's three steps, 149 until 0.3.0, 147 until 0.2.4b), 40 are put in front of the compiler
  #             by nothing else (41 until cycle 0.3.0, when the library build
  #             began to reach `src/host/host.npk`). An entry would narrow it to one directory and silently
@@ -1036,14 +1150,19 @@ index 5c634034d0c8da85c8d9780da12eeccd9381a671..4fae51e3964f2f48fb79446be8ad0a63
 +pub use "./host/host.npk".host_system_zone;
 diff --git a/tests/unit/system_zone_etc.npk b/tests/unit/system_zone_etc.npk
 new file mode 100644
-index 0000000000000000000000000000000000000000..3b015c8872e395a62edaaff56fb94c1f21d9e5cc
+index 0000000000000000000000000000000000000000..4bc0afbeab293979eaa5a3f95e816813019709f9
 --- /dev/null
 +++ b/tests/unit/system_zone_etc.npk
-@@ -0,0 +1,253 @@
+@@ -0,0 +1,349 @@
 +// expect-exit: 0
 +// stress: 40
 +// env: TZX=Asia/Tokyo
 +// env: ATZ=Africa/Lagos
++// env: SZ=Asia/Dubai
++// env: UZ=Asia/Dubai
++// env: TY=Asia/Dubai
++// env: Ta=Asia/Dubai
++// env: TZ0=Asia/Dubai
 +//
 +// The system zone's steps 2, 3 and 4, on a machine this unit makes (cycle
 +// 0.3.2; `HOST.md` H-12 ... H-16, `SAFETY.md` S-20; TM-256 and TM-257).
@@ -1054,17 +1173,20 @@ index 0000000000000000000000000000000000000000..3b015c8872e395a62edaaff56fb94c1f
 +// step 3 takes (H-16, S-20)?
 +//
 +// MATTERS BECAUSE no machine this suite runs on has none of the three, a link
-+// no distribution ships, or a `/etc/timezone` that is a directory -- and the
-+// cycle README asks for each of H-15's facts and the not-found answer as a
-+// test. So the unit enters a user and a mount namespace of its own and mounts
-+// an empty `tmpfs` over `/etc`, by its own syscalls -- `probe22`'s shape
-+// (TM-255) -- and writes each case there before it asks. The machine's `/etc`
-+// is never touched: the mount is the namespace's.
++// no distribution ships, a `/etc/timezone` that is a directory or a FIFO, or a
++// read-only `/etc` -- and the cycle README asks for each of H-15's facts and
++// the not-found answer as a test. So the unit enters a user and a mount
++// namespace of its own and mounts an empty `tmpfs` over `/etc`, by its own
++// syscalls -- `probe22`'s shape (TM-255) -- and writes each case there before
++// it asks. The machine's `/etc` is never touched: the mount is the namespace's.
 +//
-+// THE ENVIRONMENT holds no `TZ`, and two variables a careless step 1 would
-+// read as one: `TZX=Asia/Tokyo`, which begins `TZ` but not `TZ=`, and
-+// `ATZ=Africa/Lagos`, which holds `TZ=` past its start. A step 1 that read
-+// either answers every case below `TzEnvironment`.
++// THE ENVIRONMENT holds no `TZ`, and seven variables a careless step 1 would
++// read as one: `TZX=Asia/Tokyo`, which begins `TZ` but not `TZ=`;
++// `ATZ=Africa/Lagos`, which holds `TZ=` past its start; and, for each of the
++// prefix's three bytes, a name whose byte there is one below it and one above
++// -- `SZ=` and `UZ=` the `T`, `TY=` and `Ta=` the `Z`, `TZ0=` and `TZX=` the
++// `=` -- so a step 1 that compared a byte by anything but equality reads one.
++// A step 1 that read any of them answers every case below `TzEnvironment`.
 +//
 +// THE PRECONDITION, AND ITS CODES (V-1d), `probe22`'s: 20 `unshare` refused;
 +// 21, 22 and 23 the `setgroups`, uid and gid maps not written; 24 the `tmpfs`
@@ -1097,26 +1219,52 @@ index 0000000000000000000000000000000000000000..3b015c8872e395a62edaaff56fb94c1f
 +//   46  `/etc/timezone` -> `/dev/zero`: one read fills the buffer, `NotFound`
 +//   47  `/etc/timezone` a directory: the read refused, `NotFound`
 +//   48  a file of 4 096 bytes, `NTIME_PATH_MAX`: longer than a name, `NotFound`
++// and, `/etc/timezone` `Asia/Tokyo\n` behind each of the next six links, so
++// step 3 answers `EtcTimezone`, `Asia/Tokyo`, when step 2 does not:
++//   49  `/usr/share/zoneinfo/Europe/zoneinfo/`: the LAST mark ends the target,
++//       its tail empty -- step 2 does not answer
++//   50  `/opt/.zoneinfo/Asia/Dubai`: a `.` before the mark, not a component's
++//       start -- does not answer
++//   51  `xzoneinfo/Asia/Dubai`: the mark at the second byte, after an `x`
++//   52  `/usr/share/Zoneinfo/Asia/Dubai`: a capital `Z`
++//   53  `/usr/share/zoneinfo-leaps/Asia/Dubai`: `zoneinfo` and then a `-`
++//   54  `/usr/share/zoneinfo2/Asia/Dubai`: `zoneinfo` and then a `2`
++// and step 3's last five, with no link:
++//   55  `/etc/timezone` `X`, one byte: `EtcTimezone`, `X`
++//   56  `Asia/Tokyo\n` and then 4 084 bytes, 4 095 in all: `Asia/Tokyo` -- the
++//       longest read that answers
++//   57  `Asia/Tokyo\t\n`: `Asia/Tokyo\t` -- a tab is a byte of the name
++//   58  `/etc/timezone` a FIFO nothing writes, under the unit's own alarm of
++//       five seconds: the open does not block (S-21), `NotFound`
++//   59  `/etc` remounted read-only, `/etc/timezone` `Asia/Tokyo\n`:
++//       `Asia/Tokyo` -- opened read-only, it answers from a read-only root
 +// and 80 a setup syscall of the unit's own refused after the namespace.
 +//
-+// SEEN RED AT PLANNING, each on a mutant of `src/host/host.npk` in a copy of
-+// the tree -- one text replaced -- on both legs (`meta/roadmap/0.3/0.3.2.md`
-+// §1.9): every exit from 30 to 46 is reached by one, the table there naming
-+// each. 47 and 48 are BELTS: a directory's failed read takes the path an
-+// empty file's does, which a mutant reddens at 45 first, and a file of 4 096
-+// bytes is passed by as `/dev/zero` is, which one reddens at 46 first.
++// SEEN RED AT PLANNING, on mutants of `src/host/host.npk` in a copy of the
++// tree, on both legs (`meta/roadmap/0.3/0.3.2.md` §1.9): every exit above is
++// reached by one -- of the thirty-five named shapes of a careless
++// implementation, or of the section's every single-site mutant -- but three
++// BELTS. 47: a directory's failed read takes the path an empty file's does,
++// which a mutant reddens at 45 first. 48: a file of 4 096 bytes is passed by
++// as `/dev/zero` is, which one reddens at 46 first. 58: the FIFO's answer --
++// the mutant it is there for, `O_NONBLOCK` dropped, blocks the open, and the
++// alarm ends the process by `SIGALRM` before any exit, which the harness's
++// runner reports as `-14`.
 +//
-+// FOUR MUTANTS IT CANNOT SEE, AND WHAT HOLDS EACH (TM-257; `HOST.md` H-15 and
-+// H-16). A green run here is evidence about the exits above, and not about
-+// these: step 2's `n >= NTIME_PATH_MAX` refusal deleted -- the kernel refuses
-+// a link of 4 096 bytes (`probe22`), so no link it made fills the buffer;
-+// the target's length read by scanning for a NUL in place of `n` --
-+// `buffer_new` zeroes the buffer, so the scan stops where `n` does; and
-+// `O_NONBLOCK` and `O_CLOEXEC` dropped from step 3's open -- the first would
-+// block the open of a FIFO with no writer, and this harness has no timeout to
-+// see a hang with; the second needs an `exec`. Each is held by reading: the
-+// `?|` that takes `n` from the syscall's answer, the view built from `n`, and
-+// the open's one line.
++// WHAT IT CANNOT SEE, AND WHAT HOLDS EACH (TM-257; `HOST.md` H-15 and H-16).
++// A green run here is evidence about the exits above, and not about these:
++// step 2's `n >= NTIME_PATH_MAX` refusal deleted or weakened, and its buffer
++// or `readlink`'s cap a byte off -- each differs only on a link target of
++// 4 096 bytes or more, which the kernel refuses to make (`probe22`); the
++// target's length read by scanning for a NUL in place of `n` -- `buffer_new`
++// zeroes the buffer, so the scan stops where `n` does; `O_CLOEXEC` dropped
++// from step 3's open -- only an `exec` during the call could see it; and step
++// 3's buffer a byte short of its read -- the byte a read of 4 096 bytes writes
++// past it lands in the allocator's rounding, short of its guard. Each is held
++// by reading: the `?|` that takes `n` from the syscall's answer, the view built
++// from `n`, the open's one line, and `NTIME_PATH_MAX`, the one constant both
++// buffers and both caps are. Every other mutant of the section that exits 0
++// answers as the section does for every input; §1.9 names each.
 +//
 +// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
 +// `host`: its eleven (`SAFETY.md` S-4) -- no loop here states a measure.
@@ -1136,6 +1284,11 @@ index 0000000000000000000000000000000000000000..3b015c8872e395a62edaaff56fb94c1f
 +fixed int64:SYS_GETGID    = 104i64;
 +fixed int64:CLONE_NEWUSER = 268435456i64;    // 0x10000000
 +fixed int64:CLONE_NEWNS   = 131072i64;       // 0x00020000
++fixed int64:SYS_MKNOD     = 133i64;
++fixed int64:SYS_ALARM     = 37i64;
++fixed int64:S_IFIFO       = 4096i64;         // 0o010000
++fixed int64:MS_RDONLY     = 1i64;
++fixed int64:MS_REMOUNT    = 32i64;
 +
 +// Write `text` to `path`, created or truncated: one `write`, all of it.
 +func:put = NIL(string:path, string:text) {
@@ -1181,6 +1334,22 @@ index 0000000000000000000000000000000000000000..3b015c8872e395a62edaaff56fb94c1f
 +func:unlink = NIL(string:path) {
 +    cstring:p = relay to_cstring(path);
 +    discard(relay sys(SYS_UNLINK, p.ptr));
++    pass NIL;
++};
++
++// A FIFO at `path`, which nothing writes.
++func:fifo = NIL(string:path) {
++    cstring:p = relay to_cstring(path);
++    discard(relay sys(SYS_MKNOD, p.ptr, S_IFIFO | 420i64, 0i64));
++    pass NIL;
++};
++
++// `/etc` read-only, as on a machine whose root filesystem is: the namespace's
++// own `tmpfs`, remounted.
++func:remount_ro = NIL() {
++    cstring:fs = relay to_cstring("tmpfs");
++    cstring:at = relay to_cstring("/etc");
++    discard(relay sys(SYS_MOUNT, fs.ptr, at.ptr, fs.ptr, MS_REMOUNT | MS_RDONLY, 0i64));
 +    pass NIL;
 +};
 +
@@ -1272,6 +1441,47 @@ index 0000000000000000000000000000000000000000..3b015c8872e395a62edaaff56fb94c1f
 +    for (int64:i in 1i64..4096i64) { big = string_concat(big, "a"); }
 +    put(tz, big) ?! ESetup;
 +    if (!(case_ok(ZoneSource.NotFound, "", false) ?! ESetup))               { exit 48i32; }
++
++    // ---- more of step 2's mark, with step 3's answer behind it ------------
++    put(tz, "Asia/Tokyo\n") ?! ESetup;
++    link("/usr/share/zoneinfo/Europe/zoneinfo/", lt) ?! ESetup;
++    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 49i32; }
++    unlink(lt) ?! ESetup;
++    link("/opt/.zoneinfo/Asia/Dubai", lt) ?! ESetup;
++    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 50i32; }
++    unlink(lt) ?! ESetup;
++    link("xzoneinfo/Asia/Dubai", lt) ?! ESetup;
++    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 51i32; }
++    unlink(lt) ?! ESetup;
++    link("/usr/share/Zoneinfo/Asia/Dubai", lt) ?! ESetup;
++    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 52i32; }
++    unlink(lt) ?! ESetup;
++    link("/usr/share/zoneinfo-leaps/Asia/Dubai", lt) ?! ESetup;
++    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 53i32; }
++    unlink(lt) ?! ESetup;
++    link("/usr/share/zoneinfo2/Asia/Dubai", lt) ?! ESetup;
++    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 54i32; }
++    unlink(lt) ?! ESetup;
++
++    // ---- more of step 3's shapes ------------------------------------------
++    put(tz, "X") ?! ESetup;
++    if (!(case_ok(ZoneSource.EtcTimezone, "X", true) ?! ESetup))           { exit 55i32; }
++    string:padded = "Asia/Tokyo\n";
++    for (int64:i in 1i64..4084i64) { padded = string_concat(padded, "a"); }
++    if (string_byte_length(padded) != 4095i64)                               { exit 80i32; }
++    put(tz, padded) ?! ESetup;
++    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 56i32; }
++    put(tz, "Asia/Tokyo\t\n") ?! ESetup;
++    if (!(case_ok(ZoneSource.EtcTimezone, "Asia/Tokyo\t", true) ?! ESetup)) { exit 57i32; }
++    unlink(tz) ?! ESetup;
++    fifo(tz) ?! ESetup;
++    discard(sys(SYS_ALARM, 5i64) ?! ESetup);
++    if (!(case_ok(ZoneSource.NotFound, "", false) ?! ESetup))               { exit 58i32; }
++    discard(sys(SYS_ALARM, 0i64) ?! ESetup);
++    unlink(tz) ?! ESetup;
++    put(tz, "Asia/Tokyo\n") ?! ESetup;
++    remount_ro() ?! ESetup;
++    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 59i32; }
 +    exit 0i32;
 +};
 +
@@ -1411,6 +1621,65 @@ index 0000000000000000000000000000000000000000..0028a47d25d139ee977410fd8909c311
 +    }
 +    exit 9i32;
 +};
+diff --git a/tests/unit/system_zone_tz_colon_bare.npk b/tests/unit/system_zone_tz_colon_bare.npk
+new file mode 100644
+index 0000000000000000000000000000000000000000..d476b187e286c52691ceed95cab22f99cffd8a86
+--- /dev/null
++++ b/tests/unit/system_zone_tz_colon_bare.npk
+@@ -0,0 +1,53 @@
++// expect-exit: 0
++// stress: 40
++// env: TZ=:
++//
++// The system zone's step 1, `$TZ` (cycle 0.3.2; `HOST.md` H-13.1, TM-256 and
++// TM-257).
++//
++// `TZ` set to `:` and nothing after it -- four bytes, `TZ=:`, the length edge
++// of the `:` test. H-13.1 strips one leading `:` and reports the rest
++// verbatim, so the name is EMPTY: a step 1 that tested for the `:` only when
++// the value is longer than one byte reads `:`, and one that refused it moves
++// on to the files. The lookup, cycle 0.6's `zone_by_name`, refuses the empty
++// name, and the program decides (TM-019, TM-256).
++//
++// ON ANY MACHINE: `TZ` is step 1, so it answers before `/etc/localtime` and
++// `/etc/timezone` are read -- and on every machine this suite runs on, CI's
++// included, `/etc/localtime` is a link that WOULD answer, so a discovery that
++// tried the files first answers `EtcLocaltime` here, and is red.
++//
++// EXIT CODES, clear of every arm code (TM-152): 10 the answer's source not
++// `TzEnvironment`; 11 not found; 12 its name not empty.
++//
++// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
++// `host`: its eleven (`SAFETY.md` S-4).
++mod:system_zone_tz_colon_bare;
++
++use "../../src/host/host.npk".*;
++
++func:main = int32(cstring[]:_~argv) {
++    SystemZone:z = raw host_system_zone();
++    if (z.source != ZoneSource.TzEnvironment) { exit 10i32; }
++    if (!(z.found))                           { exit 11i32; }
++    if (!(string_equals(z.name, ""))) { exit 12i32; }
++    exit 0i32;
++};
++
++func:failsafe = int32(Error:e) {
++    pick (e) {
++        (cal.ETimeValue)    { exit 80i32; },
++        (HeapBadRequest)    { exit 91i32; },
++        (HeapOom)           { exit 92i32; },
++        (IntOverflow)       { exit 93i32; },
++        (OutOfBounds)       { exit 94i32; },
++        (Unreachable)       { exit 95i32; },
++        (WildLeak)          { exit 96i32; },
++        (DivByZero)         { exit 97i32; },
++        (DivOverflow)       { exit 98i32; },
++        (StackExhausted)    { exit 106i32; },
++        (MachineFault)      { exit 107i32; },
++        (*)                 { exit 99i32; }
++    }
++    exit 9i32;
++};
 diff --git a/tests/unit/system_zone_tz_empty.npk b/tests/unit/system_zone_tz_empty.npk
 new file mode 100644
 index 0000000000000000000000000000000000000000..e7404524dcd099bd27da911afc39bf1de34f878f
@@ -1452,6 +1721,197 @@ index 0000000000000000000000000000000000000000..e7404524dcd099bd27da911afc39bf1d
 +    if (!(z.found))                           { exit 11i32; }
 +    if (!(string_equals(z.name, ""))) { exit 12i32; }
 +    exit 0i32;
++};
++
++func:failsafe = int32(Error:e) {
++    pick (e) {
++        (cal.ETimeValue)    { exit 80i32; },
++        (HeapBadRequest)    { exit 91i32; },
++        (HeapOom)           { exit 92i32; },
++        (IntOverflow)       { exit 93i32; },
++        (OutOfBounds)       { exit 94i32; },
++        (Unreachable)       { exit 95i32; },
++        (WildLeak)          { exit 96i32; },
++        (DivByZero)         { exit 97i32; },
++        (DivOverflow)       { exit 98i32; },
++        (StackExhausted)    { exit 106i32; },
++        (MachineFault)      { exit 107i32; },
++        (*)                 { exit 99i32; }
++    }
++    exit 9i32;
++};
+diff --git a/tests/unit/system_zone_tz_path.npk b/tests/unit/system_zone_tz_path.npk
+new file mode 100644
+index 0000000000000000000000000000000000000000..40eddd54e6d6a5dcfdd5f2bfdd030cf3877791ae
+--- /dev/null
++++ b/tests/unit/system_zone_tz_path.npk
+@@ -0,0 +1,55 @@
++// expect-exit: 0
++// stress: 40
++// env: TZ=/usr/share/zoneinfo/Europe/London
++//
++// The system zone's step 1, `$TZ` (cycle 0.3.2; `HOST.md` H-13.1, TM-256 and
++// TM-257).
++//
++// `TZ` set to a PATH, `/usr/share/zoneinfo/Europe/London` -- a form the GNU
++// C library reads as a file to load (`meta/research/tz-environment.md`).
++// H-13.1 reports the value verbatim and never reads a file, so the name is
++// the whole path, its `/` first: a step 1 that stripped any first byte below
++// `:` with the `:`, or took the tail after `zoneinfo/` as step 2 does, reads
++// another name. Whether a path names a zone is the lookup's to judge (cycle
++// 0.6's `zone_by_name`, TM-256).
++//
++// ON ANY MACHINE: `TZ` is step 1, so it answers before `/etc/localtime` and
++// `/etc/timezone` are read -- and on every machine this suite runs on, CI's
++// included, `/etc/localtime` is a link that WOULD answer, so a discovery that
++// tried the files first answers `EtcLocaltime` here, and is red.
++//
++// EXIT CODES, clear of every arm code (TM-152): 10 the answer's source not
++// `TzEnvironment`; 11 not found; 12 its name not
++// `/usr/share/zoneinfo/Europe/London`.
++//
++// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
++// `host`: its eleven (`SAFETY.md` S-4).
++mod:system_zone_tz_path;
++
++use "../../src/host/host.npk".*;
++
++func:main = int32(cstring[]:_~argv) {
++    SystemZone:z = raw host_system_zone();
++    if (z.source != ZoneSource.TzEnvironment) { exit 10i32; }
++    if (!(z.found))                           { exit 11i32; }
++    if (!(string_equals(z.name, "/usr/share/zoneinfo/Europe/London"))) { exit 12i32; }
++    exit 0i32;
++};
++
++func:failsafe = int32(Error:e) {
++    pick (e) {
++        (cal.ETimeValue)    { exit 80i32; },
++        (HeapBadRequest)    { exit 91i32; },
++        (HeapOom)           { exit 92i32; },
++        (IntOverflow)       { exit 93i32; },
++        (OutOfBounds)       { exit 94i32; },
++        (Unreachable)       { exit 95i32; },
++        (WildLeak)          { exit 96i32; },
++        (DivByZero)         { exit 97i32; },
++        (DivOverflow)       { exit 98i32; },
++        (StackExhausted)    { exit 106i32; },
++        (MachineFault)      { exit 107i32; },
++        (*)                 { exit 99i32; }
++    }
++    exit 9i32;
++};
+diff --git a/tests/unit/system_zone_tz_raw.npk b/tests/unit/system_zone_tz_raw.npk
+new file mode 100644
+index 0000000000000000000000000000000000000000..dabacbd5f49f07d2e9aebbf949e8ed737c7311df
+--- /dev/null
++++ b/tests/unit/system_zone_tz_raw.npk
+@@ -0,0 +1,124 @@
++// expect-exit: 0
++// stress: 40
++//
++// The system zone's step 1, `$TZ`, under environments the harness cannot make
++// (cycle 0.3.2; `HOST.md` H-13.1, `TESTING.md` V-1m, TM-256 and TM-257).
++//
++// ASKS: is `TZ` found when it is the environment's FIRST entry; when two
++// entries begin `TZ=`, does the FIRST answer; and is an entry shorter than
++// `TZ=` -- empty, `T`, `TZ` -- passed by, with no byte read past its end?
++//
++// MATTERS BECAUSE the harness builds every environment as `NAME=VALUE`
++// entries after its own `NTIME_HARNESS=1`, and refuses a name twice (V-1e):
++// so no unit it sets up has `TZ` first, two `TZ` entries, or an entry with no
++// `=`, and a step 1 that skipped the first entry, kept the last `TZ=`, or
++// read three bytes of a shorter entry passes every one of them. The kernel
++// takes any array of strings as an environment, so this unit makes each of
++// its two by `execve` of itself -- `/proc/self/exe`, the `argv` naming which
++// image it is and an `envp` the unit lays out -- and the image the kernel
++// starts asks `host_system_zone`. Nothing in the harness changes.
++//
++// THE PRECONDITION, AND ITS CODES (V-1d): 20 the first `execve` refused, 21
++// the second; 22 and 23 an image whose environment is not the one laid out;
++// 24 an `argv` this unit did not write -- each the machine's, not the
++// library's.
++//
++// EXIT CODES, clear of every arm code (TM-152). The first image's
++// environment is `TZ=Europe/Paris` then `TZ=Asia/Tokyo`: 10 the answer's
++// source not `TzEnvironment`; 11 not found; 12 its name not `Europe/Paris`.
++// The second's is the empty entry, `T`, `TZ` and `TZ=Africa/Cairo`: 13, 14
++// and 15 the same, the name `Africa/Cairo` -- and a read past an entry's end
++// traps, `OutOfBounds`, 94.
++//
++// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
++// `host`: its eleven (`SAFETY.md` S-4).
++mod:system_zone_tz_raw;
++
++use "../../src/host/host.npk".*;
++
++fixed int64:SYS_EXECVE = 59i64;
++
++// This program again, as image `a`: its environment `TZ=Europe/Paris`, then
++// `TZ=Asia/Tokyo`. Each pointer array is a zeroed `buffer`, so the slot after
++// the last entry is the NULL `execve` reads to; the strings are this frame's,
++// alive until the kernel has copied them. It returns only if `execve` failed.
++func:exec_a = int32() never fails {
++    cstring:self = to_cstring("/proc/self/exe") ?| #unreachable();
++    cstring:w = to_cstring("a") ?| #unreachable();
++    cstring:e0 = to_cstring("TZ=Europe/Paris") ?| #unreachable();
++    cstring:e1 = to_cstring("TZ=Asia/Tokyo") ?| #unreachable();
++    buffer:ab = buffer_new(24i64);
++    buffer:eb = buffer_new(24i64);
++    wild int8->->:av = ab.ptr =>! wild int8->->;
++    wild int8->->:ev = eb.ptr =>! wild int8->->;
++    av[0i64] = self.ptr =>! wild int8->;
++    av[1i64] = w.ptr =>! wild int8->;
++    ev[0i64] = e0.ptr =>! wild int8->;
++    ev[1i64] = e1.ptr =>! wild int8->;
++    discard(sys(SYS_EXECVE, self.ptr, ab.ptr, eb.ptr) ?| 0i64);
++    pass 20i32;
++};
++
++// And as image `b`: the empty entry, `T`, `TZ`, then `TZ=Africa/Cairo`.
++func:exec_b = int32() never fails {
++    cstring:self = to_cstring("/proc/self/exe") ?| #unreachable();
++    cstring:w = to_cstring("b") ?| #unreachable();
++    cstring:e0 = to_cstring("") ?| #unreachable();
++    cstring:e1 = to_cstring("T") ?| #unreachable();
++    cstring:e2 = to_cstring("TZ") ?| #unreachable();
++    cstring:e3 = to_cstring("TZ=Africa/Cairo") ?| #unreachable();
++    buffer:ab = buffer_new(24i64);
++    buffer:eb = buffer_new(40i64);
++    wild int8->->:av = ab.ptr =>! wild int8->->;
++    wild int8->->:ev = eb.ptr =>! wild int8->->;
++    av[0i64] = self.ptr =>! wild int8->;
++    av[1i64] = w.ptr =>! wild int8->;
++    ev[0i64] = e0.ptr =>! wild int8->;
++    ev[1i64] = e1.ptr =>! wild int8->;
++    ev[2i64] = e2.ptr =>! wild int8->;
++    ev[3i64] = e3.ptr =>! wild int8->;
++    discard(sys(SYS_EXECVE, self.ptr, ab.ptr, eb.ptr) ?| 0i64);
++    pass 21i32;
++};
++
++func:main = int32(cstring[]:argv) {
++    if (argv.len < 2i64) { exit raw exec_a(); }
++    string:which = string_from_bytes(argv[1i64].ptr, argv[1i64].len);
++    cstring[]:env = environ();
++    if (string_equals(which, "a")) {
++        if (env.len != 2i64) { exit 22i32; }
++        SystemZone:za = raw host_system_zone();
++        if (za.source != ZoneSource.TzEnvironment) { exit 10i32; }
++        if (!(za.found))                            { exit 11i32; }
++        if (!(string_equals(za.name, "Europe/Paris"))) { exit 12i32; }
++        exit raw exec_b();
++    }
++    if (string_equals(which, "b")) {
++        if (env.len != 4i64) { exit 23i32; }
++        if ((env[0i64].len != 0i64) || (env[1i64].len != 1i64) || (env[2i64].len != 2i64)) { exit 23i32; }
++        SystemZone:zb = raw host_system_zone();
++        if (zb.source != ZoneSource.TzEnvironment) { exit 13i32; }
++        if (!(zb.found))                            { exit 14i32; }
++        if (!(string_equals(zb.name, "Africa/Cairo"))) { exit 15i32; }
++        exit 0i32;
++    }
++    exit 24i32;
 +};
 +
 +func:failsafe = int32(Error:e) {

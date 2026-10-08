@@ -2,13 +2,18 @@
 # line, each read by `sweep.py` line by line AND across line breaks, case-insensitive.
 # Each is a fact step 3 moved: the system zone's types and function, its three sources,
 # readlink's buffer, the subcycle and what is next, the counts it moves, and how many
-# names `host` makes public.
+# names `host` makes public; and, since the plan's revision, what its tests count and
+# claim -- nineteen machines, three or four units, four mutants no test can see -- each
+# the first draft's words, which a line left behind would still say.
 ZoneId|TzDirLink|EtcTimezone|SystemZone|ZoneSource
 host_system_zone
 /etc/timezone|/etc/localtime
 readlink|NTIME_PATH_MAX
 (is|are|comes) next
 \b(81|84)\b.{0,20}(names|public)|eighty-(one|four)
-\b(134|140)\b.{0,20}units?|\b(184|188)\b.{0,20}decision|(eight|nine) questions
+\b(134|140|143)\b.{0,20}units?|\b(184|188)\b.{0,20}decision|(eight|nine) questions
 ETimeZone.{0,10}\(0\.3\)|for the name lookup
 \bfour of (H-1.s|the) five\b|\bfive names\b|\beight names\b
+nineteen (machines|times|calls|cases)|all nineteen
+four (mutants )?(it )?(no test|cannot)|no test can see|no timeout to see|no verdict this harness
+three units|three .?\$?TZ.? (units|values)|four units|six tests

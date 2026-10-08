@@ -281,7 +281,7 @@ index 0000000000000000000000000000000000000000..ef33fbaad1b790da98f3f8983090a2e0
 +nothing about the value before, sets it, and makes a namespace with a mount
 +once, so a refusal is the step's and never a unit's verdict.
 diff --git a/meta/roadmap/0.3/README.md b/meta/roadmap/0.3/README.md
-index ea63419acb5e08c651fc091fe458a34516a4bde0..f0c13e4d5558ae117fa4465196d14697cb4ba3d3 100644
+index a231e76e4a4cf4c47d66c7ac55aec825f7c19f64..d6966b4d966c0d197547862e1f70ea2e5fa401c9 100644
 --- a/meta/roadmap/0.3/README.md
 +++ b/meta/roadmap/0.3/README.md
 @@ -108,7 +108,7 @@ instrument the zone's tests stand on, in a commit of its own; and the tests.
@@ -290,9 +290,9 @@ index ea63419acb5e08c651fc091fe458a34516a4bde0..f0c13e4d5558ae117fa4465196d14697
  - [x] the 0.3.1 verifier's nit: `check_purity`'s docstring and TM-252's note say a truncation of descriptors is red "only where the `DecreasesViolated` and `LimitViolated` it arms are new" — it is *any of* them, `DecreasesViolated` alone in `src/core/vec.npk` — corrected by dated notes, not rewritten — the docstring in place, recording its words, and TM-252's note by a further dated sentence
 -- [ ] a unit makes its own `/etc` — a user and a mount namespace and an empty `tmpfs`, by its own syscalls; `probe22` measures the shape and the kernel's longest link, and CI lifts Ubuntu 24.04's restriction on the namespace (PD-100)
 +- [x] a unit makes its own `/etc` — a user and a mount namespace and an empty `tmpfs`, by its own syscalls; `probe22` measures the shape and the kernel's longest link, and CI lifts Ubuntu 24.04's restriction on the namespace (PD-100) — **TM-255**: `probe22` exit 0 on both legs, here and in CI after the step that lifts the restriction; `TESTING.md` V-1m
- - [ ] the tests: one unit of nineteen machines in a namespace of its own, the lowest free descriptor held across every call; three units of `$TZ`; every exit seen red on a mutant of `host`, and the mutants no test can see named (PD-102)
+ - [ ] the tests: one unit of thirty machines in a namespace of its own, the lowest free descriptor held across every call; five units of `$TZ`, and one that makes by `execve` the environments no harness line can; every exit seen red on a mutant of `host` but the belts, each named; every single-site mutant of the system zone's section run; and each no test can see named, with why (PD-102)
  
- ### 0.3.3 — the double
+ *(The fourth was restated at the plan's revision, 2026-10-08, after its
 diff --git a/meta/specs/BUILD.md b/meta/specs/BUILD.md
 index 64813a5e5a5798921cc62cc0bd8c947221b7262c..42741ec0a5a1f4c5ac4d3a8a576b763666cdc8f2 100644
 --- a/meta/specs/BUILD.md

@@ -1,8 +1,10 @@
-# 0.3.2 -- the mutants, one row each: the step whose file they mutate, a name, the text, its
-# replacement, TAB-separated, "\n" a newline. `env.sh`'s `mutants <step>` swaps each ONCE in a
-# copy -- step 1 a copy of harness/, its plants run against it; step 3 a copy of src/ and
-# the system zone's four units, each built and run on both legs in the environment its
-# header names -- and prints what each is seen by. The plan's §1.9 holds both tables.
+# 0.3.2 -- the NAMED mutants, one row each: the step whose file they mutate, a name, the
+# text, its replacement, TAB-separated, "\n" a newline. `env.sh`'s `mutants <step>` swaps
+# each ONCE in a copy -- step 1 a copy of harness/, its plants run against it; step 3 a
+# copy of src/ and the system zone's seven units, each built and run on both legs in the
+# environment its header names (`enumerate.py table`) -- and prints what each is seen by.
+# Step 3's are shapes of a careless implementation; every SINGLE-SITE mutant of the
+# section is `mutate.py`'s, generated. The plan's §1.9 holds all three tables.
 1	instances_unread	    for defines, declares, globs in [got] + ([inst] if inst is not None else []):	    for defines, declares, globs in [got]:
 1	generic_rule_off	            if (mod, name) not in instanced:	            if False:
 1	no_instances_rule_off	    if generic and inst is None:	    if False:
@@ -31,6 +33,7 @@
 3	timezone_empty_line_answers	    if (e == 0i64) { pass raw zone_none(); }	
 3	fd_leaked_on_no_read	    if (n <= 0i64) { pass raw zone_none(); }\n    if (n >= NTIME_PATH_MAX) { pass raw zone_none(); }                  // longer than a name	    if (n <= 0i64) { fd:lk = release_fd(move(d)); pass raw zone_none(); }\n    if (n >= NTIME_PATH_MAX) { pass raw zone_none(); }                  // longer than a name
 3	timezone_full_answers	    if (n >= NTIME_PATH_MAX) { pass raw zone_none(); }                  // longer than a name	
+3	timezone_read_write	((((O_RDONLY | O_NONBLOCK) | O_CLOEXEC) => int32) => int64)	((((O_RDWR | O_NONBLOCK) | O_CLOEXEC) => int32) => int64)
 3	tz_skipped	    SystemZone:z = raw zone_from_tz();	    SystemZone:z = raw zone_none();
 3	tz_empty_passes	                string:name = string_slice(entry, lo, eb.len) ?| #unreachable();	                if (lo >= eb.len) { pass raw zone_none(); }\n                string:name = string_slice(entry, lo, eb.len) ?| #unreachable();
 3	tz_first_dropped	                int64:lo = 3i64;	                int64:lo = 4i64;

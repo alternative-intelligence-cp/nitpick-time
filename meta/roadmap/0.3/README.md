@@ -49,7 +49,7 @@ an emission the two readings read — `0.3.2.md`'s PD-99, its first step.)*
 |---|---|---|
 | 0.3.0 | **The clocks** — `clock_gettime` through `sys`, the three readings — **[`0.3.0.md`](0.3.0.md)**, written at cycle 0.2's close, measured at `5fbaf4a`, and rehearsed from its blocks in its real position on 2026-10-07 and 2026-10-08 (its §8); it opens with the instrument the close handed on | a `Timestamp` from the machine, range-checked |
 | 0.3.1 | **`check_purity` goes live** — the dormant check from 0.0.3, turned on — **[`0.3.1.md`](0.3.1.md)**: its ban list and `check_host_isolation`'s reviewed against the language at the pin and `src/host/`'s body, each seen to fail in a real module, and two readings of the library's emission beside the spelling checks, the calls (O-X9) and the wide values (O-X11) — planned at `5fbaf4a` and rehearsed from its blocks in its real position on 2026-10-08 (its §8) | the library's reproducibility claim, enforced |
-| 0.3.2 | **The system zone** — the four-step discovery, and what it reports — **[`0.3.2.md`](0.3.2.md)**: `host_system_zone` answering the name each step finds and the mechanism that answered, the lookup the caller's at cycle 0.6, its tests in a user and mount namespace each unit makes with an `/etc` of its own; and first every generic function of `src/` read in an emission (O-X12) — planned at `5fbaf4a` and rehearsed from its blocks in its real position on 2026-10-08 (its §8) | a program can ask, and is told which mechanism answered |
+| 0.3.2 | **The system zone** — the four-step discovery, and what it reports — **[`0.3.2.md`](0.3.2.md)**: `host_system_zone` answering the name each step finds and the mechanism that answered, the lookup the caller's at cycle 0.6, its tests in a user and mount namespace each unit makes with an `/etc` of its own; and first every generic function of `src/` read in an emission (O-X12) — planned at `5fbaf4a`, rehearsed from its blocks in its real position, and revised for its verifier's findings and rehearsed again, on 2026-10-08 (its §8) | a program can ask, and is told which mechanism answered |
 | 0.3.3 | **The double** — the test host module, in `tests/` | every clock-dependent behaviour reproducible |
 | 0.3.4 | **Close** | `done/0.3/`, `0.4.0.md` written |
 
@@ -109,7 +109,13 @@ The eight above keep their words.)*
 - [ ] **O-X12**: every generic function `src/` declares instantiated in `tests/unit/generic_instances.npk`, its emission read by `check_call_edges` and `check_wide_types` beside the umbrella's, and a generic no instance holds a finding (PD-99)
 - [ ] the 0.3.1 verifier's nit: `check_purity`'s docstring and TM-252's note say a truncation of descriptors is red "only where the `DecreasesViolated` and `LimitViolated` it arms are new" — it is *any of* them, `DecreasesViolated` alone in `src/core/vec.npk` — corrected by dated notes, not rewritten
 - [ ] a unit makes its own `/etc` — a user and a mount namespace and an empty `tmpfs`, by its own syscalls; `probe22` measures the shape and the kernel's longest link, and CI lifts Ubuntu 24.04's restriction on the namespace (PD-100)
-- [ ] the tests: one unit of nineteen machines in a namespace of its own, the lowest free descriptor held across every call; three units of `$TZ`; every exit seen red on a mutant of `host`, and the mutants no test can see named (PD-102)
+- [ ] the tests: one unit of thirty machines in a namespace of its own, the lowest free descriptor held across every call; five units of `$TZ`, and one that makes by `execve` the environments no harness line can; every exit seen red on a mutant of `host` but the belts, each named; every single-site mutant of the system zone's section run; and each no test can see named, with why (PD-102)
+
+*(The fourth was restated at the plan's revision, 2026-10-08, after its
+verifier measured what it claimed. It said "one unit of nineteen machines …;
+three units of `$TZ`; every exit seen red on a mutant of `host`, and the
+mutants no test can see named" — and a machine a unit can make saw mutants
+the plan had named unseeable.)*
 
 ### 0.3.3 — the double
 - [ ] the fake host module in `tests/`, **not** in `src/` (H-10)

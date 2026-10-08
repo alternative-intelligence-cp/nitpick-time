@@ -7,10 +7,12 @@
 # `0.3.1_tools/env.sh`'s helpers -- `codes`, `harness`, `ctl`, `swap`, `emit`, `dryrun`,
 # `check` and `plants` -- pointed at this subcycle's tools and its scratch,
 # `.internal/w032`; `emit` writes the instances' emission beside the umbrella's, as
-# step 7 does from step 1 on; and `mutants` runs both of this plan's tables: step 1's,
-# one-line mutants of `harness/checks.py` against the self-check's plants, and step
-# 3's, mutants of `src/host/host.npk` against the system zone's four units, each built
-# and run on both legs in the environment its header names. The paths are the
+# step 7 does from step 1 on; `mutants` runs this plan's two tables of named mutants:
+# step 1's, one-line mutants of `harness/checks.py` against the self-check's plants,
+# and step 3's, shapes of a careless `src/host/host.npk` against the system zone's
+# seven units, each built and run on both legs in the environment its header names;
+# and `enumerate` runs every single-site mutant of the system zone's section,
+# `mutate.py`'s, against the same seven (`enumerate.py`). The paths are the
 # CHECKOUT's: `WB` is the directory above it and `NPK_TREE` the compiler beside that,
 # so a block run in a relocated copy finds another workbench or none -- run the blocks
 # in the checkout the dispatch names (the workbench `PLAYBOOK.md` §12). `$NPK_TREE` is
@@ -197,16 +199,20 @@ legs2() {
 }
 
 # The mutants of `$T/mutants.tsv` whose step is <step> -- step, name, the text, its
-# replacement, TAB-separated, `\n` a newline -- each one `swap`, counted as matching
-# ONCE. Step 1's mutate a copy of the repository's `harness/checks.py`, and the
-# self-check's plants run against it: `<name>: <n> problem(s)` and the kinds. Step 3's
-# mutate a copy of `src/host/host.npk`, and the system zone's four units are built and
-# run on both legs: `<name>: etc a/b tz c/d tz_colon e/f tz_empty g/h`, each `-O0/-O2`.
-# A mutant nothing can see prints 0 everywhere, and the plan names it.
+# replacement, TAB-separated, `\n` a newline -- each counted as matching ONCE. Step
+# 1's mutate a copy of the repository's `harness/checks.py`, and the self-check's
+# plants run against it: `<name>: <n> problem(s)` and the kinds. Step 3's mutate a
+# copy of `src/host/host.npk`, and `enumerate.py table` builds and runs the system
+# zone's seven units on both legs: `<name>: etc a/b tz c/d ...`, each `-O0/-O2`, a
+# signal as the harness's runner reports it (`-14`, `SIGALRM`). A mutant nothing can
+# see prints 0 everywhere, and the plan names it.
 #     mutants <step>
 mutants() {
   local step=$1 s name old new d u line
-  local units="system_zone_etc system_zone_tz system_zone_tz_colon system_zone_tz_empty"
+  if [ "$step" = 3 ]; then
+    free -g | awk '/^Mem:/ {print "available GiB:", $7}'
+    python3 -B "$T/enumerate.py" table "$REPO" "$A/mut" -j 8; rm -rf "${A:?}/mut"; return
+  fi
   mkdir -p "$A/legs"
   while IFS=$'\t' read -r s name old new; do
     case "$s" in ''|'#'*) continue;; esac
@@ -228,15 +234,18 @@ print("%d problem(s)%s" % (len(probs), (" -- " + "; ".join(kinds)) if kinds else
 PY
 )
       echo "$name: $line" | cut -c1-200
-    else
-      mkdir -p "$d/tests/unit"; cp -r "$REPO/src" "$d/src"
-      for u in $units; do cp "$REPO/tests/unit/$u.npk" "$d/tests/unit/"; done
-      swap "$d/src/host/host.npk" "$old" "$new" || { echo "$name: not applied"; continue; }
-      line="$name:"
-      for u in $units; do line="$line ${u#system_zone_} $(legs2 "$d/tests/unit" "$u")"; done
-      echo "$line"
     fi
     rm -rf "${d:?}"
   done < "$T/mutants.tsv"
   rm -rf "${A:?}/mut" "${A:?}/legs"
+}
+
+# Every single-site mutant of the system zone's section of `src/host/host.npk`,
+# `mutate.py`'s, against the system zone's seven units: the counts, the exits each
+# unit is seen to reach, and every mutant that exits 0 (`enumerate.py all`). Eight
+# at a time; about two minutes.
+#     enumerate
+enumerate() {
+  free -g | awk '/^Mem:/ {print "available GiB:", $7}'
+  python3 -B "$T/enumerate.py" all "$REPO" "$A/enum" -j 8; rm -rf "${A:?}/enum"
 }

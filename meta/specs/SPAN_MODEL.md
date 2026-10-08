@@ -252,6 +252,14 @@ narrowed a constant to its low 64 bits in silence and passed the check until
 then. `bytes_put_int`'s `0i128` is `src/`'s one such literal, in a function
 the table marks.)*
 
+*(Cycle 0.3.0's verification, 2026-10-08 — `../OPEN_QUESTIONS.md` O-X11: the
+check reads SPELLINGS, so this rule is wider than it. A wide value no width is
+spelled for — a call's result, `(raw wide()) * (raw wide())` in a function the
+table does not mark, `wide` a marked `int256()` — is an intermediate this rule
+forbids, and the check passes it, as it has since it went live. No function in
+`src/` returns or takes a wide type, or calls one that returns one, so nothing
+does it today.)*
+
 **Rule N-20b (TM-105) — the range check at each of those sites is mandatory
 library code, because the language provides no checked narrowing.** Measured at
 cycle 0.0.0: `=>!` at a value that does not fit **truncates silently** (no trap,

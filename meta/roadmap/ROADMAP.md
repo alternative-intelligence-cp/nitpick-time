@@ -29,7 +29,11 @@ and one the author's, Q-7, raised at the close (TM-243), which blocks nothing
 before cycle 1.0's freeze of the public names.)* *(Re-derived at cycle 0.3.0:
 **180 decisions are settled**, the subcycle's four, TM-246 … TM-249; **nine
 questions are open** — the compiler's four and our five above — and Q-7 is
-answered A, `instant_of` keeping its name, TM-248.)*
+answered A, `instant_of` keeping its name, TM-248.)* *(And at 0.3.0's
+verification, 2026-10-08: **ten questions are open** — the compiler's four, and
+six ours, O-X11 raised: `check_int128_sites` reads spellings, and a wide value
+no width is spelled for passes it, dormant, for 0.3.1's planner. The decisions
+stand at 180.)*
 
 ## How this is organised
 

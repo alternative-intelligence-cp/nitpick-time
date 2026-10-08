@@ -38,8 +38,11 @@ its name**: the author's answer to Q-7 (TM-248). And first, in a commit of its
 own, **`check_int128_sites` reads a numeric literal's width suffix** as it
 reads a type's name, so `(3i256 * 5i256) =>! int64` — a computation of
 literals alone, which narrowed a constant in silence — is a finding outside
-§5's sites (TM-246). The self-check plants 95 tree-check violations. A full
-invocation is **134 units green** at pin `5fbaf4a`.
+§5's sites (TM-246). *(What it reads is spellings: a wide value no width is
+spelled for — a call's result — passes it, as it always has, and
+`meta/OPEN_QUESTIONS.md` O-X11 holds that, dormant, for 0.3.1's planner — the
+subcycle's verification, 2026-10-08.)* The self-check plants 95 tree-check
+violations. A full invocation is **134 units green** at pin `5fbaf4a`.
 
 **After cycle 0.2.4: cycle 0.2's close.** The cycle audit (ACCEPT, twenty-two
 findings: eight contradictions, two dormant, five stale, seven cosmetic; no
@@ -57,9 +60,12 @@ items reached the close after the audit, a row of the triage each.**
 `check_int128_sites` reads a wide type's NAME and not a literal's width
 suffix, so `(3i256 * 5i256) =>! int64` passes it — it compiles, and narrows
 a constant in silence; an `int64` beside an `int256` literal is
-`NITPICK-TYPE-007`, so only literals alone widen unnamed, and `src/`'s one
-wide literal stands in a function §5 marks — handed to 0.3.0's first step,
-whose plan drafts the decision. TM-241's *"within 9 223 372 037 seconds"*
+`NITPICK-TYPE-007`, so only literals alone widen unnamed *(among spellings: a
+call's result is wide with no width spelled where it is used, and no check of
+spellings sees it — cycle 0.3.0's verification, `meta/OPEN_QUESTIONS.md`
+O-X11)*, and `src/`'s one wide literal stands in a function §5 marks — handed
+to 0.3.0's first step, whose plan drafts the decision. TM-241's
+*"within 9 223 372 037 seconds"*
 reads *"less than"*, by a dated note. And `meta/specs/GLOSSARY.md` notes
 that *an instant* in prose is a point on the UTC timeline, what a
 `Timestamp` holds — the workbench's question 22 — and leaves

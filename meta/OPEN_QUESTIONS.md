@@ -992,6 +992,94 @@ be `.clone()` — (b)'s spelling, enforced by the compiler rather than
 remembered — and Z-4's `pub` binding hands a consumer nothing that compiles
 but a lend or a clone.
 
+### O-X11 — `check_int128_sites` reads SPELLINGS: should a check read TYPES, so that a wide value no width is spelled for is seen?
+
+**Raised 2026-10-08 by cycle 0.3.0's verification**
+(`s2-ntime-0.3.0-verify-work`), and registered by the subcycle's worker on the
+orchestrator's ruling: say so, track it, and do not close it now. **Not
+blocking: it is dormant, and it is older than cycle 0.3.0.**
+
+*The question.* `SPAN_MODEL.md` N-20 makes the wide sites the rows §5's table
+marks, and no other, and `TESTING.md` V-1 says `check_int128_sites` guards
+that. The check reads SPELLINGS — a wide type's name (TM-230, TM-240) and,
+since cycle 0.3.0, a literal's width (TM-246) — so a wide value no width is
+spelled for is invisible to it. The verifier's counter-example, measured again
+at compiler `5fbaf4a`:
+
+```nitpick
+func:wide = int256() never fails {          // a row of §5's table marks it
+    pass 7i256;
+};
+
+func:g = int64() never fails {              // no row marks it
+    pass ((raw wide()) * (raw wide())) =>! int64;
+};
+```
+
+As a program it compiles, and `g()` is **49** on both legs. `npkc`'s emission
+multiplies in `int256` inside `g` — `llvm.smul.with.overflow.i256` of the two
+calls' results, then a `trunc` to `i64` — and `opt -O2` folds `g` to a
+constant. Planted in a copy of the tree, the two functions appended to
+`src/span/span.npk` and a §5 row marking `wide`: `npkc` compiles the module,
+and **`check_int128_sites` reports 0 findings** — its headline 17 wide
+spellings in 4 functions against 5 marked sites — as do the nine other tree
+checks that read `src/`. On the same copy, `g` spelling `7i256` is 1 finding,
+*"spells `7i256` in `g`"*, and `wide` unmarked is 2, its `int256` and its
+`7i256`: the check reads the plant, and cannot see the product. N-20 forbids
+`g`, and nothing checks it.
+
+*Older than cycle 0.3.0.* The same plant in `int128` passes the check as it
+stood when it went live (cycle 0.2.3a, `8e46d8f`), at 0.2.4a (`c94989e`) and at
+0.3.0 (`1856b03`), 0 findings each time: a check of spellings never saw it.
+What cycle 0.3.0 added was the sentences saying the gap was closed —
+`harness/checks.py`'s *"so the literal was the whole gap"* and TM-246's *"so a
+computation of literals alone is the whole gap"* — corrected since, the first
+in place and the second by a dated note, with their twins in other words
+(`meta/roadmap/0.3/0.3.0.md`'s record, its addendum).
+
+*Dormant.* Of `src/`'s 57 functions none returns or takes a wide type, and the
+three that spell one — `timestamp_since`, `instant_since` and `bytes_put_int` —
+return `Duration`, `Duration` and `NIL`. `src/` calls none of the prelude's
+functions that return one — at the pin `npk_gcd256`, `frac_improper` and the
+wide types' `clone` — reads no field of `FracParts`, the one prelude struct
+with wide fields, and no builtin returns a wide type. A wide field, a wide
+`fixed` and a wide parameter each spell their width where they are declared,
+which the check reads. So no wide value reaches a function of `src/`
+unspelled today: the first function that returns or takes a wide type opens
+the hole.
+
+*The recommendation, so it is an input:* **a second reading, of TYPES, beside
+the spelling check** — `npkc`'s own emission of the library, before `opt`,
+read function by function, and any value or operation wider than `i64` in a
+function of `src/` that §5 does not mark a finding. At the pin that emission
+keeps both shapes: the call's product above, and the literal product
+`(3i256 * 5i256)` as `llvm.smul.with.overflow.i256(i256 3, i256 5)`, measured
+— where `opt -O2` folds both away, so it is the emission and never the
+optimised IR that is read. The spelling check stays beside it: the emission is
+a claim about the lowering, which a later `npkc` may change, and that was
+PD-91's reason for declining the IR as the only reading (TM-246). And it reads
+what O-X9's call-edge scan reads — each function of the emitted IR — so one
+reader can serve both.
+
+*Alternatives, with what each costs:*
+
+- **A call to a `src/` function whose declared result is wide, counted as a
+  site of its caller** — cheap, and lexical again: blind to a generic `T`
+  inferred wide, and to the next shape nobody has listed.
+- **V-1 and N-20 restated to what the check sees** — a check narrower than its
+  rule's reason, the shape TM-240 and TM-246 each declined.
+- **Nothing until a function of `src/` returns or takes a wide type** — true
+  of today's tree and a statement nothing would re-check: the day the hole
+  opens is a day the run stays green.
+
+*What settles it:* **cycle 0.3.1's planner** decides whether a check that reads
+types rather than spellings is in scope, and when — 0.3.1 reviews
+`check_purity`'s ban list and O-X9's scan, the same question of a source check
+that sees spellings beside an IR scan that sees what was emitted. Until it is
+settled, `TESTING.md` V-1 and §2's row, `SPAN_MODEL.md` N-20, TM-240 and
+TM-246, `harness/checks.py`, `CLAUDE.md` and CI's comment each carry a dated
+pointer here (`meta/roadmap/0.3/0.3.0.md` §7).
+
 ---
 
 ### ~~O-N17 — a generic function that MOVES OUT of an indexed element, at an owning `T`, calls an undefined `@npk.vacant.<dty>`~~ — **FIXED at pin `aaffb87`, verified here 2026-09-05 (TM-136)**

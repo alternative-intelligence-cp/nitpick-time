@@ -7446,6 +7446,15 @@ code this check exists for (TM-204).
 > suffix is one of the fourteen as well, because `(3i256 * 5i256) =>! int64`, a
 > computation of literals alone, named no type and passed it (the item cycle
 > 0.2's close deferred).
+>
+> **And corrected 2026-10-08 at cycle 0.3.0, by its verification — a dated
+> note, no new decision.** Its *"`check_int128_sites` guards that every wide
+> intermediate is at a site §5 states the answer for"* holds of every wide type
+> or literal SPELLED in `src/`, and not of a wide value no width is spelled
+> for: a call's result, multiplied in a function §5 does not mark, passes the
+> check, and passed it when this was decided (TM-246's note has the plant).
+> `TESTING.md` V-1 is dated to say so, and `meta/OPEN_QUESTIONS.md` O-X11 holds
+> the hole, dormant. The decision stands as decided.
 
 **2026-10-02, cycle 0.2.4a (the plan's PD-85) — the cycle audit's D1. Restates
 `TESTING.md` §2's row and V-1; dates `SPAN_MODEL.md` N-20; reads one clause of
@@ -7730,6 +7739,21 @@ handed on (`meta/roadmap/done/0.2/0.2.4.md`, its item (a) after the audit),
 recorded with a commit of its own; the other three are the clocks.
 
 ### TM-246 — `check_int128_sites` reads a numeric literal's width suffix as it reads a type's name: a literal of one of the fourteen widths past `int64` is a site of the function it stands in
+> **Corrected 2026-10-08 at cycle 0.3.0, by its verification — a dated note, no
+> new decision.** Its *"so a computation of literals alone is the whole gap"*
+> reads *"so, among spellings, a computation of literals alone is the gap"*. A
+> wide value no width is spelled for is not seen by a check that reads
+> spellings: in a function §5 does not mark, `((raw wide()) * (raw wide())) =>!
+> int64`, `wide` a marked `int256()`, compiles and runs — 49 on both legs —
+> while the check reports 0 findings over the tree that holds it, as do the
+> nine other tree checks that read `src/`. A runtime value cannot WIDEN
+> unnamed, as *"A runtime value cannot widen so"* says; a call's result is wide
+> already. The `int128` twin of that plant passed the check as it stood at
+> cycle 0.2.3a and at 0.2.4a, so the limit is older than this decision, which
+> added the sentence saying the gap was whole. No function in `src/` returns or
+> takes a wide type, or calls one that returns one, so nothing in the tree does
+> it, and `meta/OPEN_QUESTIONS.md` O-X11 holds the hole for cycle 0.3.1's
+> planner. Found by 0.3.0's verifier. The decision stands as decided.
 
 **2026-10-08, cycle 0.3.0 (the plan's PD-91) — the item cycle 0.2's close
 deferred, found by cycle 0.2.4a's verifier after the cycle audit. Restates

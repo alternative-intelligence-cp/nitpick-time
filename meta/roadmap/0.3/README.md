@@ -26,6 +26,13 @@ author, the workbench's question 21: **A, keep `instant_of`**. Nothing here
 moves; `0.3.0.md`'s gate reads the answer before its step 2 builds on the
 name, and its decision for the clocks records it and strikes Q-7.)*
 
+**And one more since, blocking nothing: `meta/OPEN_QUESTIONS.md` O-X11**, ours
+— raised by 0.3.0's verification on 2026-10-08: `check_int128_sites` reads
+spellings, so a wide value no width is spelled for, a call's result, passes
+it. It is dormant and older than this cycle, and 0.3.1's planner decides
+whether a check that reads types rather than spellings is in scope, and when
+(`0.3.0.md` §7).
+
 ## Subcycles
 
 | # | Topic | Ends with |

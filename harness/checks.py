@@ -2106,7 +2106,17 @@ _SITE_NAME = re.compile(r"`([A-Za-z_][A-Za-z0-9_]*)")
 # widen so -- an `int64` beside an `int256` literal is `NITPICK-TYPE-007`, "a
 # widening would decide which width this operation happens in, and that
 # decision must be visible in the source rather than following from the
-# operands" -- so the literal was the whole gap.
+# operands" -- so among SPELLINGS, the literal was the gap.
+# NOT AMONG VALUES: A WIDE VALUE NO WIDTH IS SPELLED FOR IS NOT SEEN, AND NEVER
+# WAS. A call's result is wide with no widening at all: in a function §5 does
+# not mark, `((raw wide()) * (raw wide())) =>! int64`, `wide` a marked
+# `int256()`, multiplies in `int256` and spells neither a wide type nor a wide
+# literal, so this check -- which reads spellings -- passes it; its `int128`
+# twin passed the check as it stood at cycle 0.2.3a, when it went live, and at
+# 0.2.4a (measured at the subcycle's verification, 2026-10-08). No function in
+# `src/` returns or takes a wide type, or calls one that returns one, so the
+# hole is dormant, and `meta/OPEN_QUESTIONS.md` O-X11 holds it. (Until then
+# this paragraph ended "so the literal was the whole gap".)
 # The width is read off `literals`' tokens, the reader `check_constants_named`
 # trusts (TM-231), so a width in a comment, a string or a character literal is
 # nothing, as it is to the compiler; and `bytes_put_int`'s `0i128` is a hit in
@@ -2181,8 +2191,9 @@ def int128_sites(tree):
 
 def check_int128_sites(tree, **_):
     """`int128` -- and every integer wider than `int64`, a literal of one of
-    those widths included -- in `src/` at exactly the sites `SPAN_MODEL.md` §5
-    marks."""
+    those widths included -- SPELLED in `src/` at exactly the sites
+    `SPAN_MODEL.md` §5 marks. A wide value no width is spelled for -- a call's
+    result -- is not seen (O-X11)."""
     sites, problems = int128_sites(tree)
     problems = list(problems)
     files = src_files(tree)

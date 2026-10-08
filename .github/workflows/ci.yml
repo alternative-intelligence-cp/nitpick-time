@@ -167,7 +167,12 @@
 # narrowed a constant in silence and passed every check (TM-246); and the
 # clocks: each reading of the clock it names, the realtime one range-checked
 # by `timestamp_of`, each ADVANCING within a million reads -- forty runs a leg
-# -- and each resolution in (0, 1 s] (TM-247 ... TM-249).
+# -- and each resolution in (0, 1 s] (TM-247 ... TM-249). WHAT THE THREE
+# CLAUSES ABOVE ON WIDE INTEGERS HOLD IS WHAT IS SPELLED -- a wide type's name,
+# and since 0.3.0 a literal's width: a wide value no width is spelled for, a
+# call's result multiplied in a function §5 does not mark, passes this run, and
+# always has (`meta/OPEN_QUESTIONS.md` O-X11, dormant; found by 0.3.0's
+# verification, 2026-10-08).
 #
 # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
 # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,

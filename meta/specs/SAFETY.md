@@ -371,9 +371,12 @@ the prelude's asynchronous `text_read_line`, `text_write_str` and
 methods `ByteReader.seek` and `LineBufWriter.flush`. Each is callable only
 from an `async func` — a synchronous call is `NITPICK-TYPE-043` — and a
 non-generic `async func` in `src/` is a finding of `check_call_edges`; a
-generic one nobody instantiates is in no emission, and passes every check,
-measured — dormant, since no function of `src/` is asynchronous. TM-252's
-dated note has the rest.)*
+generic one nobody instantiates is in no emission, and no purity check reads
+it, but a full run is red by the arm bill, since its `await` or `drop` spawn
+arms `DeadlineExceeded`, which no consumer of `src/` owes —
+`check_failsafe_arms`, and `NITPICK-REACH-002` in the units (until the
+verification of 0.3.1's fix this said it "passes every check", measured by
+the checks alone). TM-252's dated note has the rest.)*
 
 **Rule S-10b (TM-126) — it is a SOURCE-LEVEL check, it is LIVE, and it has been
 SEEN TO FAIL.** Three separate claims, and each was missing:

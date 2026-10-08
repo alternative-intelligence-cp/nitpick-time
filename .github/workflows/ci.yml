@@ -183,10 +183,12 @@
 # that reaches past the program's own memory, where it was six names -- the
 # asynchronous ones that do and are not on it, named in TM-252's dated note,
 # are callable only from an `async func`, which `check_call_edges` refuses in
-# `src/` unless it is generic -- a hole dormant while `src/` has no
-# asynchronous function (until 0.3.1's verification this said "every builtin
-# and prelude function") -- and `check_host_isolation` reads every name
-# `src/host/` makes public (TM-252, TM-253).
+# `src/` unless it is generic, and a generic one this run refuses by its arm
+# bill, its `await` or spawn arming `DeadlineExceeded`, which no consumer owes
+# (until 0.3.1's verification this said "every builtin and prelude function",
+# and until its fix's it called the generic case a hole) -- and
+# `check_host_isolation` reads every name `src/host/` makes public (TM-252,
+# TM-253).
 #
 # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
 # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,

@@ -29,9 +29,11 @@ of `open`. *(The asynchronous prelude names that do and are not on it — the
 functions `text_read_line`, `text_write_str` and `text_write_line`, and the
 methods `ByteReader.seek` and `LineBufWriter.flush` — are callable only from
 an `async func`, which `check_call_edges` refuses in `src/` unless it is
-generic, a hole that is dormant while `src/` has no asynchronous function:
-TM-252's dated note, from the subcycle's verification, 2026-10-08, where this
-said "every bare-name builtin and public prelude function".)*
+generic — and a generic one the arm bill refuses instead, its `await` or
+spawn arming `DeadlineExceeded`, which no consumer owes: TM-252's dated
+note, from the subcycle's verification, 2026-10-08, where this said "every
+bare-name builtin and public prelude function", and from its fix's, where it
+called the generic case a hole.)*
 `check_host_isolation` reads every name `src/host/` makes public, `HostClock`
 among them (TM-253).
 And **the library's emission is read beside the spelling checks**, before

@@ -8105,6 +8105,23 @@ lines.
 > three were found by 0.3.1's verifier, the rest by the fix it asked for;
 > `meta/roadmap/0.3/0.3.1.md`'s addendum has the measurements. The decision
 > stands as decided.
+>
+> **And corrected 2026-10-08 by the verification of that fix — a further dated
+> sentence; the note above stands as written.** Its *"each compile in the
+> umbrella and pass every check, measured"* was measured with
+> `harness/checks.py`'s checks alone, and its *"where nothing reads it"* holds
+> of the purity checks only. Each shape was run again in a FULL run over a copy
+> of the tree holding it (`meta/roadmap/0.3/0.3.1.md`'s third addendum): a
+> generic function that lets a `ByteReader` it takes by `move` die, and one
+> that calls `mono_now` through a function-typed local, are GREEN — 134 units,
+> every check silent; a generic `async func` awaiting `text_read_line` is RED
+> by the arm bill — `check_failsafe_arms`, and `NITPICK-REACH-002` in 34 units
+> — because an `await`, or a `drop` spawn, arms `DeadlineExceeded`, which no
+> consumer of `src/` owes; and a generic `list_truncate` of a
+> `List<ByteReader>` is RED the same way only where its `DecreasesViolated` and
+> `LimitViolated` are new to the module's consumers — in `cal` — and GREEN in
+> `src/core/bytes.npk`, whose consumers owe both. No purity check reads any of
+> them.
 
 **2026-10-08, cycle 0.3.1 (the plan's PD-97). Supersedes TM-018 in its list of
 names; dates `SAFETY.md` S-10 and S-10b; restates `TESTING.md` §2's row; the

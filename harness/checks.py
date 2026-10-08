@@ -1290,12 +1290,13 @@ def check_raw_index(tree, **_):
 # The asynchronous prelude names that do and are not on it are named in
 # `check_purity`'s docstring below, with where each is read: a call of one is
 # legal only in an `async func`, which `check_call_edges` refuses in `src/`
-# unless it is generic (TM-252's dated note). Until 0.3.1's verification this
-# said "every public function of its prelude", which three `pub async` ones
-# off the list falsify. What
-# it leaves answers from its arguments and what they point at: the allocator,
-# the string floor, `buffer_new`, `to_cstring`, `atomic_from_ptr`, and the
-# site tables' `site_line` and `site_path`. Until then it was cycle 0.0.3's
+# unless it is generic, and a generic one the arm bill refuses, its `await`
+# or spawn arming `DeadlineExceeded` (TM-252's dated note). Until 0.3.1's
+# verification this said "every public function of its prelude", which three
+# `pub async` ones off the list falsify. What it leaves answers from its
+# arguments and what they point at: the allocator, the string floor,
+# `buffer_new`, `to_cstring`, `atomic_from_ptr`, and the site tables'
+# `site_line` and `site_path`. Until then it was cycle 0.0.3's
 # six -- `sys`, `mono_now`, `environ`, `read_file`, `open`, `write` -- and a
 # function in a copy's `src/cal/` calling `hardware_concurrency()`,
 # `read_stdin()`, `chain_depth()`, `arena_make()` or the prelude's `std_out()`
@@ -1391,13 +1392,22 @@ def check_purity(tree, **_):
     AND EACH OF THOSE IS `check_call_edges`' TO READ ONLY WHERE THE EMISSION
     HOLDS THE FUNCTION. A GENERIC function nobody instantiates in the umbrella
     is in no emission and outside its declared-function rule, so this check is
-    its one reading, and reads spellings: a generic `async func` awaiting
-    `text_read_line`, a generic function that lets a `ByteReader` die, and one
-    that calls `mono_now` through a function-typed local each compile in the
-    umbrella and pass every check (measured at 0.3.1's verification, in
-    copies; the alias is `NITPICK-EMIT-002` only where it is emitted). Dormant:
-    `src/`'s generic functions are `src/core/vec.npk`'s nine, synchronous,
-    calling the allocator alone.
+    its one purity reading, and reads spellings. What a FULL run does with one,
+    measured in copies at 0.3.1's fix: a generic function that lets a
+    `ByteReader` it takes by `move` die, and one that calls `mono_now` through
+    a function-typed local, arm nothing, and the run is GREEN (the alias is
+    `NITPICK-EMIT-002` only where it is emitted). A generic `async func` that
+    calls one of the names above -- by `await`, or by a `drop` spawn -- is
+    red, by the ARM BILL and not by a purity reading: each arms
+    `DeadlineExceeded`, which no consumer of `src/` owes, so
+    `check_failsafe_arms` and REACH-002 in the units refuse the run. A generic
+    `list_truncate` of a `List<ByteReader>` is red the same way only where the
+    `DecreasesViolated` and `LimitViolated` it arms are new to its module's
+    consumers -- in `cal`, and not in `src/core/bytes.npk`, where the run is
+    GREEN. Dormant: `src/`'s generic functions are `src/core/vec.npk`'s nine,
+    synchronous, calling the allocator alone. (Until the verification of
+    0.3.1's fix this said all three "pass every check", from these checks'
+    runs alone.)
     """
     files = [f for f in src_files(tree) if not f.startswith(HOST_DIR)]
     total = len(src_files(tree))
@@ -1460,8 +1470,10 @@ def check_host_isolation(tree, **_):
     merely discouraged. (What reaches the kernel by no name on the list -- an
     asynchronous prelude name, a drop, an alias -- is `check_call_edges`' to
     read where the emission holds the function; in a generic one nobody
-    instantiates, no check reads it. `check_purity`'s docstring names each.
-    "By a name on its list" was added at 0.3.1's verification.)
+    instantiates, no purity check reads it, and a full run is red only where
+    the arm bill meets an identity no consumer owed, as an `await`'s
+    `DeadlineExceeded`. `check_purity`'s docstring says which. "By a name on
+    its list" was added at 0.3.1's verification.)
 
     `src/lib.npk` is exempt because it is the umbrella: it re-exports `host`'s
     public names -- four of H-1's five functions since cycle 0.3.0, and

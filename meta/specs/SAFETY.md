@@ -370,7 +370,12 @@ SEEN TO FAIL.** Three separate claims, and each was missing:
   each way, "reproduced here". At compiler `c3bdae2` they are 5 and 8, the call
   adding `npk_chain_push`, `npk_raise` and `npk_sys6`, and at `aaffb87` they
   were already 2 and 5. The scan sees the call; it can never flag it, which is
-  the half the rule rests on.)*
+  the half the rule rests on.)* *(Cycle 0.3.1, TM-250: a second reading
+  stands BESIDE it, never in for it. `check_call_edges` reads `npkc`'s
+  emission of the umbrella for every call a function outside `src/host/`
+  makes — a call through a name no ban list knows is a call like any other
+  there — and cannot read a generic function nobody instantiates in it, which
+  this check reads as spelled. The symbol scan still answers neither.)*
 - **Live from cycle 0.0.3**, not from 0.3. It runs over the six non-`host`
   files today and reports `0` findings with the denominator printed, which is
   the same answer `check_no_owning_fields` gives over an empty set and is

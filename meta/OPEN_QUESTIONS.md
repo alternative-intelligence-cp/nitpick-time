@@ -909,7 +909,22 @@ probe changes either way, and the entry in the manifest is true about the 29
 is normally frozen, but this sentence is in the PRESENT tense about the tree as
 it is now, so it is a claim and not a record. TM-142.)*
 
-### O-X9 — should an IR call-edge scan answer "did this module touch the kernel"?
+### ~~O-X9 — should an IR call-edge scan answer "did this module touch the kernel"?~~ — **SETTLED 2026-10-08 (TM-250): yes, beside `check_purity` and never instead of it — `check_call_edges` reads every call a function of `src/` outside `src/host/` makes in `npkc`'s emission of the umbrella**
+
+> The recommendation, taken at cycle 0.3.1 once `src/host/` named the kernel
+> (`meta/roadmap/0.3/0.3.1.md` §1). Measured at compiler `5fbaf4a`: a
+> function in a copy's `src/cal/` calling `hardware_concurrency()`,
+> `read_stdin()`, `chain_depth()` or the prelude's `std_out()` compiles, and
+> `check_purity` passed each — none of their names was on its list — while
+> the emission shows each reaching the runtime's own symbol, `std_out` through
+> `npk.prelude.std_dup` to `npk_sys6`. So the scan reads the CALLS, from every
+> function of `src/` outside `src/host/`, through the prelude and the glue,
+> against a reviewed allowlist of runtime symbols; a call into `src/host/`, a
+> call through a value and inline assembly are findings, and `src/host/`'s
+> own reach is the reader's positive control. What it cannot read is a generic
+> function nobody instantiates in the umbrella, which `check_purity` reads as
+> spelled, and which the same subcycle widens, by the decision after this
+> one. The question below is left as it was asked.
 
 **Raised 2026-09-25 by the stream-2 planner**, from the board's RX-120 entry,
 which recommends the call-edge scan for every library. At compiler `c3bdae2`
@@ -992,7 +1007,17 @@ be `.clone()` — (b)'s spelling, enforced by the compiler rather than
 remembered — and Z-4's `pub` binding hands a consumer nothing that compiles
 but a lend or a clone.
 
-### O-X11 — `check_int128_sites` reads SPELLINGS: should a check read TYPES, so that a wide value no width is spelled for is seen?
+### ~~O-X11 — `check_int128_sites` reads SPELLINGS: should a check read TYPES, so that a wide value no width is spelled for is seen?~~ — **SETTLED 2026-10-08 (TM-251): yes, at cycle 0.3.1 — `check_wide_types` reads every integer type wider than `i64` in `npkc`'s emission of a function of `src/`, beside the spelling check**
+
+> The recommendation, taken at cycle 0.3.1 over the reader O-X9's scan is
+> built on (TM-250). Measured at compiler `5fbaf4a`: the counter-example below,
+> planted in a copy with a §5 row marking `wide`, is 0 findings to
+> `check_int128_sites` and 1 to `check_wide_types` — *"`npk.span.g` holds
+> `i256`"* — and over the tree the new check names exactly the three
+> functions §5 marks and finds them in the emission, `period_add` not yet
+> written. The spelling check stays beside it, for TM-246's reason: the
+> emission is a claim about the lowering. The question below is left as it
+> was asked.
 
 **Raised 2026-10-08 by cycle 0.3.0's verification**
 (`s2-ntime-0.3.0-verify-work`), and registered by the subcycle's worker on the

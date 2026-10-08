@@ -16,7 +16,10 @@ WHAT A GREEN RUN HERE IS, AND IS NOT.
   cycle 0.2.3a added `check_check_registry`, `check_no_view_returns` and
   `check_int128_sites`, TM-227, TM-228 and TM-230; eight until 0.1.1 added
   `check_literal_divisors`, TM-163), and `check_specs_current` beside them,
-  which reports; the library emitted, optimised,
+  which reports; the library emitted -- and since cycle 0.3.1 its emission
+  read for every call a function of `src/` outside `src/host/` makes and
+  every wide value a function holds, by `check_call_edges` and
+  `check_wide_types` (TM-250, TM-251) -- optimised,
   assembled and scanned; the IR proved identical from two working directories;
   and every test file held to its own header at -O0 and again under `opt -O2`.
 
@@ -24,6 +27,8 @@ WHAT A GREEN RUN HERE IS, AND IS NOT.
   CANNOT FLAG A SYSCALL -- `npk_sys6` is the runtime's own and is in the
   allowlist by construction (`elf.py`, B-2c, TM-118, TM-153, RX-120). `check_purity` is
   a SOURCE-level check and is the only thing that answers that question.
+  (One of two since cycle 0.3.1: `check_call_edges` reads the calls in the
+  library's emission, TM-250. Neither is the symbol scan.)
 
   IT IS NOT evidence that the WHOLE library works. `src/core/` is real code
   since cycle 0.0.4 -- `Vec<T>`, `Bytes` and fifteen named constants,
@@ -724,6 +729,20 @@ def run_parse(rep, root, bld):
                  % (total, len(files)))
 
 
+def _report_check(rep, res):
+    """A tree check's verdict, printed as step 5 prints one."""
+    if res.problems:
+        rep.fail(res.name, res.headline)
+        for p in res.problems:
+            rep.note("")
+            for line in str(p).rstrip().splitlines():
+                rep.note(line)
+    else:
+        rep.say("  ok    %-24s %s" % (res.name, res.headline))
+    for r in res.reports:
+        rep.note("report: %s" % r)
+
+
 # ---------------------------------------------------------------------------
 # 7. the library
 # ---------------------------------------------------------------------------
@@ -736,6 +755,13 @@ def build_library(rep, root, bld):
     step asserts is that the library's entry point emits, survives `opt -O2`,
     assembles at both optimisation levels, and needs no symbol the runtime does
     not define.
+
+    AND SINCE CYCLE 0.3.1 ITS EMISSION IS READ, before `opt` (TM-250, TM-251):
+    `check_call_edges` for every call a function of `src/` outside
+    `src/host/` makes, and `check_wide_types` for every integer wider than
+    `i64` a function holds -- what the source does not spell, the emission
+    holds. Each is a tree check over this step's own output, and reports as
+    step 5's do.
     """
     entry = bld.manifest["build"]["entry"]
     reached = build_mod.reachable_sources(os.path.join(root, entry))
@@ -745,6 +771,8 @@ def build_library(rep, root, bld):
     try:
         bld.emit(entry, ll)
         rep.say("  ok    npkc            %9d B of IR" % os.path.getsize(ll))
+        _report_check(rep, checks_mod.check_call_edges(root, emission=ll))
+        _report_check(rep, checks_mod.check_wide_types(root, emission=ll))
         obj = os.path.join(bld.out_dir, "ntime.o")
         bld.assemble(ll, obj)
         bld.scan(obj)

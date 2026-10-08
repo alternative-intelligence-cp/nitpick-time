@@ -72,8 +72,8 @@ beside `check_int128_sites`, over the reader O-X9's scan is built on.)*
 *(Four more, from 0.3.1's planning on 2026-10-08 — `0.3.1.md`: the two
 questions handed on, which share one reader of the library's emission, and
 the two ban lists' decisions. The four above keep their words.)*
-- [ ] **O-X9**: the call-edge scan — every call a function of `src/` outside `src/host/` makes, read from `npkc`'s emission of the umbrella and held to a reviewed allowlist (PD-95)
-- [ ] **O-X11**: the wide values — every integer wider than `i64` in that emission held to §5's sites, spelled or not (PD-96)
+- [x] **O-X9**: the call-edge scan — every call a function of `src/` outside `src/host/` makes, read from `npkc`'s emission of the umbrella and held to a reviewed allowlist (PD-95) — **TM-250**, `check_call_edges`: eight plants caught and eight controls silent; over the tree 0 findings, `src/host/` reaching `npk_mono_now` and `npk_sys6`, every non-generic function `src/` declares in the emission
+- [x] **O-X11**: the wide values — every integer wider than `i64` in that emission held to §5's sites, spelled or not (PD-96) — **TM-251**, `check_wide_types`: three plants caught; over the tree exactly §5's three marked functions hold one
 - [ ] `check_purity`'s list: every builtin and prelude function at the pin that reaches past the program's own memory, matched as a call with an identifier boundary on its left (PD-97)
 - [ ] `check_host_isolation`'s: every name `src/host/` makes public, `HostClock` among them, beside the `host_` prefix (PD-98)
 

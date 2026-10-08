@@ -260,6 +260,13 @@ forbids, and the check passes it, as it has since it went live. No function in
 `src/` returns or takes a wide type, or calls one that returns one, so nothing
 does it today.)*
 
+*(Cycle 0.3.1, TM-251 — O-X11 answered: a second check holds this rule from
+`npkc`'s emission, `check_wide_types` — every integer type wider than `i64` in
+a function of the umbrella's emission, spelled or not, stands in a function
+the table marks — so the call's result above is a finding there. Two
+readings hold the rule, of the spelling and of the emission; a generic
+function nobody instantiates in the umbrella is read by spelling alone.)*
+
 **Rule N-20b (TM-105) — the range check at each of those sites is mandatory
 library code, because the language provides no checked narrowing.** Measured at
 cycle 0.0.0: `=>!` at a value that does not fit **truncates silently** (no trap,

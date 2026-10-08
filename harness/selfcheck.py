@@ -922,6 +922,38 @@ def _loop(hi):
             "    pass last;\n};\n" % hi)
 
 
+# THE EMISSION'S PLANTS (cycle 0.3.1, TM-250 and TM-251): `build/ntime.ll` as
+# text, never compiled. `_ir` declares every symbol `CALL_EDGE_ALLOW` holds
+# and one intrinsic of each family it allows -- the emitter declares the
+# runtime's whole table in every module, so a plant without them would read
+# every row as stale -- then the two symbols the plants reach outside it,
+# and the functions and globals given.
+def _ir(*parts, omit=()):
+    decl = "".join("declare ptr @%s()\n" % s
+                   for s in sorted(checks_mod.CALL_EDGE_ALLOW) if s not in omit)
+    decl += ("declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64)\n"
+             "declare void @llvm.assume(i1)\n"
+             "declare double @llvm.sqrt.f64(double)\n"
+             "declare i64 @npk_sys6(i64, i64, i64, i64, i64, i64, i64)\n"
+             "declare i64 @npk_mono_now()\n")
+    return ("build/ntime.ll", decl + "".join(parts))
+
+
+def _fn(name, body):
+    return ('define { i64, i32 } @"%s"() {\nentry:\n%s'
+            "  ret { i64, i32 } zeroinitializer\n}\n" % (name, body))
+
+
+_CALL = "  %%r = call %s\n"
+_HOST_FN = _fn("npk.host.h", _CALL % ("i64 @npk_sys6(i64 228, i64 0, i64 0, "
+                                     "i64 0, i64 0, i64 0, i64 0)"))
+_WIDE_FN = _fn("npk.span.wide", "  %w = add i256 7, 0\n")
+_G_FN = _fn("npk.span.g",
+            "  %a = call { i256, i32 } @\"npk.span.wide\"()\n"
+            "  %p = call { i256, i1 } @llvm.smul.with.overflow.i256(i256 %x, "
+            "i256 %y)\n  %n = trunc i256 %v to i64\n")
+
+
 # Each row: the check, the file that violates it, the file that does not, and a
 # fragment the finding must name. The CLEAN column is not decoration -- several
 # of these checks are one predicate away from failing this repository's own
@@ -1538,6 +1570,90 @@ PLANTED = [
     # here: `0x15180` is `NITPICK-LEX-003`, "digit is not valid for this base".
     (checks_mod.check_constants_named, _div("0x15180"), _div("0FFhex"),
      "a literal this check does not read"),
+    # ---- CYCLE 0.3.1: THE EMISSION, READ (TM-250, TM-251). Each row plants
+    # `build/ntime.ll` -- text the two checks read as `npkc`'s output, never
+    # compiled -- built by `_ir`, which declares every symbol the allowlist
+    # holds, so a plant is red for its own reason and no row reads as stale.
+    #
+    # A RUNTIME SYMBOL OUTSIDE THE ALLOWLIST, called directly: the syscall
+    # trampoline, beside the allocator.
+    (checks_mod.check_call_edges,
+     _ir(_fn("npk.cal.f", _CALL % "i64 @npk_sys6(i64 39, i64 0, i64 0, i64 0,"
+                                  " i64 0, i64 0, i64 0)")),
+     _ir(_fn("npk.cal.f", _CALL % "ptr @npk_alloc(i64 8)")),
+     "reaches `npk_sys6` outside `src/host/`"),
+    # THROUGH THE PRELUDE -- the shape no ban list of names reads: `cal` calls a
+    # prelude function, which reads the clock. The control's prelude function
+    # traps, which is the error route.
+    (checks_mod.check_call_edges,
+     _ir(_fn("npk.cal.f", _CALL % '{ i64, i32 } @"npk.prelude.p"()'),
+         _fn("npk.prelude.p", _CALL % "i64 @npk_mono_now()")),
+     _ir(_fn("npk.cal.f", _CALL % '{ i64, i32 } @"npk.prelude.p"()'),
+         _fn("npk.prelude.p", _CALL % "void @npk_trap(i32 -4097)")),
+     "`npk.cal.f` -> `npk.prelude.p` -> `npk_mono_now`"),
+    # INTO `src/host/` (H-2) -- beside `host`'s own call of the kernel, which is
+    # not a finding: `host` is the one module that may.
+    (checks_mod.check_call_edges,
+     _ir(_fn("npk.cal.f", _CALL % '{ i64, i32 } @"npk.host.h"()'), _HOST_FN),
+     _ir(_fn("npk.cal.f", _CALL % "ptr @npk_alloc(i64 8)"), _HOST_FN),
+     "calls into `src/host/`"),
+    # INLINE ASSEMBLY, which no name reads -- beside the same function adding.
+    (checks_mod.check_call_edges,
+     _ir(_fn("npk.cal.f", '  %r = call i64 asm sideeffect "syscall", "=r"()\n')),
+     _ir(_fn("npk.cal.f", "  %r = add i64 1, 2\n")),
+     "holds inline assembly"),
+    # A CALL THROUGH A VALUE, whose callee nobody can name -- beside the same
+    # call made by name.
+    (checks_mod.check_call_edges,
+     _ir(_fn("npk.cal.f", "  %fp = load ptr, ptr %slot\n"
+                          + _CALL % "{ i64, i32 } %fp()"),
+         _fn("npk.cal.g", "")),
+     _ir(_fn("npk.cal.f", _CALL % '{ i64, i32 } @"npk.cal.g"()'),
+         _fn("npk.cal.g", "")),
+     "holds a call through a value"),
+    # A FUNCTION `src/` DECLARES THAT THE EMISSION DOES NOT HOLD: unread, and
+    # not a smaller denominator.
+    (checks_mod.check_call_edges,
+     [("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() never fails { pass 1i64; };\n"),
+      _ir(_fn("npk.cal.g", ""))],
+     [("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() never fails { pass 1i64; };\n"),
+      _ir(_fn("npk.cal.f", ""))],
+     "declares `f`, and the emission defines no `npk.cal.f`"),
+    # A ROW OF THE ALLOWLIST THE EMISSION DOES NOT DECLARE -- a row that
+    # outlived its symbol, which V-1c's both directions fail.
+    (checks_mod.check_call_edges,
+     _ir(_fn("npk.cal.f", ""), omit=("npk_string_slice",)),
+     _ir(_fn("npk.cal.f", "")),
+     "`CALL_EDGE_ALLOW` holds `npk_string_slice`"),
+    # THE POSITIVE CONTROL: a `src/host/` that reaches nothing outside the
+    # allowlist is a reader that is not reading -- beside one that reads the
+    # kernel.
+    (checks_mod.check_call_edges,
+     _ir(_fn("npk.host.h", _CALL % "ptr @npk_alloc(i64 8)")),
+     _ir(_HOST_FN),
+     "this reader is not reading the emission's calls"),
+    # A WIDE VALUE NO WIDTH IS SPELLED FOR (O-X11, TM-251): `g` multiplies
+    # two calls' `i256` results, as `((raw wide()) * (raw wide())) =>! int64`
+    # emits, and §5 marks `wide` alone -- beside §5 marking `g` too.
+    (checks_mod.check_wide_types,
+     [_span5((("`wide`", "**yes**"),)), _ir(_WIDE_FN, _G_FN)],
+     [_span5((("`wide`", "**yes**"), ("`g`", "**yes**"))), _ir(_WIDE_FN, _G_FN)],
+     "`npk.span.g` holds `i256`"),
+    # A WIDE MODULE-LEVEL VALUE, beside the same constant in `i64`.
+    (checks_mod.check_wide_types,
+     [_span5((("`wide`", "**yes**"),)),
+      _ir(_WIDE_FN, '@"npk.span.K" = internal constant i128 7\n')],
+     [_span5((("`wide`", "**yes**"),)),
+      _ir(_WIDE_FN, '@"npk.span.K" = internal constant i64 7\n')],
+     "`npk.span.K` is a module-level value of `i128`"),
+    # A GENERIC'S WIDE INSTANCE, named by its source name -- beside the
+    # instance in `i64`.
+    (checks_mod.check_wide_types,
+     [_span5((("`wide`", "**yes**"),)), ("src/core/vec.npk", "mod:vec;\n"),
+      _ir(_fn("npk.vec.vec_push<int128>", "  %s = add i128 %a, 1\n"))],
+     [_span5((("`wide`", "**yes**"),)), ("src/core/vec.npk", "mod:vec;\n"),
+      _ir(_fn("npk.vec.vec_push<int64>", "  %s = add i64 %a, 1\n"))],
+     "§5's table marks no `int128` site in `vec_push`"),
 ]
 
 

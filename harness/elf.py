@@ -32,7 +32,9 @@ WHAT THE SCAN CAN AND CANNOT SEE -- READ THIS BEFORE CITING IT AS A GUARANTEE.
   PURITY IS A DIFFERENT CHECK: `check_purity` (`TESTING.md` §2, `SAFETY.md`
   S-10) is a SOURCE-level ban list over `src/` outside `src/host/`, and it is
   the only thing that answers "did this module touch the kernel". Do not read a
-  green symbol scan as a purity result.
+  green symbol scan as a purity result. (One of two since cycle 0.3.1:
+  `checks.check_call_edges` reads the calls in the library's emission,
+  TM-250. Neither is this scan.)
 
 WHERE THE ALLOWLIST COMES FROM, AND WHY IT IS NOT WHAT THE PLAN SAID.
 

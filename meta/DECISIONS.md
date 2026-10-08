@@ -1585,6 +1585,11 @@ missing feature rather than a defect.
   a harness that cannot run until they land is not a harness.
 
 ### TM-118 — the runtime allowlist is derived from `npkrt.o`, not from `npkrt.ll`, and the scan cannot see a syscall
+> **SUPERSEDED IN PART by TM-250 (2026-10-08, cycle 0.3.1)**: `check_purity` is
+> one of TWO readings that answer "did this module touch the kernel" —
+> `check_call_edges` reads the calls in `npkc`'s emission (`OPEN_QUESTIONS.md`
+> O-X9, answered). The symbol scan still answers neither.
+>
 > **SUPERSEDED IN PART by TM-153 (2026-09-25).** Its "what the scan cannot
 > see" paragraph says a module issuing a raw syscall has an *identical*
 > undefined set to one that does not, 29 symbols each way. At compiler
@@ -1997,6 +2002,11 @@ what it is.
   that depends on nobody reaching for it under deadline is not a rule.
 
 ### TM-126 — a tree check is COMMISSIONED, not merely written; `check_purity` and `check_host_isolation` go live now
+> **SUPERSEDED IN PART by TM-250 (2026-10-08, cycle 0.3.1)**: `check_purity` is
+> one of TWO readings that answer "did this module touch the kernel" —
+> `check_call_edges` reads the calls in `npkc`'s emission (`OPEN_QUESTIONS.md`
+> O-X9, answered). The symbol scan still answers neither.
+>
 > **SUPERSEDED IN PART by TM-153 (2026-09-25).** Its closing evidence — *"an
 > identical undefined set … 29 symbols each way, diff empty, and reproduced
 > here"* — is false at compiler `c3bdae2` (5 and 8) and was at `aaffb87` (2 and
@@ -3790,6 +3800,11 @@ was a test's encoding, not the code; leaving 107 — a verdict that cannot tell 
 trap from the answer is not a verdict.
 
 ### TM-153 — the undefined-symbol scan still never FLAGS a syscall; at `c3bdae2` it SEES one
+> **SUPERSEDED IN PART by TM-250 (2026-10-08, cycle 0.3.1)**: its *"`check_purity`
+> (S-10b) is still the only thing here that answers"* — one of two since then;
+> and its declined alternative, the IR call-edge scan, is built: BESIDE the
+> symbol scan, which it does not replace, and beside `check_purity`. The text
+> below is left exactly as written.
 
 **2026-09-25, cycle 0.1.0b (PD-5). Supersedes TM-118 and TM-126 in part.** Both
 said a module that issues a raw syscall has an **identical** undefined set to one
@@ -7441,6 +7456,11 @@ naming the gap in S-22** — the parsers that would meet the gap are the next
 code this check exists for (TM-204).
 
 ### TM-240 — `check_int128_sites` reads every integer wider than `int64`, not `int128` alone; `TESTING.md` V-1 says what the check guards, and what no check does
+> **And TM-251 (2026-10-08, cycle 0.3.1) answers what the note below holds
+> open:** a second check, `check_wide_types`, reads every wide type in
+> `npkc`'s emission, so a wide value no width is spelled for is held to §5's
+> sites too.
+>
 > **TM-246 (2026-10-08, cycle 0.3.0) reads one clause of it:** *"The check reads
 > all fourteen"* — by a type's name; since TM-246 a numeric literal whose width
 > suffix is one of the fourteen as well, because `(3i256 * 5i256) =>! int64`, a
@@ -7754,6 +7774,9 @@ recorded with a commit of its own; the other three are the clocks.
 > takes a wide type, or calls one that returns one, so nothing in the tree does
 > it, and `meta/OPEN_QUESTIONS.md` O-X11 holds the hole for cycle 0.3.1's
 > planner. Found by 0.3.0's verifier. The decision stands as decided.
+>
+> **Answered 2026-10-08 by TM-251 (cycle 0.3.1):** `check_wide_types` reads the
+> emission's types, and the plant above is 1 finding to it.
 
 **2026-10-08, cycle 0.3.0 (the plan's PD-91) — the item cycle 0.2's close
 deferred, found by cycle 0.2.4a's verifier after the cycle audit. Restates
@@ -7923,3 +7946,114 @@ suspends the machine** to tell `BOOTTIME` from `MONOTONIC` — not a unit; **a
 double for the kernel's broken answers now** — the double is cycle 0.3.3's, and
 it replaces `host`, so it cannot test `host`'s own refusals either; the honest
 statement is the note.
+
+# Cycle 0.3.1 — `check_purity`, its second reading and the wide values, ratified 2026-10-08
+
+Four decisions, drafted at planning (`meta/roadmap/0.3/0.3.1.md` §2, PD-95 …
+PD-98, in that order), accepted by the orchestrator before the subcycle's
+dispatch, and each measured at compiler `5fbaf4a`. The first two answer the
+two questions cycle 0.3.0 handed on, `meta/OPEN_QUESTIONS.md` O-X9 and O-X11,
+with one reader of the library's emission, and are recorded with a commit of
+their own; the other two are the review of the two ban lists the cycle README
+names.
+
+### TM-250 — O-X9 answered: `check_call_edges` reads every call a function of `src/` outside `src/host/` makes in `npkc`'s emission of the umbrella, and holds what it reaches to a reviewed allowlist — a second reading of S-7, beside `check_purity` and never instead of it
+
+**2026-10-08, cycle 0.3.1 (the plan's PD-95). Strikes `meta/OPEN_QUESTIONS.md`
+O-X9; adds `TESTING.md` §2's row and moves V-1a's counts; dates `SAFETY.md`
+S-10b, `BUILD.md` B-2c and every sentence that called `check_purity` the only
+thing that answers "did this module touch the kernel"; supersedes TM-118,
+TM-126 and TM-153 in that clause.**
+
+**What was found** (`0.3.1.md` §1). A function planted in a copy's
+`src/cal/cal.npk` calling `hardware_concurrency()`, `read_stdin()`,
+`chain_depth()`, `wild_live_count()`, `arena_make()`, `path_exists()` or the
+prelude's `std_out()` compiles in the umbrella, and `check_purity` passes each:
+none of their names was on its list of six. The umbrella's emission shows each
+reaching the runtime's own symbol — `std_out` through `npk.prelude.std_out` and
+`npk.prelude.std_dup` to `npk_sys6`, and through its drop glue to
+`npk_ofd_close`. Over the tree, the emission defines 90 functions of `src/`'s
+modules, 81 outside `src/host/`, and those reach fifteen runtime symbols —
+the allocator's `npk_dalloc` and `npk_buffer_new`, the string floor's
+`npk_string_concat`, `npk_string_from_bytes` and `npk_int_to_string`, the error
+route's `npk_trap`, `npk_chain_push` and `npk_chain_reset`, and seven of
+LLVM's overflow intrinsics — while `src/host/`'s reach `npk_mono_now` and
+`npk_sys6`. Every function `src/` declares is in the emission but the nine
+generic ones of `src/core/vec.npk`, which a module holds only where a caller
+instantiates them. No function of the emission calls through a value or holds
+inline assembly; `asm<int64>(…)` is `NITPICK-PARSE-002` at the pin; and a
+builtin bound to a function-typed local, or passed as an argument, is
+`NITPICK-EMIT-002` — the emitter's own words, *"a defect in the compiler rather
+than in this program"* — while an ordinary function as a value runs on both
+legs.
+
+**The decision.** *`check_call_edges` reads `build/ntime.ll`, the emission
+`run.py`'s step 7 writes, before `opt`: every `define`, `declare` and global.
+From each function of a module of `src/` outside `src/host/` — named
+`npk.<module>.…`, a module's name its file's basename (B-14) — every symbol its
+body names is followed, through the prelude, the drop glue and every global,
+and never through another function of `src/`, which is a start of its own. A
+finding is a runtime symbol reached that `CALL_EDGE_ALLOW` does not hold, a
+function of `src/host/` reached (H-2), a call through a value, or inline
+assembly, each named with its path. The allowlist is reviewed, row by row: the
+allocator at S-18's places, the string floor, the error route and LLVM's
+arithmetic intrinsics by family. It is an ALLOW-list — a symbol a re-pin adds is
+a finding until a row reviews it — checked both ways (V-1c): a row the
+emission does not declare is a finding too. The run holds the reading to the
+tree: every non-generic function `src/` declares must be in the emission, and
+`src/host/`'s must reach past the allowlist, the reader's own positive control.
+`run.py` drives it at step 7; `TESTING.md` §2 gains its row; eight plants, each
+an emission's text. `check_purity` stays — it reads a generic function nobody
+instantiates, which no emission holds — and the sentences that called it "the
+only thing" are dated, not rewritten.*
+
+*Alternatives declined:* **the ban list alone, widened** — a list of names is
+read against the names it holds; a prelude function that reaches the kernel, a
+builtin a re-pin adds and a call through a value each pass it, and its
+completeness cannot be checked by itself (it is widened anyway, by the
+decisions after this one, because it reads what no emission holds); **an
+allowlist of each function's DIRECT callees** — every prelude function a module
+calls a row, and what the prelude reaches unread; **every test program's
+emission read too, for the generics** — two hundred roots' emissions, for nine
+functions `check_purity` reads as spelled; **the undefined-symbol scan made to
+flag `npk_sys6`** — `host` calls it, and an object's undefined set cannot say
+which function does (B-2c); **declined until a module other than `host` names
+a syscall** — O-X9's own reason for waiting was a scan with nothing to check,
+and `host` names two.
+
+### TM-251 — O-X11 answered: `check_wide_types` reads every integer type wider than `i64` in `npkc`'s emission of a function of `src/`, and holds it to §5's sites — a second reading of N-20, beside `check_int128_sites`
+
+**2026-10-08, cycle 0.3.1 (the plan's PD-96). Strikes `meta/OPEN_QUESTIONS.md`
+O-X11; adds `TESTING.md` §2's row; dates `TESTING.md` V-1 and `SPAN_MODEL.md`
+N-20, whose notes held the question open; marks TM-240 and TM-246.**
+
+**What was found** (`0.3.1.md` §1). O-X11's counter-example — `wide`, a marked
+`int256()`, and an unmarked `g` returning `((raw wide()) * (raw wide())) =>!
+int64` — appended to a copy's `src/span/span.npk` with a §5 row marking `wide`:
+the umbrella compiles, `check_int128_sites` reports 0 findings, and the
+emission's `npk.span.g` holds `i256`, the two calls' results multiplied by
+`llvm.smul.with.overflow.i256`. Over the tree, three of the emission's 90
+functions of `src/`'s modules hold an integer wider than `i64` —
+`bytes_put_int`, `instant_since` and `timestamp_since`, the three §5 marks —
+and `period_add`, marked, is not written.
+
+**The decision.** *`check_wide_types` reads the same emission through the same
+reader, and every integer type wider than `i64` in a function of a module of
+`src/` — a value, an operand, a parameter, a result — must stand in a function
+§5's table marks, read as `check_int128_sites` reads it; a global of `src/`'s
+modules holding one is a finding. A generic's instance is held by its source
+name. The spelling check stays, beside it, for TM-246's reason: the emission is
+a claim about the lowering, and a literal product a later `npkc` folded at
+emission would vanish from it while staying spelled. `run.py` drives it at step
+7; `TESTING.md` §2 gains its row; three plants, each an emission's text.*
+
+*Alternatives declined:* **a call to a `src/` function whose declared result is
+wide, counted as a site of its caller** — O-X11's own first alternative, lexical
+again and blind to the next shape; **V-1 and N-20 restated to what the spelling
+check sees** — a check narrower than its rule's reason, which TM-240 and TM-246
+each declined; **nothing until a function of `src/` returns or takes a wide
+type** — the day the hole opens would be a day the run stays green; **the
+optimised IR read instead** — `opt -O2` folds the counter-example's product to
+a constant, the workbench `PLAYBOOK.md` §9's rule; **later, at its own
+subcycle** — the reader is O-X9's, built here, and the check over it is a few
+lines.

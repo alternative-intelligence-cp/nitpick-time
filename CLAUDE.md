@@ -41,7 +41,8 @@ literals alone, which narrowed a constant in silence — is a finding outside
 §5's sites (TM-246). *(What it reads is spellings: a wide value no width is
 spelled for — a call's result — passes it, as it always has, and
 `meta/OPEN_QUESTIONS.md` O-X11 holds that, dormant, for 0.3.1's planner — the
-subcycle's verification, 2026-10-08.)* The self-check plants 95 tree-check
+subcycle's verification, 2026-10-08. Answered at cycle 0.3.1: `check_wide_types`
+reads the emission's types, TM-251.)* The self-check plants 95 tree-check
 violations. A full invocation is **134 units green** at pin `5fbaf4a`.
 
 **After cycle 0.2.4: cycle 0.2's close.** The cycle audit (ACCEPT, twenty-two
@@ -640,20 +641,23 @@ here; "eight faults" was printed on every run for three cycles and only the
 cycle Gate had it right — C3.)*
 Before it, three of the harness's checks had been commissioned by hand and that
 was three checks, not a runner. Then: the `parse`, `check`, `golden` and `sweep`
-stages; `--quick`; and nine live tree checks — **seventeen today**
-<!-- [[sweep: family_live=17]] -->: plus
+stages; `--quick`; and nine live tree checks — **nineteen today**
+<!-- [[sweep: family_live=19]] -->: plus
 `check_exemptions_live` (0.0.5, TM-137), `check_denominators` and
 `run_defect_corpus` (0.0.6, TM-141/TM-142), `check_expect_headers`, which
 existed all along and **was never in the count** — the row `TESTING.md` V-14c's
 "every check is commissioned" was false about, found by V-1a's own arithmetic
 not closing — `check_literal_divisors` (0.1.1, TM-163), and
 `check_check_registry`, `check_no_view_returns` and `check_int128_sites` (0.2.3a,
-TM-227, TM-228, TM-230). *(It was FOURTEEN
+TM-227, TM-228, TM-230), and `check_call_edges` and `check_wide_types`, which
+read the library's emission (0.3.1, TM-250, TM-251). *(It was FOURTEEN
 from cycle 0.1.0 to 0.1.0b — `check_civil_literal` joined — while this sentence
 said thirteen; it was thirteen again after 0.1.0c retired that check (TM-158);
-and it was fourteen from 0.1.1 to 0.2.3a. Re-derived from the run rather than
-carried: the `[5/9]` line reads `14 live` — `checks.LIVE`'s thirteen and
-`check_failsafe_arms` — and `run.py` drives the other three outside step 5.)*
+and it was fourteen from 0.1.1 to 0.2.3a, and seventeen from 0.2.3a to 0.3.1.
+Re-derived from the run rather than carried: the `[5/9]` line reads `14 live`
+— `checks.LIVE`'s thirteen and `check_failsafe_arms` — and `run.py` drives
+the other five outside step 5, two of them over the library's emission at
+step 7.)*
 
 ## Before starting a session here
 
@@ -851,7 +855,10 @@ and carries the cost table.
   runtime's own and is in the allowlist by construction. The scan supports
   B-2's "no C, ever" and nothing wider. **`check_purity` is SOURCE-level and is
   the only thing here that answers "did this module touch the kernel"** — never
-  cite a green symbol scan for it (B-2c, S-10b, RX-120).
+  cite a green symbol scan for it (B-2c, S-10b, RX-120). *(One of two since
+  cycle 0.3.1: `check_call_edges` reads the calls in the library's emission,
+  TM-250 — every call a function outside `src/host/` makes, through the
+  prelude, against a reviewed allowlist. Neither is the symbol scan.)*
 - **The `parse` stage asks `npkc`, not the compiler's `tools/parse_check`**
   (TM-123): those are `.npk` source files, and building one is building the
   compiler from a tree ahead of our pin. It reads the diagnostic's code

@@ -172,7 +172,13 @@
 # and since 0.3.0 a literal's width: a wide value no width is spelled for, a
 # call's result multiplied in a function §5 does not mark, passes this run, and
 # always has (`meta/OPEN_QUESTIONS.md` O-X11, dormant; found by 0.3.0's
-# verification, 2026-10-08).
+# verification, 2026-10-08). AND SINCE CYCLE 0.3.1, WHAT IS EMITTED AS WELL:
+# every integer wider than `i64` in `npkc`'s emission of a function of the
+# umbrella stands where §5 marks, spelled or not, so that call's result is a
+# finding (TM-251, O-X11 answered); and no function of `src/` outside
+# `src/host/` reaches, in that emission, a runtime symbol outside a reviewed
+# allowlist -- the kernel, the clock, the environment, a descriptor -- whatever
+# name it reaches it through (TM-250, O-X9 answered).
 #
 # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
 # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,

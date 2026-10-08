@@ -149,6 +149,14 @@ that is the whole of what it supports. **`check_purity` (`TESTING.md` §2,
 > **5**, so the sentence had been false here since that re-pin. The scan SEES
 > the call and allows it. The IR call-edge scan that could flag one is
 > `../OPEN_QUESTIONS.md` O-X9.
+>
+> **Cycle 0.3.1 (TM-250): O-X9 is answered, and `check_purity` is no longer the
+> only reading.** `check_call_edges` reads `npkc`'s emission of the umbrella —
+> every call a function of `src/` outside `src/host/` makes, followed through
+> the prelude, held to a reviewed allowlist of runtime symbols — so it FLAGS
+> `npk_sys6` where this scan allows it: by the function that reaches it, which
+> an object's undefined set cannot name. This scan's boundary is unchanged: it
+> cannot flag a syscall, and is no purity result.
 
 **Rule B-3.** The optimised leg runs on every program, every time: the same
 program re-emitted through `opt -O2` + `llc -O2` must produce the **same exit

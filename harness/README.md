@@ -59,10 +59,17 @@ running unlisted since cycle 0.0.6)*:
   a code named once for two sites and three times for two (TM-210). Case 6
   (a generator differing by one line) is **pending until 0.5** and prints as
   pending rather than passing.
-- **Ninety-five planted violations across the tree checks since cycle 0.3.0**
-  (ninety-two from cycle 0.2.4a, eighty-two from cycle 0.2.3a, forty-four from
-  cycle 0.1.5's second half, forty after its first half, twenty-three before
-  it; 0.3.0's three are `check_int128_sites`' wide literals, one in a function
+- **One hundred and six planted violations across the tree checks since cycle
+  0.3.1's first step** (ninety-five from cycle 0.3.0, ninety-two from cycle
+  0.2.4a, eighty-two from cycle 0.2.3a, forty-four from cycle 0.1.5's second
+  half, forty after its first half, twenty-three before it; 0.3.1's eleven
+  are `check_call_edges`' eight — a runtime symbol outside the allowlist
+  called directly and through the prelude, a call into `host`, inline
+  assembly, a call through a value, a declared function the emission lacks,
+  a stale row and the reader's own control — and `check_wide_types`' three,
+  a call's wide result, a wide module-level value and a generic's wide
+  instance, each plant an emission's text;
+  0.3.0's three are `check_int128_sites`' wide literals, one in a function
   and one at module level, and `check_layering`'s `host` importing `fmt`
   beside `host` importing `span`; 0.2.4a's ten are
   `check_constants_named`'s six — a `core` number in `core` outside
@@ -134,7 +141,9 @@ program at compiler `c970483`, both legs, and it is printed rather than hidden.
 construction. The scan supports B-2's claim — no C, ever — and nothing wider.
 **`check_purity` is a SOURCE-level check and is the only thing in this
 repository that answers "did this module touch the kernel".** Do not cite one
-for the other.
+for the other. *(One of two since cycle 0.3.1: `check_call_edges` reads the
+calls in the library's emission at step 7, TM-250 — the sentence said "the
+only thing" until then. Neither is the symbol scan.)*
 
 **The `parse` stage asks `npkc`, not `tools/parse_check`** (TM-123). Those
 frontend tools are `.npk` source files; building one is building the compiler,
@@ -182,8 +191,8 @@ against the summary line rather than left to review.
   in cycle 0.0 and both were found by reading, not by a gate — and a third
   shipped with them, `bytes_take`'s answer, found at cycle 0.1.4b by the heap
   instrument's COUNT (S-18f).
-- **Not that the tree checks have anything to check.** Seventeen
-  <!-- [[sweep: family_live=17]] --> are live and several report `0` over a
+- **Not that the tree checks have anything to check.** Nineteen
+  <!-- [[sweep: family_live=19]] --> are live and several report `0` over a
   small denominator, which is the right answer and is why the denominator is
   always printed (V-1b). Three <!-- [[sweep: family_pending=3]] --> print as
   `PEND` with the cycle that turns them on. *(Fourteen were live from cycle
@@ -191,7 +200,9 @@ against the summary line rather than left to review.
   was true again after 0.1.0c retired that check, TM-158; cycle 0.1.1's
   `check_literal_divisors`, TM-163, made fourteen; and cycle 0.2.3a's
   `check_check_registry`, `check_no_view_returns` and `check_int128_sites`,
-  TM-227, TM-228 and TM-230, made seventeen, and the four pending three.)*
+  TM-227, TM-228 and TM-230, made seventeen, and the four pending three; and
+  cycle 0.3.1's `check_call_edges` and `check_wide_types`, TM-250 and TM-251,
+  which `run.py` drives over the library's emission, nineteen.)*
 - **Not that CI is green.** Until cycle 0.0.6 this repository had never pushed,
   so the workflow had never run; the 0.0 close is its first.
 

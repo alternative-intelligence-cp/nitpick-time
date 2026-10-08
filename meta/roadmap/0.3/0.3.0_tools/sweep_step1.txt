@@ -1,0 +1,6 @@
+# 0.3.0's omission sweep for step 1, block 1b -- one extended regular expression per
+# line, each read by `sweep.py` line by line AND across line breaks,
+# case-insensitive. Each is a fact step 1 moved: what `check_int128_sites` holds,
+# and the plant count, in digits and in words.
+wider than|width suffix|wide literal|blanked first
+ninety-(two|four)|\b9[24]\b.{0,30}(plant|tree-check|violation)

@@ -1,0 +1,174 @@
+diff --git a/tests/unit/host_clocks.npk b/tests/unit/host_clocks.npk
+new file mode 100644
+index 0000000000000000000000000000000000000000..475d91b4c9cd1d9449937d34eacce239ed5510d3
+--- /dev/null
++++ b/tests/unit/host_clocks.npk
+@@ -0,0 +1,168 @@
++// expect-exit: 0
++// stress: 40
++//
++// The clocks, read from the machine (cycle 0.3.0; `HOST.md` H-1 ... H-8,
++// TM-248 and TM-249; `TESTING.md` V-11).
++//
++// ASKS: does each reading come back from the machine, of the clock it names,
++// range-checked where H-8 asks it -- and does each one ADVANCE? Is a boot
++// reading refused beside a monotonic one (H-6), and is each clock's
++// resolution in (0, 1 s]?
++//
++// MATTERS BECAUSE `src/host/` is the only place `ntime` can answer differently
++// on two runs, so it is the only place `// stress: 40` can find anything
++// (V-11); and because H-3's "two calls are two syscalls" is a property no
++// single reading shows. A reading that is cached, or computed rather than
++// read, never advances, so each clock is read until it moves, within a million
++// reads -- a bound a real clock passes on its first or second read, and the
++// advance is the test of the property, not of the clock's speed.
++//
++// THE ONE ENVIRONMENTAL ASSUMPTION is `probe03`'s: the realtime clock is set
++// inside 2020-09-13 ... 2100-01-01 (exit 11).
++//
++// EXIT CODES, clear of every arm code (TM-152): 10 `host_now_utc` refused,
++// the first reading or one in the loop; 11 the realtime second outside
++// 1 600 000 000 ... 4 102 444 800; 12 no realtime reading later than the
++// first within a million; 13 `host_now_instant`'s clock not `Monotonic`; 14
++// no monotonic reading later than the first within a million; 15
++// `instant_since` refused two monotonic readings; 16 `host_now_boot` refused,
++// or its clock not `Boottime`; 17 no boot reading later than the first within
++// a million; 18 `instant_since(boot, monotonic)` answered -- H-6's refusal
++// missing; 19 `host_clock_res` refused, for any of the three; 20 a resolution
++// not above 0; 21 a resolution above 1 s.
++//
++// SEEN RED AT PLANNING, each on a one-line mutant of `src/host/host.npk` in a
++// copy of the tree, on both legs (`meta/roadmap/0.3/0.3.0.md`, step 3): 10
++// with `host_now_utc` handing `timestamp_of` a nanosecond field a second
++// high; 11 with it reading `CLOCK_MONOTONIC` -- the second is uptime, below
++// the window; 12 with it passing `timestamp_of(1700000000, 0)` -- a reading
++// computed, not read, never advances; 13 with `host_now_instant` tagged
++// `Boottime`; 14 with it passing `instant_of(5, ...)`; 16 with `host_now_boot`
++// tagged `Monotonic`; 17 with it passing `instant_of(5, ...)`; 19 with
++// `host_clock_res` asking clock 99 for `Boottime`; 20 with it passing a
++// resolution of 0; 21 with it calling 228 for 229 -- the "resolution" is the
++// time of day. 15 and 18 are belts on `span`'s own refusals of a pair from two
++// clocks, which `tests/unit/instant_ops.npk` sees red; no edit of `host`
++// reaches them past exits 13 and 16.
++//
++// FOUR MUTANTS IT CANNOT SEE, AND WHAT HOLDS EACH (TM-249; `HOST.md` H-3). A
++// green run here is evidence about the exits above, and not about these:
++// `host_now_boot` reading `CLOCK_MONOTONIC` under the `Boottime` tag -- the two
++// clocks differ by the time the machine has spent suspended, which a CI
++// runner never has; `host_clock_res` mapping `Boottime` to `CLOCK_REALTIME` --
++// every clock's resolution here is 1 ns; `host_now_utc`'s
++// `if (r.is_error) { fail r.err; }` deleted, and `timespec_ns`'s `secs > top`
++// refusal deleted -- each needs a kernel that breaks its contract. Each is
++// held by reading: the constant's name at each `sys` site, the `pick`'s three
++// arms, and `probe03`, which measures a bad clock id coming back as an errno
++// in the `Result` rather than a trap.
++//
++// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
++// `host`: its eleven (`SAFETY.md` S-4), and `DecreasesViolated` (108) for the
++// three measured loops.
++mod:host_clocks;
++
++use "../../src/host/host.npk".*;
++use "../../src/span/span.npk".Instant;
++use "../../src/span/span.npk".InstantClock;
++use "../../src/span/span.npk".Timestamp;
++use "../../src/span/span.npk".instant_since;
++
++func:later = bool(Timestamp:a, Timestamp:b) never fails {
++    if (a.secs != b.secs) { pass a.secs > b.secs; }
++    pass a.nanos > b.nanos;
++};
++
++func:main = int32(cstring[]:_~argv) {
++    // ---- the realtime clock -----------------------------------------------
++    Result<Timestamp>:u0 = host_now_utc();
++    if (u0.is_error) { exit 10i32; }
++    if (u0.value.secs < 1600000000i64) { exit 11i32; }
++    if (u0.value.secs > 4102444800i64) { exit 11i32; }
++    bool:moved = false;
++    int64:k = 0i64;
++    while (k < 1000000i64) decreases 1000000i64 - k {
++        Result<Timestamp>:u = host_now_utc();
++        if (u.is_error) { exit 10i32; }
++        if (raw later(u.value, u0.value)) {
++            moved = true;
++            k = 1000000i64;
++        } else {
++            k = k + 1i64;
++        }
++    }
++    if (!moved) { exit 12i32; }
++
++    // ---- the monotonic clock ----------------------------------------------
++    Instant:m0 = raw host_now_instant();
++    if (m0.clock != InstantClock.Monotonic) { exit 13i32; }
++    Instant:m1 = m0;
++    moved = false;
++    k = 0i64;
++    while (k < 1000000i64) decreases 1000000i64 - k {
++        m1 = raw host_now_instant();
++        if (m1.ns > m0.ns) {
++            moved = true;
++            k = 1000000i64;
++        } else {
++            k = k + 1i64;
++        }
++    }
++    if (!moved) { exit 14i32; }
++    Result<Duration>:dm = instant_since(m1, m0);
++    if (dm.is_error) { exit 15i32; }
++
++    // ---- the boot clock ---------------------------------------------------
++    Result<Instant>:b0 = host_now_boot();
++    if (b0.is_error) { exit 16i32; }
++    if (b0.value.clock != InstantClock.Boottime) { exit 16i32; }
++    moved = false;
++    k = 0i64;
++    while (k < 1000000i64) decreases 1000000i64 - k {
++        Result<Instant>:b = host_now_boot();
++        if (b.is_error) { exit 16i32; }
++        if (b.value.ns > b0.value.ns) {
++            moved = true;
++            k = 1000000i64;
++        } else {
++            k = k + 1i64;
++        }
++    }
++    if (!moved) { exit 17i32; }
++    Result<Duration>:x = instant_since(b0.value, m0);
++    if (!(x.is_error)) { exit 18i32; }
++
++    // ---- the resolutions --------------------------------------------------
++    Result<Duration>:rr = host_clock_res(HostClock.Realtime);
++    if (rr.is_error) { exit 19i32; }
++    if (rr.value.ns <= 0i64) { exit 20i32; }
++    if (rr.value.ns > 1000000000i64) { exit 21i32; }
++    Result<Duration>:rm = host_clock_res(HostClock.Monotonic);
++    if (rm.is_error) { exit 19i32; }
++    if (rm.value.ns <= 0i64) { exit 20i32; }
++    if (rm.value.ns > 1000000000i64) { exit 21i32; }
++    Result<Duration>:rb = host_clock_res(HostClock.Boottime);
++    if (rb.is_error) { exit 19i32; }
++    if (rb.value.ns <= 0i64) { exit 20i32; }
++    if (rb.value.ns > 1000000000i64) { exit 21i32; }
++    exit 0i32;
++};
++
++func:failsafe = int32(Error:e) {
++    pick (e) {
++        (cal.ETimeValue)    { exit 80i32; },
++        (HeapBadRequest)    { exit 91i32; },
++        (HeapOom)           { exit 92i32; },
++        (IntOverflow)       { exit 93i32; },
++        (OutOfBounds)       { exit 94i32; },
++        (Unreachable)       { exit 95i32; },
++        (WildLeak)          { exit 96i32; },
++        (DivByZero)         { exit 97i32; },
++        (DivOverflow)       { exit 98i32; },
++        (StackExhausted)    { exit 106i32; },
++        (MachineFault)      { exit 107i32; },
++        (DecreasesViolated) { exit 108i32; },
++        (*)                 { exit 99i32; }
++    }
++    exit 9i32;
++};

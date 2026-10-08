@@ -164,7 +164,7 @@ last clause: a live `requires i >= 0 && i < v.count` on `vec_at` adds
 `RequiresViolated` to a consumer's bill and makes an index past the end stop at
 116 where the slice guard stops it at 94.)*
 
-### Q-7 — should `Instant`'s constructor say, in its name, that it takes a raw reading — before 1.0?
+### ~~Q-7 — should `Instant`'s constructor say, in its name, that it takes a raw reading — before 1.0?~~ — **ANSWERED 2026-10-02: A, keep `instant_of` — the author's answer to the workbench's question 21**
 
 **Raised 2026-10-02 by the stream-2 planner at cycle 0.2's close, from the
 cycle audit's C2** (the workbench's `meta/audits/nitpick-time-0.2-2026-10-02.md`;
@@ -221,6 +221,13 @@ direction at the price of a name. **Until the author answers, the documents say
 what the type enforces** — `0.2.4b.md`'s restatement of M-3 and its sites, which
 is true under A and under B, so nothing waits on this question but cycle 1.0's
 freeze of the public names. **Not blocking.**
+
+*(Answered 2026-10-02 at 08:24 by the author — the workbench's question 21,
+put beside two others and answered "go with the recommendations": **A, keep
+`instant_of`**. Recorded here on 2026-10-08, at the rehearsal of cycle 0.3's
+first plan: nothing in `roadmap/0.3/0.3.0.md` moves under A, and the decision
+that records the answer is that plan's for the clocks, which strikes this
+question with its number.)*
 
 ### O-N1 — `npkg` cannot build a library, and `[dependencies]` resolves to nothing
 Measured at the compiler's 1.5.0 and recorded in `specs/BUILD.md` §1.

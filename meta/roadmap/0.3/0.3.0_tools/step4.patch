@@ -1,0 +1,888 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 6400323ef723d03ed2fd6aeda927daf97da7c30f..09cb9262ab9eadba1076d262635ffb0bd6a4e075 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -48,10 +48,10 @@
+ # and `src/span/` since 0.2.0, `Instant` and its four operations, and since
+ # 0.2.1 `Timestamp` and its constructor, since 0.2.2 the two conversions
+ # between a `Timestamp` and its civil reading, and since 0.2.3 the `Duration`
+-# interop --
+-# re-exported together as 76 public names [[sweep: lib_reexports=76]],
+-# so this IS evidence about behaviour, of the 133 units the runner reports at
+-# compiler `5fbaf4a` since cycle 0.2.4b (131 at cycles 0.2.3 and 0.2.4a, 126 at cycles 0.2.2 and 0.2.3a, 122 at cycle 0.2.1, 114 at cycle 0.2.0, 111 at 0.2.0b, 113 at 0.2.0a and at
++# interop -- and `src/host/` since 0.3.0, the clocks --
++# re-exported together as 81 public names [[sweep: lib_reexports=81]],
++# so this IS evidence about behaviour, of the 134 units the runner reports at
++# compiler `5fbaf4a` since cycle 0.3.0 (133 at cycles 0.2.4b and 0.2.4, 131 at cycles 0.2.3 and 0.2.4a, 126 at cycles 0.2.2 and 0.2.3a, 122 at cycle 0.2.1, 114 at cycle 0.2.0, 111 at 0.2.0b, 113 at 0.2.0a and at
+ # `c970483` at cycle 0.1.5's second half; 62 at cycle 0.0.6, 67 at 0.1.0,
+ # 70 at 0.1.0b, 75 at 0.1.0c, 78 at 0.1.1, 81 at 0.1.2, 86 at 0.1.3, 90 at
+ # 0.1.3b, 91 at 0.1.4 and 0.1.4b, all at `c3bdae2` from 0.1.0b on, 101 at
+@@ -164,7 +164,10 @@
+ # numbers compiles and runs, which M-3 now says (TM-241 ... TM-243). AND
+ # SINCE CYCLE 0.3.0: a literal of a width past `int64` -- `3i256` -- is held to
+ # §5's sites as the type's name is, where a computation of literals alone
+-# narrowed a constant in silence and passed every check (TM-246).
++# narrowed a constant in silence and passed every check (TM-246); and the
++# clocks: each reading of the clock it names, the realtime one range-checked
++# by `timestamp_of`, each ADVANCING within a million reads -- forty runs a leg
++# -- and each resolution in (0, 1 s] (TM-247 ... TM-249).
+ #
+ # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
+ # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
+@@ -192,8 +195,9 @@
+ # Until 0.0.3 that was the honest gap here, and it was written in this comment
+ # for three cycles.
+ #
+-# WHAT IT IS STILL NOT EVIDENCE OF. Three of the six `src/` directories are
+-# still placeholders -- `zone/`, `fmt/`, `host/` -- and `span/` holds `Instant`
++# WHAT IT IS STILL NOT EVIDENCE OF. Two of the six `src/` directories are
++# still placeholders -- `zone/` and `fmt/` (three, `host/` among them, until
++# cycle 0.3.0 gave it the clocks) -- and `span/` holds `Instant`
+ # since cycle 0.2.0, `Timestamp` since 0.2.1, the conversions between a
+ # `Timestamp` and its civil reading since 0.2.2 and the `Duration` interop
+ # since 0.2.3, so nothing here converts a
+diff --git a/CLAUDE.md b/CLAUDE.md
+index fc6fbaeb9d5f03aecdef89be8f56009e9f46d8f2..ccc3d1aae4bf86560c5eaa7d901970b321781f3b 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -7,13 +7,39 @@ Guidance for Claude Code sessions working in this repository.
+ `ntime` — a date, time and time-zone library for **Nitpick**, the
+ safety-critical systems language at `../../nitpick`.
+ 
+-**Status: cycle 0.2 CLOSED (2026-10-02), archived at `meta/roadmap/done/0.2/`
+-— instants and timestamps: `Instant` and its two clocks, `Timestamp` and its
+-one constructor, the conversions to and from the civil scale in UTC with their
+-exhaustive gate on every run, and the `Duration` interop — after cycle 0.1, the
+-civil calendar, CLOSED 2026-09-26 and archived at `meta/roadmap/done/0.1/`.
+-Cycle 0.3, the host boundary, is next: `meta/roadmap/0.3/0.3.0.md`, the
+-clocks, was written at the close.**
++**Status: cycle 0.3, the host boundary, IN PROGRESS — 0.3.0, the clocks,
++DONE (@@DATE@@): `src/host/` reads the machine's clocks, and 0.3.1, the review
++of `check_purity`'s ban list against that body, is next. Cycle 0.2 CLOSED
++(2026-10-02), archived at `meta/roadmap/done/0.2/` — instants and timestamps:
++`Instant` and its two clocks, `Timestamp` and its one constructor, the
++conversions to and from the civil scale in UTC with their exhaustive gate on
++every run, and the `Duration` interop — after cycle 0.1, the civil calendar,
++CLOSED 2026-09-26 and archived at `meta/roadmap/done/0.1/`.**
++
++**After cycle 0.3.0: the clocks.** `src/host/` has a body. `host_now_utc`
++reads `CLOCK_REALTIME` through `sys` into a 16-byte `timespec` and builds its
++`Timestamp` through `timestamp_of`, whose refusal of a `secs` outside the range
++is `HOST.md` H-8's range check; `host_now_instant` is the floor's `mono_now()`,
++`never fails`; `host_now_boot` reads `CLOCK_BOOTTIME` and refuses, in a
++private `timespec_ns`, a reading an `int64` of nanoseconds cannot hold before
++it multiplies; and `host_clock_res` asks `clock_getres` — syscall 229, which
++no file of the compiler names and the kernel's table does — about the clock a
++`HostClock` names, `host`'s own enum, since `InstantClock` must not gain a
++realtime clock (TM-248). The kernel's errno is forwarded verbatim, so `host`
++declares no error: it owes **11** arms and the umbrella **13** still,
++re-exporting 81 <!-- [[sweep: lib_reexports=81]] --> names. **`BUILD.md` B-17
++draws `host` → `span`**, because both readings' types are sealed and only
++`span` builds them (TM-247). **`tests/unit/host_clocks.npk` reads every clock
++under `// stress: 40`** and asserts each reading ADVANCES — H-3's "two calls
++are two syscalls", which a cached or computed reading fails — with ten of
++fourteen one-line mutants of the module red at their exits and the four no
++test can see named in its header and under H-3 (TM-249). **`instant_of` keeps
++its name**: the author's answer to Q-7 (TM-248). And first, in a commit of its
++own, **`check_int128_sites` reads a numeric literal's width suffix** as it
++reads a type's name, so `(3i256 * 5i256) =>! int64` — a computation of
++literals alone, which narrowed a constant in silence — is a finding outside
++§5's sites (TM-246). The self-check plants 95 tree-check violations. A full
++invocation is **134 units green** at pin `5fbaf4a`.
+ 
+ **After cycle 0.2.4: cycle 0.2's close.** The cycle audit (ACCEPT, twenty-two
+ findings: eight contradictions, two dormant, five stale, seven cosmetic; no
+@@ -104,7 +130,7 @@ past `Duration`'s two ends — `NTIME_DURATION_NS_MAX` and
+ end exactly, from both sides (TM-236; `check_int128_sites` holds it to §5's
+ marked row). `timestamp_until` is cycle 0.7.3's, beside `date_until`
+ (TM-237). `span` owes **11** arms and the umbrella **13** still, and the
+-umbrella re-exports 76 <!-- [[sweep: lib_reexports=76]] --> names. A full
++umbrella re-exports 76 names. A full
+ invocation is **131 units green** at pin `5fbaf4a`.
+ 
+ **After cycle 0.2.3a: the instruments.** The tree checks' family is one list:
+diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
+index 444066c206b79494c67c9581e7ae1b9b72e56966..f5899831a514eb5e3506dda403e0547c7d3e494c 100644
+--- a/CONTRIBUTING.md
++++ b/CONTRIBUTING.md
+@@ -4,18 +4,19 @@
+ That is unusual and it is deliberate: the specifications catch design mistakes
+ that would otherwise be found by writing the wrong code twice.
+ 
+-**Where it stands:** cycle 0.2, instants and timestamps, is closed
+-(2026-10-02), as cycle 0.1, the civil calendar, is (2026-09-26); cycle 0.3, the
+-host boundary, is next. `src/core/`
+-and `src/cal/` are real, and `src/span/` holds `Instant` since cycle 0.2.0,
+-`Timestamp` since 0.2.1, the conversions between a `Timestamp` and its civil
+-reading since 0.2.2, and the `Duration` interop since 0.2.3; the
+-other three `src/` directories hold one placeholder each until the cycle
+-`meta/roadmap/ROADMAP.md` names replaces it.
++**Where it stands:** cycle 0.3, the host boundary, is in progress, its first
++subcycle, the clocks, done (@@DATE@@); cycle 0.2, instants and timestamps, is
++closed (2026-10-02), as cycle 0.1, the civil calendar, is (2026-09-26).
++`src/core/` and `src/cal/` are real, `src/span/` holds `Instant` since cycle
++0.2.0, `Timestamp` since 0.2.1, the conversions between a `Timestamp` and its
++civil reading since 0.2.2, and the `Duration` interop since 0.2.3, and
++`src/host/` the clocks since 0.3.0; the other two `src/` directories hold one
++placeholder each until the cycle `meta/roadmap/ROADMAP.md` names replaces it.
+ `harness/run.py` is the runner, and it proves first, on every full run, that it
+ can fail (`meta/specs/TESTING.md` V-14, V-15). *(This paragraph described cycle
+-0.0.1's skeleton — "no self-check yet" — until cycle 0.1.5, and said the cycle
+-"is in its close" between the close's two halves.)*
++0.0.1's skeleton — "no self-check yet" — until cycle 0.1.5, said the cycle
++"is in its close" between the close's two halves, and said cycle 0.3 "is next"
++until cycle 0.3.0.)*
+ 
+ ## Before you write anything
+ 
+diff --git a/README.md b/README.md
+index d49d10296aee83ccc0d14c393c9e1bbae9adb159..784d8a8e9f8346b56e97cfbff887bc3e83a4ed56 100644
+--- a/README.md
++++ b/README.md
+@@ -6,11 +6,12 @@ the safety-critical systems language. No dependencies, no libc, no
+ compiled in from a pinned IANA release, so the same program gives the same
+ answer on every machine.
+ 
+-> **Status: cycle 0.2, instants and timestamps, CLOSED on 2026-10-02, archived at
++> **Status: cycle 0.3, the host boundary, is in progress — its first
++> subcycle, the clocks, done on @@DATE@@ — after cycle 0.2, instants and
++> timestamps, CLOSED on 2026-10-02, archived at
+ > [`meta/roadmap/done/0.2/`](meta/roadmap/done/0.2/README.md)**, as cycle 0.1,
+ > the civil calendar, was on 2026-09-26 ([`meta/roadmap/done/0.1/`](meta/roadmap/done/0.1/README.md))
+-> — each with its code, its gate and its audit done — **and cycle 0.3, the host
+-> boundary, is next.**
++> — each with its code, its gate and its audit done.
+ > What exists: `src/core/` — `Vec<T>`, `Bytes` and the named limits — since
+ > cycle 0.0, its `Vec` holding only `Copy` elements since cycle 0.2.0b; and
+ > `src/cal/` — `CivilDate`,
+@@ -29,7 +30,10 @@ answer on every machine.
+ > prelude's `Duration` — a day
+ > exactly 86 400 seconds, not a calendar day — moves a `Timestamp` by one, and
+ > gives the span between two, refusing one past `Duration`'s ±292 years rather
+-> than wrapping it. Zones, formats and the clocks are still
++> than wrapping it. Since cycle 0.3.0 `src/host/`, the one module that touches
++> the machine, reads its clocks: the realtime clock as a `Timestamp`,
++> range-checked, the monotonic and boot clocks as `Instant`s, and each
++> clock's resolution. Zones and formats are still
+ > placeholders, each replaced by the cycle
+ > [`meta/roadmap/ROADMAP.md`](meta/roadmap/ROADMAP.md) names. The specification
+ > set is in [`meta/specs/`](meta/specs/) and the plan in
+@@ -45,7 +49,8 @@ answer on every machine.
+ > 0.2.0a had opened; until cycle 0.2.1, that timestamps were placeholders
+ > too; and until cycle 0.2.2, that an `Instant` could not be "converted to a
+ > wall-clock time" — a civil reading, in `meta/specs/GLOSSARY.md`'s words,
+-> where the conversion refused is to a point on the UTC scale, TM-226.)*
++> where the conversion refused is to a point on the UTC scale, TM-226; and
++> until cycle 0.3.0, that cycle 0.3 "is next" and the clocks placeholders.)*
+ 
+ ---
+ 
+@@ -69,8 +74,9 @@ accident: what you can write is a construction, `instant_of` handed a number
+ computed from a `Timestamp`, which names in writing the clock it claims to have
+ read. *(Until cycle 0.2.4b this said an `Instant` "cannot be built from a
+ number", and that the bug cannot be written at all — the cycle audit's C2,
+-TM-243; `meta/OPEN_QUESTIONS.md` Q-7 asks whether `instant_of`'s name should
+-say so.)* *(Until cycle 0.2.2 this
++TM-243; `meta/OPEN_QUESTIONS.md` Q-7 asked whether `instant_of`'s name should
++say so, and the author's answer, on 2026-10-02, is that it keeps its name —
++TM-248.)* *(Until cycle 0.2.2 this
+ paragraph called the realtime clock's reading "a wall-clock reading" — the
+ words `meta/specs/GLOSSARY.md` keeps for a civil reading, which a `Timestamp`
+ is not — and the clock itself "the wall clock" twice, TM-226.)* *(Until cycle
+diff --git a/harness/README.md b/harness/README.md
+index 8408334cadcc360c67b1c7ceefc7195d3466dbe5..4769bfdd3193638c059ad2a0dba2c053a6bbf443 100644
+--- a/harness/README.md
++++ b/harness/README.md
+@@ -59,11 +59,12 @@ running unlisted since cycle 0.0.6)*:
+   a code named once for two sites and three times for two (TM-210). Case 6
+   (a generator differing by one line) is **pending until 0.5** and prints as
+   pending rather than passing.
+-- **Ninety-four planted violations across the tree checks since cycle 0.3.0**
++- **Ninety-five planted violations across the tree checks since cycle 0.3.0**
+   (ninety-two from cycle 0.2.4a, eighty-two from cycle 0.2.3a, forty-four from
+   cycle 0.1.5's second half, forty after its first half, twenty-three before
+-  it; 0.3.0's two are `check_int128_sites`' wide literals, one in a function
+-  and one at module level; 0.2.4a's ten are
++  it; 0.3.0's three are `check_int128_sites`' wide literals, one in a function
++  and one at module level, and `check_layering`'s `host` importing `fmt`
++  beside `host` importing `span`; 0.2.4a's ten are
+   `check_constants_named`'s six — a `core` number in `core` outside
+   `limits.npk`, a `cal` number in `core`, a bound spelled by its value, the
+   folded minimum by its value, a small bound left to review, and an
+@@ -154,10 +155,11 @@ against the summary line rather than left to review.
+   since 0.1.1, swept over the whole range since 0.1.2 — and the suite is
+   evidence about both — and about `src/span/`'s `Instant` since cycle 0.2.0,
+   its `Timestamp` since 0.2.1, the conversions between a `Timestamp` and its
+-  civil reading since 0.2.2, and the `Duration` interop since 0.2.3;
+-  the other three `src/` directories are still placeholders, so nothing here
+-  converts a time to a zone, or between a time and text. *(It said "a
+-  timestamp to a date" too until cycle 0.2.2, and four placeholders until
++  civil reading since 0.2.2, and the `Duration` interop since 0.2.3 — and
++  about `src/host/`'s clocks since 0.3.0; the other two `src/` directories
++  are still placeholders, so nothing here converts a time to a zone, or
++  between a time and text. *(It said three placeholders until cycle 0.3.0,
++  "a timestamp to a date" too until cycle 0.2.2, and four placeholders until
+   cycle 0.2.0. This read "there is none yet; `src/` is
+   placeholders" for two subcycles after `src/core/` landed — C6. And until
+   cycle 0.1.2 it read "the other five `src/` directories are still
+@@ -457,6 +459,20 @@ probe**, **31 unit**, **8 sweep**). `133 = 35 + 98`. A full invocation about
+ 207 s; the two units cost about a second together, both legs, compile
+ included.
+ 
++**At cycle 0.3.0, the same pin, 134 units**: one test added —
++`tests/unit/host_clocks.npk`, the clocks under `// stress: 40` (TM-249) — and
++`src/host/` given its body (TM-247, TM-248), after `check_int128_sites` began
++reading a literal's width in a commit of its own (TM-246). The self-check
++plants 12 of V-14's 13 cases, **95** tree-check violations with 95 clean
++controls — the three new are `check_int128_sites`' two wide literals and
++`check_layering`'s `host` importing `fmt` — 4 arm specimens and 4 verdict
++specimens; `check_int128_sites` counts 15 wide spellings, `bytes_put_int`'s
++`0i128` among them; parse over 150 files, `105 + 43 + 2`; the defect corpus
++unchanged at 36; the library reaching **7** sources and its IR **309 729 B**,
++`host`'s four readings; and library + repro + suite at **99** (**58 probe**,
++**32 unit**, **8 sweep**). `134 = 35 + 99`. A full invocation about 211 s;
++the unit costs under a second, both legs and eighty runs, compile included.
++
+ The floor under all of it is still TM-117's: every root re-emits the prelude,
+ so a `npkc` invocation on anything that compiles costs a fixed amount and the
+ run makes about 200 of them. One that does *not* compile costs ~0.03 s.
+diff --git a/harness/checks.py b/harness/checks.py
+index 69bdbf09bd4234787e6619b909b054e463340441..1c52266eea5971fa32007ad4410432c956c7b1f0 100644
+--- a/harness/checks.py
++++ b/harness/checks.py
+@@ -277,10 +277,11 @@ def check_layering(tree, **_):
+                 "every sweep that counts files, which is why this is an "
+                 "assertion and not a denominator." % layer)
+ 
+-    # The umbrella's reach, reported rather than asserted. It is 6 since cycle
+-    # 0.2.0 -- `src/lib.npk`, the three `src/core/` modules, `src/cal/cal.npk`
+-    # and `src/span/span.npk`, 5 from cycle 0.1.0 until `span` had a body --
+-    # and the three remaining placeholders, with `core.npk`'s layer note, are
++    # The umbrella's reach, reported rather than asserted. It is 7 since cycle
++    # 0.3.0 -- `src/lib.npk`, the three `src/core/` modules, `src/cal/cal.npk`,
++    # `src/span/span.npk` and `src/host/host.npk`; 6 from cycle 0.2.0 until
++    # `host` had a body, 5 from cycle 0.1.0 until `span` had one -- and the two
++    # remaining placeholders, with `core.npk`'s layer note, are
+     # reached by no root at all,
+     # which is exactly why the `parse` stage roots every file in the tree rather
+     # than trusting the module graph. (It said "4 today" and "five remaining"
+@@ -1346,7 +1347,8 @@ def check_host_isolation(tree, **_):
+     the impure module unreachable rather than merely discouraged.
+ 
+     `src/lib.npk` is exempt because it is the umbrella: it re-exports `host`'s
+-    five functions and is the ONE file that may (B-17). Its exemption is named
++    public names -- four of H-1's five functions since cycle 0.3.0, and
++    `HostClock` -- and is the ONE file that may (B-17). Its exemption is named
+     here rather than pattern-matched, per V-1c.
+     """
+     files = [f for f in src_files(tree)
+diff --git a/harness/run.py b/harness/run.py
+index 36e6ec4e861d107c3e72e775f5867a4897aeb323..5196c9c3cb25637b2426eb3ce3089dec199a494b 100644
+--- a/harness/run.py
++++ b/harness/run.py
+@@ -35,9 +35,10 @@ WHAT A GREEN RUN HERE IS, AND IS NOT.
+   about both, and since 0.2.0 about `src/span/`'s `Instant` -- and since
+   0.2.1 its `Timestamp`, since 0.2.2 the conversions between a
+   `Timestamp` and its civil reading, and since 0.2.3 the `Duration`
+-  interop. The other three
++  interop -- and since 0.3.0 about `src/host/`'s clocks. The other two
+   `src/` directories are still placeholders, so nothing here converts a time
+-  to a zone, or between a time and text. (It said "a timestamp to a date"
++  to a zone, or between a time and text. (It said three until cycle 0.3.0
++  gave `host/` its clocks. It said "a timestamp to a date"
+   too until cycle 0.2.2. It said four until
+   cycle 0.2.0. Until cycle 0.1.2 this said "the other five ... so nothing here
+   dates anything" -- false since 0.1.0 gave `cal/` a body, and since 0.1.1
+@@ -630,22 +631,25 @@ def run_parse(rep, root, bld):
+     """Every `.npk` in the tree in front of the real parser, each exactly once.
+ 
+     THE DENOMINATOR IS THE WHOLE TREE AND THAT IS WHY THE STAGE IS WORTH ITS
+-    COST. Re-measured at cycle 0.2.4b: of the 149 `.npk` files
+-    here [[sweep: npk_total=149]] the library build roots 6
+-    [[sweep: lib_reach=6]], the suite roots 98 [[sweep: suite_roots=98]]
++    COST. Re-measured at cycle 0.3.0: of the 150 `.npk` files
++    here [[sweep: npk_total=150]] the library build roots 7
++    [[sweep: lib_reach=7]], the suite roots 99 [[sweep: suite_roots=99]]
+     (127 and 77 from cycle 0.1.3c until `tests/unit/civil_total_edges.npk`
+     joined; 128 and 78 from then until cycle 0.2.0b retired the churn pair,
+     TM-214; 126 and 76 until cycle 0.2.0 added `span`'s body to the
+     library's reach and a unit and two probes to the suite; 130 and 79 until
+     cycle 0.2.1 added two units and six probes; 138 and 87 until cycle 0.2.2
+     added two units and two sweeps; 142 and 91 until cycle 0.2.3 added five
+-    units; 147 and 96 until cycle 0.2.4b added a unit and a probe), and of the 4
++    units; 147 and 96 until cycle 0.2.4b added a unit and a probe; 149, 6
++    and 98 until cycle 0.3.0 gave `host` a body the library reaches and added
++    its unit), and of the 4
+     support modules [[sweep: support_total=4]] 3 are reached by `use` from
+     a suite root -- and since cycle 0.1.4 so is the civil cross-oracle's
+-    corpus, which only its member imports -- so 41 are put in front of the
+-    compiler by NOTHING ELSE. Four of those are the remaining `src/`
+-    placeholders, the layer note `src/core/core.npk` among them (five until
+-    cycle 0.2.0 gave `span/` a body); 36 are the reproductions under
++    corpus, which only its member imports -- so 40 are put in front of the
++    compiler by NOTHING ELSE. Three of those are the remaining `src/`
++    placeholders, the layer note `src/core/core.npk` among them (four until
++    cycle 0.3.0 gave `host/` a body, five until cycle 0.2.0 gave `span/`
++    one); 36 are the reproductions under
+     `tests/probe/defect/` [[sweep: defect_total=36]] -- the directory whose
+     files went two days with no expectation at all (TM-115), and whose markers
+     then went three cycles asserted by nothing (TM-141), for exactly this
+@@ -653,7 +657,7 @@ def run_parse(rep, root, bld):
+     a support module no suite root imports, which only its part C compiles
+     (TM-217).
+ 
+-        149 = 6 (library) + 98 (suite roots) + 3 + 1 (reached by `use`) + 41
++        150 = 7 (library) + 99 (suite roots) + 3 + 1 (reached by `use`) + 40
+ 
+     (It read `116 = 5 + 66 + 3 + 1 + 41` from cycle 0.1.4c until cycle 0.1.3c
+     added eleven suite roots -- seven probes and four unit tests -- and none
+@@ -662,8 +666,9 @@ def run_parse(rep, root, bld):
+     when `civil_total_edges` joined, and found at 0.2.0b's planning;
+     `130 = 6 + 79 + 3 + 1 + 41` until cycle 0.2.1;
+     `138 = 6 + 87 + 3 + 1 + 41` until cycle 0.2.2;
+-    `142 = 6 + 91 + 3 + 1 + 41` until cycle 0.2.3; and
+-    `147 = 6 + 96 + 3 + 1 + 41` until cycle 0.2.4b.)
++    `142 = 6 + 91 + 3 + 1 + 41` until cycle 0.2.3;
++    `147 = 6 + 96 + 3 + 1 + 41` until cycle 0.2.4b; and
++    `149 = 6 + 98 + 3 + 1 + 41` until cycle 0.3.0.)
+ 
+     EVERY NUMBER IN THAT SENTENCE IS TAGGED AND CHECKED (TM-142). It read
+     `50 = 1 + 27 + 3 + 19` until cycle 0.0.6, three subcycles after the tree
+diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
+index f7192c2f4658838d206ad7e2425bc33df93b0684..8a46e33d73217aa74436a2d3a48dd14fba33ac45 100644
+--- a/meta/DECISIONS.md
++++ b/meta/DECISIONS.md
+@@ -7594,6 +7594,11 @@ restated instead** — the six rows cost a line each and are what the sentence
+ promises.
+ 
+ ### TM-243 — M-3 claims what the type enforces: no conversion function, no implicit conversion, no cast, no literal, no write; an `Instant` built from numbers is a construction in writing, pinned by a probe, and whether its constructor should say so is the author's
++> **TM-248 (@@DATE@@, cycle 0.3.0) records the author's answer to the question
++> this decision registered:** Q-7 is answered A — `instant_of` keeps its name
++> (2026-10-02, the workbench's question 21) — and is struck with TM-248's
++> number. This decision's *"whether its constructor should say so is the
++> author's"* is answered, and nothing it decided moves.
+ 
+ **2026-10-02, cycle 0.2.4b (the plan's PD-88) — the cycle audit's C2 and K6. Dates
+ `TIME_MODEL.md` M-3, `CLAUDE.md`'s cycle 0.2.0 paragraph and the cycle README's
+@@ -7768,3 +7773,129 @@ finding; **the IR's wide arithmetic read instead** — every `i256` operation
+ the emission holds, but a claim about the lowering and the optimiser, which may
+ fold a literal product away; **every wide literal a finding** —
+ `bytes_put_int`'s `0i128` is a marked site's correct literal.
++
++### TM-247 — `BUILD.md` B-17 draws `host` → `span`: `host` imports the readings' types and their constructors, because both types' fields are sealed and only `span` builds them
++
++**@@DATE@@, cycle 0.3.0 (the plan's PD-92). Amends `BUILD.md` B-17's diagram;
++moves `checks.HOST_MAY_IMPORT`; dates `HOST.md` H-6's and H-8's notes.**
++
++**What was found** (`0.3.0.md` §1.6). `host_now_instant` and `host_now_boot`
++return `Instant`s and `host_now_utc` a `Timestamp`; both types' fields are
++sealed (TM-215, TM-219), so only `span`'s constructors build them. Over a copy
++holding the clocks' module, `check_layering` reports five findings, one per
++`use` of `span` — *"`host` may import cal, core, zone and nothing else
++(B-17)"* — and B-17 is the authority it reads. H-6's note had said so since
++cycle 0.2.0: `host` importing `span` was cycle 0.3's, *"with a `BUILD.md` B-17
++arrow it does not have yet"*.
++
++**The decision.** *B-17 draws `host` → `span`, for the readings' types and
++their constructors, above `zone`, `cal` and `core`; `checks.HOST_MAY_IMPORT`
++gains `span`, its comment with it; `src/host/host.npk`'s "WHAT IT MAY IMPORT"
++says so; and a self-check plant holds the rest of the rule — `host` importing
++`fmt` red, beside `host` importing `span`. `span` is pure, so the arrow costs
++the purity boundary nothing: it still points one way, into `host`'s callees.*
++
++*Alternatives declined:* **`host` writing the readings itself through `wild`
++storage** — the library forging its own sealed types, the opt-out C-8c leaves
++to consumers; **`host` importing the umbrella** — the umbrella imports `host`,
++a `use` cycle (D-086) that B-17 calls a decomposition mistake; **the clocks
++moved into `span`** — `span` would turn impure, and S-7 is the property every
++other module's testability rests on.
++
++### TM-248 — the clocks, as `HOST.md` H-1 names them: `host_now_utc`, `host_now_instant`, `host_now_boot` and `host_clock_res` over `HostClock`, each reading checked and none trapped; and `instant_of` keeps its name, the author's answer to Q-7
++
++**@@DATE@@, cycle 0.3.0 (the plan's PD-93). Declares `HostClock`; dates
++`HOST.md` H-1 and H-4 and `SAFETY.md` S-8; measures `SAFETY.md` S-4's `host`
++row; records the author's answer to `meta/OPEN_QUESTIONS.md` Q-7, which it
++strikes, and reads one clause of TM-243.**
++
++**What was found** (`0.3.0.md` §1.3 … §1.11). H-1 names `host_clock_res =
++Duration(HostClock:which)` and no specification declares `HostClock`, and
++`span`'s `InstantClock` has no realtime clock and must not gain one:
++`instant_of(ns, InstantClock.Realtime)` would build an `Instant` from the wall
++clock under the type's own name, M-3's hazard. `SAFETY.md` S-8 calls the
++function `host_clock_resolution(which)`, where every other site says
++`host_clock_res`; H-4's table says `CLOCK_MONOTONIC` is "not used", and
++`host_clock_res` hands it to `clock_getres`. `clock_gettime` is 228 in the
++compiler's runtime at the pin, `npk_mono_now`'s call; `clock_getres`, 229, is
++in no file of the compiler's tree, and the kernel's own table names it
++(`meta/research/CURRENCY.md`), its behaviour measured on both legs: `{0 s,
++1 ns}` for clocks 0, 1 and 7 and an errno in the `Result` for 99. The module
++compiles; a root importing it alone owes eleven identities, by
++`NITPICK-REACH-003` and by `arms.compute_bill` alike — `cal.ETimeValue`, the
++floor of six and the four arithmetic arms — and the umbrella with its five new
++names owes thirteen, as before. Its IR holds no global that is not `constant`.
++**And the author answered Q-7 on 2026-10-02** — the workbench's question 21,
++*"go with the recommendations"*: **A, keep `instant_of`**, so the two
++`Instant` readings build through it as drafted.
++
++**The decision.** *`host_now_utc = Timestamp()`: `clock_gettime(CLOCK_REALTIME)`
++through `sys` into a 16-byte `buffer`, `probe03`'s shape (H-4); the kernel's
++errno forwarded verbatim, `fail r.err` (H-7, S-5); the answer `relay
++timestamp_of(secs, nanos)`, whose `YearRange` and `NanoRange` refusals are
++H-8's range check. `host_now_instant = Instant() never fails`: `raw
++instant_of(mono_now(), InstantClock.Monotonic)` (H-5). `host_now_boot =
++Instant()`: `clock_gettime(CLOCK_BOOTTIME)`, the errno forwarded, the
++`timespec` turned into nanoseconds by a private `timespec_ns` that refuses,
++`cal`'s `ETimeValue`, a reading an `int64` of nanoseconds cannot hold — a
++negative second, a nanosecond field outside one second, or past
++`NTIME_DURATION_NS_MAX` — before it multiplies; the answer `raw
++instant_of(ns, InstantClock.Boottime)`. `host_clock_res =
++Duration(HostClock:which)`: `clock_getres` (229) on the clock `which` names,
++the errno forwarded, the `timespec` through `timespec_ns`, the answer `raw
++duration_ns(ns)`. `pub enum:HostClock = { Realtime; Monotonic; Boottime; }`,
++deriving `Eq`, `Clone`, `Debug` and `Copy`, declared in `host`. The numbers —
++228, 229, and the clock ids 0, 1 and 7 — are private `fixed int64`s in
++`host.npk`, each with its source in a comment. The umbrella re-exports the five
++public names, and `SAFETY.md` S-4's `host` row is measured, 11. H-1, H-4 and
++S-8 are dated, and the cycle README's first item restated. `instant_of` keeps
++its name: Q-7 is struck with this decision's number, and TM-243 is marked.*
++
++*Alternatives declined:* **`host_now_boot` `never fails`, its overflow a
++trap** — a new S-12 exception for a reading that is already fallible;
++**`timespec_ns` in `int128`** — a §5 site for a range a comparison states
++exactly; **`InstantClock` for `host_clock_res`** — it has no realtime clock,
++and must not gain one; **`clock_gettime` for the monotonic reading too** — H-5:
++a second reading of one clock through a second path; **the numbers in
++`src/host/sys.npk`** — two numbers read by one module, where a second file is a
++second module the layering, the parse sweep and the counts all carry, and
++`mod:sys;` beside the builtin compiles (`0.3.0.md` §1.5), so cycle 0.3.2 may
++move them if its syscalls make a table worth a file; **a header on this
++machine as the numbers' source** — the compiler's runtime at the pin and the
++kernel's table are where they are; **Q-7's B, a name that says it takes a raw
++reading** — the author's answer is A, and Q-7 records why: no name closes the
++reverse direction.
++
++### TM-249 — `tests/unit/host_clocks.npk`, `// stress: 40`: each reading asserted where a test can see it — its clock, its range, and its ADVANCE, H-3's "two calls are two syscalls" made observable — and the four mutants no test can see named where a reader looks
++
++**@@DATE@@, cycle 0.3.0 (the plan's PD-94). Dates `HOST.md` H-3.**
++
++**What was found** (`0.3.0.md` §1.8 and §1.9). The unit exits 0 on both legs,
++forty runs each, under a millisecond a run. Of fourteen one-line mutants of
++`src/host/host.npk`, ten are red at the exit each is aimed at, on both legs —
++10 … 14, 16, 17 and 19 … 21 — and four exit 0 on both: the boot clock read
++through `CLOCK_MONOTONIC` under the `Boottime` tag, `Boottime`'s resolution
++asked of `CLOCK_REALTIME`, `host_now_utc`'s errno branch deleted, and
++`timespec_ns`'s `secs > top` refusal deleted. `CLOCK_BOOTTIME` and
++`CLOCK_MONOTONIC` differ by the time the machine has spent suspended, which a
++CI runner never has; every clock's resolution here is 1 ns; and the errno
++branch and `timespec_ns`'s refusals need a kernel that breaks its contract.
++
++**The decision.** *One unit, `// stress: 40` (V-11): the realtime second inside
++`probe03`'s window; each reading's clock; each reading ADVANCING within a
++million reads — a cached or computed reading never advances, so the advance is
++the test of the property, not of the clock's speed; the boot reading refused
++beside a monotonic one (H-6); and each resolution in (0, 1 s]. Every exit a
++mutant of `host` can reach was seen red on one; exits 15 and 18 are belts on
++`span`'s own refusal of two clocks, which `tests/unit/instant_ops.npk` sees
++red. The four mutants no test can see are named in the unit's header and in a
++dated note under H-3, with what holds each — the constant's name at each `sys`
++site, the `pick`'s three arms, and `probe03`'s measured errno — so the next
++reader does not take a green run for more than it is.*
++
++*Alternatives declined:* **asserting the syscall count** — no counter the
++runtime exposes, and `strace` is no instrument of this harness; **a test that
++suspends the machine** to tell `BOOTTIME` from `MONOTONIC` — not a unit; **a
++double for the kernel's broken answers now** — the double is cycle 0.3.3's, and
++it replaces `host`, so it cannot test `host`'s own refusals either; the honest
++statement is the note.
+diff --git a/meta/OPEN_QUESTIONS.md b/meta/OPEN_QUESTIONS.md
+index ed3a1e54c44f8f702389015d18c07771086ad299..659b516de18810e46c3ee1be9cc2a20aff313370 100644
+--- a/meta/OPEN_QUESTIONS.md
++++ b/meta/OPEN_QUESTIONS.md
+@@ -164,7 +164,7 @@ last clause: a live `requires i >= 0 && i < v.count` on `vec_at` adds
+ `RequiresViolated` to a consumer's bill and makes an index past the end stop at
+ 116 where the slice guard stops it at 94.)*
+ 
+-### ~~Q-7 — should `Instant`'s constructor say, in its name, that it takes a raw reading — before 1.0?~~ — **ANSWERED 2026-10-02: A, keep `instant_of` — the author's answer to the workbench's question 21**
++### ~~Q-7 — should `Instant`'s constructor say, in its name, that it takes a raw reading — before 1.0?~~ — **SETTLED @@DATE@@ (TM-248): A, the author's answer of 2026-10-02 — `instant_of` keeps its name**
+ 
+ **Raised 2026-10-02 by the stream-2 planner at cycle 0.2's close, from the
+ cycle audit's C2** (the workbench's `meta/audits/nitpick-time-0.2-2026-10-02.md`;
+@@ -927,7 +927,10 @@ host boundary, where the first syscall enters `src/`. *Why it stays open until
+ then:* it waits for something to check. Today no module but the placeholder
+ `host` could name a syscall, `check_purity` refuses the spelling everywhere
+ else, and a scan with nothing to find would be commissioned only against
+-plants.
++plants. *(Cycle 0.3.0: `host` names two syscalls now, `clock_gettime` and
++`clock_getres`, through `sys`, so the scan has something to check; cycle
++0.3.1, which reviews `check_purity`'s ban list against that body, is where it
++is built or declined.)*
+ 
+ *(Cycle 0.1.5: two more spellings `check_purity` did not refuse were measured
+ and closed at the close — `mono_now ()`, and a banned call after a `//` inside a
+diff --git a/meta/research/CURRENCY.md b/meta/research/CURRENCY.md
+index 09fbc37be2dcb4de9a0285e793beb2218824e2b8..64eba63bf6d379503ac67bfa0c6f1d4c6822d5ba 100644
+--- a/meta/research/CURRENCY.md
++++ b/meta/research/CURRENCY.md
+@@ -12,4 +12,5 @@ tree at the pinned commit.
+ | Howard Hinnant, *chrono-Compatible Low-Level Date Algorithms* — `days_from_civil`, `civil_from_days`; the digest is [`hinnant-date-algorithms.md`](hinnant-date-algorithms.md) | the page as it dates itself, 2021-09-01 | 2026-09-25 | howardhinnant.github.io/date_algorithms.html | TM-016 |
+ | tzdata | 2026c | 2026-09-05 — the release installed on the workbench, measured by the 0.0.5 spike ([`tzdb-size.md`](tzdb-size.md)). **Whether it is still IANA's latest is not checked here**: cycle 0.1 reads no zone data, and TM-100 pins *"the latest release at cycle 0.5"*, which re-checks it | iana.org/time-zones | TM-100 |
+ | Python `datetime` — the independent source of `meta/roadmap/done/0.1/0.1.1.md` §4a's vectors for years ≥ 1, `meta/roadmap/done/0.1/0.1.2.md` §2's recomputation of the sweeps' domains, `meta/roadmap/done/0.1/0.1.3.md` §3's first method for the 41 derived-field vectors (`weekday()`, `timetuple().tm_yday`, `isocalendar()`), **cycle 0.1.4's cross-oracle corpus**, `tests/fixtures/civil/civil_oracle.npk`, generated by `tools/gen_civil_oracle.py` from `MINYEAR`, `MAXYEAR`, `fromordinal()`, `toordinal()`, `isoweekday()`, `isocalendar()` and `timetuple().tm_yday`; and cycle 0.2.2's sixteen conversion vectors, `tests/unit/utc_vectors.npk`, from the difference of two `datetime`s in days and seconds for years ≥ 1, and below year 1 by whole 400-year cycles of 146 097 days (`meta/roadmap/done/0.2/0.2.2.md` §1); the digest is [`python-datetime.md`](python-datetime.md) | 3.12.3, the workbench's interpreter — `/usr/bin/python3` and its virtual environment both; the corpus's `sha256` in `meta/roadmap/done/0.1/0.1.4.md` §5 is this interpreter's. The documentation was read at 3.14.7 | 2026-09-25 — re-checked for cycle 0.1.4, the statements the corpus reads quoted in the digest | docs.python.org/3/library/datetime.html | C-18 |
++| The Linux kernel's x86-64 syscall table — `clock_gettime` 228 and `clock_getres` 229, the two numbers `src/host/host.npk` declares; cycle 0.3.2 adds its own, `readlink` 89 among them. The digest is [`linux-syscall-table.md`](linux-syscall-table.md) | the ABI, which never renumbers a syscall on an architecture, read on the table's `master` | 2026-10-07 — 228, 229 and 89 quoted from the table; first fetched 2026-10-02 by cycle 0.2's close for `meta/roadmap/0.3/0.3.0.md` §1.3, and 228 is the compiler's runtime's too, `npk_mono_now` at `5fbaf4a` | github.com/torvalds/linux, `arch/x86/entry/syscalls/syscall_64.tbl` | TM-248 |
+ | ISO 8601-1 — the week-date rule of `CALENDAR.md` C-14 (week 1 holds the year's first Thursday, clause 3.1.1.23); the digest is [`iso-8601-week-date.md`](iso-8601-week-date.md). **Monday = 1 … Sunday = 7 could not be quoted from the 2019 text** and rests on C-7, RFC 3339's informational appendix and Python's `isocalendar()` | 2019, first edition, with Amd 1:2022 — its successor ISO/CD 8601-1 at stage 30.60 since 2026-07-25: re-check at DIS, and at 0.8 at the latest | 2026-09-25 | iss.rs/en/project/show/iso:proj:70907 (iso.org answered 403); the text through the distributor iTeh's previews of ISO's own pages | C-14 |
+diff --git a/meta/roadmap/0.3/README.md b/meta/roadmap/0.3/README.md
+index 8731deb68611aa94c260c8bbc29e717b8a930216..9841d2ae5cf8f3af54538627d5f66860ebeb774d 100644
+--- a/meta/roadmap/0.3/README.md
++++ b/meta/roadmap/0.3/README.md
+@@ -40,18 +40,18 @@ name, and its decision for the clocks records it and strikes Q-7.)*
+ 
+ ### 0.3.0 — the clocks
+ *(Restated 2026-10-02, at cycle 0.2's close, to `0.3.0.md`'s drafted decisions, PD-91 … PD-94. The first item is new — the instrument the close handed on; the `sys.npk` item is struck for the shape PD-93 drafts; `HostClock`, `timespec_ns` and the arm bill are named; and the H-3 item says how a test sees it. The rest keep their words.)*
+-- [ ] **FIRST, the instrument cycle 0.2's close handed on, in a commit of its own**: `check_int128_sites` reads a numeric literal's width suffix as it reads a type's name, so `(3i256 * 5i256) =>! int64` in a function `SPAN_MODEL.md` §5 does not mark is a finding; two plants, and `TESTING.md` §2's row restated (PD-91) *(found by 0.2.4a's verifier after the cycle audit; `done/0.2/0.2.4.md`)*
++- [x] **FIRST, the instrument cycle 0.2's close handed on, in a commit of its own**: `check_int128_sites` reads a numeric literal's width suffix as it reads a type's name, so `(3i256 * 5i256) =>! int64` in a function `SPAN_MODEL.md` §5 does not mark is a finding; two plants, and `TESTING.md` §2's row restated (PD-91) *(found by 0.2.4a's verifier after the cycle audit; `done/0.2/0.2.4.md`)* — **done, TM-246**: both plants unseen by the check before it, its first control read as a stale mark, and both caught after; the tree 0 findings, the headline's count 15 with `bytes_put_int`'s `0i128`; its own commit green with 94 plants
+ - [ ] ~~`src/host/sys.npk` with the four syscall numbers, each carrying the header it came from as a comment~~ — restated by PD-93, the item below: two numbers this subcycle needs, kept in `host.npk`, and no header on this machine their source
+-- [ ] the two syscall numbers — `clock_gettime` 228 and `clock_getres` 229 — and the clock ids 0, 1 and 7, as private `fixed int64`s in `src/host/host.npk`, each with its source in a comment: the compiler's runtime at the pin and the kernel's own table (PD-93)
+-- [ ] the 16-byte `timespec` laid out in a `buffer`, asserted by `#size_of` and by offsets (probe 03's shape)
+-- [ ] `host_now_utc` (CLOCK_REALTIME 0), `host_now_boot` (CLOCK_BOOTTIME 7) — `host_now_boot`'s nanoseconds through a private `timespec_ns`, which refuses a reading an `int64` cannot hold before it multiplies (PD-93)
+-- [ ] `host_now_instant` calls the floor's `mono_now()`, **not** `clock_gettime` (H-5) — so an `ntime` `Instant` and an executor deadline are on the same timeline by construction
+-- [ ] `host_clock_res` over `clock_getres`, on `HostClock` — `{ Realtime; Monotonic; Boottime; }`, declared in `host`, which H-1 names and no specification declared (PD-93)
+-- [ ] **`BUILD.md` B-17 gains `host` → `span`, by decision, when `host` first imports it** (PD-92): `host_now_instant` and `host_now_boot` return `Instant`s, and both fields of an `Instant` are sealed, so `host` builds them through `span`'s public `instant_of` (TM-215, TM-216) — B-17 draws `host` → `zone`, `cal`, `core` today *(handed on by `done/0.2/0.2.0.md` §7)* — and `host_now_utc`'s `Timestamp` through `timestamp_of`, its fields sealed since cycle 0.2.1 (TM-219, TM-220)
+-- [ ] errnos **forwarded verbatim** (H-7), so this module declares no error and costs no arm — asserted by `check_error_budget`; and its bill measured, 11 for `host` alone and 13 for the umbrella with its five names (PD-93)
+-- [ ] the returned `Timestamp` range-checked (H-8): an unset machine clock is `ETimeValue`, not a value that fails somewhere less obvious — by `timestamp_of`, whose `YearRange` refusal is H-8's (TM-220)
+-- [ ] **no state in the module** (H-3): a test asserts two calls are two syscalls — each reading ADVANCES within a million reads, which a cached or computed one never does; the module's IR holds no global that is not `constant`; and the four mutants no test can see named (PD-94)
+-- [ ] `// stress: 40` on every clock test
++- [x] the two syscall numbers — `clock_gettime` 228 and `clock_getres` 229 — and the clock ids 0, 1 and 7, as private `fixed int64`s in `src/host/host.npk`, each with its source in a comment: the compiler's runtime at the pin and the kernel's own table (PD-93) — TM-248, and `meta/research/CURRENCY.md`'s row
++- [x] the 16-byte `timespec` laid out in a `buffer`, asserted by `#size_of` and by offsets (probe 03's shape) — `probe03` asserts both on every run, and the module's three readings are its shape, the reads in bounds by construction and said so at each (S-17b's fourth row)
++- [x] `host_now_utc` (CLOCK_REALTIME 0), `host_now_boot` (CLOCK_BOOTTIME 7) — `host_now_boot`'s nanoseconds through a private `timespec_ns`, which refuses a reading an `int64` cannot hold before it multiplies (PD-93) — TM-248
++- [x] `host_now_instant` calls the floor's `mono_now()`, **not** `clock_gettime` (H-5) — so an `ntime` `Instant` and an executor deadline are on the same timeline by construction — TM-248; its IR calls `mono_now` and no `npk_sys6`
++- [x] `host_clock_res` over `clock_getres`, on `HostClock` — `{ Realtime; Monotonic; Boottime; }`, declared in `host`, which H-1 names and no specification declared (PD-93) — TM-248, H-1 and H-4 dated
++- [x] **`BUILD.md` B-17 gains `host` → `span`, by decision, when `host` first imports it** (PD-92): `host_now_instant` and `host_now_boot` return `Instant`s, and both fields of an `Instant` are sealed, so `host` builds them through `span`'s public `instant_of` (TM-215, TM-216) — B-17 draws `host` → `zone`, `cal`, `core` today *(handed on by `done/0.2/0.2.0.md` §7)* — and `host_now_utc`'s `Timestamp` through `timestamp_of`, its fields sealed since cycle 0.2.1 (TM-219, TM-220) — TM-247; `check_layering`'s new plant, `host` importing `fmt`, red beside `host` importing `span`
++- [x] errnos **forwarded verbatim** (H-7), so this module declares no error and costs no arm — asserted by `check_error_budget`; and its bill measured, 11 for `host` alone and 13 for the umbrella with its five names (PD-93) — `check_error_budget` silent; 11 by `arms.compute_bill` and by `NITPICK-REACH-003`, 13 the umbrella's, both tagged
++- [x] the returned `Timestamp` range-checked (H-8): an unset machine clock is `ETimeValue`, not a value that fails somewhere less obvious — by `timestamp_of`, whose `YearRange` refusal is H-8's (TM-220) — and the unit's exit 10 is red when `host_now_utc` hands it a nanosecond field a second high
++- [x] **no state in the module** (H-3): a test asserts two calls are two syscalls — each reading ADVANCES within a million reads, which a cached or computed one never does; the module's IR holds no global that is not `constant`; and the four mutants no test can see named (PD-94) — TM-249: ten of fourteen one-line mutants red at their exits on both legs, the four named in the unit's header and under H-3
++- [x] `// stress: 40` on every clock test — `tests/unit/host_clocks.npk`, forty runs a leg on every full invocation
+ 
+ ### 0.3.1 — `check_purity` goes live
+ *(Stale in its title, found at cycle 0.2.0's planning: `check_purity` has been live since cycle 0.0.3, TM-126. What this subcycle owes is the review of its ban list against a `src/` with a real `host/` — the last item below — and the two plants. `done/0.2/0.2.0.md` §7.)*
+diff --git a/meta/roadmap/ROADMAP.md b/meta/roadmap/ROADMAP.md
+index ab1eda6aa0265f6cb062652c2e62aa29858755ec..e12b0085cc3450cb8f7c0d59b5d6d862d9425f9d 100644
+--- a/meta/roadmap/ROADMAP.md
++++ b/meta/roadmap/ROADMAP.md
+@@ -26,7 +26,10 @@ settled**, TM-208 … TM-245 the cycle's thirty-eight, the close's eight among
+ them; **ten questions are open** — four the compiler's, O-N1, O-N2, O-N3 and
+ O-N34, restated at 0.2.4b (TM-245); five ours, O-X1, O-B1, O-X4, O-X8 and O-X9;
+ and one the author's, Q-7, raised at the close (TM-243), which blocks nothing
+-before cycle 1.0's freeze of the public names.)*
++before cycle 1.0's freeze of the public names.)* *(Re-derived at cycle 0.3.0:
++**180 decisions are settled**, the subcycle's four, TM-246 … TM-249; **nine
++questions are open** — the compiler's four and our five above — and Q-7 is
++answered A, `instant_of` keeping its name, TM-248.)*
+ 
+ ## How this is organised
+ 
+@@ -86,7 +89,7 @@ sibling libraries.
+ | ~~**0.0**~~ | **Foundations** — the language probes, the harness, `src/core/` — **CLOSED 2026-09-06, archived at [`done/0.0/`](done/0.0/README.md)** | — |
+ | ~~**0.1**~~ | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **CLOSED 2026-09-26, archived at [`done/0.1/`](done/0.1/README.md)** | 0.0 ✓ |
+ | ~~**0.2**~~ | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **CLOSED 2026-10-02, archived at [`done/0.2/`](done/0.2/README.md)** | 0.1 ✓ |
+-| **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double — **NEXT**: `0.3/0.3.0.md`, the clocks, written at cycle 0.2's close | 0.2 ✓ |
++| **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double — **IN PROGRESS**: [`0.3/0.3.0.md`](0.3/0.3.0.md), the clocks, DONE @@DATE@@; 0.3.1, `check_purity`'s review against the clocks' body, next | 0.2 ✓ |
+ | **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate | 0.2 |
+ | **0.5** | **The zone table** — the generator, the committed tables, the size measurement | 0.1 |
+ | **0.6** | **Zoned time** — offset lookup, the four resolution modes, the transition sweep | 0.4, 0.5 |
+@@ -185,7 +188,8 @@ a `Timestamp`; one adoption, to compiler `5fbaf4a` (TM-208 … TM-213);
+ `Vec<T: Copy>` (TM-214); the tree checks' family one list, and three checks
+ live (TM-227 … TM-232), each read again at the close (TM-238 … TM-240); and 133
+ units green. `timestamp_until` moved to cycle 0.7.3 (TM-237); whether
+-`instant_of`'s name should say it takes a raw reading is the author's, Q-7.
++`instant_of`'s name should say it takes a raw reading is the author's, Q-7
++*(answered A on 2026-10-02: it keeps its name, TM-248)*.
+ The table row read *"IN PROGRESS: …"* with each subcycle's file linked, and
+ `done/0.2/README.md` keeps that list. `done/0.2/0.2.4.md`'s record holds what
+ the cycle found and taught.
+diff --git a/meta/specs/BUILD.md b/meta/specs/BUILD.md
+index 090c6417e6403ee3a2fd53575bcf1c3892bc02d1..12c3ae2fef201945b6a0c06f5d27ccd03f02ca21 100644
+--- a/meta/specs/BUILD.md
++++ b/meta/specs/BUILD.md
+@@ -316,17 +316,18 @@ list kept the old code until cycle 0.2.0), `BORROW-001`, `BORROW-012`,
+ `RESOLVE-001`, `RESOLVE-002` (since cycle 0.2.0, `probe20b`),
+ `REACH-002` and `REACH-003`, and every family
+ after the first three runs only on something that parsed. Re-measured at pin
+-`5fbaf4a`, cycle 0.2.4b: **149 files = 104 parse cleanly + 43
++`5fbaf4a`, cycle 0.3.0: **150 files = 105 parse cleanly + 43
+ parse and are refused later + 2 do not parse**
+-<!-- [[sweep: npk_total=149]] --> (`127 = 90 + 35 + 2` from cycle 0.1.3c until
++<!-- [[sweep: npk_total=150]] --> (`127 = 90 + 35 + 2` from cycle 0.1.3c until
+ `tests/unit/civil_total_edges.npk` joined, `128 = 91 + 35 + 2` from then
+ until cycle 0.2.0b retired the churn pair, TM-214, `126 = 89 + 35 + 2`
+ until cycle 0.2.0 added `Instant`'s unit, its two refusals and the relay
+ specimen, `130 = 91 + 37 + 2` until cycle 0.2.1 added `Timestamp`'s two
+ units and six refusals, `138 = 93 + 43 + 2` until cycle 0.2.2 added the
+ conversions' two units and two sweeps, `142 = 97 + 43 + 2` until cycle
+-0.2.3 added the interop's five units, and `147 = 102 + 43 + 2` until cycle
+-0.2.4b added a unit and a probe), and the two
++0.2.3 added the interop's five units, `147 = 102 + 43 + 2` until cycle
++0.2.4b added a unit and a probe, and `149 = 104 + 43 + 2` until cycle 0.3.0
++added the clocks' unit), and the two
+ are `probe02d_wide_literal_refused.npk` (LEX-004, PARSE-002) and
+ `probe14_error_payload_refused.npk` (PARSE-001, TM-147). It read
+ `50 = 36 + 13 + 1` for three subcycles after the tree stopped being that size,
+@@ -452,7 +453,11 @@ Specifically and deliberately:
+   out of that repository into an `nlibc` sibling, so importing them today is
+   importing a path that is scheduled to change. The four syscall numbers
+   `ntime` needs are x86-64 ABI facts and are declared in `src/host/sys.npk`
+-  with the same shape `nsys` uses.
++  with the same shape `nsys` uses. *(Cycle 0.3.0, TM-248: the clocks' two,
++  `clock_gettime` 228 and `clock_getres` 229, are private `fixed int64`s in
++  `src/host/host.npk`, each with its source — the compiler's runtime at the
++  pin and the kernel's table — and no header; a file of their own is cycle
++  0.3.2's to choose, when its syscalls join them.)*
+ - **not `nitpick-parse`**, even though the two overlap on datetime scanning —
+   `nparse`'s TOML plugin needs the four TOML datetime types and `ntime` is
+   where they belong. Recorded as O-X1 and resolvable when dependency
+diff --git a/meta/specs/HOST.md b/meta/specs/HOST.md
+index ddd3bdab05fb7698ff8a502886019650b491cdc9..1238767f03207f5db45e646c1bbe776d47990aa3 100644
+--- a/meta/specs/HOST.md
++++ b/meta/specs/HOST.md
+@@ -19,6 +19,15 @@ pub func:host_clock_res      = Duration(HostClock:which);
+ pub func:host_system_zone    = SystemZone();
+ ```
+ 
++*(Cycle 0.3.0, TM-248: four of the five are in `src/host/host.npk` —
++`host_system_zone` is cycle 0.3.2's — beside `HostClock`, the argument
++`host_clock_res` takes, which no specification declared until then: `pub
++enum:HostClock = { Realtime; Monotonic; Boottime; }`, `host`'s own, because
++`span`'s `InstantClock` has no realtime clock and must not gain one. "Nothing
++else" is no sixth PUBLIC function: the module also holds five private `fixed`
++numbers — the two syscalls and H-4's three clock ids — and one private helper,
++`timespec_ns`.)*
++
+ **Rule H-2 (TM-018) — nothing else in the library calls any of them.** A function that
+ needs "now" takes it as a parameter (`SAFETY.md` S-9). `check_purity` enforces
+ the converse — that no syscall appears outside this module — and a second check
+@@ -29,6 +38,18 @@ enforces this one: no module outside `src/host/` names a `host_` symbol except
+ lazy initialisation. Two calls to `host_now_utc()` are two syscalls, which is
+ what the caller asked for.
+ 
++*(Cycle 0.3.0, TM-249: `tests/unit/host_clocks.npk` makes this observable —
++each reading ADVANCES within a million reads, which a cached or computed
++reading never does — forty runs a leg (`TESTING.md` V-11); and the module's IR
++holds no global that is not `constant`. **Four mutants of the module no test
++can see** are named in the unit's header, each held by reading instead: the
++boot clock read through `CLOCK_MONOTONIC` under the `Boottime` tag — the two
++differ by the time the machine has spent suspended, which a CI runner never
++has; `Boottime`'s resolution asked of `CLOCK_REALTIME` — every clock's
++resolution here is 1 ns; the forwarded errno's branch deleted; and
++`timespec_ns`'s range check deleted — each of the last two needs a kernel that
++breaks its contract. A green run is not evidence about these four.)*
++
+ ---
+ 
+ ## 2. The clocks
+@@ -50,6 +71,13 @@ and the field offsets rather than trusting this paragraph.
+ | `CLOCK_MONOTONIC` | 1 | *(not used — see H-5)* |
+ | `CLOCK_BOOTTIME` | 7 | `host_now_boot` |
+ 
++*(Cycle 0.3.0, TM-248: the `CLOCK_MONOTONIC` row's "not used" holds for the
++READINGS, by H-5, and `host_clock_res(HostClock.Monotonic)` hands id 1 to
++**`clock_getres`, syscall 229**, which this rule did not name — the kernel's
++own table (`../research/CURRENCY.md`), its behaviour measured at cycle 0.3.0's
++planning: `{0 s, 1 ns}` for clocks 0, 1 and 7. Both numbers and the three ids
++are private `fixed int64`s in `src/host/host.npk`, each with its source.)*
++
+ **Rule H-5 — `host_now_instant()` calls the floor's `mono_now()`, not
+ `clock_gettime`.** (There is no floor builtin for the *wall* clock, which is
+ why `host_now_utc` goes through `sys`; recorded as O-N2, with no ask.) The floor already provides `CLOCK_MONOTONIC` nanoseconds, it
+@@ -75,7 +103,8 @@ boottime` — and a `uint8` holds 254 values that are no clock (`SAFETY.md`
+ S-15c), so the tag is an enum; both fields are sealed, so `host` builds its
+ readings through `span`'s `instant_of`; and `instant_cmp` refuses two clocks as
+ `instant_since` does. `host` importing `span` is cycle 0.3's, with a
+-`BUILD.md` B-17 arrow it does not have yet.)*
++`BUILD.md` B-17 arrow it does not have yet.)* *(Cycle 0.3.0, TM-247: `host`
++imports `span`, and B-17 draws the arrow.)*
+ 
+ **Rule H-7 — `host_now_utc` forwards the kernel's errno verbatim**
+ (`SAFETY.md` S-5), so it declares no error and costs no `failsafe` arm.
+@@ -102,7 +131,8 @@ reading from a machine whose clock is unset can be anything; if it is outside
+ *(Cycle 0.2.1, TM-219 and TM-220: `Timestamp`'s fields are sealed, so
+ `host_now_utc` builds its reading through `span`'s `timestamp_of`, whose
+ refusal of a `secs` outside the range is this rule's `YearRange` — the `host`
+-→ `span` arrow cycle 0.3's README owes for `Instant` already.)*
++→ `span` arrow cycle 0.3's README owes for `Instant` already.)* *(Drawn at
++cycle 0.3.0, TM-247: `host_now_utc`'s reading is `timestamp_of`'s.)*
+ 
+ ---
+ 
+diff --git a/meta/specs/SAFETY.md b/meta/specs/SAFETY.md
+index acfe98674551cd1491c02fc1cf1467d9c40c3e6a..593b9dfdc0dc3fa5c6cedac2cc93a9b6511868d3 100644
+--- a/meta/specs/SAFETY.md
++++ b/meta/specs/SAFETY.md
+@@ -336,12 +336,16 @@ purpose. It contains exactly:
+ - `host_now_utc()` — `clock_gettime(CLOCK_REALTIME)` → `Timestamp`
+ - `host_now_instant()` — `mono_now()` → `Instant`
+ - `host_now_boot()` — `clock_gettime(CLOCK_BOOTTIME)` → `Instant`
+-- `host_clock_resolution(which)` — `clock_getres`
++- `host_clock_res(which)` — `clock_getres`
+ - `host_system_zone()` — reads `$TZ`, then `/etc/localtime`, and **says which
+   it used**
+ 
+ and nothing else. Nothing elsewhere in the library calls any of them.
+ 
++*(Cycle 0.3.0, TM-248: the fourth read `host_clock_resolution(which)`.
++`HOST.md` H-1, the module's specification, and every other site call it
++`host_clock_res`, which `src/host/host.npk` declares, over `HostClock`.)*
++
+ **Rule S-9 — the clock is a parameter, never an ambient.** A function that
+ needs "now" takes a `Timestamp` or an `Instant`. `ntime` provides `host_now_*`
+ so a caller can get one; the library itself never asks. This is the same rule
+diff --git a/meta/specs/TESTING.md b/meta/specs/TESTING.md
+index 427ffa34eab1959be5ff8924dacb7cf1c048e785..f6ca8e6aed23c4c3a3785e77eae8cb07a1ecf1ac 100644
+--- a/meta/specs/TESTING.md
++++ b/meta/specs/TESTING.md
+@@ -17,7 +17,7 @@ than sampled. Where that is possible it is the gate, and §3 says where.
+ 
+ | Stage | Answers |
+ |---|---|
+-| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **41 files of 149 that no other stage roots** <!-- [[sweep: npk_total=149]] --> |
++| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **40 files of 150 that no other stage roots** <!-- [[sweep: npk_total=150]] --> *(41 of 149 until cycle 0.3.0, when the library build began to reach `src/host/host.npk`)* |
+ | `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
+ | `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
+ | `check` | every documented refusal actually refuses, with exactly its code |
+diff --git a/meta/specs/TIME_MODEL.md b/meta/specs/TIME_MODEL.md
+index 5a95cbab909b4441c10494448db493fa6cf6cc3b..9ad016cfca48946cc8d0efb074dd03b340d034d1 100644
+--- a/meta/specs/TIME_MODEL.md
++++ b/meta/specs/TIME_MODEL.md
+@@ -90,7 +90,8 @@ it claims to have read (TM-216), and it is what M-3 does not refuse: the
+ guarantee is that a timeout cannot be written against the realtime clock BY
+ ACCIDENT. Whether `instant_of`'s name should say it takes a raw reading is
+ `../OPEN_QUESTIONS.md` Q-7, the author's, before 1.0; this note is true under
+-either answer.)*
++either answer.)* *(Answered A on 2026-10-02: `instant_of` keeps its name,
++TM-248.)*
+ 
+ **Rule M-4 — the only thing you can do with two `Instant`s is subtract them**,
+ and the result is a `Duration` — or compare them; and both refuse a pair from
+diff --git a/nitpick.toml b/nitpick.toml
+index 2784f5e9b6cab6525ee58a9c08f3a11f17eec841..2b6424a41dabef7af28db451d35df81753922864 100644
+--- a/nitpick.toml
++++ b/nitpick.toml
+@@ -134,9 +134,10 @@ path  = "tests/probe"
+ #   `parse`   HAS NO ENTRY BY DESIGN, not by omission (TM-123). It is a
+ #             WHOLE-TREE stage: `BUILD.md` §3's Directory column for it reads
+ #             "every `.npk` in the tree", and that is where its value is — of
+-#             the 149 files here [[sweep: npk_total=149]] (147 until cycle
+-#             0.2.4b), 41 are put in front of the compiler by nothing
+-#             else. An entry would narrow it to one directory and silently
++#             the 150 files here [[sweep: npk_total=150]] (149 until cycle
++#             0.3.0, 147 until 0.2.4b), 40 are put in front of the compiler
++#             by nothing else (41 until cycle 0.3.0, when the library build
++#             began to reach `src/host/host.npk`). An entry would narrow it to one directory and silently
+ #             un-cover the rest, so `stage = "parse"` is REFUSED BY NAME.
+ #   `accept`  DECLINED, not unimplemented (TM-124, B-4b). It stops at "accepted
+ #             in silence", which is the shape a program with no `failsafe`
+diff --git a/src/core/core.npk b/src/core/core.npk
+index 5aad0c132839a54a3b83495716b489259f857ec7..3f11069caa686f4c0173b35b41cc75db348874bf 100644
+--- a/src/core/core.npk
++++ b/src/core/core.npk
+@@ -1,7 +1,8 @@
+ // `ntime`'s storage primitives — THE LAYER NOTE. This was `src/core/`'s
+ // placeholder (0.0.1 P-7) and the directory has been filled since cycle 0.0.4;
+-// the file stays because the other placeholders -- three since cycle 0.2.0
+-// filled `span/`, four since cycle 0.1.0 filled `cal/`, five before -- point AT
++// the file stays because the other placeholders -- two since cycle 0.3.0
++// filled `host/`, three since cycle 0.2.0 filled `span/`, four since cycle
++// 0.1.0 filled `cal/`, five before -- point AT
+ // it for the explanation below, and because a
+ // layer note that a reader meets before the code is worth one file.
+ //
+diff --git a/src/host/README.md b/src/host/README.md
+index 31ddac23059ebfbd030739747f6ad6d31ba9e57e..794500d876a0800dedd3017a0ce692b572afecd1 100644
+--- a/src/host/README.md
++++ b/src/host/README.md
+@@ -2,9 +2,13 @@
+ 
+ Five functions, and nothing else in the library calls any of them (TM-018):
+ `host_now_utc`, `host_now_instant`, `host_now_boot`, `host_clock_res`,
+-`host_system_zone`.
++`host_system_zone` — four of them since cycle 0.3.0, the clocks, beside
++`HostClock`, the argument `host_clock_res` takes (TM-247 … TM-249);
++`host_system_zone` is cycle 0.3.2's.
+ 
+ Everything outside this directory is a pure function of its arguments, which
+ is what makes the library reproducible, testable without a double, and portable
+ by rewriting one module. `check_purity` fails the build if that stops being
+-true. Governed by `meta/specs/HOST.md`. Built in cycle 0.3.
++true. Governed by `meta/specs/HOST.md`. Built in cycle 0.3: the clocks at
++0.3.0, the system zone at 0.3.2. *(It said "Built in cycle 0.3." until the
++clocks were.)*
+diff --git a/src/lib.npk b/src/lib.npk
+index 6650999540532c53ab5eb4d5baab02bcdb1e487a..5c634034d0c8da85c8d9780da12eeccd9381a671 100644
+--- a/src/lib.npk
++++ b/src/lib.npk
+@@ -19,8 +19,9 @@
+ // deliberate. Adding a line here is the moment a name becomes public and, by
+ // TM-013, a thing a MAJOR version is needed to take away.
+ //
+-// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 76
+-// names now [[sweep: lib_reexports=76]], below -- 68 until cycle 0.2.3 added
++// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 81
++// names now [[sweep: lib_reexports=81]], below -- 76 until cycle 0.3.0 added
++// `host`'s five, 68 until cycle 0.2.3 added
+ // `Duration`'s two ends and `span`'s six for the `Duration` interop, 66 until
+ // cycle 0.2.2 added
+ // `timestamp_to_utc` and `civil_to_utc`, 64 until cycle 0.2.1 added
+diff --git a/src/span/span.npk b/src/span/span.npk
+index a851a6e0ab695c82d6ab8c564da08bc6968217dc..5a1b12a6b743dfcbda2cc3e6b861cb0fe2cdb662 100644
+--- a/src/span/span.npk
++++ b/src/span/span.npk
+@@ -10,9 +10,10 @@
+ // §9, TM-222); and the `Duration` interop -- the four constructors `ntime` adds
+ // to the prelude's, `timestamp_add` and `timestamp_since` (cycle 0.2.3;
+ // `SPAN_MODEL.md` N-2 and §5, `TIME_MODEL.md` M-18 and M-20, TM-233 ...
+-// TM-236). The clocks themselves are cycle 0.3's: `host_now_instant` and
+-// `host_now_boot` will build their answers through `instant_of`, and
+-// `host_now_utc` through `timestamp_of`, which is why both are public. (Until
++// TM-236). The clocks themselves are `host`'s, since cycle 0.3.0 (TM-248):
++// `host_now_instant` and `host_now_boot` build their answers through
++// `instant_of`, and `host_now_utc` through `timestamp_of`, which is why both
++// are public -- "cycle 0.3's", and "will build", until then. (Until
+ // cycle 0.2.2 this said the conversions were that cycle's, and until cycle
+ // 0.2.3 that the interop was.)
+ //
+@@ -27,7 +28,8 @@
+ // fields becomes an `Instant` that names, in writing, the clock it claims to
+ // have read -- TM-216's opt-out in writing, which `probe20g` compiles and
+ // runs, so this paragraph is checked (TM-243; `meta/OPEN_QUESTIONS.md` Q-7
+-// asks the author whether the constructor's name should say so). (Until cycle
++// asked the author whether the constructor's name should say so, and the
++// answer, A, is that it keeps its name: TM-248). (Until cycle
+ // 0.2.4b this said a consumer could not build an `Instant` from a number --
+ // the cycle audit's C2.) The compiler's runtime says the same of its own
+ // deadline clock -- `runtime/npkrt.ll` at the pin, the block headed "the
+@@ -235,8 +237,8 @@ pub struct:Instant = { sealed int64:ns; sealed InstantClock:clock; };
+ // any `int64` on either clock, so `VERIFICATION.md` P-3 asks no contract of
+ // it. A number computed from anything -- a `Timestamp`'s fields included --
+ // becomes a reading that names, in writing, the clock it claims to have read
+-// (TM-216; `meta/OPEN_QUESTIONS.md` Q-7 asks whether the name should say
+-// so).
++// (TM-216; `meta/OPEN_QUESTIONS.md` Q-7 asked whether the name should say
++// so, and the author's answer is that it keeps its name: TM-248).
+ pub func:instant_of = Instant(int64:ns, InstantClock:clock) never fails {
+     pass Instant{ ns: ns, clock: clock };
+ };
+diff --git a/tests/probe/probe20g_construction_from_numbers.npk b/tests/probe/probe20g_construction_from_numbers.npk
+index bffd09fc7f42a9d999a3f0a88fb4351f3a3d0908..4d53a0e6a9cffb6e152a54e3735f4bd3d0e413eb 100644
+--- a/tests/probe/probe20g_construction_from_numbers.npk
++++ b/tests/probe/probe20g_construction_from_numbers.npk
+@@ -17,9 +17,10 @@
+ // What it cannot refuse is a CONSTRUCTION from numbers, which names in
+ // writing the clock it claims to have read. ANSWER, measured at `5fbaf4a`:
+ // YES, exit 0 on both legs. THIS FILE PINS THE PATH, so the restated M-3 is
+-// checked rather than stated: if a later change refuses it -- the author's
+-// answer to `meta/OPEN_QUESTIONS.md` Q-7 may rename `instant_of` -- this file
+-// stops compiling, and M-3 is restated with it.
++// checked rather than stated: if a later change refuses it -- a rename of
++// `instant_of`, which the author's answer to `meta/OPEN_QUESTIONS.md` Q-7
++// declined on 2026-10-02 (TM-248) -- this file stops compiling, and M-3 is
++// restated with it.
+ //
+ // EXIT CODES, clear of every arm code (TM-152): 10 `timestamp_of` refused the
+ // reading; 11 the `Instant` holds another number; 12 `instant_since` refused

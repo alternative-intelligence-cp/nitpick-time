@@ -21,13 +21,16 @@ reading. `host_now_instant` and `host_now_boot` build their readings through
 `instant_of` (0.3.0's checklist); under the recommended answer nothing here
 changes, and under the other the rename lands first, by a decision of its own,
 and 0.3.0's plan reads it. *(From cycle 0.2's close, `done/0.2/0.2.4.md`;
-the question is the cycle audit's C2, TM-243.)*
+the question is the cycle audit's C2, TM-243.)* *(Answered 2026-10-02 by the
+author, the workbench's question 21: **A, keep `instant_of`**. Nothing here
+moves; `0.3.0.md`'s gate reads the answer before its step 2 builds on the
+name, and its decision for the clocks records it and strikes Q-7.)*
 
 ## Subcycles
 
 | # | Topic | Ends with |
 |---|---|---|
-| 0.3.0 | **The clocks** — `clock_gettime` through `sys`, the three readings — **[`0.3.0.md`](0.3.0.md)**, written at cycle 0.2's close, measured at `5fbaf4a` and not rehearsed from its blocks; it opens with the instrument the close handed on | a `Timestamp` from the machine, range-checked |
+| 0.3.0 | **The clocks** — `clock_gettime` through `sys`, the three readings — **[`0.3.0.md`](0.3.0.md)**, written at cycle 0.2's close, measured at `5fbaf4a`, and rehearsed from its blocks in its real position on 2026-10-07 and 2026-10-08 (its §8); it opens with the instrument the close handed on | a `Timestamp` from the machine, range-checked |
 | 0.3.1 | **`check_purity` goes live** — the dormant check from 0.0.3, turned on | the library's reproducibility claim, enforced |
 | 0.3.2 | **The system zone** — the four-step discovery, and what it reports | a program can ask, and is told which mechanism answered |
 | 0.3.3 | **The double** — the test host module, in `tests/` | every clock-dependent behaviour reproducible |

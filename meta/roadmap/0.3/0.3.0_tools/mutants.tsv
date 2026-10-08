@@ -1,0 +1,17 @@
+# 0.3.0 step 3 -- the mutants of src/host/host.npk, one row each: name, the text, its
+# replacement, TAB-separated, "\n" a newline. `env.sh`'s `mutants` swaps each ONCE in a
+# copy and runs the unit on both legs; the exit each is aimed at is the plan's step 3.
+utc_monotonic	sys(SYS_CLOCK_GETTIME, CLOCK_REALTIME, ts.ptr)	sys(SYS_CLOCK_GETTIME, CLOCK_MONOTONIC, ts.ptr)
+utc_computed	pass (relay timestamp_of(secs, nanos));	pass (relay timestamp_of(1700000000i64, 0i64));
+utc_nanos_high	pass (relay timestamp_of(secs, nanos));	pass (relay timestamp_of(secs, nanos + NTIME_NANOS_PER_SEC));
+instant_boottime	instant_of(mono_now(), InstantClock.Monotonic)	instant_of(mono_now(), InstantClock.Boottime)
+instant_computed	instant_of(mono_now(), InstantClock.Monotonic)	instant_of(5i64, InstantClock.Monotonic)
+boot_tag_monotonic	instant_of(ns, InstantClock.Boottime)	instant_of(ns, InstantClock.Monotonic)
+boot_computed	instant_of(ns, InstantClock.Boottime)	instant_of(5i64, InstantClock.Boottime)
+res_bad_clock	(HostClock.Boottime)  { id = CLOCK_BOOTTIME; }	(HostClock.Boottime)  { id = 99i64; }
+res_zero	pass raw duration_ns(ns);	pass raw duration_ns(0i64);
+res_gettime	fixed int64:SYS_CLOCK_GETRES  = 229i64;	fixed int64:SYS_CLOCK_GETRES  = 228i64;
+boot_reads_monotonic	sys(SYS_CLOCK_GETTIME, CLOCK_BOOTTIME, ts.ptr)	sys(SYS_CLOCK_GETTIME, CLOCK_MONOTONIC, ts.ptr)
+res_boottime_realtime	(HostClock.Boottime)  { id = CLOCK_BOOTTIME; }	(HostClock.Boottime)  { id = CLOCK_REALTIME; }
+utc_errno_deleted	CLOCK_REALTIME, ts.ptr);\n    if (r.is_error) { fail r.err; }	CLOCK_REALTIME, ts.ptr);
+timespec_top_deleted	    if (secs > top)                   { fail ETimeValue; }     // Overflow\n	

@@ -1,0 +1,24 @@
+# 0.3.0's omission sweep for steps 2 ... 4, block 5b -- one extended regular expression
+# per line, each read by `sweep.py` line by line AND across line breaks,
+# case-insensitive. The first nine are the plan's own list, as cycle 0.2's close
+# wrote it; the rest the rehearsal added: Q-7 answered, the clocks spoken of as
+# future, the library's reach, the plant count in words, the placeholders'
+# count, the constructor's name, the unit and re-export counts, and step 1's
+# subject read again over the finished tree.
+placeholder
+five functions|five public
+host_clock_resolution
+not used
+sys\.npk
+may import
+\b(92|76|149|98|41)\b
+nothing (yet|today)
+cycle 0\.3
+Q-7
+will build|clocks themselves|are cycle 0\.3.s|is cycle 0\.3.s
+reach(es|ing)? (6|six) (source|module)|roots? 6|library build roots
+ninety-(two|four|five)|\b9[245]\b.{0,30}(plant|tree-check)
+\b(three|3) (remaining |other )?(placeholder|`src/` director)
+instant_of.{0,80}(name|rename)|name.{0,40}instant_of
+\b133\b|\b(76|81)\b.{0,20}(name|re-export)|re-exports? (76|81)
+wider than|width suffix|wide literal|blanked first

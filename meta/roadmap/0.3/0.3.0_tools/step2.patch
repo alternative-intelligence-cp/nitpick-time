@@ -1,0 +1,292 @@
+diff --git a/harness/checks.py b/harness/checks.py
+index 145bd10e72ecd8c55588297b7faac044983a0431..69bdbf09bd4234787e6619b909b054e463340441 100644
+--- a/harness/checks.py
++++ b/harness/checks.py
+@@ -178,13 +178,15 @@ class Result:
+ # ---------------------------------------------------------------------------
+ 
+ # B-17's diagram as a partial order. `core` is the base; each layer may import
+-# strictly below itself. `host` is NOT in the chain: it may reach zone, cal and
+-# core, and NOTHING may reach IT except `src/lib.npk` -- which is `SAFETY.md`
++# strictly below itself. `host` is NOT in the chain: it may reach span, zone,
++# cal and core -- `span` since cycle 0.3.0 (TM-247), because `Instant`'s and
++# `Timestamp`'s fields are sealed and only `span`'s constructors build them --
++# and NOTHING may reach IT except `src/lib.npk` -- which is `SAFETY.md`
+ # §3's purity boundary expressed as a layering rule, and the reason this check
+ # and `check_host_isolation` are two checks rather than one. They fail on
+ # different things: an `import` of host, and a mention of a `host_` name.
+ LAYER = {"core": 0, "cal": 1, "span": 2, "zone": 3, "fmt": 4}
+-HOST_MAY_IMPORT = {"zone", "cal", "core"}
++HOST_MAY_IMPORT = {"span", "zone", "cal", "core"}
+ 
+ 
+ def check_layering(tree, **_):
+diff --git a/harness/selfcheck.py b/harness/selfcheck.py
+index 66a107c8a1b6da34ad94ae8d1b40dddef1c85c18..2ce09f35bec7de9ee25fcc8121d62b2fa61844df 100644
+--- a/harness/selfcheck.py
++++ b/harness/selfcheck.py
+@@ -990,6 +990,13 @@ PLANTED = [
+      ("src/cal/cal.npk", "mod:cal;\nuse \"../host/host.npk\".*;\n"),
+      ("src/cal/cal.npk", "mod:cal;\nuse \"../core/core.npk\".*;\n"),
+      "NOTHING imports `host`"),
++    # `host` IMPORTS WHAT B-17 DRAWS AND NOTHING ELSE (cycle 0.3.0, TM-247):
++    # `span` since the clocks, whose readings only `span`'s constructors build,
++    # beside `fmt`, which it may never import.
++    (checks_mod.check_layering,
++     ("src/host/host.npk", "mod:host;\nuse \"../fmt/fmt.npk\".*;\n"),
++     ("src/host/host.npk", "mod:host;\nuse \"../span/span.npk\".*;\n"),
++     "`host` may import"),
+     (checks_mod.check_error_budget,
+      ("src/cal/cal.npk", "mod:cal;\npub error:ETimeOops;\n"),
+      ("src/cal/cal.npk", "mod:cal;\npub error:ETimeValue;\n"),
+diff --git a/meta/specs/BUILD.md b/meta/specs/BUILD.md
+index 9187225862ea72243630395c4f7fb49bdc2ea72e..090c6417e6403ee3a2fd53575bcf1c3892bc02d1 100644
+--- a/meta/specs/BUILD.md
++++ b/meta/specs/BUILD.md
+@@ -567,7 +567,8 @@ consumer writes one import.
+          │                     │         │          ▲
+          └─────────────────────┴─────────┴──────────┘
+ 
+-        host ──►  zone (for the name lookup)
++        host ──►  span (for the readings' types and their constructors)
++             ──►  zone (for the name lookup)
+              ──►  cal  (for the range check)
+              ──►  core
+ ```
+@@ -576,6 +577,14 @@ consumer writes one import.
+ and an application — which is `SAFETY.md` §3's purity boundary expressed as a
+ layering rule, and `check_layering` enforces it.
+ 
++*(Cycle 0.3.0, TM-247: `host` → `span` is drawn. `host_now_instant` and
++`host_now_boot` return `Instant`s and `host_now_utc` a `Timestamp`, both types'
++fields are sealed (TM-215, TM-219), and only `span`'s constructors build them.
++`span` is pure, so the arrow costs the purity boundary nothing: it still points
++one way, into `host`'s callees. Until then `host` reached `zone`, `cal` and
++`core` alone, and `check_layering` refused the arrow — five findings over the
++module, one per `use` of `span`.)*
++
+ A `use` cycle is legal in the language (D-086) and is still a decomposition
+ mistake; `ntime`'s layers are acyclic and the harness says so.
+ 
+diff --git a/meta/specs/SAFETY.md b/meta/specs/SAFETY.md
+index cb11f833b0e6f4550f2090beb9beb3c4e9c579e9..acfe98674551cd1491c02fc1cf1467d9c40c3e6a 100644
+--- a/meta/specs/SAFETY.md
++++ b/meta/specs/SAFETY.md
+@@ -90,7 +90,7 @@ import-scoped:
+ | `ntime/span.npk` | — (raises `cal`'s) | one arm | **11** <!-- [[sweep: arms_span=11]] --> (—) — since cycle 0.2.0, measured: `cal.ETimeValue`, which `span` raises for two clocks' readings (TM-216), since cycle 0.2.1 for a `secs` outside the range or a `nanos` outside one second handed to `timestamp_of` (TM-220), since cycle 0.2.2 for a civil reading `civil_to_utc` cannot convert, `timestamp_of`'s refusal relayed (TM-222), and since cycle 0.2.3 for a sum `timestamp_add` cannot keep in the range, relayed the same way (TM-234), and a difference `timestamp_since` cannot hold in a `Duration` (TM-236), and since cycle 0.2.4b for a `secs` handed to `timestamp_add` outside the range (TM-241) and a difference `instant_since` cannot hold (TM-242); the floor of six; and `cal`'s four arithmetic arms, which reach every importer of `span` because `span` imports `cal`. **No new identity**: the umbrella's row stays 13. *(A placeholder until cycle 0.2.0, the row read **6** (4), the floor, "meaningless until cycle 0.2 gives the module a body".)* |
+ | `ntime/zone.npk` | `ETimeZone` | two arms | placeholder; **6** <!-- [[sweep: arms_zone=6]] --> (4) today (cycle 0.3) |
+ | `ntime/fmt.npk` | `ETimeParse` | three arms | placeholder; **6** <!-- [[sweep: arms_fmt=6]] --> (4) today (cycle 0.4) |
+-| `ntime/host.npk` | — (forwards errnos) | one arm | placeholder; **6** <!-- [[sweep: arms_host=6]] --> (4) today |
++| `ntime/host.npk` | — (forwards errnos) | one arm | **11** <!-- [[sweep: arms_host=11]] --> (—) — since cycle 0.3.0, measured (TM-248): `cal.ETimeValue`, which `host` relays from `timestamp_of` (H-8) and raises in `timespec_ns`; the floor of six; and `cal`'s four arithmetic arms, which reach `host` through `span`. A forwarded errno is a dynamic operand and arms nothing (S-5). **No new identity**: the umbrella's row stays 13. *(A placeholder until cycle 0.3.0, the row read "placeholder; **6** (4) today" — the floor.)* |
+ 
+ *(Amended at cycle 0.1.0b: the column read "MEASURED at pin `aaffb87`" with the
+ bracketed numbers, and had no umbrella row. At compiler `c3bdae2` every row
+diff --git a/src/host/host.npk b/src/host/host.npk
+index dda0eb7ce283ecf956f30f5c87e3e4b131f6e315..8ac0a7bb945cc963dc0d3ad8641c23c3111b9bde 100644
+--- a/src/host/host.npk
++++ b/src/host/host.npk
+@@ -1,9 +1,6 @@
+-// THE ONLY IMPURE MODULE IN THE LIBRARY — the PLACEHOLDER (0.0.1 P-7, P-11).
+-//
+-// EMPTY ON PURPOSE: see `../core/core.npk` for why a placeholder exists at all.
+-// It is REPLACED at the cycle below, never deleted. The rule below is carried
+-// from day one, deliberately: it is what a reader meets before a check
+-// enforces it.
++// THE ONLY IMPURE MODULE IN THE LIBRARY — the clocks, since cycle 0.3.0
++// (`meta/roadmap/0.3/0.3.0.md`, TM-247 … TM-249). Governed by
++// `meta/specs/HOST.md`.
+ //
+ // ============================ THE PURITY RULE ============================
+ // NO SYSCALL, NO CLOCK, NO ENVIRONMENT READ AND NO FILE READ EXISTS ANYWHERE
+@@ -19,21 +16,148 @@
+ // as a layering rule, and `check_layering` enforces it.
+ // =========================================================================
+ //
+-// WHAT FILLS IT: five functions and nothing else — `host_now_utc`,
+-// `host_now_instant`, `host_now_boot`, `host_clock_res`, `host_system_zone` —
+-// with `clock_gettime` reached through `sys` and a 16-byte `timespec` laid out
+-// in a `buffer` (probe 03 pinned that shape). Governed by
+-// `meta/specs/HOST.md`.
+-// WHEN: cycle 0.3 (`meta/roadmap/0.3/README.md`), which is also when
+-// `check_purity` goes live and must be SEEN TO FAIL against a planted
+-// `mono_now()` outside this directory. (Dated at cycle 0.2.4, cycle 0.2's
+-// close -- its audit's S4: `check_purity` has been live since cycle 0.0.3,
+-// TM-126, and the self-check plants a `mono_now()` outside this directory on
+-// every run; cycle 0.3 reviews its ban list against this module's body.)
++// WHAT FILLS IT: five public functions and nothing else (H-1) — four since
++// cycle 0.3.0: `host_now_utc`, `host_now_instant`, `host_now_boot` and
++// `host_clock_res`, with `HostClock`, the argument H-1 names; and
++// `host_system_zone`, which is cycle 0.3.2's. Beside them, nothing public: the
++// five numbers below and one helper, `timespec_ns`. `clock_gettime` and
++// `clock_getres` are reached through `sys` with a 16-byte `timespec` laid out
++// in a `buffer` (probe 03 pinned that shape), and the monotonic reading is the
++// floor's `mono_now()` (H-5).
++// WHEN: cycle 0.3 (`meta/roadmap/0.3/README.md`) — the clocks at 0.3.0, the
++// review of `check_purity`'s ban list against this body at 0.3.1, the system
++// zone at 0.3.2 and the double at 0.3.3. (Until cycle 0.3.0 this file was the
++// PLACEHOLDER of 0.0.1 P-7 and P-11, replaced and never deleted, and it said
++// cycle 0.3 "is also when `check_purity` goes live and must be SEEN TO FAIL
++// against a planted `mono_now()` outside this directory". Dated at cycle
++// 0.2.4, cycle 0.2's close -- its audit's S4: `check_purity` has been live
++// since cycle 0.0.3, TM-126, and the self-check plants a `mono_now()` outside
++// this directory on every run; cycle 0.3 reviews its ban list against this
++// module's body.)
+ //
+-// WHAT IT MAY IMPORT: `zone` (for the name lookup), `cal` (for the range
+-// check) and `core` (`BUILD.md` B-17).
++// WHAT IT MAY IMPORT: `span` (the readings' types and their constructors:
++// `Instant`'s and `Timestamp`'s fields are sealed, so only `span` builds them),
++// `cal` (the range check's identity) and `core` (`BUILD.md` B-17, TM-247) — and
++// `zone`, for the name lookup, when cycle 0.3.2 needs it.
+ //
+-// THE ERRORS IT RAISES: none of its own — kernel errnos are FORWARDED VERBATIM
+-// (`SAFETY.md` S-5), exactly as `lib/nsys.npk` does.
++// THE ERRORS IT RAISES: none of its own. `cal`'s `ETimeValue`, relayed from
++// `timestamp_of` (H-8's range check) or raised by `timespec_ns`; and the
++// kernel's errno, FORWARDED VERBATIM (`SAFETY.md` S-5), exactly as
++// `lib/nsys.npk` does — a dynamic operand, which arms nothing. A root that
++// imports this module alone owes eleven identities, measured: `cal.ETimeValue`,
++// the floor of six and the four arithmetic arms (`SAFETY.md` S-4).
+ mod:host;
++
++use "../cal/cal.npk".ETimeValue;
++use "../core/limits.npk".NTIME_NANOS_PER_SEC;
++use "../core/limits.npk".NTIME_DURATION_NS_MAX;
++use "../span/span.npk".Instant;
++use "../span/span.npk".InstantClock;
++use "../span/span.npk".Timestamp;
++use "../span/span.npk".instant_of;
++use "../span/span.npk".timestamp_of;
++
++// The syscall numbers, x86-64 (TM-008), and the clock ids (H-4). 228 is the
++// one the compiler's runtime calls in `npk_mono_now` at the pin (`git show
++// 5fbaf4a:runtime/npkrt.ll`: `@npk_sys6(i64 228, i64 1, ...)`) and the kernel's
++// table names `clock_gettime`; 229 is in no file of the compiler's tree, and
++// the kernel's table names it `clock_getres` (`arch/x86/entry/syscalls/
++// syscall_64.tbl`, `meta/research/CURRENCY.md`), its behaviour measured at
++// cycle 0.3.0's planning: `{0 s, 1 ns}` for clocks 0, 1 and 7, and an errno in
++// the `Result` for 99. 0 and 7 are H-4's, and `probe03` measures them apart on
++// every run; 1 is the id the runtime's own call passes.
++fixed int64:SYS_CLOCK_GETTIME = 228i64;
++fixed int64:SYS_CLOCK_GETRES  = 229i64;
++fixed int64:CLOCK_REALTIME    = 0i64;
++fixed int64:CLOCK_MONOTONIC   = 1i64;
++fixed int64:CLOCK_BOOTTIME    = 7i64;
++
++// THE CLOCK `host_clock_res` IS ASKED ABOUT (H-1, TM-248). `host`'s own, three
++// variants, because `span`'s `InstantClock` has no realtime clock and must not
++// gain one: `instant_of(ns, InstantClock.Realtime)` would build an `Instant`
++// from the wall clock under the type's own name, the hazard M-3 exists for.
++#[derive(Eq, Clone, Debug, Copy)]
++pub enum:HostClock = { Realtime; Monotonic; Boottime; };
++
++// A `timespec`'s two fields as nanoseconds, or `ETimeValue` for a reading an
++// `int64` of nanoseconds cannot hold -- checked BEFORE the multiplication, so
++// nothing here traps (H-7's posture, `SAFETY.md` S-12). The range it answers
++// in is 0 ... `NTIME_DURATION_NS_MAX`; outside it -- a negative second among
++// it -- the detail is `ValueFault.Overflow`, and a nanosecond field outside one
++// second is `NanoRange`, each written here until `meta/OPEN_QUESTIONS.md` O-X8
++// says how a refusal hands its detail back. A kernel keeping its contract
++// meets none of them: the boot clock counts up from zero and a resolution is
++// a nanosecond here, so each is held by reading, not by a test (TM-249).
++func:timespec_ns = int64(int64:secs, int64:nanos) {
++    if (secs < 0i64)                  { fail ETimeValue; }     // Overflow
++    if (nanos < 0i64)                 { fail ETimeValue; }     // NanoRange
++    if (nanos >= NTIME_NANOS_PER_SEC) { fail ETimeValue; }     // NanoRange
++    int64:top = NTIME_DURATION_NS_MAX / NTIME_NANOS_PER_SEC;
++    if (secs > top)                   { fail ETimeValue; }     // Overflow
++    if (secs == top) {                                         // Overflow
++        if (nanos > (NTIME_DURATION_NS_MAX % NTIME_NANOS_PER_SEC)) { fail ETimeValue; }
++    }
++    pass (secs * NTIME_NANOS_PER_SEC) + nanos;
++};
++
++// `HOST.md` H-4, H-7 and H-8: `clock_gettime(CLOCK_REALTIME)`. The kernel's
++// errno is forwarded verbatim; the reading becomes a `Timestamp` through
++// `timestamp_of`, whose refusal of a `secs` outside the range (`YearRange`)
++// and of a `nanos` outside one second (`NanoRange`) IS H-8's range check -- an
++// unset machine clock is `ETimeValue`, not a value that fails later.
++//
++// THE TWO READS are of a 16-byte `buffer` at the offsets the `timespec` fixes,
++// slot 0 the seconds and slot 1 the nanoseconds -- in bounds by construction,
++// and through the bare pointer a `buffer` is indexed by, which no check here
++// can bound (`SAFETY.md` S-17b's fourth row). So it is said here.
++pub func:host_now_utc = Timestamp() {
++    buffer:ts = buffer_new(16i64);
++    Result<int64>:r = sys(SYS_CLOCK_GETTIME, CLOCK_REALTIME, ts.ptr);
++    if (r.is_error) { fail r.err; }
++    int64:secs = <-(#ptr_add<int64>(ts.ptr, 0i64));
++    int64:nanos = <-(#ptr_add<int64>(ts.ptr, 1i64));
++    pass (relay timestamp_of(secs, nanos));
++};
++
++// `HOST.md` H-5: the floor's `mono_now()`, not `clock_gettime` -- the clock the
++// deadline substrate reads, so an `Instant` from here and an executor deadline
++// are on one timeline by construction. `never fails`, as `mono_now` is, and
++// `raw` before `instant_of`, which is `never fails` too: the compiler asks for
++// it before a callee whose value is used.
++pub func:host_now_instant = Instant() never fails {
++    pass raw instant_of(mono_now(), InstantClock.Monotonic);
++};
++
++// `HOST.md` H-4 and H-6: `clock_gettime(CLOCK_BOOTTIME)`, which counts
++// suspend; the errno forwarded, the `timespec` turned into nanoseconds by
++// `timespec_ns`, and the `Instant` tagged `Boottime`, so `instant_since`
++// refuses it beside a `Monotonic` reading. The reads, as `host_now_utc`'s.
++pub func:host_now_boot = Instant() {
++    buffer:ts = buffer_new(16i64);
++    Result<int64>:r = sys(SYS_CLOCK_GETTIME, CLOCK_BOOTTIME, ts.ptr);
++    if (r.is_error) { fail r.err; }
++    int64:secs = <-(#ptr_add<int64>(ts.ptr, 0i64));
++    int64:nanos = <-(#ptr_add<int64>(ts.ptr, 1i64));
++    int64:ns = relay timespec_ns(secs, nanos);
++    pass raw instant_of(ns, InstantClock.Boottime);
++};
++
++// `HOST.md` H-1 and H-4: `clock_getres` on the clock `which` names -- the one
++// use of `CLOCK_MONOTONIC` here, H-5 holding for the reading -- the errno
++// forwarded, and the `timespec` through `timespec_ns` into a `Duration`. The
++// reads, as `host_now_utc`'s.
++pub func:host_clock_res = Duration(HostClock:which) {
++    int64:id = CLOCK_REALTIME;
++    pick (which) {
++        (HostClock.Realtime)  { id = CLOCK_REALTIME; },
++        (HostClock.Monotonic) { id = CLOCK_MONOTONIC; },
++        (HostClock.Boottime)  { id = CLOCK_BOOTTIME; }
++    }
++    buffer:ts = buffer_new(16i64);
++    Result<int64>:r = sys(SYS_CLOCK_GETRES, id, ts.ptr);
++    if (r.is_error) { fail r.err; }
++    int64:secs = <-(#ptr_add<int64>(ts.ptr, 0i64));
++    int64:nanos = <-(#ptr_add<int64>(ts.ptr, 1i64));
++    int64:ns = relay timespec_ns(secs, nanos);
++    pass raw duration_ns(ns);
++};
+diff --git a/src/lib.npk b/src/lib.npk
+index 9123c5bca3b53d42c3b975f5ec0f706390764b1a..6650999540532c53ab5eb4d5baab02bcdb1e487a 100644
+--- a/src/lib.npk
++++ b/src/lib.npk
+@@ -320,3 +320,23 @@ pub use "./span/span.npk".duration_days;
+ pub use "./span/span.npk".duration_weeks;
+ pub use "./span/span.npk".timestamp_add;
+ pub use "./span/span.npk".timestamp_since;
++
++// ===========================================================================
++// host -- the clocks (cycle 0.3.0). THE ONE IMPURE MODULE, AND NO NEW
++// IDENTITY.
++// ===========================================================================
++//
++// Four of the five readings `HOST.md` H-1 names, and `HostClock`, the argument
++// `host_clock_res` takes (TM-248); `host_system_zone` is cycle 0.3.2's. `host`
++// declares no error: it relays `cal`'s `ETimeValue` from `timestamp_of` --
++// H-8's range check -- and from its own `timespec_ns`, and forwards the
++// kernel's errno, which arms nothing (`SAFETY.md` S-5). So it costs what
++// importing `span` costs: 11 for `host` alone [[sweep: arms_host=11]] and 13
++// here [[sweep: arms_lib=13]], measured. This file is the only one in the
++// library that imports `host` (B-17). FIVE NAMES, each a MAJOR version to take
++// away (TM-013).
++pub use "./host/host.npk".HostClock;
++pub use "./host/host.npk".host_now_utc;
++pub use "./host/host.npk".host_now_instant;
++pub use "./host/host.npk".host_now_boot;
++pub use "./host/host.npk".host_clock_res;

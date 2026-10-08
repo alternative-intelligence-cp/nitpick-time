@@ -1,0 +1,277 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 0e7583297f5ba85a4bf962bccb976889de1f4d41..6400323ef723d03ed2fd6aeda927daf97da7c30f 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -161,7 +161,10 @@
+ # forged operand at `int64`'s ends rather than trapping; `instant_since`
+ # answers at `Duration`'s two ends exactly and refuses one nanosecond past
+ # them; and a consumer's construction of an `Instant` from a `Timestamp`'s
+-# numbers compiles and runs, which M-3 now says (TM-241 ... TM-243).
++# numbers compiles and runs, which M-3 now says (TM-241 ... TM-243). AND
++# SINCE CYCLE 0.3.0: a literal of a width past `int64` -- `3i256` -- is held to
++# §5's sites as the type's name is, where a computation of literals alone
++# narrowed a constant in silence and passed every check (TM-246).
+ #
+ # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
+ # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
+diff --git a/harness/README.md b/harness/README.md
+index ed2b7c82e9afac7ee8008a3015a0920d3aeeb745..8408334cadcc360c67b1c7ceefc7195d3466dbe5 100644
+--- a/harness/README.md
++++ b/harness/README.md
+@@ -59,9 +59,11 @@ running unlisted since cycle 0.0.6)*:
+   a code named once for two sites and three times for two (TM-210). Case 6
+   (a generator differing by one line) is **pending until 0.5** and prints as
+   pending rather than passing.
+-- **Ninety-two planted violations across the tree checks since cycle 0.2.4a**
+-  (eighty-two from cycle 0.2.3a, forty-four from cycle 0.1.5's second half,
+-  forty after its first half, twenty-three before it; 0.2.4a's ten are
++- **Ninety-four planted violations across the tree checks since cycle 0.3.0**
++  (ninety-two from cycle 0.2.4a, eighty-two from cycle 0.2.3a, forty-four from
++  cycle 0.1.5's second half, forty after its first half, twenty-three before
++  it; 0.3.0's two are `check_int128_sites`' wide literals, one in a function
++  and one at module level; 0.2.4a's ten are
+   `check_constants_named`'s six — a `core` number in `core` outside
+   `limits.npk`, a `cal` number in `core`, a bound spelled by its value, the
+   folded minimum by its value, a small bound left to review, and an
+diff --git a/harness/checks.py b/harness/checks.py
+index acd6f55940c85d167d381c5be67ef64227618848..145bd10e72ecd8c55588297b7faac044983a0431 100644
+--- a/harness/checks.py
++++ b/harness/checks.py
+@@ -2088,10 +2088,39 @@ INT128_DOC = "meta/specs/SPAN_MODEL.md"
+ # narrowed by a bare `=>! int64` compiled, ran, and passed every tree check,
+ # measured; the same function in `int128` was red. `§5`'s column keeps its
+ # name: `int128` is the one width this library computes in.
+-# (`(?<![A-Za-z0-9_])int128(?![A-Za-z0-9_])` until then.)
++# (`(?<![A-Za-z0-9_])int128(?![A-Za-z0-9_])` until then.) And since cycle
++# 0.3.0 a literal of one of those widths too -- `_WIDE_LITERAL`, below (TM-246).
+ _INT128 = re.compile(r"(?<![A-Za-z0-9_])(?:u?int(?:128|256|512|1024|2048|4096)"
+                      r"|tbb(?:128|256))(?![A-Za-z0-9_])")
+ _SITE_NAME = re.compile(r"`([A-Za-z_][A-Za-z0-9_]*)")
++# AND A LITERAL'S WIDTH, AS A TYPE'S NAME (cycle 0.3.0, TM-246). A numeric
++# literal whose width suffix is one of the fourteen -- `3i256`, `7u128` -- is a
++# site of the function it stands in, exactly as the type's name is, because a
++# computation of literals alone widens with no type named: `(3i256 * 5i256)
++# =>! int64` compiled, ran, narrowed a constant to its low 64 bits in silence,
++# and passed this check, measured at compiler `5fbaf4a`. A runtime value cannot
++# widen so -- an `int64` beside an `int256` literal is `NITPICK-TYPE-007`, "a
++# widening would decide which width this operation happens in, and that
++# decision must be visible in the source rather than following from the
++# operands" -- so the literal was the whole gap.
++# The width is read off `literals`' tokens, the reader `check_constants_named`
++# trusts (TM-231), so a width in a comment, a string or a character literal is
++# nothing, as it is to the compiler; and `bytes_put_int`'s `0i128` is a hit in
++# a function §5 marks. (Until then this read the type's name alone: TESTING.md
++# §2's row said "comments and literals are blanked first".)
++_WIDE_LITERAL = frozenset(("i128", "i256", "i512", "i1024", "i2048", "i4096",
++                           "u128", "u256", "u512", "u1024", "u2048", "u4096",
++                           "tbb128", "tbb256"))
++
++
++def _literal_width(tok):
++    """A numeric literal's width suffix as the lexer's `strip_type_suffix`
++    strips it -- the longest of the thirty-seven `num_width_of` knows, with
++    something left before it -- or '' for none."""
++    for n in range(6, 1, -1):
++        if len(tok) > n and tok[-n:] in _WIDTHS:
++            return tok[-n:]
++    return ""
+ 
+ 
+ def int128_sites(tree):
+@@ -2147,8 +2176,9 @@ def int128_sites(tree):
+ 
+ 
+ def check_int128_sites(tree, **_):
+-    """`int128` -- and every integer wider than `int64` -- in `src/` at exactly
+-    the sites `SPAN_MODEL.md` §5 marks."""
++    """`int128` -- and every integer wider than `int64`, a literal of one of
++    those widths included -- in `src/` at exactly the sites `SPAN_MODEL.md` §5
++    marks."""
+     sites, problems = int128_sites(tree)
+     problems = list(problems)
+     files = src_files(tree)
+@@ -2156,11 +2186,15 @@ def check_int128_sites(tree, **_):
+     declared = {f[2] for f in funcs}
+     holders, seen = {}, 0
+     for rel in files:
+-        code = blank_code(lexical.read(os.path.join(tree, rel)))
++        text = lexical.read(os.path.join(tree, rel))
++        code = blank_code(text)
+         mine = [(f[5], f[6], f[2]) for f in funcs if f[0] == rel]
+-        for m in _INT128.finditer(code):
++        hits = [(m.start(), m.group(0)) for m in _INT128.finditer(code)]
++        hits += [(off, tok) for off, tok, _v in literals(text)
++                 if _literal_width(tok) in _WIDE_LITERAL]
++        for start, what in sorted(hits):
+             seen += 1
+-            owner = next((n for s, e, n in mine if s <= m.start() < e), None)
++            owner = next((n for s, e, n in mine if s <= start < e), None)
+             if owner is None:
+                 problems.append(
+                     "%s:%d spells `%s` outside every function. A site is a "
+@@ -2168,7 +2202,7 @@ def check_int128_sites(tree, **_):
+                     "module-level wide value is a wide value nobody's "
+                     "obligation names: move it into the function that needs "
+                     "it, and mark that function's row."
+-                    % (rel, _line(code, m.start()), m.group(0)))
++                    % (rel, _line(code, start), what))
+             elif owner not in sites:
+                 problems.append(
+                     "%s:%d spells `%s` in `%s`, and §5's table marks no "
+@@ -2176,7 +2210,7 @@ def check_int128_sites(tree, **_):
+                     "used where nobody reasoned about it is the thing N-20 "
+                     "forbids: compute in `int64` with its own range check, or "
+                     "mark the row -- with its answer -- in the same commit."
+-                    % (rel, _line(code, m.start()), m.group(0), owner))
++                    % (rel, _line(code, start), what, owner))
+             else:
+                 holders[owner] = holders.get(owner, 0) + 1
+     unwritten = sorted(n for n in sites if n not in declared)
+diff --git a/harness/selfcheck.py b/harness/selfcheck.py
+index b7d0f0723ae64125956110f985eb70de820e8a4b..66a107c8a1b6da34ad94ae8d1b40dddef1c85c18 100644
+--- a/harness/selfcheck.py
++++ b/harness/selfcheck.py
+@@ -1466,6 +1466,26 @@ PLANTED = [
+      [_span5((("`g`", "**yes**"),)),
+       ("src/span/span.npk", "mod:span;\n" + _wide("g").replace("int128", "uint128"))],
+      "spells `uint128` in `g`"),
++    # A WIDE LITERAL WHERE §5 MARKS NO SITE (cycle 0.3.0, TM-246): a
++    # computation of literals alone widens with no type's name and narrows in
++    # silence -- `(3i256 * 5i256) =>! int64` compiles and runs at the pin -- so
++    # the check reads a literal's width as it reads a type's name. The first
++    # row is the function unmarked beside the same function marked; the second
++    # a wide literal at module level, beside the same constant in `int64`.
++    (checks_mod.check_int128_sites,
++     [_span5((("`f`", "**yes**"),)),
++      ("src/span/span.npk", "mod:span;\nfunc:g = int64() never fails {\n"
++                            "    pass (3i256 * 5i256) =>! int64;\n};\n")],
++     [_span5((("`g`", "**yes**"),)),
++      ("src/span/span.npk", "mod:span;\nfunc:g = int64() never fails {\n"
++                            "    pass (3i256 * 5i256) =>! int64;\n};\n")],
++     "spells `3i256` in `g`"),
++    (checks_mod.check_int128_sites,
++     [_span5((("`g`", "**yes**"),)),
++      ("src/span/span.npk", "mod:span;\nfixed int64:K = 7u128 =>! int64;\n" + _wide("g"))],
++     [_span5((("`g`", "**yes**"),)),
++      ("src/span/span.npk", "mod:span;\nfixed int64:K = 7i64;\n" + _wide("g"))],
++     "spells `7u128` outside every function"),
+     # A DIGIT SEPARATOR -- the dispatch's measured case, `86_400i64`.
+     (checks_mod.check_constants_named, _div("86_400i64"), _div("86_401i64"),
+      "belongs to module `core`"),
+diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
+index 10df3fef112a4d033fe16b0b143ca1180e2ee9e6..f7192c2f4658838d206ad7e2425bc33df93b0684 100644
+--- a/meta/DECISIONS.md
++++ b/meta/DECISIONS.md
+@@ -7441,6 +7441,11 @@ naming the gap in S-22** — the parsers that would meet the gap are the next
+ code this check exists for (TM-204).
+ 
+ ### TM-240 — `check_int128_sites` reads every integer wider than `int64`, not `int128` alone; `TESTING.md` V-1 says what the check guards, and what no check does
++> **TM-246 (@@DATE@@, cycle 0.3.0) reads one clause of it:** *"The check reads
++> all fourteen"* — by a type's name; since TM-246 a numeric literal whose width
++> suffix is one of the fourteen as well, because `(3i256 * 5i256) =>! int64`, a
++> computation of literals alone, named no type and passed it (the item cycle
++> 0.2's close deferred).
+ 
+ **2026-10-02, cycle 0.2.4a (the plan's PD-85) — the cycle audit's D1. Restates
+ `TESTING.md` §2's row and V-1; dates `SPAN_MODEL.md` N-20; reads one clause of
+@@ -7710,3 +7715,56 @@ form there — an item cycle 0.2's close writes into cycle 0.3's README.*
+ *Alternatives declined:* **the two sites respelled in the statement form now** —
+ refused at our pin; **the note left as the language's rule** — a defect recorded
+ as a rule is a rule nobody re-measures.
++
++# Cycle 0.3.0 — the clocks, ratified @@DATE@@
++
++Four decisions, drafted at planning (`meta/roadmap/0.3/0.3.0.md` §2, PD-91 …
++PD-94, in that order), accepted by the orchestrator on 2026-10-05 and each
++measured at compiler `5fbaf4a`: the first is the instrument cycle 0.2's close
++handed on (`meta/roadmap/done/0.2/0.2.4.md`, its item (a) after the audit),
++recorded with a commit of its own; the other three are the clocks.
++
++### TM-246 — `check_int128_sites` reads a numeric literal's width suffix as it reads a type's name: a literal of one of the fourteen widths past `int64` is a site of the function it stands in
++
++**@@DATE@@, cycle 0.3.0 (the plan's PD-91) — the item cycle 0.2's close
++deferred, found by cycle 0.2.4a's verifier after the cycle audit. Restates
++`TESTING.md` §2's row; dates V-1 and `SPAN_MODEL.md` N-20; reads one clause of
++TM-240.**
++
++**What was found** (`0.3.0.md` §1.2). In a consumer, `(3i256 * 5i256) =>!
++int64` compiles and runs at the pin, and `(10000000000i256 * 10000000000i256)
++=>! int64` is 7 766 279 631 452 241 920 on both legs — 10²⁰ narrowed to its
++low 64 bits, a constant wrong in silence. Planted in a copy's `span.npk` as a
++function §5 marks no row for, it compiles in `span` and every live check is
++silent, `check_int128_sites` among them: TM-240's check read a TYPE's name,
++and TESTING.md's row said *"Comments and literals are blanked first"*. A
++runtime value cannot widen so — an `int64` beside an `int256` literal is
++`NITPICK-TYPE-007`, *"a widening would decide which width this operation
++happens in, and that decision must be visible in the source rather than
++following from the operands"* — so a computation of literals alone is the
++whole gap. `src/`'s 235 numeric literals
++hold one wide width, `0i128`, in `bytes_put_int`'s loop measure, a function §5
++marks.
++
++**The decision.** *The check reads every numeric literal in `src/` through
++`checks.literals`, the reader `check_constants_named` trusts (TM-231), and a
++literal whose width suffix is one of the fourteen — `i128` … `i4096`, `u128` …
++`u4096`, `tbb128` and `tbb256`, the suffix read as the compiler's
++`strip_type_suffix` reads it — counts as a site of the function it stands in,
++exactly as the type's name does: outside every function §5 marks it is a
++finding, and inside one it keeps the mark live. Comments, strings and
++characters are still blanked first, so a width in prose is nothing. TESTING.md
++§2's row is restated, with a dated note quoting what it read; V-1 and N-20 are
++dated. Two plants: `(3i256 * 5i256) =>! int64` in a function §5 does not mark,
++beside the same function marked; and `7u128` at module level, beside `7i64`.
++Over the tree the check stays silent, its headline's count one higher — the
++`0i128` — and against the check before it both plants pass, and the first's
++control, a marked function whose one wide item is a literal, reads as a stale
++mark.*
++
++*Alternatives declined:* **V-1 narrowed to intermediates whose type is named**
++— a check narrower than its rule's reason, the shape this repository keeps
++finding; **the IR's wide arithmetic read instead** — every `i256` operation
++the emission holds, but a claim about the lowering and the optimiser, which may
++fold a literal product away; **every wide literal a finding** —
++`bytes_put_int`'s `0i128` is a marked site's correct literal.
+diff --git a/meta/specs/SPAN_MODEL.md b/meta/specs/SPAN_MODEL.md
+index c5dfcdfed5c2d047dd92c7da9e34c1585ec161b4..3bd7445ff5d61becf4f1933d556a2a0baf7cb92b 100644
+--- a/meta/specs/SPAN_MODEL.md
++++ b/meta/specs/SPAN_MODEL.md
+@@ -245,6 +245,13 @@ narrowed by a bare `=>!` compiled, ran and passed every tree check, measured,
+ until `check_int128_sites` read all fourteen. The column keeps its name:
+ `int128` is the one width this library computes in.)*
+ 
++*(Cycle 0.3.0, TM-246: and a numeric literal whose width suffix is one of those
++fourteen — `3i256`, `7u128` — is a site as the type's name is. A computation of
++literals alone widens with no type named, and `(3i256 * 5i256) =>! int64`
++narrowed a constant to its low 64 bits in silence and passed the check until
++then. `bytes_put_int`'s `0i128` is `src/`'s one such literal, in a function
++the table marks.)*
++
+ **Rule N-20b (TM-105) — the range check at each of those sites is mandatory
+ library code, because the language provides no checked narrowing.** Measured at
+ cycle 0.0.0: `=>!` at a value that does not fit **truncates silently** (no trap,
+diff --git a/meta/specs/TESTING.md b/meta/specs/TESTING.md
+index 679aa2a32827cb20a1aa345c642d1287b23fdb76..427ffa34eab1959be5ff8924dacb7cf1c048e785 100644
+--- a/meta/specs/TESTING.md
++++ b/meta/specs/TESTING.md
+@@ -43,7 +43,7 @@ them found something on its first run.
+ | `check_failsafe_arms` | the generated per-module arm list against programs that import each module and compile their `failsafe` |
+ | `check_layering` | `BUILD.md` §6's diagram against `src/` — its **edges** (every `use`) and its **nodes** (every layer the diagram names holds at least one module). The node half is D1's repair: cycle 0.0.1's acceptance claimed `run.py` "asserts the count is at least 7" and no such assertion was in the tree, so *"a directory whose placeholder was deleted rather than replaced is invisible to the sweep"* was live for four subcycles inside a ticked box |
+ | `check_no_owning_fields` | **no `fixed` table's element owns — itself, or through a field at any depth** (`SAFETY.md` S-19b). **It could not see a SINGLE-LINE struct until cycle 0.0.6 and both of this repository's structs are one** (TM-138), so neither type's real fields had ever been examined while the check reported `0 of 0`; the self-check now plants the same violation in both spellings. **And until cycle 0.1.3b it could not see an owning ELEMENT (`fixed string[2]`) or an owner two structs down, and it matched owners by substring**, so a field named `string_off` read as one — all three found by re-measuring the premise the check was written on, which was false (TM-177), and all three planted now |
+-| `check_int128_sites` (TM-230) | **`int128` — and every other integer wider than `int64`, fourteen types, since cycle 0.2.4a (TM-240) — in `src/` only inside a function `SPAN_MODEL.md` §5's table marks yes in its `int128` column**, and every marked function `src/` declares spells one — N-20, as TM-229 restates it; a marked function not written yet is named on every run, not failed. Comments and literals are blanked first, so the type in prose is nothing. Live since cycle 0.2.3a. *(It read "`int128` appears at exactly the three sites `SPAN_MODEL.md` §5 names, and nowhere else" — a count §5's table did not match, `OPEN_QUESTIONS.md` O-X6, so it could not be written until the question was answered. And until cycle 0.2.4a it read `int128` alone, so an `int256` or a `uint128` intermediate narrowed by a bare `=>!` passed it — the cycle audit's D1.)* |
++| `check_int128_sites` (TM-230) | **`int128` — and every other integer wider than `int64`, fourteen types, since cycle 0.2.4a (TM-240) — in `src/` only inside a function `SPAN_MODEL.md` §5's table marks yes in its `int128` column**, and every marked function `src/` declares spells one — N-20, as TM-229 restates it; a marked function not written yet is named on every run, not failed. **A numeric literal of one of those widths — `3i256`, `7u128` — is read as the type's name is, since cycle 0.3.0 (TM-246)**: comments, strings and characters are blanked first, so the type in prose is nothing, and a numeric literal is read for its width suffix. Live since cycle 0.2.3a. *(It read "`int128` appears at exactly the three sites `SPAN_MODEL.md` §5 names, and nowhere else" — a count §5's table did not match, `OPEN_QUESTIONS.md` O-X6, so it could not be written until the question was answered. And until cycle 0.2.4a it read `int128` alone, so an `int256` or a `uint128` intermediate narrowed by a bare `=>!` passed it — the cycle audit's D1. And until cycle 0.3.0 it read "Comments and literals are blanked first, so the type in prose is nothing", and so the check did: a literal's width was never read, and `(3i256 * 5i256) =>! int64` — a computation of literals alone, which widens with no type named — passed it, found by cycle 0.2.4a's verifier and deferred by cycle 0.2's close.)* |
+ | `check_constants_named` | **no bound outside `src/core/limits.npk` — declared there, and spelled nowhere else in `src/` by its value** (TM-238): the value of every bound that file declares, its initializer evaluated, is held to it, but a value in `nitpick-regex`'s `_SMALL` set (its RX-062), which review reads and the headline names — today `NTIME_PARSE_MAX`'s 128; and **no magic 86400, 146097, 719468 or 1000000000 outside its owner's place** — `core`'s is `src/core/limits.npk` alone and `cal`'s is `src/cal/` (TM-238), `core` the owner of 86400 since cycle 0.2.2 (TM-223) and of 1000000000 since 0.2.3a (TM-232), "the algorithm module" for all four until 0.2.2. **A literal is read as the compiler's lexer reads it, and held to the map by its VALUE** (TM-231): every base suffix, `_` wherever it stands, every width, a character literal's code point, a bound after `..` — and a float, or a token the lexer refuses, is reported by its text, never passed. *(Until cycle 0.2.3a it read four or more decimal digits as text, and sixteen spellings of the four numbers passed it, measured. And until cycle 0.2.4a it read a bound as a declaration alone, so `253402300799i64` in place of `NTIME_SECS_MAX` passed it, and held a copy to the module `core`, so `86400i64` in `src/core/bytes.npk` passed it — the cycle audit's C8 and C3.)* |
+ | `check_literal_divisors` (TM-163) | **every `/`, `%`, `/=` and `%=` in `src/cal/` against `CALENDAR.md` C-11**: the divisor must be a positive decimal integer literal with its width suffix, standing alone — nothing after it that binds tighter than `/`, since `256i64 =>! uint8` is 0 — so D-007's divide-by-zero and `MIN / −1` traps are unreachable by construction. It reads code with comments AND strings blanked, because every `use` path in `cal.npk` holds a `/`; `+%`, `-%` and `*%` are the wrapping operators and not divisions. It is C-11's list of divisors, which a list in the rule's text could not be: the one C-11 carried was short by eight the day `civil_from_days` arrived. *(Until cycle 0.1.5 this row said its docstring's limits — block comments, character literals, raw strings and templates "not modelled", `src/cal/` having none — and the docstring called the gap the safe direction. Measured at 0.1.5's planning, a `'"'`, a template's `//` and a lone CR in a `//` comment each HID a division, and a `//` inside a `/* */` hid a clock call and a declaration from the checks beside this one; since then it reads through V-1k's reader, and each shape is planted.)* |
+ | `check_no_format_string` | no function anywhere takes a pattern `string` and interprets it — `FORMAT_MODEL.md` F-5's rule, made checkable. **Pending until cycle 0.4**: nothing enforces F-5 before then, and V-1a's table says why |
+@@ -70,6 +70,12 @@ or `*` traps (D-210) — and on `SAFETY.md` S-15b's range check before every
+ wrapping operators `+%`, `-%` and `*%` are in no file of `src/`, measured at
+ 0.2.4a's planning, which no check holds either.)*
+ 
++*(Cycle 0.3.0, TM-246: an intermediate wider than `int64` includes one that a
++literal's width makes wide — `(3i256 * 5i256)` — which the check read by a
++type's name alone until then, so a computation of literals alone narrowed a
++constant in silence and passed it. A runtime value cannot widen without naming
++its type: an `int64` beside an `int256` literal is `NITPICK-TYPE-007`.)*
++
+ **Rule V-1a (TM-126) — a check runs from the cycle it can be written, and its
+ pending siblings are PRINTED.** The table above has **20**
+ <!-- [[sweep: family_rows=20]] --> rows: **17 are live**

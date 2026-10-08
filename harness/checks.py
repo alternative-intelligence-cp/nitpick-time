@@ -1285,8 +1285,14 @@ def check_raw_index(tree, **_):
 # `strip_comments` above for the other half of that argument, which this tree
 # needed on its first run. The list is every bare-name builtin of the pinned
 # compiler -- fifty-seven at `5fbaf4a`, its `src/frontend/builtins.npk`,
-# generated from `BUILTIN_REFERENCE.md`'s marked rows -- and every public
-# function of its prelude, that reaches past the program's own memory. What
+# generated from `BUILTIN_REFERENCE.md`'s marked rows -- and every SYNCHRONOUS
+# public function of its prelude, that reaches past the program's own memory.
+# The asynchronous prelude names that do and are not on it are named in
+# `check_purity`'s docstring below, with where each is read: a call of one is
+# legal only in an `async func`, which `check_call_edges` refuses in `src/`
+# unless it is generic (TM-252's dated note). Until 0.3.1's verification this
+# said "every public function of its prelude", which three `pub async` ones
+# off the list falsify. What
 # it leaves answers from its arguments and what they point at: the allocator,
 # the string floor, `buffer_new`, `to_cstring`, `atomic_from_ptr`, and the
 # site tables' `site_line` and `site_path`. Until then it was cycle 0.0.3's
@@ -1355,14 +1361,25 @@ def check_purity(tree, **_):
     reached through a name it does not know -- an alias, or a helper in a file
     it is not scanning. The defence against that is `check_host_isolation` plus
     B-17's layering, which together make `host` a leaf nothing may import.
-    Since cycle 0.3.1 the list holds every bare-name builtin and public
-    module-level prelude function at the pin that reaches past the program's
-    own memory (TM-252). A prelude METHOD that does is not on the list --
-    `ByteReader.seek`, through `sys(8i64, ...)` -- and such a method is
-    callable only from an `async func` (`NITPICK-TYPE-043` anywhere else),
-    whose body `check_call_edges` refuses by its declared-function rule: the
-    emission names that body `npk.resume.<module>.<name>`, and defines no
-    `npk.<module>.<name>`. What else is left is a name a later pin adds -- the
+    Since cycle 0.3.1 the list holds every bare-name builtin and every
+    SYNCHRONOUS public module-level prelude function at the pin that reaches
+    past the program's own memory (TM-252). The ASYNCHRONOUS prelude names
+    that do and are not on the list are the functions `text_read_line`,
+    `text_write_str` and `text_write_line` -- each reaches `mono_now()`, the
+    first itself and the other two through the private `tw_write_all` -- and
+    the methods `ByteReader.seek`, through `sys(8i64, ...)`, and
+    `LineBufWriter.flush`, through `tw_write_all`. Each is callable only from
+    an `async func` (`NITPICK-TYPE-043` anywhere else), whose body
+    `check_call_edges` refuses by its declared-function rule: the emission
+    names that body `npk.resume.<module>.<name>`, and defines no
+    `npk.<module>.<name>`. (Until 0.3.1's verification this said "every
+    bare-name builtin and public module-level prelude function", and named
+    `ByteReader.seek` alone.) What a generic reaches through its type argument
+    is that argument's: `text_flush` and `TextWriter.flush` reach their
+    writer's `flush` -- `LineBufWriter.flush` at the writer `std_out()` builds
+    -- and `list_truncate` reaches its element's drop, which closes a
+    descriptor the element owns; a drop calls no name, and `check_call_edges`
+    follows the drop glue. What else is left is a name a later pin adds -- the
     adoption re-reads the builtin table and the prelude against this list --
     and an alias: a banned builtin bound to a function-typed local, or passed
     as an argument, is admitted by the frontend and refused by the emitter at
@@ -1370,6 +1387,17 @@ def check_purity(tree, **_):
     "a defect in the compiler"; a function-typed local named after one is
     `NITPICK-RESOLVE-001` (its D-296). Both are `check_call_edges`' to read: it
     follows every call the emission holds, and refuses one through a value.
+
+    AND EACH OF THOSE IS `check_call_edges`' TO READ ONLY WHERE THE EMISSION
+    HOLDS THE FUNCTION. A GENERIC function nobody instantiates in the umbrella
+    is in no emission and outside its declared-function rule, so this check is
+    its one reading, and reads spellings: a generic `async func` awaiting
+    `text_read_line`, a generic function that lets a `ByteReader` die, and one
+    that calls `mono_now` through a function-typed local each compile in the
+    umbrella and pass every check (measured at 0.3.1's verification, in
+    copies; the alias is `NITPICK-EMIT-002` only where it is emitted). Dormant:
+    `src/`'s generic functions are `src/core/vec.npk`'s nine, synchronous,
+    calling the allocator alone.
     """
     files = [f for f in src_files(tree) if not f.startswith(HOST_DIR)]
     total = len(src_files(tree))
@@ -1426,9 +1454,14 @@ def check_host_isolation(tree, **_):
     or any name `src/host/` makes public (TM-253).
 
     The second half of the purity boundary. `check_purity` catches a module
-    that reaches the kernel ITSELF; this catches one that reaches it through
-    `host`. Together with B-17's layering rule -- `host` is a leaf -- they make
-    the impure module unreachable rather than merely discouraged.
+    that reaches the kernel ITSELF, by a name on its list; this catches one
+    that reaches it through `host`. Together with B-17's layering rule --
+    `host` is a leaf -- they make the impure module unreachable rather than
+    merely discouraged. (What reaches the kernel by no name on the list -- an
+    asynchronous prelude name, a drop, an alias -- is `check_call_edges`' to
+    read where the emission holds the function; in a generic one nobody
+    instantiates, no check reads it. `check_purity`'s docstring names each.
+    "By a name on its list" was added at 0.3.1's verification.)
 
     `src/lib.npk` is exempt because it is the umbrella: it re-exports `host`'s
     public names -- four of H-1's five functions since cycle 0.3.0, and

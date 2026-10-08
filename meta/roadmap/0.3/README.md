@@ -74,7 +74,7 @@ questions handed on, which share one reader of the library's emission, and
 the two ban lists' decisions. The four above keep their words.)*
 - [x] **O-X9**: the call-edge scan — every call a function of `src/` outside `src/host/` makes, read from `npkc`'s emission of the umbrella and held to a reviewed allowlist (PD-95) — **TM-250**, `check_call_edges`: eight plants caught and eight controls silent; over the tree 0 findings, `src/host/` reaching `npk_mono_now` and `npk_sys6`, every non-generic function `src/` declares in the emission
 - [x] **O-X11**: the wide values — every integer wider than `i64` in that emission held to §5's sites, spelled or not (PD-96) — **TM-251**, `check_wide_types`: three plants caught; over the tree exactly §5's three marked functions hold one
-- [x] `check_purity`'s list: every builtin and prelude function at the pin that reaches past the program's own memory, matched as a call with an identifier boundary on its left (PD-97) — **TM-252**: forty-three names in seven classes; five plants red against the six names before it and caught after, and `reopen(` a finding before and none after
+- [x] `check_purity`'s list: every builtin and every synchronous public prelude function at the pin that reaches past the program's own memory, matched as a call with an identifier boundary on its left (PD-97) — **TM-252**: forty-three names in seven classes; five plants red against the six names before it and caught after, and `reopen(` a finding before and none after *(corrected 2026-10-08 by the subcycle's verification, where the item said "every builtin and prelude function": the asynchronous prelude names that do and are not on the list — `text_read_line`, `text_write_str`, `text_write_line`, `ByteReader.seek` and `LineBufWriter.flush` — are callable only from an `async func`, which `check_call_edges` refuses in `src/` unless it is generic, a hole dormant while `src/` has no asynchronous function; TM-252's dated note)*
 - [x] `check_host_isolation`'s: every name `src/host/` makes public, `HostClock` among them, beside the `host_` prefix (PD-98) — **TM-253**: its plant unseen before and caught after
 
 ### 0.3.2 — the system zone
@@ -124,7 +124,9 @@ unchanged tree at both pins before it changes anything, as 0.1.0b, 0.1.4c and
 6. **The compiler's builtin table and prelude re-read against
    `check_purity`'s list** (TM-252) — `src/frontend/builtins.npk` and
    `src/prelude/prelude.npk` at the new pin: a name that reaches past the
-   program's own memory joins the list, and a runtime symbol
+   program's own memory joins the list *(read with TM-252's dated note of
+   2026-10-08: the list holds every synchronous one, and the note names the
+   asynchronous ones that are not on it)*, and a runtime symbol
    `check_call_edges` finds unreviewed joins `CALL_EDGE_ALLOW` or is refused,
    in the adoption's own commit (TM-250). And the emission's names —
    `npk.<module>.<name>` at `5fbaf4a` — read again: `check_call_edges` holds

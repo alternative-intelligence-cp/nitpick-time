@@ -325,6 +325,12 @@ fields carry it at no cost to any consumer).
 > builtin and public prelude function at the pin that reaches past the
 > program's own memory — and TM-250 reads the rule a second way, from the
 > library's emission. The text below is left exactly as written.
+> *(Corrected 2026-10-08 by cycle 0.3.1's verification: every bare-name
+> builtin and every SYNCHRONOUS public prelude function that does. The
+> asynchronous prelude names that do and are not on the list are named in
+> TM-252's dated note, with where each is read: a call of one is legal only
+> in an `async func`, which `check_call_edges` refuses in `src/` unless it is
+> generic.)*
 **2026-09-03.** Every function in `ntime` outside `src/host/` is a pure
 function of its arguments — no syscall, no clock, no environment read, no file
 read. `src/host/` contains exactly five functions and nothing else calls them.
@@ -8064,6 +8070,41 @@ subcycle** — the reader is O-X9's, built here, and the check over it is a few
 lines.
 
 ### TM-252 — `check_purity`'s ban list, reviewed against the pinned compiler: every bare-name builtin and prelude function that reaches past the program's own memory, matched as a whole name called — forty-three where cycle 0.0.3 guessed six
+> **Corrected 2026-10-08 at cycle 0.3.1, by its verification — a dated note, no
+> new decision.** Its *"every bare-name builtin and every public prelude
+> function at the pin that reaches past the program's own memory"* holds of
+> every bare-name builtin and every SYNCHRONOUS public module-level prelude
+> function, and not of the asynchronous ones. Three `pub async` prelude
+> functions reach `mono_now()` and are not among the forty-three:
+> `text_read_line`, which calls it itself, and `text_write_str` and
+> `text_write_line`, through the private `tw_write_all`; and two prelude
+> methods that reach past the program's own memory are not on the list
+> either, `ByteReader.seek`, through `sys(8i64, …)`, and
+> `LineBufWriter.flush`, through `tw_write_all`. What a generic reaches
+> through its type argument is that argument's: `text_flush` and
+> `TextWriter.flush` reach their writer's `flush`, `LineBufWriter.flush` at
+> the writer `std_out()` builds, and `list_truncate` its element's drop,
+> which closes a descriptor the element owns — a drop calls no name, and
+> `check_call_edges` follows the drop glue. **Where the boundary holds, and
+> where nothing reads it**: each of the five is callable only from an `async
+> func`, a synchronous call being `NITPICK-TYPE-043`, and a non-generic `async
+> func` in `src/` turns `check_call_edges` RED by its declared-function rule,
+> since the emission names its body `npk.resume.<module>.<name>` — measured,
+> one in a copy's `src/cal/` awaiting `text_read_line` passes `check_purity`
+> and is `check_call_edges`' one finding, as each of the other four is. But a
+> GENERIC function nobody instantiates in the umbrella is in no emission and
+> outside that rule, and `check_purity` reads only its spellings: a generic
+> `async func` awaiting `text_read_line`, a generic function that lets a
+> `ByteReader` die, and one that calls `mono_now` through a function-typed
+> local each compile in the umbrella and pass every check, measured. That
+> hole is dormant — `src/`'s generic functions are `src/core/vec.npk`'s nine,
+> synchronous, calling the allocator alone — and older than this decision;
+> what should read it is not decided here. What was found below names eight
+> public prelude functions that reach the kernel; the three `pub async` ones
+> above are the rest. The forty-three names stay, and no check moves. The
+> three were found by 0.3.1's verifier, the rest by the fix it asked for;
+> `meta/roadmap/0.3/0.3.1.md`'s addendum has the measurements. The decision
+> stands as decided.
 
 **2026-10-08, cycle 0.3.1 (the plan's PD-97). Supersedes TM-018 in its list of
 names; dates `SAFETY.md` S-10 and S-10b; restates `TESTING.md` §2's row; the

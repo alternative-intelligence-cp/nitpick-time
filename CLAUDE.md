@@ -19,13 +19,21 @@ every run, and the `Duration` interop — after cycle 0.1, the civil calendar,
 CLOSED 2026-09-26 and archived at `meta/roadmap/done/0.1/`.**
 
 **After cycle 0.3.1: the purity boundary's instruments.** `check_purity`'s ban
-list is the review's (TM-252): every bare-name builtin and public prelude
-function of the pinned compiler that reaches past the program's own memory —
-forty-three names in seven classes, where cycle 0.0.3 guessed six, which a
-function calling `hardware_concurrency()`, `read_stdin()`, `chain_depth()`,
-`arena_make()` or the prelude's `std_out()` passed — each matched as a whole
-name called, so a pure `reopen` is no call of `open`. `check_host_isolation`
-reads every name `src/host/` makes public, `HostClock` among them (TM-253).
+list is the review's (TM-252): every bare-name builtin and every synchronous
+public prelude function of the pinned compiler that reaches past the
+program's own memory — forty-three names in seven classes, where cycle 0.0.3
+guessed six, which a function calling `hardware_concurrency()`,
+`read_stdin()`, `chain_depth()`, `arena_make()` or the prelude's `std_out()`
+passed — each matched as a whole name called, so a pure `reopen` is no call
+of `open`. *(The asynchronous prelude names that do and are not on it — the
+functions `text_read_line`, `text_write_str` and `text_write_line`, and the
+methods `ByteReader.seek` and `LineBufWriter.flush` — are callable only from
+an `async func`, which `check_call_edges` refuses in `src/` unless it is
+generic, a hole that is dormant while `src/` has no asynchronous function:
+TM-252's dated note, from the subcycle's verification, 2026-10-08, where this
+said "every bare-name builtin and public prelude function".)*
+`check_host_isolation` reads every name `src/host/` makes public, `HostClock`
+among them (TM-253).
 And **the library's emission is read beside the spelling checks**, before
 `opt`: `check_call_edges` follows every call a function of `src/` outside
 `src/host/` makes in `npkc`'s output for the umbrella, through the prelude,

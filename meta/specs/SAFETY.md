@@ -358,13 +358,22 @@ outside `src/host/` for `sys(`, `mono_now`, `environ`, `read_file`, `open` and
 it, and this is the check.
 
 *(Cycle 0.3.1, TM-252: the list is the review's — every bare-name builtin
-and public prelude function at the pin that reaches past the program's own
-memory, forty-three names in seven classes, each matched as a call with no
-identifier character on its left; `TESTING.md` §2's row lists them. The six
-above were cycle 0.0.3's guess, and a function calling
+and every synchronous public prelude function at the pin that reaches past
+the program's own memory, forty-three names in seven classes, each matched as
+a call with no identifier character on its left; `TESTING.md` §2's row lists
+them. The six above were cycle 0.0.3's guess, and a function calling
 `hardware_concurrency()` or the prelude's `std_out()` passed them. And since
 TM-250 a second reading holds the rule from the library's emission,
-`check_call_edges`.)*
+`check_call_edges`.)* *(Corrected 2026-10-08 by cycle 0.3.1's verification,
+where the note said "every bare-name builtin and public prelude function":
+the prelude's asynchronous `text_read_line`, `text_write_str` and
+`text_write_line` reach the clock and are not on the list, nor are the
+methods `ByteReader.seek` and `LineBufWriter.flush`. Each is callable only
+from an `async func` — a synchronous call is `NITPICK-TYPE-043` — and a
+non-generic `async func` in `src/` is a finding of `check_call_edges`; a
+generic one nobody instantiates is in no emission, and passes every check,
+measured — dormant, since no function of `src/` is asynchronous. TM-252's
+dated note has the rest.)*
 
 **Rule S-10b (TM-126) — it is a SOURCE-LEVEL check, it is LIVE, and it has been
 SEEN TO FAIL.** Three separate claims, and each was missing:

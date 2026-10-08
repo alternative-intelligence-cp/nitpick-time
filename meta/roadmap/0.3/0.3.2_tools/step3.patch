@@ -1,0 +1,1473 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 057921c1dc0d27cccb5b5f267a1c7069d703e763..64b03e8644e64b8e0523f74443a9ca265f4d4429 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -49,9 +49,10 @@
+ # 0.2.1 `Timestamp` and its constructor, since 0.2.2 the two conversions
+ # between a `Timestamp` and its civil reading, and since 0.2.3 the `Duration`
+ # interop -- and `src/host/` since 0.3.0, the clocks --
+-# re-exported together as 81 public names [[sweep: lib_reexports=81]],
+-# so this IS evidence about behaviour, of the 134 units the runner reports at
+-# compiler `5fbaf4a` since cycle 0.3.0 (133 at cycles 0.2.4b and 0.2.4, 131 at cycles 0.2.3 and 0.2.4a, 126 at cycles 0.2.2 and 0.2.3a, 122 at cycle 0.2.1, 114 at cycle 0.2.0, 111 at 0.2.0b, 113 at 0.2.0a and at
++# re-exported together as 84 public names [[sweep: lib_reexports=84]] (81
++# until cycle 0.3.2 added the system zone's three),
++# so this IS evidence about behaviour, of the 140 units the runner reports at
++# compiler `5fbaf4a` since cycle 0.3.2 (134 at cycles 0.3.0 and 0.3.1, 133 at cycles 0.2.4b and 0.2.4, 131 at cycles 0.2.3 and 0.2.4a, 126 at cycles 0.2.2 and 0.2.3a, 122 at cycle 0.2.1, 114 at cycle 0.2.0, 111 at 0.2.0b, 113 at 0.2.0a and at
+ # `c970483` at cycle 0.1.5's second half; 62 at cycle 0.0.6, 67 at 0.1.0,
+ # 70 at 0.1.0b, 75 at 0.1.0c, 78 at 0.1.1, 81 at 0.1.2, 86 at 0.1.3, 90 at
+ # 0.1.3b, 91 at 0.1.4 and 0.1.4b, all at `c3bdae2` from 0.1.0b on, 101 at
+@@ -196,7 +197,13 @@
+ # `meta/OPEN_QUESTIONS.md` O-X12 answered). And a unit can make the machine
+ # `src/host/` reads: `probe22` enters a user and a mount namespace of its own
+ # and mounts an empty `tmpfs` over `/etc`, once the step below has lifted
+-# Ubuntu 24.04's restriction on the namespace (TM-255, `TESTING.md` V-1m).
++# Ubuntu 24.04's restriction on the namespace (TM-255, `TESTING.md` V-1m). AND
++# SINCE CYCLE 0.3.2 THE SYSTEM ZONE: `host_system_zone` answers the zone's name
++# and the mechanism that gave it -- `$TZ`, `/etc/localtime`'s link or
++# `/etc/timezone` -- or that none did, never UTC, asserted over nineteen
++# machines a unit makes in a namespace of its own, the lowest free descriptor
++# held across every call, and over three `TZ` values, forty runs a leg each
++# (TM-256, TM-257).
+ #
+ # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
+ # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
+diff --git a/CLAUDE.md b/CLAUDE.md
+index eed0d80b009732bfc3d8301da0d59362a0ae15ad..b9170abb6bd324e0070399e771d984204637e05f 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -10,14 +10,47 @@ safety-critical systems language at `../../nitpick`.
+ **Status: cycle 0.3, the host boundary, IN PROGRESS — 0.3.0, the clocks,
+ DONE (2026-10-08): `src/host/` reads the machine's clocks; 0.3.1, the purity
+ boundary's instruments, DONE (2026-10-08): `check_purity`'s ban list reviewed, and
+-the library's emission read beside the spelling checks; and 0.3.2, the system
+-zone, is next. Cycle 0.2 CLOSED
++the library's emission read beside the spelling checks; 0.3.2, the system zone,
++DONE (@@RUN_DATE@@): `host_system_zone` says which zone the machine names, and
++how; and 0.3.3, the double, is next. Cycle 0.2 CLOSED
+ (2026-10-02), archived at `meta/roadmap/done/0.2/` — instants and timestamps:
+ `Instant` and its two clocks, `Timestamp` and its one constructor, the
+ conversions to and from the civil scale in UTC with their exhaustive gate on
+ every run, and the `Duration` interop — after cycle 0.1, the civil calendar,
+ CLOSED 2026-09-26 and archived at `meta/roadmap/done/0.1/`.**
+ 
++**After cycle 0.3.2: the system zone.** `host_system_zone()` — the fifth of
++`HOST.md` H-1's functions, `never fails` — answers `SystemZone { string:name;
++ZoneSource:source; bool:found; }`: the zone's NAME as the machine gives it, and
++which of H-13's steps gave it — `$TZ`, read in place from `environ()`, one
++leading `:` stripped and the rest verbatim, a POSIX rule string reported and
++never parsed, an empty value reported empty; `/etc/localtime`'s LINK TARGET,
++by `readlink` into `NTIME_PATH_MAX` bytes, the tail after its last `zoneinfo/`
++at a component's start; or `/etc/timezone`'s first line, the library's one
++descriptor an `OwnedFd` closed by its drop on every path — or `NotFound`,
++`found: false`, never UTC. H-12's `ZoneId` and the table it indexes are cycles
++0.5's and 0.6's, so the lookup is the caller's, `zone_by_name` at 0.6, which
++refuses a rule string and the empty `TZ` as names no table holds; `host`
++imports nothing from `zone` and raises nothing, and still owes **11** arms,
++the umbrella **13**, re-exporting 84 <!-- [[sweep: lib_reexports=84]] -->
++names (TM-256). **Its tests make their own machine** (TM-255, `TESTING.md`
++V-1m): `tests/unit/system_zone_etc.npk` enters a user and a mount namespace of
++its own and mounts an empty `tmpfs` over `/etc`, by its own syscalls, and asks
++nineteen machines in one run — none of the three, a dangling link, a regular
++file, a link of 4 095 bytes, a `/etc/timezone` that is a directory or a link
++to `/dev/zero` — holding the lowest free descriptor across every call; three
++units set `$TZ`; every exit seen red on a mutant, and the four no test can see
++named under H-15 and H-16 (TM-257). `probe22` measures the shape, and CI lifts
++Ubuntu 24.04's restriction on the namespace in a step before the harness. And
++first, in a commit of its own, **every generic function of `src/` is read in
++an emission**: `tests/unit/generic_instances.npk` instantiates each, step 7
++emits it beside the umbrella, and `check_call_edges` and `check_wide_types`
++read its instances — a generic no instance holds is a finding, so the shapes
++0.3.1's fix measured passing a full run in a generic nobody instantiated are
++red (TM-254, `meta/OPEN_QUESTIONS.md` O-X12 answered); TM-252's note reads
++"any of" where it said "and". The self-check plants 116 tree-check
++violations. A full invocation is **140 units green** at pin `5fbaf4a`.
++
+ **After cycle 0.3.1: the purity boundary's instruments.** `check_purity`'s ban
+ list is the review's (TM-252): every bare-name builtin and every synchronous
+ public prelude function of the pinned compiler that reaches past the
+@@ -67,7 +100,7 @@ no file of the compiler names and the kernel's table does — about the clock a
+ `HostClock` names, `host`'s own enum, since `InstantClock` must not gain a
+ realtime clock (TM-248). The kernel's errno is forwarded verbatim, so `host`
+ declares no error: it owes **11** arms and the umbrella **13** still,
+-re-exporting 81 <!-- [[sweep: lib_reexports=81]] --> names. **`BUILD.md` B-17
++re-exporting 81 names. **`BUILD.md` B-17
+ draws `host` → `span`**, because both readings' types are sealed and only
+ `span` builds them (TM-247). **`tests/unit/host_clocks.npk` reads every clock
+ under `// stress: 40`** and asserts each reading ADVANCES — H-3's "two calls
+diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
+index 111f0373bc966b952ca0fedf95fe303f470eb6f5..e4ca795e616d53ee5cc188979b0d73d56e940a67 100644
+--- a/CONTRIBUTING.md
++++ b/CONTRIBUTING.md
+@@ -5,19 +5,21 @@ That is unusual and it is deliberate: the specifications catch design mistakes
+ that would otherwise be found by writing the wrong code twice.
+ 
+ **Where it stands:** cycle 0.3, the host boundary, is in progress, its first
+-two subcycles done — the clocks (2026-10-08) and the purity boundary's
+-instruments (2026-10-08); cycle 0.2, instants and timestamps, is
++three subcycles done — the clocks (2026-10-08), the purity boundary's
++instruments (2026-10-08) and the system zone (@@RUN_DATE@@); cycle 0.2,
++instants and timestamps, is
+ closed (2026-10-02), as cycle 0.1, the civil calendar, is (2026-09-26).
+ `src/core/` and `src/cal/` are real, `src/span/` holds `Instant` since cycle
+ 0.2.0, `Timestamp` since 0.2.1, the conversions between a `Timestamp` and its
+ civil reading since 0.2.2, and the `Duration` interop since 0.2.3, and
+-`src/host/` the clocks since 0.3.0; the other two `src/` directories hold one
++`src/host/` the clocks since 0.3.0 and the system zone since 0.3.2; the other two `src/` directories hold one
+ placeholder each until the cycle `meta/roadmap/ROADMAP.md` names replaces it.
+ `harness/run.py` is the runner, and it proves first, on every full run, that it
+ can fail (`meta/specs/TESTING.md` V-14, V-15). *(This paragraph described cycle
+ 0.0.1's skeleton — "no self-check yet" — until cycle 0.1.5, said the cycle
+ "is in its close" between the close's two halves, said cycle 0.3 "is next"
+-until cycle 0.3.0, and its first subcycle alone done until cycle 0.3.1.)*
++until cycle 0.3.0, its first subcycle alone done until cycle 0.3.1, and
++its first two until cycle 0.3.2.)*
+ 
+ ## Before you write anything
+ 
+diff --git a/README.md b/README.md
+index 54f63ab1ee6cb8fa54f08ba6185a7bf6b1dc13a9..f4269736292421c8be40bdaabc07ac95264c1621 100644
+--- a/README.md
++++ b/README.md
+@@ -33,8 +33,11 @@ answer on every machine.
+ > than wrapping it. Since cycle 0.3.0 `src/host/`, the one module that touches
+ > the machine, reads its clocks: the realtime clock as a `Timestamp`,
+ > range-checked, the monotonic and boot clocks as `Instant`s, and each
+-> clock's resolution; and since cycle 0.3.1 two readings hold the rest of
+-> the library pure, of its source and of the compiler's own output for it.
++> clock's resolution; since cycle 0.3.1 two readings hold the rest of
++> the library pure, of its source and of the compiler's own output for it;
++> and since cycle 0.3.2 it says which zone the machine names, and by which
++> mechanism — `$TZ`, `/etc/localtime`'s link or `/etc/timezone` — or that
++> none does, never UTC.
+ > Zones and formats are still
+ > placeholders, each replaced by the cycle
+ > [`meta/roadmap/ROADMAP.md`](meta/roadmap/ROADMAP.md) names. The specification
+@@ -52,7 +55,8 @@ answer on every machine.
+ > too; and until cycle 0.2.2, that an `Instant` could not be "converted to a
+ > wall-clock time" — a civil reading, in `meta/specs/GLOSSARY.md`'s words,
+ > where the conversion refused is to a point on the UTC scale, TM-226; and
+-> until cycle 0.3.0, that cycle 0.3 "is next" and the clocks placeholders.)*
++> until cycle 0.3.0, that cycle 0.3 "is next" and the clocks placeholders;
++> and until cycle 0.3.2, that `src/host/` read its clocks and nothing more.)*
+ 
+ ---
+ 
+diff --git a/harness/README.md b/harness/README.md
+index d17154f4c48e5c7b04f2633e87b71101eaecf93e..c9cc9dd3d4140fa82b1288b7906c8a41345450f0 100644
+--- a/harness/README.md
++++ b/harness/README.md
+@@ -507,6 +507,24 @@ sources and its IR **309 729 B**; and library + repro + suite at **99**.
+ `134 = 35 + 99`. A full invocation about 210 s; the two readings of the
+ emission cost milliseconds.
+ 
++**At cycle 0.3.2, the same pin, 140 units**: six tests added —
++`tests/unit/generic_instances.npk`, every generic function of `src/`
++instantiated (TM-254); `tests/probe/probe22_private_etc.npk`, a program's own
++`/etc` (TM-255); and the system zone's four, `system_zone_etc` and three of
++`$TZ`, forty runs a leg (TM-257) — and `src/host/` given its fifth function
++(TM-256). The self-check plants 12 of V-14's 13 cases, **116** tree-check
++violations with 116 clean controls — `check_call_edges`' three and
++`check_wide_types`' one over the instances' emission — 4 arm specimens and 4
++verdict specimens; step 7 emits the instances beside the umbrella and reads
++both, **108** functions of `src/`'s modules, 90 outside `src/host/`, reaching
++17 runtime symbols, every one in the allowlist, `src/host/` reaching
++`npk_environ`, `npk_mono_now`, `npk_ofd_close`, `npk_open`, `npk_read` and
++`npk_sys6`; parse over 156 files, `111 + 43 + 2`; the defect corpus unchanged
++at 36; the library reaching 7 sources and its IR **366 527 B**; and library +
++repro + suite at **105**. `140 = 35 + 105`. A full invocation about 230 s; the
++namespace unit's eighty runs cost about 7.5 s of it, each run a namespace,
++nineteen machines and the 4 095-byte link built byte by byte.
++
+ The floor under all of it is still TM-117's: every root re-emits the prelude,
+ so a `npkc` invocation on anything that compiles costs a fixed amount and the
+ run makes about 200 of them. One that does *not* compile costs ~0.03 s.
+diff --git a/harness/checks.py b/harness/checks.py
+index a2c7d35d2d0b145e70d81b4866030c2ac067043d..8323031163f78b5efa669442df42feaeb766bdbe 100644
+--- a/harness/checks.py
++++ b/harness/checks.py
+@@ -1502,8 +1502,10 @@ def check_host_isolation(tree, **_):
+     `tests/unit/generic_instances.npk`'s -- TM-254.)
+ 
+     `src/lib.npk` is exempt because it is the umbrella: it re-exports `host`'s
+-    public names -- four of H-1's five functions since cycle 0.3.0, and
+-    `HostClock` -- and is the ONE file that may (B-17). Its exemption is named
++    public names -- H-1's five functions, four since cycle 0.3.0 and the fifth
++    since 0.3.2, and `HostClock`, `SystemZone` and `ZoneSource` -- and is the
++    ONE file that may (B-17). (It said "four of H-1's five functions since
++    cycle 0.3.0, and `HostClock`" until cycle 0.3.2.) Its exemption is named
+     here rather than pattern-matched, per V-1c.
+     """
+     files = [f for f in src_files(tree)
+diff --git a/harness/run.py b/harness/run.py
+index ce4fe886e51a2ab11fed675078ec0b2cc711ad0f..5e3ca17d34f8870afe984fe53a42670d993b6942 100644
+--- a/harness/run.py
++++ b/harness/run.py
+@@ -636,9 +636,9 @@ def run_parse(rep, root, bld):
+     """Every `.npk` in the tree in front of the real parser, each exactly once.
+ 
+     THE DENOMINATOR IS THE WHOLE TREE AND THAT IS WHY THE STAGE IS WORTH ITS
+-    COST. Re-measured at cycle 0.3.2's second step: of the 152 `.npk` files
+-    here [[sweep: npk_total=152]] the library build roots 7
+-    [[sweep: lib_reach=7]], the suite roots 101 [[sweep: suite_roots=101]]
++    COST. Re-measured at cycle 0.3.2: of the 156 `.npk` files
++    here [[sweep: npk_total=156]] the library build roots 7
++    [[sweep: lib_reach=7]], the suite roots 105 [[sweep: suite_roots=105]]
+     (127 and 77 from cycle 0.1.3c until `tests/unit/civil_total_edges.npk`
+     joined; 128 and 78 from then until cycle 0.2.0b retired the churn pair,
+     TM-214; 126 and 76 until cycle 0.2.0 added `span`'s body to the
+@@ -647,8 +647,9 @@ def run_parse(rep, root, bld):
+     added two units and two sweeps; 142 and 91 until cycle 0.2.3 added five
+     units; 147 and 96 until cycle 0.2.4b added a unit and a probe; 150, 7 and
+     99 from cycle 0.3.0 until cycle 0.3.2 added the unit that instantiates
+-    every generic function, TM-254, and 151 and 100 until its second step
+-    added `probe22`, TM-255; 149, 6
++    every generic function, TM-254, 151 and 100 until its second step added
++    `probe22`, TM-255, and 152 and 101 until its third added the system
++    zone's four units, TM-257; 149, 6
+     and 98 until cycle 0.3.0 gave `host` a body the library reaches and added
+     its unit), and of the 4
+     support modules [[sweep: support_total=4]] 3 are reached by `use` from
+diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
+index aacc225bdb9722a695a96d189fe7836a4648def9..b8fef392ed6788c84270e253f6b63b38d85fe621 100644
+--- a/meta/DECISIONS.md
++++ b/meta/DECISIONS.md
+@@ -8359,3 +8359,132 @@ test can call, or a switch in the shipped module, H-10's objection to a
+ second code path; **`sudo` in the harness** — it runs as the user, on the
+ workbench and in CI alike, and a step of CI's own lifts what the runner
+ restricts.
++
++### TM-256 — the system zone: `host_system_zone = SystemZone() never fails` answers the zone's NAME and the mechanism that gave it — `SystemZone = { string:name; ZoneSource:source; bool:found; }`, `ZoneSource = { TzEnvironment; EtcLocaltime; EtcTimezone; NotFound; }` — by H-13's four steps, each made exact, and the lookup is the caller's
++
++**@@RUN_DATE@@, cycle 0.3.2 (the plan's PD-101). Amends `HOST.md` H-1 and H-12;
++dates H-13 … H-16, `SAFETY.md` S-8, S-18, S-20 and §2's "`ETimeZone` (0.3)",
++and `BUILD.md` B-17's `zone` arrow; restates the cycle README's 0.3.2 items; and
++notes cycle 0.6's `zone_by_name` item.**
++
++**What was found** (`0.3.2.md` §1). H-12's `SystemZone` holds a `ZoneId`, and
++H-13's first step looks a name up "in the compiled table" — and `ZoneId` is
++declared nowhere, the table is cycle 0.5's and its lookup, `zone_by_name`,
++cycle 0.6's, while cycle 0.3 is gated on 0.2 alone (`ROADMAP.md`). H-12's
++third variant, `TzDirLink`, names no mechanism H-13 has: step 3 reads a
++one-line text file, through no link and no `TZDIR`. H-13 says nothing of an
++empty `$TZ`, of which `zoneinfo/` a link with two names, or of what step 3
++takes from its file. POSIX leaves what follows a leading `:` in `TZ` to the
++implementation, and the GNU C library strips the `:` and reads an empty `TZ`
++as UTC (`meta/research/tz-environment.md`). Measured at the pin: the module
++compiles as a root and in the umbrella, and a root that imports `host` alone
++owes eleven identities, as before, the umbrella thirteen — the steps' loops are
++`for` loops, which state no measure, so `DecreasesViolated` stays out of
++`host`'s bill, where one `while` puts it, twelve; `check_host_isolation`
++reads `SystemZone` and `ZoneSource` among the names `src/host/` makes public;
++and `check_call_edges` reads `src/host/` reaching `npk_environ`,
++`npk_mono_now`, `npk_ofd_close`, `npk_open`, `npk_read` and `npk_sys6`.
++
++**The decision.** *`pub enum:ZoneSource = { TzEnvironment; EtcLocaltime;
++EtcTimezone; NotFound; }`, deriving `Eq`, `Clone`, `Debug` and `Copy` — H-12's,
++its third variant `/etc/timezone`'s. `pub struct:SystemZone = { string:name;
++ZoneSource:source; bool:found; }` — H-12's, its `zone` the NAME the mechanism
++gave: a program turns it into a zone with `zone_by_name` (cycle 0.6), whose
++`ETimeZone`/`Unknown` refuses a name the table lacks, a POSIX rule string and
++the empty `$TZ` among them, so `host` imports nothing from `zone` and raises
++nothing. `pub func:host_system_zone = SystemZone() never fails` — the four
++steps in order, stopping at the first that answers, each a private function:
++(1) `$TZ` — the first entry of `environ()` that begins `TZ=`, read in place,
++one leading `:` stripped, the rest the name verbatim, the empty value
++included: a set `TZ` answers; (2) `/etc/localtime` — `readlink` (89) into
++`NTIME_PATH_MAX` bytes, the target and never the file, its length the
++syscall's answer and no NUL looked for, a result that fills the buffer not an
++answer, the name the tail after the last `zoneinfo/` that begins the target or
++follows a `/`, and no such `zoneinfo/` or an empty tail not an answer; (3)
++`/etc/timezone` — opened `O_RDONLY | O_NONBLOCK | O_CLOEXEC`, an `OwnedFd` at
++once, whose drop closes it on every path out, one read of up to
++`NTIME_PATH_MAX` bytes, a read that fills the buffer not an answer, the name
++the bytes before the first newline, every other byte as the file holds it,
++and an empty first line not an answer; (4) `{ "", NotFound, false }` — not
++UTC. In every step, an error is that step's not answering, so nothing is
++forwarded and nothing is left to fail but a trap. `SYS_READLINK` is a private
++`fixed int64` beside the clocks' numbers, its source the kernel's table. The
++umbrella re-exports the three names, 84 in all. H-1 and H-12 amended; H-13 …
++H-16, S-8, S-18, S-20, §2's sentence and B-17 dated; the cycle README's
++items restated at planning and ticked; cycle 0.6's `zone_by_name` item noted.*
++
++*Alternatives declined:* **`ZoneId` declared now, holding a name** — a type
++whose promise, a zone the table holds, no value of it could keep until cycle
++0.6, and whose shape that cycle would change; **the system zone moved after
++cycle 0.6** — `host`'s syscall shapes are measured while the library is small,
++the cycle README's reason for the cycle's place, and the double of 0.3.3
++reproduces all five of H-1's signatures; **`ETimeZone` declared in `zone` now,
++and `host` refusing a rule string by its shape** — every program that reads a
++clock, importing `host`, would owe a zone arm, which TM-017's decomposition
++exists to spare it, and a shape test would be a second judge of a name beside
++the table; **an errno forwarded, `EACCES` or `EIO`** — which errno means
++"absent" is a list to keep, and a caller can do nothing with `EIO` it cannot do
++with `NotFound`; **an empty `TZ` read as unset** — the GNU C library reads it
++as UTC, so moving on to `/etc/localtime` would answer, in silence, a question
++the environment did not ask; reported, the lookup refuses it and the program
++decides (TM-019); **the first `zoneinfo/`, or any**, not one at a component's
++start — a target that holds two names the second, and `myzoneinfo/` is no
++directory of zones; **`posix/` stripped from a tail** — a rewrite of what the
++machine says, where the lookup is the one judge of a name; **the whole of
++`/etc/timezone`, or its first line trimmed of white space** — a byte the file
++holds is reported, not interpreted; **`read_file` for `/etc/timezone`** —
++unbounded: a link to `/dev/zero` is read until memory runs out; **a `close`
++on each path, the verdict observed** — a careless path is a leaked descriptor,
++and a read-only descriptor's close carries nothing the answer could use;
++**`O_NOCTTY`** — the prelude's own stream open passes the three flags above,
++and a terminal at `/etc/timezone` is a machine past what this library guards;
++**H-1's fallible signature kept** — nothing in it can fail, and `never fails`
++says so where it is called.
++
++### TM-257 — the system zone's tests: one unit in a namespace of its own, nineteen machines in one run and the lowest free descriptor held across every call; three units of `$TZ`; every exit but the belts seen red on a mutant of `host`, and the four mutants no test can see named
++
++**@@RUN_DATE@@, cycle 0.3.2 (the plan's PD-102). Dates `HOST.md` H-3, H-14,
++H-15 and H-16.**
++
++**What was found** (`0.3.2.md` §1). In a namespace of its own (TM-255),
++`tests/unit/system_zone_etc.npk` asks `host_system_zone` nineteen times,
++`/etc` written between each, with no `TZ` and two variables a careless step 1
++would read as one: each case's source, name and `found`, and the lowest free
++descriptor — what `open` hands out next — the same after the call as before
++it. Three units set `TZ` through the harness (V-1e): a POSIX rule string, a
++name behind a `:`, and the empty value. All exit 0 on both legs, forty runs a
++leg. Of thirty-four mutants of `src/host/host.npk`, each a text replaced once,
++thirty are red at the exits each is aimed at, on both legs, and four exit 0:
++step 2's refusal of a result that fills the buffer, deleted — the kernel
++refuses a link of 4 096 bytes, so none does; the target's length read by a
++scan for a NUL — the buffer is born zeroed, so the scan stops where the
++syscall's answer does; and step 3's `O_NONBLOCK` and `O_CLOEXEC`, each
++dropped — a FIFO with no writer would block the open, and this harness has no
++timeout to see a hang with, and the second needs an `exec`.
++
++**The decision.** *`tests/unit/system_zone_etc.npk`, `// stress: 40`, in a
++user and a mount namespace of its own with an empty `/etc` (TM-255): nothing;
++`/etc/timezone` alone; a link beside it — step 2 before step 3; a relative
++link; a dangling link — the target, never the file; `zoneinfo/` not at a
++component's start; two, the last; an empty tail; a regular file; the mark at
++the target's start; a link of 4 095 bytes; and `/etc/timezone` with no
++newline, two lines, a CR before the newline, an empty first line, empty, a
++link to `/dev/zero`, a directory, and 4 096 bytes — each its exit, and each
++with the lowest free descriptor held. `tests/unit/system_zone_tz.npk`,
++`system_zone_tz_colon.npk` and `system_zone_tz_empty.npk`, `// stress: 40`,
++each a `TZ` the harness sets. Every exit was seen red on a mutant of `host`
++but three belts — 47, a directory, whose failed read is an empty file's path,
++which a mutant reddens at 45 first; 48, a file of 4 096 bytes, passed by as
++`/dev/zero` is, which a mutant reddens at 46 first; and the `$TZ` units' 11,
++not found beside `TzEnvironment`, which no one-text mutant writes. The four no
++test can see are named in the unit's header and in dated notes under H-15 and
++H-16, with what holds each — the `?|` that takes the length from the
++syscall's answer, the view built from it, and the open's one line.*
++
++*Alternatives declined:* **one unit per machine** — nineteen files and
++nineteen namespaces for what one process asks in sequence, and the descriptor
++held across all of them; **the cases built by the harness** — TM-255's
++declined marker; **a FIFO at `/etc/timezone`** — the open it tests blocks
++forever under the mutant it is there to see, and a hang is no verdict this
++harness reads; **asserting the close's verdict** — `OwnedFd`'s drop does not
++report it, and the lowest free descriptor is what a leak moves.
+diff --git a/meta/research/CURRENCY.md b/meta/research/CURRENCY.md
+index f0b56d5eb5dd771f98c8ead337dbaadaeae2d87a..b9dbd84751c24d50d3246eebbc78ab4b5804e486 100644
+--- a/meta/research/CURRENCY.md
++++ b/meta/research/CURRENCY.md
+@@ -12,6 +12,8 @@ tree at the pinned commit.
+ | Howard Hinnant, *chrono-Compatible Low-Level Date Algorithms* — `days_from_civil`, `civil_from_days`; the digest is [`hinnant-date-algorithms.md`](hinnant-date-algorithms.md) | the page as it dates itself, 2021-09-01 | 2026-09-25 | howardhinnant.github.io/date_algorithms.html | TM-016 |
+ | tzdata | 2026c | 2026-09-05 — the release installed on the workbench, measured by the 0.0.5 spike ([`tzdb-size.md`](tzdb-size.md)). **Whether it is still IANA's latest is not checked here**: cycle 0.1 reads no zone data, and TM-100 pins *"the latest release at cycle 0.5"*, which re-checks it | iana.org/time-zones | TM-100 |
+ | Python `datetime` — the independent source of `meta/roadmap/done/0.1/0.1.1.md` §4a's vectors for years ≥ 1, `meta/roadmap/done/0.1/0.1.2.md` §2's recomputation of the sweeps' domains, `meta/roadmap/done/0.1/0.1.3.md` §3's first method for the 41 derived-field vectors (`weekday()`, `timetuple().tm_yday`, `isocalendar()`), **cycle 0.1.4's cross-oracle corpus**, `tests/fixtures/civil/civil_oracle.npk`, generated by `tools/gen_civil_oracle.py` from `MINYEAR`, `MAXYEAR`, `fromordinal()`, `toordinal()`, `isoweekday()`, `isocalendar()` and `timetuple().tm_yday`; and cycle 0.2.2's sixteen conversion vectors, `tests/unit/utc_vectors.npk`, from the difference of two `datetime`s in days and seconds for years ≥ 1, and below year 1 by whole 400-year cycles of 146 097 days (`meta/roadmap/done/0.2/0.2.2.md` §1); the digest is [`python-datetime.md`](python-datetime.md) | 3.12.3, the workbench's interpreter — `/usr/bin/python3` and its virtual environment both; the corpus's `sha256` in `meta/roadmap/done/0.1/0.1.4.md` §5 is this interpreter's. The documentation was read at 3.14.7 | 2026-09-25 — re-checked for cycle 0.1.4, the statements the corpus reads quoted in the digest | docs.python.org/3/library/datetime.html | C-18 |
+-| The Linux kernel's x86-64 syscall table — `clock_gettime` 228 and `clock_getres` 229, the two numbers `src/host/host.npk` declares; cycle 0.3.2 adds its own, `readlink` 89 among them. The digest is [`linux-syscall-table.md`](linux-syscall-table.md) | the ABI, which never renumbers a syscall on an architecture, read on the table's `master` | 2026-10-07 — 228, 229 and 89 quoted from the table; first fetched 2026-10-02 by cycle 0.2's close for `meta/roadmap/0.3/0.3.0.md` §1.3, and 228 is the compiler's runtime's too, `npk_mono_now` at `5fbaf4a`. **And 2026-10-08**, for cycle 0.3.2's tests: 83, 84, 87, 88, 89, 102, 104, 165 and 272, and `CLONE_NEWNS` and `CLONE_NEWUSER` from `include/uapi/linux/sched.h` | github.com/torvalds/linux, `arch/x86/entry/syscalls/syscall_64.tbl` | TM-248, TM-255 |
++| The Linux kernel's x86-64 syscall table — `clock_gettime` 228 and `clock_getres` 229, the two numbers `src/host/host.npk` declares; cycle 0.3.2 adds its own, `readlink` 89 among them. The digest is [`linux-syscall-table.md`](linux-syscall-table.md) | the ABI, which never renumbers a syscall on an architecture, read on the table's `master` | 2026-10-07 — 228, 229 and 89 quoted from the table; first fetched 2026-10-02 by cycle 0.2's close for `meta/roadmap/0.3/0.3.0.md` §1.3, and 228 is the compiler's runtime's too, `npk_mono_now` at `5fbaf4a`. **And 2026-10-08**, for cycle 0.3.2's tests: 83, 84, 87, 88, 89, 102, 104, 165 and 272, and `CLONE_NEWNS` and `CLONE_NEWUSER` from `include/uapi/linux/sched.h` | github.com/torvalds/linux, `arch/x86/entry/syscalls/syscall_64.tbl` | TM-248, TM-255, TM-256 |
++| POSIX's `TZ` — a leading `:` makes what follows implementation-defined, and a set, empty `TZ` is unspecified; what `HOST.md` H-13's first step strips. The digest is [`tz-environment.md`](tz-environment.md) | The Open Group Base Specifications Issue 8, IEEE Std 1003.1-2024, §8.3 | 2026-10-08 | pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap08.html | TM-256 |
++| The GNU C library's `tzset` — strips one leading `:`, reads an empty `TZ` as UTC and an unset one as `/etc/localtime`; the reason an empty `TZ` answers H-13's first step. The digest is [`tz-environment.md`](tz-environment.md) | `master`, `time/tzset.c`'s `tzset_internal`, read through the GitHub mirror | 2026-10-08 | github.com/bminor/glibc, mirroring sourceware.org/git/glibc.git | TM-256 |
+ | Ubuntu 24.04 LTS's restriction on unprivileged user namespaces — on by default, the namespace created and the capabilities inside it denied, lifted by `kernel.apparmor_restrict_unprivileged_userns=0`; what CI's step before the harness lifts, so that a unit can make its own `/etc` (`TESTING.md` V-1m). The digest is [`user-namespaces.md`](user-namespaces.md) | 24.04 LTS, the runner image `.github/workflows/ci.yml` pins (`ubuntu-24.04`) | 2026-10-08 | discourse.ubuntu.com, *Ubuntu 24.04 LTS (Noble Numbat) Release Notes* | TM-255 |
+ | ISO 8601-1 — the week-date rule of `CALENDAR.md` C-14 (week 1 holds the year's first Thursday, clause 3.1.1.23); the digest is [`iso-8601-week-date.md`](iso-8601-week-date.md). **Monday = 1 … Sunday = 7 could not be quoted from the 2019 text** and rests on C-7, RFC 3339's informational appendix and Python's `isocalendar()` | 2019, first edition, with Amd 1:2022 — its successor ISO/CD 8601-1 at stage 30.60 since 2026-07-25: re-check at DIS, and at 0.8 at the latest | 2026-09-25 | iss.rs/en/project/show/iso:proj:70907 (iso.org answered 403); the text through the distributor iTeh's previews of ISO's own pages | C-14 |
+diff --git a/meta/research/tz-environment.md b/meta/research/tz-environment.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..4f85fff8c977fe6e5497e925f57b1adce2b8fc91
+--- /dev/null
++++ b/meta/research/tz-environment.md
+@@ -0,0 +1,65 @@
++# What `TZ` holds, set empty or behind a `:` — research digest
++
++**As of 2026-10-08.** Question: what does POSIX say of a `TZ` that begins
++with `:`, and of one set to the empty string — and what does the reference C
++library do with each — so that `HOST.md` H-13's first step can say what it
++strips and whether an empty `TZ` answers?
++
++## Answer
++
++POSIX (Issue 8, IEEE Std 1003.1-2024, the base definitions' §8.3) makes a `TZ`
++whose first character is `:` an implementation-defined form — the characters
++after the `:` are the implementation's to read — and its entry for `TZ` says
++nothing of a value set and empty. The GNU C library's `tzset_internal` strips
++one leading `:` and reads what follows, and reads an empty `TZ` as UTC
++("Universal"); an unset `TZ` is the site's default, `/etc/localtime`. So a C
++program on the machine reads `TZ=` as UTC, and `TZ=:Europe/London` as
++`Europe/London`.
++
++## Evidence
++
++- https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap08.html —
++  retrieved 2026-10-08 — §8.3, the `TZ` entry, its first format: "the
++  characters following the <colon> are handled in an implementation-defined
++  manner." The page names The Open Group Base Specifications Issue 8, IEEE Std
++  1003.1-2024. The entry does not say what a null `TZ` means.
++- https://raw.githubusercontent.com/bminor/glibc/master/time/tzset.c — the GNU
++  C library's source, its `master`, through the GitHub mirror of
++  sourceware.org's repository (which answered a bot check) — retrieved
++  2026-10-08 — `tzset_internal`:
++
++  ```c
++    tz = getenv ("TZ");
++  ```
++  ```c
++    if (tz && *tz == '\0')
++      /* User specified the empty string; use UTC explicitly.  */
++      tz = "Universal";
++
++    /* A leading colon means "implementation defined syntax".
++       We ignore the colon and always use the same algorithm:
++       try a data file, and if none exists parse the 1003.1 syntax.  */
++    if (tz && *tz == ':')
++      ++tz;
++  ```
++  ```c
++    if (tz == NULL)
++      /* No user specification; use the site-wide default.  */
++      tz = TZDEFAULT;
++  ```
++
++## What would change this
++
++A C library that read an empty `TZ` as unset — tried `/etc/localtime` — would
++weaken the reason H-13.1 lets an empty `TZ` answer, which is that a silent fall
++to the machine's zone would disagree with the C programs on the same machine.
++It did not, for the reference implementation. And POSIX defining the `:` form
++would bind H-13.1's reading of what follows it; it leaves it to the
++implementation.
++
++## Confidence and gaps
++
++High for POSIX's wording and for glibc's behaviour, each quoted from its own
++text. glibc is read on `master` through a mirror, not at a release tag; the
++lines are old and the behaviour long-standing. Other C libraries were not
++read, so the plan's claims name glibc alone.
+diff --git a/meta/roadmap/0.3/README.md b/meta/roadmap/0.3/README.md
+index f0c13e4d5558ae117fa4465196d14697cb4ba3d3..c1fca856f6a59ff10c4131724b40428d076d910c 100644
+--- a/meta/roadmap/0.3/README.md
++++ b/meta/roadmap/0.3/README.md
+@@ -93,14 +93,14 @@ the lookup — a rule string's refusal with it — is the caller's, at 0.6
+ (PD-101); and a machine with none of the three is one the unit makes (PD-100).
+ The items keep their words; the first and third carry what PD-101 makes of
+ them.)*
+-- [ ] `SystemZone` and `ZoneSource` as `HOST.md` §4 defines them — *as PD-101 amends §4: the name, where H-12 held a `ZoneId`, and `EtcTimezone`, where it named `TzDirLink`*
+-- [ ] the four steps in order, stopping at the first that answers (H-13)
+-- [ ] `$TZ` with a leading `:` stripped; **a POSIX rule string refused** with `ETimeZone`/`Unknown` (H-13.1), not parsed — *as PD-101 places it: reported as the text it is, never parsed, and refused by the lookup, cycle 0.6's `zone_by_name`*
+-- [ ] `/etc/localtime` read as a **symlink target**, never as bytes (H-14)
+-- [ ] `readlink`'s four facts honoured (H-15): the length is the authority, the result is not NUL-terminated, `NTIME_PATH_MAX` bounds it, a truncated result is not-found
+-- [ ] `/etc/timezone` as step 3
+-- [ ] **not-found is `found: false`, not UTC** (H-13.4) — a test asserts it on a machine with none of the three
+-- [ ] the descriptor closed on every path (S-20)
++- [x] `SystemZone` and `ZoneSource` as `HOST.md` §4 defines them — *as PD-101 amends §4: the name, where H-12 held a `ZoneId`, and `EtcTimezone`, where it named `TzDirLink`* — **TM-256**, H-12 amended; both re-exported, and read by `check_host_isolation` among `src/host/`'s public names
++- [x] the four steps in order, stopping at the first that answers (H-13) — each a private function, `host_system_zone` `never fails`; `tests/unit/system_zone_etc.npk`'s exit 32 sees step 2 answer before step 3, and every `$TZ` unit sees step 1 answer before the machine's `/etc/localtime`
++- [x] `$TZ` with a leading `:` stripped; **a POSIX rule string refused** with `ETimeZone`/`Unknown` (H-13.1), not parsed — *as PD-101 places it: reported as the text it is, never parsed, and refused by the lookup, cycle 0.6's `zone_by_name`* — `tests/unit/system_zone_tz.npk`, `_colon.npk` and `_empty.npk`; cycle 0.6's item noted
++- [x] `/etc/localtime` read as a **symlink target**, never as bytes (H-14) — `readlink`, 89; exits 34 (a dangling link answers) and 38 (a regular file is passed by)
++- [x] `readlink`'s four facts honoured (H-15): the length is the authority, the result is not NUL-terminated, `NTIME_PATH_MAX` bounds it, a truncated result is not-found — each kept where H-15's dated note says; a link of 4 095 bytes read whole (exit 40), and the two no test can see named: the kernel never makes a link that fills the buffer, and a zeroed buffer hides a NUL scan
++- [x] `/etc/timezone` as step 3 — its first line; exits 31 and 41 … 48
++- [x] **not-found is `found: false`, not UTC** (H-13.4) — a test asserts it on a machine with none of the three — exit 30, an empty `/etc` in the unit's own namespace (TM-255)
++- [x] the descriptor closed on every path (S-20) — an `OwnedFd`, closed by its drop; the lowest free descriptor held across all nineteen calls
+ 
+ *(Four more, from 0.3.2's planning on 2026-10-08 — `0.3.2.md`: the question
+ 0.3.1's fix raised and its verifier's nit, in a commit before the zone; the
+@@ -109,7 +109,7 @@ The eight above keep their words.)*
+ - [x] **O-X12**: every generic function `src/` declares instantiated in `tests/unit/generic_instances.npk`, its emission read by `check_call_edges` and `check_wide_types` beside the umbrella's, and a generic no instance holds a finding (PD-99) — **TM-254**: four plants caught and four controls silent, each unseen by the checks before it; over the tree `vec.npk`'s nine, at `int64`, reach the allocator, the error route and LLVM's arithmetic, every symbol in the allowlist
+ - [x] the 0.3.1 verifier's nit: `check_purity`'s docstring and TM-252's note say a truncation of descriptors is red "only where the `DecreasesViolated` and `LimitViolated` it arms are new" — it is *any of* them, `DecreasesViolated` alone in `src/core/vec.npk` — corrected by dated notes, not rewritten — the docstring in place, recording its words, and TM-252's note by a further dated sentence
+ - [x] a unit makes its own `/etc` — a user and a mount namespace and an empty `tmpfs`, by its own syscalls; `probe22` measures the shape and the kernel's longest link, and CI lifts Ubuntu 24.04's restriction on the namespace (PD-100) — **TM-255**: `probe22` exit 0 on both legs, here and in CI after the step that lifts the restriction; `TESTING.md` V-1m
+-- [ ] the tests: one unit of nineteen machines in a namespace of its own, the lowest free descriptor held across every call; three units of `$TZ`; every exit seen red on a mutant of `host`, and the mutants no test can see named (PD-102)
++- [x] the tests: one unit of nineteen machines in a namespace of its own, the lowest free descriptor held across every call; three units of `$TZ`; every exit seen red on a mutant of `host`, and the mutants no test can see named (PD-102) — **TM-257**: four units, forty runs a leg; the mutants in `0.3.2.md`'s record
+ 
+ ### 0.3.3 — the double
+ - [ ] the fake host module in `tests/`, **not** in `src/` (H-10)
+diff --git a/meta/roadmap/0.6/README.md b/meta/roadmap/0.6/README.md
+index a155bf3290bdbe99c8a17aedec1b2074a667f45a..e762ec9e5f2acab8612d368aca0bee9a063922ba 100644
+--- a/meta/roadmap/0.6/README.md
++++ b/meta/roadmap/0.6/README.md
+@@ -22,7 +22,7 @@ settled.
+ ## Checklist
+ 
+ ### 0.6.0 — the lookup
+-- [ ] `zone_by_name` — binary search over the sorted name index (Z-9); an unknown name is `ETimeZone`/`Unknown`
++- [ ] `zone_by_name` — binary search over the sorted name index (Z-9); an unknown name is `ETimeZone`/`Unknown` — *and it is how a program turns `host_system_zone`'s name into a zone: a POSIX rule string `$TZ` held, and the empty `$TZ`, are names no table holds, refused here and nowhere earlier (cycle 0.3.2, TM-256)*
+ - [ ] `zone_offset_at(zone, instant)` — binary search over the zone's transition slice (Z-8)
+ - [ ] **one accessor pair guards the slice bound** (S-17), and nothing outside `src/zone/` indexes the raw tables
+ - [ ] the search's invariant and termination as `prove`-shaped comments (`VERIFICATION.md` §6)
+diff --git a/meta/roadmap/ROADMAP.md b/meta/roadmap/ROADMAP.md
+index b94ab5f91a296077c6b6f586a379ba09e558cf69..092208cb46143f93e1ac8671ae0ac60c1d18805e 100644
+--- a/meta/roadmap/ROADMAP.md
++++ b/meta/roadmap/ROADMAP.md
+@@ -36,7 +36,10 @@ no width is spelled for passes it, dormant, for 0.3.1's planner. The decisions
+ stand at 180.)* *(Re-derived at cycle 0.3.1: **184 decisions are settled**,
+ the subcycle's four, TM-250 … TM-253; **eight questions are open** — the
+ compiler's four, O-N1, O-N2, O-N3 and O-N34, and four ours, O-X1, O-B1, O-X4
+-and O-X8: O-X9 and O-X11 are answered, TM-250 and TM-251.)*
++and O-X8: O-X9 and O-X11 are answered, TM-250 and TM-251.)* *(Re-derived at
++cycle 0.3.2: **188 decisions are settled**, the subcycle's four, TM-254 …
++TM-257; **eight questions are open**, the same eight — O-X12, registered at
++the subcycle's planning, is answered by its first step, TM-254.)*
+ 
+ ## How this is organised
+ 
+@@ -96,7 +99,7 @@ sibling libraries.
+ | ~~**0.0**~~ | **Foundations** — the language probes, the harness, `src/core/` — **CLOSED 2026-09-06, archived at [`done/0.0/`](done/0.0/README.md)** | — |
+ | ~~**0.1**~~ | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **CLOSED 2026-09-26, archived at [`done/0.1/`](done/0.1/README.md)** | 0.0 ✓ |
+ | ~~**0.2**~~ | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **CLOSED 2026-10-02, archived at [`done/0.2/`](done/0.2/README.md)** | 0.1 ✓ |
+-| **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double — **IN PROGRESS**: [`0.3/0.3.0.md`](0.3/0.3.0.md), the clocks, DONE 2026-10-08; [`0.3/0.3.1.md`](0.3/0.3.1.md), `check_purity` reviewed and the library's emission read beside it, DONE 2026-10-08; 0.3.2, the system zone, next | 0.2 ✓ |
++| **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double — **IN PROGRESS**: [`0.3/0.3.0.md`](0.3/0.3.0.md), the clocks, DONE 2026-10-08; [`0.3/0.3.1.md`](0.3/0.3.1.md), `check_purity` reviewed and the library's emission read beside it, DONE 2026-10-08; [`0.3/0.3.2.md`](0.3/0.3.2.md), the system zone, every generic function read first, DONE @@RUN_DATE@@; 0.3.3, the double, next | 0.2 ✓ |
+ | **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate | 0.2 |
+ | **0.5** | **The zone table** — the generator, the committed tables, the size measurement | 0.1 |
+ | **0.6** | **Zoned time** — offset lookup, the four resolution modes, the transition sweep | 0.4, 0.5 |
+diff --git a/meta/specs/BUILD.md b/meta/specs/BUILD.md
+index 42741ec0a5a1f4c5ac4d3a8a576b763666cdc8f2..a9a5ccd1e28cab28f5dd5dc233b1f0c5b7ac061c 100644
+--- a/meta/specs/BUILD.md
++++ b/meta/specs/BUILD.md
+@@ -324,9 +324,10 @@ list kept the old code until cycle 0.2.0), `BORROW-001`, `BORROW-012`,
+ `RESOLVE-001`, `RESOLVE-002` (since cycle 0.2.0, `probe20b`),
+ `REACH-002` and `REACH-003`, and every family
+ after the first three runs only on something that parsed. Re-measured at pin
+-`5fbaf4a`, cycle 0.3.2's second step: **152 files = 107 parse cleanly + 43
++`5fbaf4a`, cycle 0.3.2: **156 files = 111 parse cleanly + 43
+ parse and are refused later + 2 do not parse**
+-<!-- [[sweep: npk_total=152]] --> (`151 = 106 + 43 + 2` from cycle 0.3.2's
++<!-- [[sweep: npk_total=156]] --> (`152 = 107 + 43 + 2` from its second step
++until its third added the system zone's four units, TM-257; `151 = 106 + 43 + 2` from cycle 0.3.2's
+ first step, which added `tests/unit/generic_instances.npk`, TM-254, until its
+ second added `probe22`, TM-255; `150 = 105 + 43 + 2` from cycle 0.3.0 until
+ then; `127 = 90 + 35 + 2` from cycle 0.1.3c until
+@@ -599,7 +600,10 @@ fields are sealed (TM-215, TM-219), and only `span`'s constructors build them.
+ `span` is pure, so the arrow costs the purity boundary nothing: it still points
+ one way, into `host`'s callees. Until then `host` reached `zone`, `cal` and
+ `core` alone, and `check_layering` refused the arrow — five findings over the
+-module, one per `use` of `span`.)*
++module, one per `use` of `span`.)* *(Cycle 0.3.2, TM-256: `host` → `zone` stays
++drawn and is not taken. `host_system_zone` answers the zone's NAME, and the
++lookup is the caller's, `zone_by_name` at cycle 0.6, so a program that reads a
++clock owes no zone arm; "for the name lookup" names what `host` does not do.)*
+ 
+ A `use` cycle is legal in the language (D-086) and is still a decomposition
+ mistake; `ntime`'s layers are acyclic and the harness says so.
+diff --git a/meta/specs/HOST.md b/meta/specs/HOST.md
+index f77597c063406f99c7b98df05ddff6483a78f45d..358f6869569d8aa65ec1f07041b725f816c1173f 100644
+--- a/meta/specs/HOST.md
++++ b/meta/specs/HOST.md
+@@ -16,7 +16,7 @@ pub func:host_now_utc        = Timestamp();          // CLOCK_REALTIME
+ pub func:host_now_instant    = Instant() never fails;// mono_now()
+ pub func:host_now_boot       = Instant();            // CLOCK_BOOTTIME
+ pub func:host_clock_res      = Duration(HostClock:which);
+-pub func:host_system_zone    = SystemZone();
++pub func:host_system_zone    = SystemZone() never fails;
+ ```
+ 
+ *(Cycle 0.3.0, TM-248: four of the five are in `src/host/host.npk` —
+@@ -26,7 +26,12 @@ enum:HostClock = { Realtime; Monotonic; Boottime; }`, `host`'s own, because
+ `span`'s `InstantClock` has no realtime clock and must not gain one. "Nothing
+ else" is no sixth PUBLIC function: the module also holds five private `fixed`
+ numbers — the two syscalls and H-4's three clock ids — and one private helper,
+-`timespec_ns`.)*
++`timespec_ns`.)* *(Cycle 0.3.2, TM-256: the fifth is written, and `never
++fails` — the block read `SystemZone();` — beside `SystemZone` and
++`ZoneSource`, what it answers (H-12): a step that cannot read its source has
++not answered, so nothing is left to fail but a trap. And beside the five, one
++more private number, `readlink`'s 89, and four more helpers, the system zone's
++three steps and its not-found answer.)*
+ 
+ **Rule H-2 (TM-018) — nothing else in the library calls any of them.** A function that
+ needs "now" takes it as a parameter (`SAFETY.md` S-9). `check_purity` enforces
+@@ -55,6 +60,11 @@ resolution here is 1 ns; the forwarded errno's branch deleted; and
+ `timespec_ns`'s range check deleted — each of the last two needs a kernel that
+ breaks its contract. A green run is not evidence about these four.)*
+ 
++*(Cycle 0.3.2, TM-257: and no memoised zone, observed —
++`tests/unit/system_zone_etc.npk` asks `host_system_zone()` nineteen times in
++one process, `/etc` rewritten between each, and every answer is that
++`/etc`'s.)*
++
+ ---
+ 
+ ## 2. The clocks
+@@ -174,13 +184,25 @@ it found:
+ 
+ ```nitpick
+ pub struct:SystemZone = {
+-    ZoneId:zone;
++    string:name;
+     ZoneSource:source;
+     bool:found;
+ };
+-pub enum:ZoneSource = { TzEnvironment; EtcLocaltime; TzDirLink; NotFound; };
++pub enum:ZoneSource = { TzEnvironment; EtcLocaltime; EtcTimezone; NotFound; };
+ ```
+ 
++*(Amended at cycle 0.3.2, TM-256. The block read `ZoneId:zone;` and named
++the third variant `TzDirLink`. `ZoneId`, and the compiled table it indexes,
++are cycles 0.5's and 0.6's — this cycle is gated on 0.2 alone — so what the
++discovery answers is the zone's NAME as the mechanism gave it, and a program
++turns it into a zone with the lookup, `zone_by_name` (cycle 0.6), whose
++`ETimeZone`/`Unknown` refuses a name the table lacks. `host` looks nothing up,
++imports nothing from `zone`, and raises nothing: a program that reads a clock
++owes no zone arm (TM-017's decomposition). And `TzDirLink` named no mechanism
++H-13 has — step 3 reads a one-line text file, through no link and no `TZDIR` —
++so the variant is `EtcTimezone`, beside `EtcLocaltime`. `found` is false only
++with `NotFound`, and `name` is then empty.)*
++
+ **Rule H-13 — the discovery order**, and it stops at the first that answers:
+ 
+ 1. **`$TZ`**, from `environ()`. A bare name (`Europe/London`) is looked up in
+@@ -199,20 +221,63 @@ pub enum:ZoneSource = { TzEnvironment; EtcLocaltime; TzDirLink; NotFound; };
+    decide what to do, and a library that quietly substitutes UTC has made that
+    decision badly on its behalf.
+ 
++*(Cycle 0.3.2, TM-256 — each step made exact, and the lookup placed. **Step 1**
++reads the first entry of `environ()` that begins `TZ=`, in place; one leading
++`:` is stripped — POSIX leaves what follows it to the implementation, and the
++GNU C library strips it too (`../research/tz-environment.md`) — and the rest is
++the name, verbatim, the empty value included: a set `TZ` answers, because the
++GNU C library reads an empty one as UTC, and moving on to `/etc/localtime`
++would answer a question the environment did not ask. A rule string is reported
++as the text it is, never parsed; "**refused** — `ETimeZone`/`Unknown`" is the
++lookup's, at cycle 0.6, as a name no table holds, and not this step's.
++**Step 2**'s name is the tail after the LAST `zoneinfo/` that begins the
++target or follows a `/`; none, or an empty tail, and the step does not
++answer. **Step 3**'s name is the bytes before the file's first newline, every
++other byte as the file holds it; an empty first line, an empty file, or a
++read that fills its buffer of `NTIME_PATH_MAX` bytes, and the step does not
++answer. And **in every step an error is that step's not answering**: nothing
++is forwarded, so `host_system_zone` is `never fails` (H-1).)*
++
+ **Rule H-14 — the file that is never read is `/etc/localtime` itself.** Step 2
+ reads the *link target*, not the TZif content. If `/etc/localtime` is a regular
+ file rather than a symlink — which happens — step 2 does not answer and step 3
+ is tried. Reading its bytes is the post-1.0 opt-in of Z-3 and nothing here.
+ 
++*(Cycle 0.3.2, TM-257: asserted — a regular file at `/etc/localtime` holding
++a zone's name is passed by for step 3, and a dangling link answers with its
++target's tail, each in `tests/unit/system_zone_etc.npk`.)*
++
+ **Rule H-15 — `readlink` is syscall 89** (`readlinkat` is 267); the buffer is
+ `NTIME_PATH_MAX` (4096) bytes, the result is not NUL-terminated by the kernel
+ and the returned length is the authority, and a truncated result is treated as
+ not-found rather than as a shorter name. Every one of those four facts is a
+ place a careless implementation is wrong.
+ 
++*(Cycle 0.3.2, TM-256 and TM-257 — where each is kept. The length is the
++authority: the view of the target is built from `n`, the syscall's answer, and
++nothing scans for a NUL — `tests/unit/system_zone_etc.npk` reads a link of
++4 095 bytes whole. The buffer is `NTIME_PATH_MAX`, `src/core/limits.npk`'s. A
++truncated result does not answer: `n >= NTIME_PATH_MAX` passes it by. **Two of
++the four are held by reading, not by a test**: the kernel refuses a link
++target of 4 096 bytes and holds one of 4 095 (`tests/probe/probe22_private_etc.npk`),
++so no link it made fills the buffer, and the refusal deleted is unseen; and a
++scan for the first NUL in place of `n` stops where `n` does, because the buffer
++is born zeroed — unseen too. A green run is not evidence about these two.)*
++
+ **Rule H-16 — the descriptor is closed on every path.** `SAFETY.md` S-20: the
+ module holds nothing across a call.
+ 
++*(Cycle 0.3.2, TM-256: by construction. The descriptor is `/etc/timezone`'s,
++step 3's — `readlink` opens none — and it is an `OwnedFd` the moment `open`
++returns it, so its drop closes it on every path out; the close's verdict is not
++observed, which for a descriptor opened read-only carries nothing the answer
++could use. Opened `O_NONBLOCK`, so a FIFO there never blocks the open
++(`SAFETY.md` S-21), and `O_CLOEXEC`, so it never outlives the call into an
++`exec`. TM-257: the lowest free descriptor is the same after every call as
++before it, through each path step 3 takes. **The two flags are held by
++reading**: a FIFO with no writer would block the open, and the harness has no
++timeout to see a hang with; the second needs an `exec`.)*
++
+ ---
+ 
+ ## 5. What is deliberately absent
+diff --git a/meta/specs/SAFETY.md b/meta/specs/SAFETY.md
+index 8e50f8febc4c4ee10b3ba526d7ba88378811b49c..cbf4c09b56fe21c0247f8812b8e345a43eafa43c 100644
+--- a/meta/specs/SAFETY.md
++++ b/meta/specs/SAFETY.md
+@@ -88,7 +88,7 @@ import-scoped:
+ | `ntime/core.npk` | — | nothing | **6** <!-- [[sweep: arms_core=6]] --> (4) — the floor; `core` is not yet reachable as its own public module, and its code is billed through the umbrella's row |
+ | `ntime/cal.npk` | `ETimeValue` | one arm | **11** <!-- [[sweep: arms_cal=11]] --> (9) — measured 2026-09-06 and 2026-09-25 |
+ | `ntime/span.npk` | — (raises `cal`'s) | one arm | **11** <!-- [[sweep: arms_span=11]] --> (—) — since cycle 0.2.0, measured: `cal.ETimeValue`, which `span` raises for two clocks' readings (TM-216), since cycle 0.2.1 for a `secs` outside the range or a `nanos` outside one second handed to `timestamp_of` (TM-220), since cycle 0.2.2 for a civil reading `civil_to_utc` cannot convert, `timestamp_of`'s refusal relayed (TM-222), and since cycle 0.2.3 for a sum `timestamp_add` cannot keep in the range, relayed the same way (TM-234), and a difference `timestamp_since` cannot hold in a `Duration` (TM-236), and since cycle 0.2.4b for a `secs` handed to `timestamp_add` outside the range (TM-241) and a difference `instant_since` cannot hold (TM-242); the floor of six; and `cal`'s four arithmetic arms, which reach every importer of `span` because `span` imports `cal`. **No new identity**: the umbrella's row stays 13. *(A placeholder until cycle 0.2.0, the row read **6** (4), the floor, "meaningless until cycle 0.2 gives the module a body".)* |
+-| `ntime/zone.npk` | `ETimeZone` | two arms | placeholder; **6** <!-- [[sweep: arms_zone=6]] --> (4) today (cycle 0.3) |
++| `ntime/zone.npk` | `ETimeZone` | two arms | placeholder; **6** <!-- [[sweep: arms_zone=6]] --> (4) today (cycle 0.3) *(its identity arrives with the lookup, `zone_by_name`, at cycle 0.6 — the system zone raises none: cycle 0.3.2, TM-256)* |
+ | `ntime/fmt.npk` | `ETimeParse` | three arms | placeholder; **6** <!-- [[sweep: arms_fmt=6]] --> (4) today (cycle 0.4) |
+ | `ntime/host.npk` | — (forwards errnos) | one arm | **11** <!-- [[sweep: arms_host=11]] --> (—) — since cycle 0.3.0, measured (TM-248): `cal.ETimeValue`, which `host` relays from `timestamp_of` (H-8) and raises in `timespec_ns`; the floor of six; and `cal`'s four arithmetic arms, which reach `host` through `span`. A forwarded errno is a dynamic operand and arms nothing (S-5). **No new identity**: the umbrella's row stays 13. *(A placeholder until cycle 0.3.0, the row read "placeholder; **6** (4) today" — the floor.)* |
+ 
+@@ -154,7 +154,9 @@ module doing the same kind of arithmetic adds nothing. So S-4b's system-arm
+ half is **front-loaded** — it arrives with the first module that computes
+ anything and never grows again — while the identity half grows one per module
+ that declares *and raises*. `ETimeParse` (0.4) and `ETimeZone` (0.3) are the two
+-still to come, and `import.npk` is where each will first show.
++still to come, and `import.npk` is where each will first show. *(Cycle 0.3.2,
++TM-256: `ETimeZone` is cycle 0.6's — the lookup's, `zone_by_name`; the system
++zone answers a name and raises nothing.)*
+ 
+ *(Cycle 0.1.5's second half, the cycle audit's C7: "never grows again" is true
+ of the four ARITHMETIC arms and of nothing else. The machinery half grew twice
+@@ -338,7 +340,8 @@ purpose. It contains exactly:
+ - `host_now_boot()` — `clock_gettime(CLOCK_BOOTTIME)` → `Instant`
+ - `host_clock_res(which)` — `clock_getres`
+ - `host_system_zone()` — reads `$TZ`, then `/etc/localtime`, and **says which
+-  it used**
++  it used** *(and then `/etc/timezone`, H-13's third step, answering the name
++  each step finds — cycle 0.3.2, TM-256)*
+ 
+ and nothing else. Nothing elsewhere in the library calls any of them.
+ 
+@@ -817,6 +820,9 @@ checks where the `Vec` is written (S-18d's amendment).)*
+ 
+ **Rule S-18.** `ntime` allocates only where it returns a `string` — formatting,
+ and the zone name lookup. Everything else is value arithmetic on the stack.
++*(Cycle 0.3.2, TM-256: and `host_system_zone`, whose answer holds the zone's
++name — its two buffers of `NTIME_PATH_MAX` bytes and a `cstring` of each path
++freed before it returns.)*
+ Growable storage is the library's own `Vec<T>` (`BUILD.md` §5), whose block is
+ `wild` and whose lifetime is its owner's scope; every `wild` byte is released
+ on every path, so `exit 0` never trips D-151.
+@@ -1236,7 +1242,10 @@ measured false on 2026-09-25, and re-measured here.)*
+ 
+ **Rule S-20.** `ntime` opens **no descriptor** except in `host_system_zone()`,
+ which reads `/etc/localtime`'s *link target*, closes what it opened before
+-returning, and holds nothing across a call.
++returning, and holds nothing across a call. *(Cycle 0.3.2, TM-256: the link
++target is read by `readlink`, which opens no descriptor; the one descriptor is
++`/etc/timezone`'s, step 3's, an `OwnedFd` the moment it is opened and closed by
++its drop on every path — `HOST.md` H-16.)*
+ 
+ **Rule S-21.** `ntime` spawns no processes, installs no signal handler, starts
+ no thread, and blocks on nothing.
+diff --git a/meta/specs/TESTING.md b/meta/specs/TESTING.md
+index 65c85959a3a4f1c26ba72c5ade871c2bba4fd64d..3565773632534ac72a9f655b3e201569b7d5af14 100644
+--- a/meta/specs/TESTING.md
++++ b/meta/specs/TESTING.md
+@@ -17,7 +17,7 @@ than sampled. Where that is possible it is the gate, and §3 says where.
+ 
+ | Stage | Answers |
+ |---|---|
+-| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **40 files of 152 that no other stage roots** <!-- [[sweep: npk_total=152]] --> *(40 of 151 until cycle 0.3.2's second step added a probe, and of 150 until its first added a unit; 41 of 149 until cycle 0.3.0, when the library build began to reach `src/host/host.npk`)* |
++| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **40 files of 156 that no other stage roots** <!-- [[sweep: npk_total=156]] --> *(40 of 152 until cycle 0.3.2's third step added four units, of 151 until its second added a probe, and of 150 until its first added a unit; 41 of 149 until cycle 0.3.0, when the library build began to reach `src/host/host.npk`)* |
+ | `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
+ | `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
+ | `check` | every documented refusal actually refuses, with exactly its code |
+diff --git a/nitpick.toml b/nitpick.toml
+index 0f2d1857cf0a5136eea1ce5a3e563d3e18b792fe..cd7d26b07bc72f90e69915d4a1b4d48bde78cc2c 100644
+--- a/nitpick.toml
++++ b/nitpick.toml
+@@ -136,8 +136,8 @@ path  = "tests/probe"
+ #   `parse`   HAS NO ENTRY BY DESIGN, not by omission (TM-123). It is a
+ #             WHOLE-TREE stage: `BUILD.md` §3's Directory column for it reads
+ #             "every `.npk` in the tree", and that is where its value is — of
+-#             the 152 files here [[sweep: npk_total=152]] (151 and 150 until
+-#             cycle 0.3.2's two first steps, 149 until 0.3.0, 147 until 0.2.4b), 40 are put in front of the compiler
++#             the 156 files here [[sweep: npk_total=156]] (152, 151 and 150
++#             until cycle 0.3.2's three steps, 149 until 0.3.0, 147 until 0.2.4b), 40 are put in front of the compiler
+ #             by nothing else (41 until cycle 0.3.0, when the library build
+ #             began to reach `src/host/host.npk`). An entry would narrow it to one directory and silently
+ #             un-cover the rest, so `stage = "parse"` is REFUSED BY NAME.
+diff --git a/src/host/README.md b/src/host/README.md
+index 794500d876a0800dedd3017a0ce692b572afecd1..b00cf0e70ffd1f1121c224b504c3755cc5c0be12 100644
+--- a/src/host/README.md
++++ b/src/host/README.md
+@@ -3,12 +3,15 @@
+ Five functions, and nothing else in the library calls any of them (TM-018):
+ `host_now_utc`, `host_now_instant`, `host_now_boot`, `host_clock_res`,
+ `host_system_zone` — four of them since cycle 0.3.0, the clocks, beside
+-`HostClock`, the argument `host_clock_res` takes (TM-247 … TM-249);
+-`host_system_zone` is cycle 0.3.2's.
++`HostClock`, the argument `host_clock_res` takes (TM-247 … TM-249); and
++`host_system_zone` since cycle 0.3.2, beside `SystemZone` and `ZoneSource`,
++what it answers: the zone's name, by `$TZ`, `/etc/localtime`'s link or
++`/etc/timezone`, and which of them answered — or that none did, never UTC
++(TM-256).
+ 
+ Everything outside this directory is a pure function of its arguments, which
+ is what makes the library reproducible, testable without a double, and portable
+ by rewriting one module. `check_purity` fails the build if that stops being
+ true. Governed by `meta/specs/HOST.md`. Built in cycle 0.3: the clocks at
+ 0.3.0, the system zone at 0.3.2. *(It said "Built in cycle 0.3." until the
+-clocks were.)*
++clocks were, and "`host_system_zone` is cycle 0.3.2's" until it was.)*
+diff --git a/src/host/host.npk b/src/host/host.npk
+index 8ac0a7bb945cc963dc0d3ad8641c23c3111b9bde..447fda1b784d9ac0e4c52c49e0a672956474f729 100644
+--- a/src/host/host.npk
++++ b/src/host/host.npk
+@@ -19,11 +19,15 @@
+ // WHAT FILLS IT: five public functions and nothing else (H-1) — four since
+ // cycle 0.3.0: `host_now_utc`, `host_now_instant`, `host_now_boot` and
+ // `host_clock_res`, with `HostClock`, the argument H-1 names; and
+-// `host_system_zone`, which is cycle 0.3.2's. Beside them, nothing public: the
+-// five numbers below and one helper, `timespec_ns`. `clock_gettime` and
+-// `clock_getres` are reached through `sys` with a 16-byte `timespec` laid out
+-// in a `buffer` (probe 03 pinned that shape), and the monotonic reading is the
+-// floor's `mono_now()` (H-5).
++// `host_system_zone`, since cycle 0.3.2, with `SystemZone` and `ZoneSource`,
++// what it answers (TM-256). Beside them, nothing public: six numbers and five
++// helpers -- `timespec_ns`, and the system zone's three steps and its
++// not-found answer. `clock_gettime` and `clock_getres` are reached through
++// `sys` with a 16-byte `timespec` laid out in a `buffer` (probe 03 pinned that
++// shape), and the monotonic reading is the floor's `mono_now()` (H-5);
++// `readlink` through `sys` into a `buffer` of `NTIME_PATH_MAX` bytes, and
++// `/etc/timezone` through the floor's `open` and `read`, its descriptor an
++// `OwnedFd` -- the library's one (`SAFETY.md` S-20).
+ // WHEN: cycle 0.3 (`meta/roadmap/0.3/README.md`) — the clocks at 0.3.0, the
+ // review of `check_purity`'s ban list against this body at 0.3.1, the system
+ // zone at 0.3.2 and the double at 0.3.3. (Until cycle 0.3.0 this file was the
+@@ -38,19 +42,26 @@
+ // WHAT IT MAY IMPORT: `span` (the readings' types and their constructors:
+ // `Instant`'s and `Timestamp`'s fields are sealed, so only `span` builds them),
+ // `cal` (the range check's identity) and `core` (`BUILD.md` B-17, TM-247) — and
+-// `zone`, for the name lookup, when cycle 0.3.2 needs it.
++// `zone`, for the name lookup, when cycle 0.3.2 needs it. (Cycle 0.3.2,
++// TM-256: it does not. `host_system_zone` answers the zone's NAME, and the
++// lookup is the caller's, `zone`'s pure `zone_by_name` at cycle 0.6, so a
++// program that reads the clock owes no zone arm.)
+ //
+ // THE ERRORS IT RAISES: none of its own. `cal`'s `ETimeValue`, relayed from
+ // `timestamp_of` (H-8's range check) or raised by `timespec_ns`; and the
+ // kernel's errno, FORWARDED VERBATIM (`SAFETY.md` S-5), exactly as
+ // `lib/nsys.npk` does — a dynamic operand, which arms nothing. A root that
+ // imports this module alone owes eleven identities, measured: `cal.ETimeValue`,
+-// the floor of six and the four arithmetic arms (`SAFETY.md` S-4).
++// the floor of six and the four arithmetic arms (`SAFETY.md` S-4). The system
++// zone raises nothing and forwards nothing (TM-256): a step that cannot read
++// its source has not answered, and its loops are `for` loops, which state no
++// measure -- so the eleven stand.
+ mod:host;
+ 
+ use "../cal/cal.npk".ETimeValue;
+ use "../core/limits.npk".NTIME_NANOS_PER_SEC;
+ use "../core/limits.npk".NTIME_DURATION_NS_MAX;
++use "../core/limits.npk".NTIME_PATH_MAX;
+ use "../span/span.npk".Instant;
+ use "../span/span.npk".InstantClock;
+ use "../span/span.npk".Timestamp;
+@@ -161,3 +172,152 @@ pub func:host_clock_res = Duration(HostClock:which) {
+     int64:ns = relay timespec_ns(secs, nanos);
+     pass raw duration_ns(ns);
+ };
++
++// ---------------------------------------------------------------------------
++// The system zone -- `HOST.md` H-12 ... H-16, cycle 0.3.2 (TM-256)
++// ---------------------------------------------------------------------------
++
++// `readlink`, x86-64: H-15's number, and the kernel's table's
++// (`arch/x86/entry/syscalls/syscall_64.tbl`, `meta/research/CURRENCY.md`).
++fixed int64:SYS_READLINK = 89i64;
++
++// WHICH MECHANISM ANSWERED (H-12, TM-256). The third variant is
++// `/etc/timezone`'s: H-12 named it `TzDirLink`, which names no mechanism H-13
++// has -- step 3 reads a one-line text file, through no link and no `TZDIR`.
++#[derive(Eq, Clone, Debug, Copy)]
++pub enum:ZoneSource = { TzEnvironment; EtcLocaltime; EtcTimezone; NotFound; };
++
++// WHAT THE DISCOVERY FOUND, AND WHERE (H-12, TM-256). `name` is the zone's
++// NAME, as the mechanism gave it -- H-12's `ZoneId:zone`, whose type and the
++// compiled table it indexes are cycles 0.5's and 0.6's. A program turns the
++// name into a zone with the lookup (`zone_by_name`, cycle 0.6), whose
++// `ETimeZone`/`Unknown` refuses a name the table lacks, a POSIX rule string
++// and the empty value among them; so this module looks nothing up, imports
++// nothing from `zone`, and raises nothing. `found` is false only with
++// `NotFound`, and `name` is then empty -- never UTC (H-13.4).
++pub struct:SystemZone = { string:name; ZoneSource:source; bool:found; };
++
++func:zone_none = SystemZone() never fails {
++    pass SystemZone{ name: "", source: ZoneSource.NotFound, found: false };
++};
++
++// STEP 1, `$TZ` (H-13.1): the first entry of `environ()` that begins `TZ=` --
++// the `=` part of the prefix, so `TZX=` is another variable -- read in place,
++// as `probe09` measured the entries' bytes are the kernel's and stay. One
++// leading `:` is stripped (POSIX), and the rest is the name, VERBATIM: a
++// POSIX rule string is reported as the text it is, never parsed (Z-12), and
++// the empty value is reported empty. A set `TZ` always answers, because a
++// program run with `TZ` set was asked for that zone, and moving on to
++// `/etc/localtime` would answer a question the environment did not ask --
++// the GNU C library reads an empty `TZ` as UTC
++// (`meta/research/tz-environment.md`), and a silent fall to the machine's
++// zone would disagree with the C programs beside it. The copy is
++// `string_slice`'s, in bounds by construction: `lo` is 3 or 4 and at most
++// `eb.len`, so its refusal is `#unreachable()` (`SAFETY.md` S-15c).
++func:zone_from_tz = SystemZone() never fails {
++    cstring[]:env = environ();
++    for (int64:k in 0i64..(env.len - 1i64)) {
++        string:entry = string_from_bytes(env[k].ptr, env[k].len);
++        uint8[]:eb = string_bytes(entry);
++        if (eb.len >= 3i64) {
++            if ((eb[0i64] == 84u8) && (eb[1i64] == 90u8) && (eb[2i64] == 61u8)) {   // `TZ=`
++                int64:lo = 3i64;
++                if (eb.len > 3i64) {
++                    if (eb[3i64] == 58u8) { lo = 4i64; }                        // `:`
++                }
++                string:name = string_slice(entry, lo, eb.len) ?| #unreachable();
++                pass SystemZone{ name: move(name), source: ZoneSource.TzEnvironment, found: true };
++            }
++        }
++    }
++    pass raw zone_none();
++};
++
++// STEP 2, `/etc/localtime`'s link (H-13.2, H-14, H-15): `readlink` into a
++// buffer of `NTIME_PATH_MAX` bytes, and the TARGET read, never the file -- a
++// regular file is `EINVAL`, and a dangling link still names its zone. H-15's
++// four facts, each where it is kept: the RETURNED LENGTH is the authority --
++// the view is `n` bytes, and no NUL is looked for, since the kernel writes
++// none; the buffer is `NTIME_PATH_MAX`; and a result that fills it may be a
++// prefix, so it does not answer (the kernel refuses a link of 4 096 bytes,
++// `probe22`, so a link it made never fills it). The name is the tail after
++// the LAST `zoneinfo/` that begins the target or follows a `/` -- the last,
++// so a path that holds two names the second; at a component's start, so
++// `myzoneinfo/` is not one. No such `zoneinfo/`, an empty tail, or any error
++// -- no link, a regular file, a path the process cannot search -- and the
++// step does not answer. The tail is reported as the target holds it:
++// `posix/Europe/London` is the lookup's to judge. The view is of the buffer,
++// which outlives it; the copy is `string_slice`'s, `lo` at most `tb.len`.
++func:zone_from_localtime = SystemZone() never fails {
++    cstring:path = to_cstring("/etc/localtime") ?| #unreachable();
++    buffer:b = buffer_new(NTIME_PATH_MAX);
++    int64:n = sys(SYS_READLINK, path.ptr, b.ptr, NTIME_PATH_MAX) ?| -1i64;
++    if (n <= 0i64) { pass raw zone_none(); }
++    if (n >= NTIME_PATH_MAX) { pass raw zone_none(); }                  // truncated
++    string:target = string_from_bytes(b.ptr, n);
++    uint8[]:tb = string_bytes(target);
++    string:mark = "zoneinfo/";
++    uint8[]:mb = string_bytes(mark);
++    int64:lo = -1i64;
++    for (int64:i in 0i64..(tb.len - mb.len)) {
++        bool:same = true;
++        if (i > 0i64) { same = (tb[i - 1i64] == 47u8); }                // `/`
++        for (int64:j in 0i64..(mb.len - 1i64)) {
++            if (tb[i + j] != mb[j]) { same = false; }
++        }
++        if (same) { lo = i + mb.len; }
++    }
++    if (lo < 0i64) { pass raw zone_none(); }
++    if (lo >= tb.len) { pass raw zone_none(); }
++    string:name = string_slice(target, lo, tb.len) ?| #unreachable();
++    pass SystemZone{ name: move(name), source: ZoneSource.EtcLocaltime, found: true };
++};
++
++// STEP 3, `/etc/timezone` (H-13.3, H-16, `SAFETY.md` S-20): the library's one
++// descriptor. Opened `O_RDONLY | O_NONBLOCK | O_CLOEXEC` -- `O_NONBLOCK` so a
++// FIFO at that path never blocks the open (S-21: `ntime` blocks on nothing),
++// `O_CLOEXEC` so the descriptor never outlives the call into an `exec` -- and
++// owned at once by an `OwnedFd`, whose drop closes it: every `pass` below is a
++// path out, and each one closes it, by construction rather than by a `close`
++// on each path. ONE read of up to `NTIME_PATH_MAX` bytes: a read that fills
++// the buffer is longer than any name, and does not answer -- a link to
++// `/dev/zero` is read once, and is not a name. The name is the bytes before
++// the first newline, every other byte reported as the file holds it; an empty
++// first line, an empty file (the floor's `E_EOF`), or any error -- no file, a
++// directory, a FIFO with no writer -- and the step does not answer.
++func:zone_from_timezone = SystemZone() never fails {
++    cstring:path = to_cstring("/etc/timezone") ?| #unreachable();
++    Result<fd>:o = open(path, ((((O_RDONLY | O_NONBLOCK) | O_CLOEXEC) => int32) => int64),
++                        ((S_NONE => int32) => int64));
++    if (o.is_error) { pass raw zone_none(); }
++    OwnedFd:d = own_fd(o.value);
++    buffer:b = buffer_new(NTIME_PATH_MAX);
++    int64:n = read(d.value, b.ptr, NTIME_PATH_MAX) ?| -1i64;
++    if (n <= 0i64) { pass raw zone_none(); }
++    if (n >= NTIME_PATH_MAX) { pass raw zone_none(); }                  // longer than a name
++    string:text = string_from_bytes(b.ptr, n);
++    uint8[]:fb = string_bytes(text);
++    int64:e = fb.len;
++    for (int64:i in 0i64..(fb.len - 1i64)) {
++        if (fb[i] == 10u8) { e = i; break; }                            // `\n`
++    }
++    if (e == 0i64) { pass raw zone_none(); }
++    string:name = string_slice(text, 0i64, e) ?| #unreachable();
++    pass SystemZone{ name: move(name), source: ZoneSource.EtcTimezone, found: true };
++};
++
++// `HOST.md` H-12 and H-13: the four steps, in order, stopping at the first
++// that answers; the fourth is `NotFound`, `found: false` -- not UTC, and not
++// an error (TM-019). `never fails`: a step whose source cannot be read has not
++// answered, so nothing is left to fail but what traps -- an allocation, or a
++// copy out of bounds that cannot happen. Two calls are two discoveries (H-3):
++// nothing is kept between them.
++pub func:host_system_zone = SystemZone() never fails {
++    SystemZone:z = raw zone_from_tz();
++    if (z.found) { pass z; }
++    z = raw zone_from_localtime();
++    if (z.found) { pass z; }
++    z = raw zone_from_timezone();
++    if (z.found) { pass z; }
++    pass raw zone_none();
++};
+diff --git a/src/lib.npk b/src/lib.npk
+index 5c634034d0c8da85c8d9780da12eeccd9381a671..4fae51e3964f2f48fb79446be8ad0a63fad0ac63 100644
+--- a/src/lib.npk
++++ b/src/lib.npk
+@@ -19,9 +19,10 @@
+ // deliberate. Adding a line here is the moment a name becomes public and, by
+ // TM-013, a thing a MAJOR version is needed to take away.
+ //
+-// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 81
+-// names now [[sweep: lib_reexports=81]], below -- 76 until cycle 0.3.0 added
+-// `host`'s five, 68 until cycle 0.2.3 added
++// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 84
++// names now [[sweep: lib_reexports=84]], below -- 81 until cycle 0.3.2 added
++// `host`'s system zone, its function and its two types, 76 until cycle 0.3.0
++// added `host`'s five, 68 until cycle 0.2.3 added
+ // `Duration`'s two ends and `span`'s six for the `Duration` interop, 66 until
+ // cycle 0.2.2 added
+ // `timestamp_to_utc` and `civil_to_utc`, 64 until cycle 0.2.1 added
+@@ -328,7 +329,8 @@ pub use "./span/span.npk".timestamp_since;
+ // ===========================================================================
+ //
+ // Four of the five readings `HOST.md` H-1 names, and `HostClock`, the argument
+-// `host_clock_res` takes (TM-248); `host_system_zone` is cycle 0.3.2's. `host`
++// `host_clock_res` takes (TM-248); `host_system_zone` is cycle 0.3.2's, below
++// (TM-256). `host`
+ // declares no error: it relays `cal`'s `ETimeValue` from `timestamp_of` --
+ // H-8's range check -- and from its own `timespec_ns`, and forwards the
+ // kernel's errno, which arms nothing (`SAFETY.md` S-5). So it costs what
+@@ -341,3 +343,8 @@ pub use "./host/host.npk".host_now_utc;
+ pub use "./host/host.npk".host_now_instant;
+ pub use "./host/host.npk".host_now_boot;
+ pub use "./host/host.npk".host_clock_res;
++// THE SYSTEM ZONE (cycle 0.3.2, TM-256): the fifth of H-1's functions, and what
++// it answers. It raises nothing, so the bills above stand. EIGHT NAMES now.
++pub use "./host/host.npk".ZoneSource;
++pub use "./host/host.npk".SystemZone;
++pub use "./host/host.npk".host_system_zone;
+diff --git a/tests/unit/system_zone_etc.npk b/tests/unit/system_zone_etc.npk
+new file mode 100644
+index 0000000000000000000000000000000000000000..3b015c8872e395a62edaaff56fb94c1f21d9e5cc
+--- /dev/null
++++ b/tests/unit/system_zone_etc.npk
+@@ -0,0 +1,253 @@
++// expect-exit: 0
++// stress: 40
++// env: TZX=Asia/Tokyo
++// env: ATZ=Africa/Lagos
++//
++// The system zone's steps 2, 3 and 4, on a machine this unit makes (cycle
++// 0.3.2; `HOST.md` H-12 ... H-16, `SAFETY.md` S-20; TM-256 and TM-257).
++//
++// ASKS: with no `TZ`, which mechanism answers, with what name, on each
++// `/etc` below -- and is the lowest free descriptor the same after every call
++// as before it, so that `/etc/timezone`'s descriptor is closed on every path
++// step 3 takes (H-16, S-20)?
++//
++// MATTERS BECAUSE no machine this suite runs on has none of the three, a link
++// no distribution ships, or a `/etc/timezone` that is a directory -- and the
++// cycle README asks for each of H-15's facts and the not-found answer as a
++// test. So the unit enters a user and a mount namespace of its own and mounts
++// an empty `tmpfs` over `/etc`, by its own syscalls -- `probe22`'s shape
++// (TM-255) -- and writes each case there before it asks. The machine's `/etc`
++// is never touched: the mount is the namespace's.
++//
++// THE ENVIRONMENT holds no `TZ`, and two variables a careless step 1 would
++// read as one: `TZX=Asia/Tokyo`, which begins `TZ` but not `TZ=`, and
++// `ATZ=Africa/Lagos`, which holds `TZ=` past its start. A step 1 that read
++// either answers every case below `TzEnvironment`.
++//
++// THE PRECONDITION, AND ITS CODES (V-1d), `probe22`'s: 20 `unshare` refused;
++// 21, 22 and 23 the `setgroups`, uid and gid maps not written; 24 the `tmpfs`
++// not mounted -- each says the machine refused the namespace, and CI lifts
++// Ubuntu 24.04's restriction before the harness runs.
++//
++// EXIT CODES, one per case, clear of every arm code (TM-152) -- the source,
++// the name and `found` each case asserts, and the descriptor:
++//   30  `/etc` empty: `NotFound`, `""`, false -- not UTC (H-13.4)
++//   31  `/etc/timezone` alone, `Asia/Tokyo\n`: `EtcTimezone`, `Asia/Tokyo`
++//   32  beside it, `/etc/localtime` -> `/usr/share/zoneinfo/Europe/London`:
++//       `EtcLocaltime`, `Europe/London` -- step 2 before step 3
++//   33  a relative link, `../usr/share/zoneinfo/Asia/Kolkata`: `Asia/Kolkata`
++//   34  a dangling link, `/nonexistent/zoneinfo/Pacific/Auckland`:
++//       `Pacific/Auckland` -- the target is read, never the file (H-14)
++//   35  `/usr/share/myzoneinfo/Europe/Paris`, no `zoneinfo/` at a component's
++//       start: step 2 does not answer, `EtcTimezone`, `Asia/Tokyo`
++//   36  `/opt/zoneinfo/x/zoneinfo/Europe/Rome`: the LAST, `Europe/Rome`
++//   37  `/usr/share/zoneinfo/`, an empty tail: step 2 does not answer
++//   38  `/etc/localtime` a regular file holding `Europe/Berlin\n`: never
++//       read as bytes (H-14), step 3 answers
++//   39  `zoneinfo/Africa/Cairo`, the mark at the target's start: `Africa/Cairo`
++//   40  a link of 4 095 bytes, the longest the kernel holds, ending
++//       `/zoneinfo/Europe/Oslo`: `Europe/Oslo` -- the length is the authority
++//   41  `/etc/timezone` `Asia/Tokyo`, no newline: `Asia/Tokyo`
++//   42  `Asia/Tokyo\nEurope/Paris\n`: the first line, `Asia/Tokyo`
++//   43  `Asia/Tokyo\r\n`: `Asia/Tokyo\r` -- every byte but the newline reported
++//   44  `\nAsia/Tokyo\n`, an empty first line: `NotFound`
++//   45  an empty file: `NotFound`
++//   46  `/etc/timezone` -> `/dev/zero`: one read fills the buffer, `NotFound`
++//   47  `/etc/timezone` a directory: the read refused, `NotFound`
++//   48  a file of 4 096 bytes, `NTIME_PATH_MAX`: longer than a name, `NotFound`
++// and 80 a setup syscall of the unit's own refused after the namespace.
++//
++// SEEN RED AT PLANNING, each on a mutant of `src/host/host.npk` in a copy of
++// the tree -- one text replaced -- on both legs (`meta/roadmap/0.3/0.3.2.md`
++// §1.9): every exit from 30 to 46 is reached by one, the table there naming
++// each. 47 and 48 are BELTS: a directory's failed read takes the path an
++// empty file's does, which a mutant reddens at 45 first, and a file of 4 096
++// bytes is passed by as `/dev/zero` is, which one reddens at 46 first.
++//
++// FOUR MUTANTS IT CANNOT SEE, AND WHAT HOLDS EACH (TM-257; `HOST.md` H-15 and
++// H-16). A green run here is evidence about the exits above, and not about
++// these: step 2's `n >= NTIME_PATH_MAX` refusal deleted -- the kernel refuses
++// a link of 4 096 bytes (`probe22`), so no link it made fills the buffer;
++// the target's length read by scanning for a NUL in place of `n` --
++// `buffer_new` zeroes the buffer, so the scan stops where `n` does; and
++// `O_NONBLOCK` and `O_CLOEXEC` dropped from step 3's open -- the first would
++// block the open of a FIFO with no writer, and this harness has no timeout to
++// see a hang with; the second needs an `exec`. Each is held by reading: the
++// `?|` that takes `n` from the syscall's answer, the view built from `n`, and
++// the open's one line.
++//
++// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
++// `host`: its eleven (`SAFETY.md` S-4) -- no loop here states a measure.
++mod:system_zone_etc;
++
++use "../../src/host/host.npk".*;
++
++error:ESetup;
++
++fixed int64:SYS_UNSHARE   = 272i64;
++fixed int64:SYS_MOUNT     = 165i64;
++fixed int64:SYS_SYMLINK   = 88i64;
++fixed int64:SYS_UNLINK    = 87i64;
++fixed int64:SYS_MKDIR     = 83i64;
++fixed int64:SYS_RMDIR     = 84i64;
++fixed int64:SYS_GETUID    = 102i64;
++fixed int64:SYS_GETGID    = 104i64;
++fixed int64:CLONE_NEWUSER = 268435456i64;    // 0x10000000
++fixed int64:CLONE_NEWNS   = 131072i64;       // 0x00020000
++
++// Write `text` to `path`, created or truncated: one `write`, all of it.
++func:put = NIL(string:path, string:text) {
++    cstring:c = relay to_cstring(path);
++    fd:f = relay open(c, ((((O_WRONLY | O_CREAT) | O_TRUNC) => int32) => int64), 420i64);
++    uint8[]:b = string_bytes(text);
++    if (b.len > 0i64) {
++        int64:n = relay write(f, b.ptr, b.len);
++        if (n != b.len) { fail ESetup; }
++    }
++    discard(relay close(f));
++    pass NIL;
++};
++
++// The namespace, `probe22`'s: 0, or the precondition's code.
++func:enter = int32() {
++    int64:me = relay sys(SYS_GETUID);
++    int64:mg = relay sys(SYS_GETGID);
++    Result<int64>:u = sys(SYS_UNSHARE, CLONE_NEWUSER | CLONE_NEWNS);
++    if (u.is_error) { pass 20i32; }
++    Result<NIL>:g = put("/proc/self/setgroups", "deny");
++    if (g.is_error) { pass 21i32; }
++    Result<NIL>:um = put("/proc/self/uid_map",
++                         string_concat(string_concat("0 ", int_to_string(me)), " 1"));
++    if (um.is_error) { pass 22i32; }
++    Result<NIL>:gm = put("/proc/self/gid_map",
++                         string_concat(string_concat("0 ", int_to_string(mg)), " 1"));
++    if (gm.is_error) { pass 23i32; }
++    cstring:fs = relay to_cstring("tmpfs");
++    cstring:at = relay to_cstring("/etc");
++    Result<int64>:m = sys(SYS_MOUNT, fs.ptr, at.ptr, fs.ptr, 0i64, 0i64);
++    if (m.is_error) { pass 24i32; }
++    pass 0i32;
++};
++
++func:link = NIL(string:target, string:path) {
++    cstring:t = relay to_cstring(target);
++    cstring:p = relay to_cstring(path);
++    discard(relay sys(SYS_SYMLINK, t.ptr, p.ptr));
++    pass NIL;
++};
++
++func:unlink = NIL(string:path) {
++    cstring:p = relay to_cstring(path);
++    discard(relay sys(SYS_UNLINK, p.ptr));
++    pass NIL;
++};
++
++// The lowest descriptor free: what `open` hands out next.
++func:lowest_fd = int64() {
++    cstring:p = relay to_cstring("/dev/null");
++    fd:f = relay open(p, ((O_RDONLY => int32) => int64), 0i64);
++    int64:k = f =>! int64;
++    discard(relay close(f));
++    pass k;
++};
++
++// One case: the answer's source, name and `found`, and the lowest free
++// descriptor the same after the call as before it.
++func:case_ok = bool(ZoneSource:src, string:want, bool:found) {
++    int64:before = relay lowest_fd();
++    SystemZone:z = raw host_system_zone();
++    int64:after = relay lowest_fd();
++    if (after != before) { pass false; }
++    if (z.source != src) { pass false; }
++    if (z.found != found) { pass false; }
++    pass string_equals(z.name, want);
++};
++
++func:main = int32(cstring[]:_~argv) {
++    int32:pre = enter() ?! ESetup;
++    if (pre != 0i32) { exit pre; }
++    string:lt = "/etc/localtime";
++    string:tz = "/etc/timezone";
++    string:tokyo = "Asia/Tokyo";
++
++    if (!(case_ok(ZoneSource.NotFound, "", false) ?! ESetup))               { exit 30i32; }
++    put(tz, "Asia/Tokyo\n") ?! ESetup;
++    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 31i32; }
++
++    // ---- step 2, with step 3's answer behind it ---------------------------
++    link("/usr/share/zoneinfo/Europe/London", lt) ?! ESetup;
++    if (!(case_ok(ZoneSource.EtcLocaltime, "Europe/London", true) ?! ESetup)) { exit 32i32; }
++    unlink(lt) ?! ESetup;
++    link("../usr/share/zoneinfo/Asia/Kolkata", lt) ?! ESetup;
++    if (!(case_ok(ZoneSource.EtcLocaltime, "Asia/Kolkata", true) ?! ESetup)) { exit 33i32; }
++    unlink(lt) ?! ESetup;
++    link("/nonexistent/zoneinfo/Pacific/Auckland", lt) ?! ESetup;
++    if (!(case_ok(ZoneSource.EtcLocaltime, "Pacific/Auckland", true) ?! ESetup)) { exit 34i32; }
++    unlink(lt) ?! ESetup;
++    link("/usr/share/myzoneinfo/Europe/Paris", lt) ?! ESetup;
++    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 35i32; }
++    unlink(lt) ?! ESetup;
++    link("/opt/zoneinfo/x/zoneinfo/Europe/Rome", lt) ?! ESetup;
++    if (!(case_ok(ZoneSource.EtcLocaltime, "Europe/Rome", true) ?! ESetup)) { exit 36i32; }
++    unlink(lt) ?! ESetup;
++    link("/usr/share/zoneinfo/", lt) ?! ESetup;
++    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 37i32; }
++    unlink(lt) ?! ESetup;
++    put(lt, "Europe/Berlin\n") ?! ESetup;
++    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 38i32; }
++    unlink(lt) ?! ESetup;
++    link("zoneinfo/Africa/Cairo", lt) ?! ESetup;
++    if (!(case_ok(ZoneSource.EtcLocaltime, "Africa/Cairo", true) ?! ESetup)) { exit 39i32; }
++    unlink(lt) ?! ESetup;
++    string:long = "/";
++    for (int64:i in 1i64..4073i64) { long = string_concat(long, "a"); }
++    long = string_concat(long, "/zoneinfo/Europe/Oslo");
++    if (string_byte_length(long) != 4095i64)                                 { exit 80i32; }
++    link(long, lt) ?! ESetup;
++    if (!(case_ok(ZoneSource.EtcLocaltime, "Europe/Oslo", true) ?! ESetup)) { exit 40i32; }
++    unlink(lt) ?! ESetup;
++
++    // ---- step 3's shapes, with no link ------------------------------------
++    put(tz, "Asia/Tokyo") ?! ESetup;
++    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 41i32; }
++    put(tz, "Asia/Tokyo\nEurope/Paris\n") ?! ESetup;
++    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 42i32; }
++    put(tz, "Asia/Tokyo\r\n") ?! ESetup;
++    if (!(case_ok(ZoneSource.EtcTimezone, "Asia/Tokyo\r", true) ?! ESetup)) { exit 43i32; }
++    put(tz, "\nAsia/Tokyo\n") ?! ESetup;
++    if (!(case_ok(ZoneSource.NotFound, "", false) ?! ESetup))               { exit 44i32; }
++    put(tz, "") ?! ESetup;
++    if (!(case_ok(ZoneSource.NotFound, "", false) ?! ESetup))               { exit 45i32; }
++    unlink(tz) ?! ESetup;
++    link("/dev/zero", tz) ?! ESetup;
++    if (!(case_ok(ZoneSource.NotFound, "", false) ?! ESetup))               { exit 46i32; }
++    unlink(tz) ?! ESetup;
++    cstring:tzc = to_cstring(tz) ?! ESetup;
++    discard(sys(SYS_MKDIR, tzc.ptr, 493i64) ?! ESetup);
++    if (!(case_ok(ZoneSource.NotFound, "", false) ?! ESetup))               { exit 47i32; }
++    discard(sys(SYS_RMDIR, tzc.ptr) ?! ESetup);
++    string:big = "";
++    for (int64:i in 1i64..4096i64) { big = string_concat(big, "a"); }
++    put(tz, big) ?! ESetup;
++    if (!(case_ok(ZoneSource.NotFound, "", false) ?! ESetup))               { exit 48i32; }
++    exit 0i32;
++};
++
++func:failsafe = int32(Error:e) {
++    pick (e) {
++        (ESetup)            { exit 80i32; },
++        (cal.ETimeValue)    { exit 81i32; },
++        (HeapBadRequest)    { exit 91i32; },
++        (HeapOom)           { exit 92i32; },
++        (IntOverflow)       { exit 93i32; },
++        (OutOfBounds)       { exit 94i32; },
++        (Unreachable)       { exit 95i32; },
++        (WildLeak)          { exit 96i32; },
++        (DivByZero)         { exit 97i32; },
++        (DivOverflow)       { exit 98i32; },
++        (StackExhausted)    { exit 106i32; },
++        (MachineFault)      { exit 107i32; },
++        (*)                 { exit 99i32; }
++    }
++    exit 9i32;
++};
+diff --git a/tests/unit/system_zone_tz.npk b/tests/unit/system_zone_tz.npk
+new file mode 100644
+index 0000000000000000000000000000000000000000..858ae0da73b89cc23775d7e29f03e276050f630f
+--- /dev/null
++++ b/tests/unit/system_zone_tz.npk
+@@ -0,0 +1,54 @@
++// expect-exit: 0
++// stress: 40
++// env: TZ=GMT0BST,M3.5.0/1,M10.5.0
++//
++// The system zone's step 1, `$TZ` (cycle 0.3.2; `HOST.md` H-13.1, TM-256 and
++// TM-257).
++//
++// `TZ` set to a POSIX RULE STRING, `GMT0BST,M3.5.0/1,M10.5.0` -- `HOST.md`
++// H-13.1's own example. Step 1 answers, and reports the value as the text it
++// is: not parsed (`ZONE_MODEL.md` Z-12), not refused here, and not passed by
++// for `/etc/localtime`. Its refusal is the lookup's, cycle 0.6's
++// `zone_by_name`, which holds no zone of that name (TM-256). And with no `:`,
++// nothing is stripped: a step 1 that dropped the value's first byte reads
++// `MT0BST,...`.
++//
++// ON ANY MACHINE: `TZ` is step 1, so it answers before `/etc/localtime` and
++// `/etc/timezone` are read -- and on every machine this suite runs on, CI's
++// included, `/etc/localtime` is a link that WOULD answer, so a discovery that
++// tried the files first answers `EtcLocaltime` here, and is red.
++//
++// EXIT CODES, clear of every arm code (TM-152): 10 the answer's source not
++// `TzEnvironment`; 11 not found; 12 its name not `GMT0BST,M3.5.0/1,M10.5.0`.
++//
++// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
++// `host`: its eleven (`SAFETY.md` S-4).
++mod:system_zone_tz;
++
++use "../../src/host/host.npk".*;
++
++func:main = int32(cstring[]:_~argv) {
++    SystemZone:z = raw host_system_zone();
++    if (z.source != ZoneSource.TzEnvironment) { exit 10i32; }
++    if (!(z.found))                           { exit 11i32; }
++    if (!(string_equals(z.name, "GMT0BST,M3.5.0/1,M10.5.0"))) { exit 12i32; }
++    exit 0i32;
++};
++
++func:failsafe = int32(Error:e) {
++    pick (e) {
++        (cal.ETimeValue)    { exit 80i32; },
++        (HeapBadRequest)    { exit 91i32; },
++        (HeapOom)           { exit 92i32; },
++        (IntOverflow)       { exit 93i32; },
++        (OutOfBounds)       { exit 94i32; },
++        (Unreachable)       { exit 95i32; },
++        (WildLeak)          { exit 96i32; },
++        (DivByZero)         { exit 97i32; },
++        (DivOverflow)       { exit 98i32; },
++        (StackExhausted)    { exit 106i32; },
++        (MachineFault)      { exit 107i32; },
++        (*)                 { exit 99i32; }
++    }
++    exit 9i32;
++};
+diff --git a/tests/unit/system_zone_tz_colon.npk b/tests/unit/system_zone_tz_colon.npk
+new file mode 100644
+index 0000000000000000000000000000000000000000..0028a47d25d139ee977410fd8909c311e1c34888
+--- /dev/null
++++ b/tests/unit/system_zone_tz_colon.npk
+@@ -0,0 +1,52 @@
++// expect-exit: 0
++// stress: 40
++// env: TZ=:America/Sao_Paulo
++//
++// The system zone's step 1, `$TZ` (cycle 0.3.2; `HOST.md` H-13.1, TM-256 and
++// TM-257).
++//
++// `TZ` set to `:America/Sao_Paulo`. POSIX leaves what follows a leading `:`
++// to the implementation, and H-13.1 strips the `:` and reads the rest as a
++// name, as the GNU C library does (`meta/research/tz-environment.md`): the
++// name is `America/Sao_Paulo`, and a step 1 that kept the `:` reads
++// `:America/Sao_Paulo`.
++//
++// ON ANY MACHINE: `TZ` is step 1, so it answers before `/etc/localtime` and
++// `/etc/timezone` are read -- and on every machine this suite runs on, CI's
++// included, `/etc/localtime` is a link that WOULD answer, so a discovery that
++// tried the files first answers `EtcLocaltime` here, and is red.
++//
++// EXIT CODES, clear of every arm code (TM-152): 10 the answer's source not
++// `TzEnvironment`; 11 not found; 12 its name not `America/Sao_Paulo`.
++//
++// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
++// `host`: its eleven (`SAFETY.md` S-4).
++mod:system_zone_tz_colon;
++
++use "../../src/host/host.npk".*;
++
++func:main = int32(cstring[]:_~argv) {
++    SystemZone:z = raw host_system_zone();
++    if (z.source != ZoneSource.TzEnvironment) { exit 10i32; }
++    if (!(z.found))                           { exit 11i32; }
++    if (!(string_equals(z.name, "America/Sao_Paulo"))) { exit 12i32; }
++    exit 0i32;
++};
++
++func:failsafe = int32(Error:e) {
++    pick (e) {
++        (cal.ETimeValue)    { exit 80i32; },
++        (HeapBadRequest)    { exit 91i32; },
++        (HeapOom)           { exit 92i32; },
++        (IntOverflow)       { exit 93i32; },
++        (OutOfBounds)       { exit 94i32; },
++        (Unreachable)       { exit 95i32; },
++        (WildLeak)          { exit 96i32; },
++        (DivByZero)         { exit 97i32; },
++        (DivOverflow)       { exit 98i32; },
++        (StackExhausted)    { exit 106i32; },
++        (MachineFault)      { exit 107i32; },
++        (*)                 { exit 99i32; }
++    }
++    exit 9i32;
++};
+diff --git a/tests/unit/system_zone_tz_empty.npk b/tests/unit/system_zone_tz_empty.npk
+new file mode 100644
+index 0000000000000000000000000000000000000000..e7404524dcd099bd27da911afc39bf1de34f878f
+--- /dev/null
++++ b/tests/unit/system_zone_tz_empty.npk
+@@ -0,0 +1,54 @@
++// expect-exit: 0
++// stress: 40
++// env: TZ=
++//
++// The system zone's step 1, `$TZ` (cycle 0.3.2; `HOST.md` H-13.1, TM-256 and
++// TM-257).
++//
++// `TZ` set, and EMPTY. Step 1 answers, with the empty name: a program run
++// with `TZ` set was asked for that zone, and the GNU C library reads an empty
++// `TZ` as UTC (`meta/research/tz-environment.md`), so moving on to
++// `/etc/localtime` would answer, in silence, a question the environment did
++// not ask. The lookup, cycle 0.6's `zone_by_name`, refuses the empty name, and
++// the program decides (TM-019, TM-256). It is also the length edge of step
++// 1's `:` test: three bytes, `TZ=`, and none past them.
++//
++// ON ANY MACHINE: `TZ` is step 1, so it answers before `/etc/localtime` and
++// `/etc/timezone` are read -- and on every machine this suite runs on, CI's
++// included, `/etc/localtime` is a link that WOULD answer, so a discovery that
++// tried the files first answers `EtcLocaltime` here, and is red.
++//
++// EXIT CODES, clear of every arm code (TM-152): 10 the answer's source not
++// `TzEnvironment`; 11 not found; 12 its name not empty.
++//
++// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
++// `host`: its eleven (`SAFETY.md` S-4).
++mod:system_zone_tz_empty;
++
++use "../../src/host/host.npk".*;
++
++func:main = int32(cstring[]:_~argv) {
++    SystemZone:z = raw host_system_zone();
++    if (z.source != ZoneSource.TzEnvironment) { exit 10i32; }
++    if (!(z.found))                           { exit 11i32; }
++    if (!(string_equals(z.name, ""))) { exit 12i32; }
++    exit 0i32;
++};
++
++func:failsafe = int32(Error:e) {
++    pick (e) {
++        (cal.ETimeValue)    { exit 80i32; },
++        (HeapBadRequest)    { exit 91i32; },
++        (HeapOom)           { exit 92i32; },
++        (IntOverflow)       { exit 93i32; },
++        (OutOfBounds)       { exit 94i32; },
++        (Unreachable)       { exit 95i32; },
++        (WildLeak)          { exit 96i32; },
++        (DivByZero)         { exit 97i32; },
++        (DivOverflow)       { exit 98i32; },
++        (StackExhausted)    { exit 106i32; },
++        (MachineFault)      { exit 107i32; },
++        (*)                 { exit 99i32; }
++    }
++    exit 9i32;
++};

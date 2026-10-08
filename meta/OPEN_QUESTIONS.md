@@ -1107,6 +1107,73 @@ pointer here (`meta/roadmap/0.3/0.3.0.md` §7).
 
 ---
 
+### O-X12 — a generic function of `src/` that nobody instantiates is in no emission: what reads it?
+
+**Raised 2026-10-08 by cycle 0.3.1's fix** (`s2-ntime-0.3.1-0752`, `74844ac`),
+measured again in full runs by that fix's verification (`30bd704`), held in the
+workbench registry (`../../meta/OPEN_QUESTIONS.md` O-X12), and registered here
+by cycle 0.3.2's planner. **Not blocking: it is dormant, and it is older than
+cycle 0.3.1.**
+
+*The question.* `check_call_edges` and `check_wide_types` read `npkc`'s
+emission of the umbrella (TM-250, TM-251), and a generic function is emitted
+only where a caller instantiates it. The umbrella instantiates none, so the
+declared-function rule holds only the non-generic functions `src/` declares,
+and `check_purity` reads a generic one's spellings alone. Measured at compiler
+`5fbaf4a`, each a generic function appended to a copy's `src/cal/cal.npk`, in
+full runs (`meta/roadmap/0.3/0.3.1.md`, its third addendum):
+
+- one that lets a `ByteReader` it takes by `move` die, and one that calls
+  `mono_now` through a function-typed local: **GREEN**, 134 units, every check
+  silent;
+- one that awaits `text_read_line`: **RED by the arm bill** —
+  `check_failsafe_arms`, and `NITPICK-REACH-002` in 34 units, for
+  `DeadlineExceeded`, which no consumer of `src/` owes — and named by no
+  purity check;
+- one that truncates a `List<ByteReader>`: red by the arm bill only where any
+  identity it arms is new to its module's consumers — in `cal`, both
+  `DecreasesViolated` and `LimitViolated`; in `src/core/vec.npk`,
+  `DecreasesViolated` alone — and **GREEN** in `src/core/bytes.npk`, whose
+  consumers owe both.
+
+*Dormant.* `src/`'s generic functions are `src/core/vec.npk`'s nine,
+synchronous, calling the allocator alone; nothing in `src/` is asynchronous,
+holds a function-typed local, or names a descriptor-owning type outside
+`src/host/`.
+
+*The recommendation, so it is an input:* **every generic function `src/`
+declares, instantiated in an emission the two checks read** — a unit,
+`tests/unit/generic_instances.npk`, that calls each at a type its bounds admit,
+emitted by `run.py`'s step 7 beside the umbrella — and the declared-function
+rule held to the generic ones too: a generic no instance holds is a finding.
+Measured at planning (`meta/roadmap/0.3/0.3.2.md` §1.3): each of the four
+shapes above is a finding of `check_call_edges` with no instance, and with one
+the drop and the truncation reach `npk_ofd_close` through the drop glue, the
+alias is refused where it is instantiated (`NITPICK-EMIT-002`), and the
+`await` cannot be written in a synchronous root at all (`NITPICK-TYPE-043`).
+
+*Alternatives, with what each costs:*
+
+- **Three token checks**, the 0.3.1 fix's recommendation, each plantable: no
+  `async` in `src/` outside `src/host/`; no function-typed local in `src/`;
+  and no descriptor-owning prelude type — `ByteReader`, `ByteWriter`,
+  `OwnedFd`, `TextReader`, `TextWriter`, `LineBufWriter` — named in `src/`
+  outside `src/host/`. Cheap, and the third is compatible with cycle 0.3.2's
+  own code, whose one descriptor is `src/host/`'s; but each reads the shape it
+  names, and a list of shapes is a list of names as 0.3.1 measured one — a
+  shape nobody listed would still be read by spelling alone.
+- **Every test program's emission read** — TM-250's declined alternative: a
+  hundred roots' emissions for nine functions, and a generic no test
+  instantiates still unread.
+- **No generic function outside `src/core/vec.npk`** — a rule about where
+  code may live, where the question is what reads it.
+
+*What settles it:* **cycle 0.3.2's planning**, by that subcycle's first
+decision (`meta/roadmap/0.3/0.3.2.md`'s PD-99), or the orchestrator's choice of
+an alternative.
+
+---
+
 ### ~~O-N17 — a generic function that MOVES OUT of an indexed element, at an owning `T`, calls an undefined `@npk.vacant.<dty>`~~ — **FIXED at pin `aaffb87`, verified here 2026-09-05 (TM-136)**
 
 > **Verified, not assumed.** All five reproduction cases now compile, assemble,

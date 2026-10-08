@@ -1,0 +1,581 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index e4c482babada9bcef3c29793879584cabdc27a08..057921c1dc0d27cccb5b5f267a1c7069d703e763 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -193,7 +193,10 @@
+ # emits it beside the umbrella, and both readings read its instances, so a
+ # generic function that reaches past the program's own memory -- by a drop, an
+ # alias or an `await` -- or that nobody instantiates is red here (TM-254,
+-# `meta/OPEN_QUESTIONS.md` O-X12 answered).
++# `meta/OPEN_QUESTIONS.md` O-X12 answered). And a unit can make the machine
++# `src/host/` reads: `probe22` enters a user and a mount namespace of its own
++# and mounts an empty `tmpfs` over `/etc`, once the step below has lifted
++# Ubuntu 24.04's restriction on the namespace (TM-255, `TESTING.md` V-1m).
+ #
+ # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
+ # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
+@@ -484,6 +487,26 @@ jobs:
+       # This step has not changed since cycle 0.0.1 and will not, which is the
+       # point of invoking the runner rather than a list of commands: the runner
+       # grew from four hardcoded checks to nine stages underneath it.
++      # A UNIT MAKES ITS OWN `/etc` (cycle 0.3.2, TM-255): `tests/probe/probe22_private_etc.npk`
++      # and, from the system zone, `tests/unit/system_zone_etc.npk` enter a user and a mount
++      # namespace of their own and mount an empty `tmpfs` over `/etc`, by their own syscalls,
++      # so they can make the machine `src/host/` reads. Ubuntu 24.04 lets an unprivileged
++      # process create the namespace and denies it the capabilities inside -- its AppArmor
++      # restriction, on by default; the 24.04 release notes name the sysctl that lifts it
++      # (`meta/research/user-namespaces.md`). This runner is a fresh VM for one job, so the
++      # restriction is lifted here, its value printed before and after, and a namespace with a
++      # mount made once by `unshare` before the harness runs -- a refusal is this step's, and
++      # never a unit's verdict about the library. The release notes' warning stands: the lift
++      # gives up a defence against kernel exploits that use user namespaces, on a machine that
++      # lives for one job.
++      - name: Allow an unprivileged user namespace, for a unit's own /etc
++        run: |
++          set -euo pipefail
++          echo "before: kernel.apparmor_restrict_unprivileged_userns = $(sysctl -n kernel.apparmor_restrict_unprivileged_userns)"
++          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
++          echo "after: kernel.apparmor_restrict_unprivileged_userns = $(sysctl -n kernel.apparmor_restrict_unprivileged_userns)"
++          unshare --user --map-root-user --mount sh -c 'mount -t tmpfs tmpfs /etc && echo "a private /etc: mounted"'
++
+       - name: Run the harness
+         run: |
+           # `set +e` EXPLICITLY, AND IT IS NOT REDUNDANT (TM-146). The runner's
+diff --git a/harness/run.py b/harness/run.py
+index 368208a3661a73d95ec01518ecc0919e1ec6c79c..ce4fe886e51a2ab11fed675078ec0b2cc711ad0f 100644
+--- a/harness/run.py
++++ b/harness/run.py
+@@ -636,9 +636,9 @@ def run_parse(rep, root, bld):
+     """Every `.npk` in the tree in front of the real parser, each exactly once.
+ 
+     THE DENOMINATOR IS THE WHOLE TREE AND THAT IS WHY THE STAGE IS WORTH ITS
+-    COST. Re-measured at cycle 0.3.2's first step: of the 151 `.npk` files
+-    here [[sweep: npk_total=151]] the library build roots 7
+-    [[sweep: lib_reach=7]], the suite roots 100 [[sweep: suite_roots=100]]
++    COST. Re-measured at cycle 0.3.2's second step: of the 152 `.npk` files
++    here [[sweep: npk_total=152]] the library build roots 7
++    [[sweep: lib_reach=7]], the suite roots 101 [[sweep: suite_roots=101]]
+     (127 and 77 from cycle 0.1.3c until `tests/unit/civil_total_edges.npk`
+     joined; 128 and 78 from then until cycle 0.2.0b retired the churn pair,
+     TM-214; 126 and 76 until cycle 0.2.0 added `span`'s body to the
+@@ -647,7 +647,8 @@ def run_parse(rep, root, bld):
+     added two units and two sweeps; 142 and 91 until cycle 0.2.3 added five
+     units; 147 and 96 until cycle 0.2.4b added a unit and a probe; 150, 7 and
+     99 from cycle 0.3.0 until cycle 0.3.2 added the unit that instantiates
+-    every generic function, TM-254; 149, 6
++    every generic function, TM-254, and 151 and 100 until its second step
++    added `probe22`, TM-255; 149, 6
+     and 98 until cycle 0.3.0 gave `host` a body the library reaches and added
+     its unit), and of the 4
+     support modules [[sweep: support_total=4]] 3 are reached by `use` from
+@@ -816,8 +817,9 @@ def select(root, entry):
+     """The files a `[[test]]` entry selects: `<path>/*.npk`, non-recursive.
+ 
+     NOT recursive, and the omission is load-bearing (the manifest says so at
+-    length): a plain glob over `tests/probe/` is exactly the 58
+-    [[sweep: probe_dir=58]] probe programs (57 until cycle 0.2.4b) and
++    length): a plain glob over `tests/probe/` is exactly the 59
++    [[sweep: probe_dir=59]] probe programs (58 until cycle 0.3.2, 57 until
++    cycle 0.2.4b) and
+     excludes `support/` -- four
+     library modules with no `main`, three until cycle 0.2.0 -- and `defect/`, whose files are
+     reproductions rather than tests of this library and are judged by
+diff --git a/harness/stages.py b/harness/stages.py
+index 8bd8de384f5c67eb059405ec23cdbc387b4e8b76..ce3a273ffe03e2dd656298e75886cad421543248 100644
+--- a/harness/stages.py
++++ b/harness/stages.py
+@@ -3,8 +3,9 @@
+ THE HEADER IS THE AUTHORITY (B-5), AND FROM THIS CYCLE IT ALSO DECIDES WHAT KIND
+ OF TEST A FILE IS (O-X7, TM-119). A `[[test]]` entry selects by DIRECTORY and
+ never by file, so one `program` entry over `tests/probe/` cannot be true about
+-both the 29 files carrying `expect-exit:` [[sweep: probe_exit=29]] (28 until
+-cycle 0.2.4b) and the 29 carrying `expect-error:` [[sweep: probe_error=29]] (23
++both the 30 files carrying `expect-exit:` [[sweep: probe_exit=30]] (29 until
++cycle 0.3.2, 28 until 0.2.4b) and the 29 carrying `expect-error:`
++[[sweep: probe_error=29]] (23
+ until cycle 0.2.1, 21 until 0.2.0). It dispatches per file instead:
+ 
+     expect-error:  present  ->  a REFUSAL member. `npkc` must fail, and the SET
+diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
+index 867bc83805d290c12784a36836810b5eb49ca0b4..aacc225bdb9722a695a96d189fe7836a4648def9 100644
+--- a/meta/DECISIONS.md
++++ b/meta/DECISIONS.md
+@@ -8307,3 +8307,55 @@ test instantiates still unread; **no generic function outside
+ what reads it; **instances generated by the harness from the signatures** — a
+ generator of programs the harness would have to get right for every bound,
+ where a unit states each call once.
++
++### TM-255 — a unit that must set what `src/host/` reads makes its own machine: a user and a mount namespace of its own and an empty `tmpfs` over `/etc`, by syscalls in its own text; and CI lifts Ubuntu 24.04's restriction on them
++
++**@@RUN_DATE@@, cycle 0.3.2 (the plan's PD-100). Adds `TESTING.md` V-1m and
++`tests/probe/probe22_private_etc.npk`; `tests/probe/README.md` gains its row,
++`meta/research/` the digest `user-namespaces.md` and two rows of
++`CURRENCY.md`'s.**
++
++**What was found** (`0.3.2.md` §1). The cycle README asks for each of
++`HOST.md` H-15's facts as a test, and for the not-found answer "on a machine
++with none of the three" — and no machine this suite runs on is one: the
++workbench's `/etc/localtime` names `America/New_York`, and the runner's is a
++link too. The harness builds a program's environment (V-1e), so `$TZ` is set
++per unit; `/etc` is the machine's. Measured at the pin, on both legs: a program
++that calls `unshare` (272) with `CLONE_NEWUSER | CLONE_NEWNS`, writes `deny` to
++its `setgroups` and its uid and gid to its maps, and mounts a `tmpfs` over
++`/etc` (`mount`, 165) runs in an `/etc` of its own, empty; a link it makes
++there (`symlink`, 88) reads back whole, and a file reads back; the kernel
++refuses a link target of 4 096 bytes and holds one of 4 095, so a `readlink`
++into `NTIME_PATH_MAX` bytes is never truncated by a link the kernel made; and
++the machine's `/etc/localtime` is unchanged after. Ubuntu 24.04 lets an
++unprivileged process create the namespace and denies it the capabilities
++inside, by an AppArmor restriction its release notes describe, with the
++sysctl that lifts it (`meta/research/user-namespaces.md`); the workbench's is
++lifted.
++
++**The decision.** *A unit that must set what `src/host/` reads from the
++machine enters a user and a mount namespace of its own and mounts an empty
++`tmpfs` over `/etc`, by syscalls in its own text, then writes each case there
++before it asks. Nothing in the harness changes. A refusal is the
++precondition's, with codes no assertion uses (V-1d): 20 `unshare`, 21 … 23 the
++maps, 24 the mount. `tests/probe/probe22_private_etc.npk` measures the shape
++and the kernel's longest link. CI lifts the restriction in a step before the
++harness, on a runner that lives for one job — the value printed before and
++after, and a namespace with a mount made once by `unshare`, so a refusal is
++that step's and never a unit's — and the release notes' warning is written
++beside it. `TESTING.md` gains V-1m.*
++
++*Alternatives declined:* **a harness marker** — `// etc:` and fixtures, the
++runner wrapping the program in `unshare(1)` — machinery in the runner and a
++small language for the fixtures, where a unit's own syscalls state each case
++beside its assertion and a probe tests the shape; **fixtures committed as
++links and files under `tests/fixtures/`** — a 4 095-byte link in git, and
++links into `/usr/share/zoneinfo` every tree walk would meet; **`bwrap`** — a
++tool the runner does not have, on the same kernel feature; **the cases held by
++reading**, as cycle 0.3.0's four mutants were — the cycle README asks for them
++as tests, and the machine can be made to show them; **the paths a parameter of
++`host`'s private functions, or read from the environment** — a function no
++test can call, or a switch in the shipped module, H-10's objection to a
++second code path; **`sudo` in the harness** — it runs as the user, on the
++workbench and in CI alike, and a step of CI's own lifts what the runner
++restricts.
+diff --git a/meta/OPEN_QUESTIONS.md b/meta/OPEN_QUESTIONS.md
+index 73d29989d1e98c1d27fdf789650e473a85bcd3cd..e625268feb68f777e6ecb14415a3f8ef1d7c6af7 100644
+--- a/meta/OPEN_QUESTIONS.md
++++ b/meta/OPEN_QUESTIONS.md
+@@ -903,9 +903,9 @@ table, `tests/probe/README.md`'s table and several decisions cite by name, and
+ P-5 says a probe is never deleted for the same reason those citations exist.
+ 
+ **Settled at 0.0.2**, which builds the runner. **Nothing waits on it**: no
+-probe changes either way, and the entry in the manifest is true about the 29
+-<!-- [[sweep: probe_exit=29]] --> today. *(That word was `nineteen` until cycle
+-0.0.6, and 28 until cycle 0.2.4b — a settled question's prose is history and
++probe changes either way, and the entry in the manifest is true about the 30
++<!-- [[sweep: probe_exit=30]] --> today. *(That word was `nineteen` until cycle
++0.0.6, 28 until cycle 0.2.4b, and 29 until cycle 0.3.2 — a settled question's prose is history and
+ is normally frozen, but this sentence is in the PRESENT tense about the tree as
+ it is now, so it is a claim and not a record. TM-142.)*
+ 
+diff --git a/meta/research/CURRENCY.md b/meta/research/CURRENCY.md
+index 64eba63bf6d379503ac67bfa0c6f1d4c6822d5ba..f0b56d5eb5dd771f98c8ead337dbaadaeae2d87a 100644
+--- a/meta/research/CURRENCY.md
++++ b/meta/research/CURRENCY.md
+@@ -12,5 +12,6 @@ tree at the pinned commit.
+ | Howard Hinnant, *chrono-Compatible Low-Level Date Algorithms* — `days_from_civil`, `civil_from_days`; the digest is [`hinnant-date-algorithms.md`](hinnant-date-algorithms.md) | the page as it dates itself, 2021-09-01 | 2026-09-25 | howardhinnant.github.io/date_algorithms.html | TM-016 |
+ | tzdata | 2026c | 2026-09-05 — the release installed on the workbench, measured by the 0.0.5 spike ([`tzdb-size.md`](tzdb-size.md)). **Whether it is still IANA's latest is not checked here**: cycle 0.1 reads no zone data, and TM-100 pins *"the latest release at cycle 0.5"*, which re-checks it | iana.org/time-zones | TM-100 |
+ | Python `datetime` — the independent source of `meta/roadmap/done/0.1/0.1.1.md` §4a's vectors for years ≥ 1, `meta/roadmap/done/0.1/0.1.2.md` §2's recomputation of the sweeps' domains, `meta/roadmap/done/0.1/0.1.3.md` §3's first method for the 41 derived-field vectors (`weekday()`, `timetuple().tm_yday`, `isocalendar()`), **cycle 0.1.4's cross-oracle corpus**, `tests/fixtures/civil/civil_oracle.npk`, generated by `tools/gen_civil_oracle.py` from `MINYEAR`, `MAXYEAR`, `fromordinal()`, `toordinal()`, `isoweekday()`, `isocalendar()` and `timetuple().tm_yday`; and cycle 0.2.2's sixteen conversion vectors, `tests/unit/utc_vectors.npk`, from the difference of two `datetime`s in days and seconds for years ≥ 1, and below year 1 by whole 400-year cycles of 146 097 days (`meta/roadmap/done/0.2/0.2.2.md` §1); the digest is [`python-datetime.md`](python-datetime.md) | 3.12.3, the workbench's interpreter — `/usr/bin/python3` and its virtual environment both; the corpus's `sha256` in `meta/roadmap/done/0.1/0.1.4.md` §5 is this interpreter's. The documentation was read at 3.14.7 | 2026-09-25 — re-checked for cycle 0.1.4, the statements the corpus reads quoted in the digest | docs.python.org/3/library/datetime.html | C-18 |
+-| The Linux kernel's x86-64 syscall table — `clock_gettime` 228 and `clock_getres` 229, the two numbers `src/host/host.npk` declares; cycle 0.3.2 adds its own, `readlink` 89 among them. The digest is [`linux-syscall-table.md`](linux-syscall-table.md) | the ABI, which never renumbers a syscall on an architecture, read on the table's `master` | 2026-10-07 — 228, 229 and 89 quoted from the table; first fetched 2026-10-02 by cycle 0.2's close for `meta/roadmap/0.3/0.3.0.md` §1.3, and 228 is the compiler's runtime's too, `npk_mono_now` at `5fbaf4a` | github.com/torvalds/linux, `arch/x86/entry/syscalls/syscall_64.tbl` | TM-248 |
++| The Linux kernel's x86-64 syscall table — `clock_gettime` 228 and `clock_getres` 229, the two numbers `src/host/host.npk` declares; cycle 0.3.2 adds its own, `readlink` 89 among them. The digest is [`linux-syscall-table.md`](linux-syscall-table.md) | the ABI, which never renumbers a syscall on an architecture, read on the table's `master` | 2026-10-07 — 228, 229 and 89 quoted from the table; first fetched 2026-10-02 by cycle 0.2's close for `meta/roadmap/0.3/0.3.0.md` §1.3, and 228 is the compiler's runtime's too, `npk_mono_now` at `5fbaf4a`. **And 2026-10-08**, for cycle 0.3.2's tests: 83, 84, 87, 88, 89, 102, 104, 165 and 272, and `CLONE_NEWNS` and `CLONE_NEWUSER` from `include/uapi/linux/sched.h` | github.com/torvalds/linux, `arch/x86/entry/syscalls/syscall_64.tbl` | TM-248, TM-255 |
++| Ubuntu 24.04 LTS's restriction on unprivileged user namespaces — on by default, the namespace created and the capabilities inside it denied, lifted by `kernel.apparmor_restrict_unprivileged_userns=0`; what CI's step before the harness lifts, so that a unit can make its own `/etc` (`TESTING.md` V-1m). The digest is [`user-namespaces.md`](user-namespaces.md) | 24.04 LTS, the runner image `.github/workflows/ci.yml` pins (`ubuntu-24.04`) | 2026-10-08 | discourse.ubuntu.com, *Ubuntu 24.04 LTS (Noble Numbat) Release Notes* | TM-255 |
+ | ISO 8601-1 — the week-date rule of `CALENDAR.md` C-14 (week 1 holds the year's first Thursday, clause 3.1.1.23); the digest is [`iso-8601-week-date.md`](iso-8601-week-date.md). **Monday = 1 … Sunday = 7 could not be quoted from the 2019 text** and rests on C-7, RFC 3339's informational appendix and Python's `isocalendar()` | 2019, first edition, with Amd 1:2022 — its successor ISO/CD 8601-1 at stage 30.60 since 2026-07-25: re-check at DIS, and at 0.8 at the latest | 2026-09-25 | iss.rs/en/project/show/iso:proj:70907 (iso.org answered 403); the text through the distributor iTeh's previews of ISO's own pages | C-14 |
+diff --git a/meta/research/linux-syscall-table.md b/meta/research/linux-syscall-table.md
+index 21cccc3a38b47e3ef10d46981cb30965bab7c69c..dee75e1f47b2f11aa0312d853621bf37c714bd93 100644
+--- a/meta/research/linux-syscall-table.md
++++ b/meta/research/linux-syscall-table.md
+@@ -4,6 +4,32 @@
+ `clock_gettime` and `clock_getres` on x86-64 — and `readlink`, which cycle
+ 0.3.2 needs — so that `src/host/host.npk` can name each number's source?
+ 
++**And as of 2026-10-08** (cycle 0.3.2's planning): the numbers its tests call
++to make an `/etc` of their own (`TESTING.md` V-1m), and the two flags
++`unshare` takes — read again from the same table, and from the kernel's
++`include/uapi/linux/sched.h`:
++
++```text
++83	common	mkdir			sys_mkdir
++84	common	rmdir			sys_rmdir
++87	common	unlink			sys_unlink
++88	common	symlink			sys_symlink
++89	common	readlink		sys_readlink
++102	common	getuid			sys_getuid
++104	common	getgid			sys_getgid
++165	common	mount			sys_mount
++272	common	unshare			sys_unshare
++```
++
++```text
++#define CLONE_NEWNS	0x00020000	/* New mount namespace group */
++#define CLONE_NEWUSER		0x10000000	/* New user namespace */
++```
++
++— https://raw.githubusercontent.com/torvalds/linux/master/arch/x86/entry/syscalls/syscall_64.tbl
++and https://raw.githubusercontent.com/torvalds/linux/master/include/uapi/linux/sched.h,
++each retrieved 2026-10-08, on `master`. 89 is the day before's, unchanged.
++
+ ## Answer
+ 
+ `clock_gettime` is **228**, `clock_getres` is **229** and `readlink` is **89**,
+diff --git a/meta/research/user-namespaces.md b/meta/research/user-namespaces.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..ef33fbaad1b790da98f3f8983090a2e0c9309a41
+--- /dev/null
++++ b/meta/research/user-namespaces.md
+@@ -0,0 +1,52 @@
++# Unprivileged user namespaces on Ubuntu 24.04 — research digest
++
++**As of 2026-10-08.** Question: may an unprivileged process on CI's runner
++image, Ubuntu 24.04 LTS (`.github/workflows/ci.yml`'s `ubuntu-24.04`), create a
++user namespace and use the capabilities inside it — enough to mount a `tmpfs`
++over `/etc` in a mount namespace of its own — and if not, what lifts the
++restriction?
++
++## Answer
++
++Not by default. Ubuntu 24.04 LTS restricts unprivileged user namespaces when
++AppArmor is in use: an unprivileged, unconfined program may create one, under
++a default profile that denies it the use of any capability inside — so the
++`mount` a unit makes there is refused (`probe22`'s exit 24). The release notes
++name the sysctl that lifts the restriction, for one boot or for good:
++`kernel.apparmor_restrict_unprivileged_userns`, set to 0. They warn that
++lifting it gives up the defence against kernel exploits that use unprivileged
++user namespaces. A GitHub-hosted runner is a fresh VM for one job with
++passwordless `sudo`, so CI lifts it in a step before the harness and prints
++the value before and after. The workbench machine reads 0, measured.
++
++## Evidence
++
++- https://discourse.ubuntu.com/t/ubuntu-24-04-lts-noble-numbat-release-notes/39890
++  — retrieved 2026-10-08 — the release notes' section on unprivileged user
++  namespace restrictions: in 24.04 the Ubuntu kernel restricts unprivileged
++  user namespaces when the `apparmor` package is in use; a default AppArmor
++  profile lets an unprivileged, unconfined program create one and denies "the
++  subsequent use of any capabilities within the user namespace"; to disable,
++  for one boot, `echo 0 | sudo tee /proc/sys/kernel/apparmor_restrict_unprivileged_userns`,
++  or for good a `/etc/sysctl.d/60-apparmor-namespace.conf` holding
++  `kernel.apparmor_restrict_unprivileged_userns=0`; and that neither protects
++  against kernel exploits that abuse unprivileged user namespaces.
++- Measured on the workbench, 2026-10-08: `sysctl kernel.apparmor_restrict_unprivileged_userns`
++  reads 0, and `unshare -rm` with a `tmpfs` mount inside succeeds, as
++  `tests/probe/probe22_private_etc.npk` does on both legs.
++
++## What would change this
++
++A runner image whose restriction is already lifted, which would make CI's step
++a no-op; or one where lifting it is refused, which would turn `probe22` RED at
++exit 24 in CI and stop cycle 0.3.2 at its second step, before the system zone
++— the plan's order exists for that. Neither is known before CI runs it: the
++digest found no statement from GitHub of what its `ubuntu-24.04` image sets,
++and the step prints it.
++
++## Confidence and gaps
++
++High for Ubuntu's default and the sysctl, from its own release notes. Unknown
++for GitHub's image until its first run prints the value; the step asserts
++nothing about the value before, sets it, and makes a namespace with a mount
++once, so a refusal is the step's and never a unit's verdict.
+diff --git a/meta/roadmap/0.3/README.md b/meta/roadmap/0.3/README.md
+index ea63419acb5e08c651fc091fe458a34516a4bde0..f0c13e4d5558ae117fa4465196d14697cb4ba3d3 100644
+--- a/meta/roadmap/0.3/README.md
++++ b/meta/roadmap/0.3/README.md
+@@ -108,7 +108,7 @@ instrument the zone's tests stand on, in a commit of its own; and the tests.
+ The eight above keep their words.)*
+ - [x] **O-X12**: every generic function `src/` declares instantiated in `tests/unit/generic_instances.npk`, its emission read by `check_call_edges` and `check_wide_types` beside the umbrella's, and a generic no instance holds a finding (PD-99) — **TM-254**: four plants caught and four controls silent, each unseen by the checks before it; over the tree `vec.npk`'s nine, at `int64`, reach the allocator, the error route and LLVM's arithmetic, every symbol in the allowlist
+ - [x] the 0.3.1 verifier's nit: `check_purity`'s docstring and TM-252's note say a truncation of descriptors is red "only where the `DecreasesViolated` and `LimitViolated` it arms are new" — it is *any of* them, `DecreasesViolated` alone in `src/core/vec.npk` — corrected by dated notes, not rewritten — the docstring in place, recording its words, and TM-252's note by a further dated sentence
+-- [ ] a unit makes its own `/etc` — a user and a mount namespace and an empty `tmpfs`, by its own syscalls; `probe22` measures the shape and the kernel's longest link, and CI lifts Ubuntu 24.04's restriction on the namespace (PD-100)
++- [x] a unit makes its own `/etc` — a user and a mount namespace and an empty `tmpfs`, by its own syscalls; `probe22` measures the shape and the kernel's longest link, and CI lifts Ubuntu 24.04's restriction on the namespace (PD-100) — **TM-255**: `probe22` exit 0 on both legs, here and in CI after the step that lifts the restriction; `TESTING.md` V-1m
+ - [ ] the tests: one unit of nineteen machines in a namespace of its own, the lowest free descriptor held across every call; three units of `$TZ`; every exit seen red on a mutant of `host`, and the mutants no test can see named (PD-102)
+ 
+ ### 0.3.3 — the double
+diff --git a/meta/specs/BUILD.md b/meta/specs/BUILD.md
+index 64813a5e5a5798921cc62cc0bd8c947221b7262c..42741ec0a5a1f4c5ac4d3a8a576b763666cdc8f2 100644
+--- a/meta/specs/BUILD.md
++++ b/meta/specs/BUILD.md
+@@ -210,8 +210,8 @@ add — is the document that was wrong.
+ **Rule B-4c (TM-119) — inside a `program` entry, the FILE'S OWN HEADER decides
+ what kind of test it is. This is a deliberate divergence from `npkg`'s `kind`.**
+ A `[[test]]` selects by **directory** and `kind` is per entry, so one entry over
+-`tests/probe/` cannot be true about both the 29 files carrying `expect-exit:`
+-<!-- [[sweep: probe_exit=29]] --> (28 until cycle 0.2.4b)
++`tests/probe/` cannot be true about both the 30 files carrying `expect-exit:`
++<!-- [[sweep: probe_exit=30]] --> (29 until cycle 0.3.2, 28 until cycle 0.2.4b)
+ and the 29 carrying `expect-error:` (O-X7; 8 until cycle 0.1.0c, 13 until 0.1.3b, 15 until 0.1.3c, 21 until 0.2.0, 23 until 0.2.1). The runner therefore dispatches per
+ file: `expect-error:` present makes it a **refusal** member — `npkc` must fail
+ and the *set* of codes must equal the set named (B-7), each code named once
+@@ -324,10 +324,12 @@ list kept the old code until cycle 0.2.0), `BORROW-001`, `BORROW-012`,
+ `RESOLVE-001`, `RESOLVE-002` (since cycle 0.2.0, `probe20b`),
+ `REACH-002` and `REACH-003`, and every family
+ after the first three runs only on something that parsed. Re-measured at pin
+-`5fbaf4a`, cycle 0.3.2's first step: **151 files = 106 parse cleanly + 43
++`5fbaf4a`, cycle 0.3.2's second step: **152 files = 107 parse cleanly + 43
+ parse and are refused later + 2 do not parse**
+-<!-- [[sweep: npk_total=151]] --> (`150 = 105 + 43 + 2` from cycle 0.3.0 until
+-cycle 0.3.2 added `tests/unit/generic_instances.npk`, TM-254; `127 = 90 + 35 + 2` from cycle 0.1.3c until
++<!-- [[sweep: npk_total=152]] --> (`151 = 106 + 43 + 2` from cycle 0.3.2's
++first step, which added `tests/unit/generic_instances.npk`, TM-254, until its
++second added `probe22`, TM-255; `150 = 105 + 43 + 2` from cycle 0.3.0 until
++then; `127 = 90 + 35 + 2` from cycle 0.1.3c until
+ `tests/unit/civil_total_edges.npk` joined, `128 = 91 + 35 + 2` from then
+ until cycle 0.2.0b retired the churn pair, TM-214, `126 = 89 + 35 + 2`
+ until cycle 0.2.0 added `Instant`'s unit, its two refusals and the relay
+diff --git a/meta/specs/TESTING.md b/meta/specs/TESTING.md
+index 25da90f515539c121d3125ca7f9ab7480d5d92a1..65c85959a3a4f1c26ba72c5ade871c2bba4fd64d 100644
+--- a/meta/specs/TESTING.md
++++ b/meta/specs/TESTING.md
+@@ -17,7 +17,7 @@ than sampled. Where that is possible it is the gate, and §3 says where.
+ 
+ | Stage | Answers |
+ |---|---|
+-| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **40 files of 151 that no other stage roots** <!-- [[sweep: npk_total=151]] --> *(40 of 150 until cycle 0.3.2's first step added a unit; 41 of 149 until cycle 0.3.0, when the library build began to reach `src/host/host.npk`)* |
++| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **40 files of 152 that no other stage roots** <!-- [[sweep: npk_total=152]] --> *(40 of 151 until cycle 0.3.2's second step added a probe, and of 150 until its first added a unit; 41 of 149 until cycle 0.3.0, when the library build began to reach `src/host/host.npk`)* |
+ | `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
+ | `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
+ | `check` | every documented refusal actually refuses, with exactly its code |
+@@ -358,6 +358,26 @@ so it allows the whitespace on both sides now, and a plant spells it across a
+ line end. No exposure: outside their modules `items` and `body` are `hidden`,
+ `NITPICK-TYPE-080`.)*
+ 
++**Rule V-1m (TM-255) — what the runner cannot construct, a unit makes: an
++`/etc` of its own.** V-1e builds each program's environment; `/etc` is the
++machine's, and `src/host/` reads it — `/etc/localtime`'s link and
++`/etc/timezone` (`HOST.md` H-13) — so a test of what the system zone answers
++on a machine with none of the three, a link no distribution ships, or a
++`/etc/timezone` that is a directory needs a machine nobody has. A unit that
++must set what `src/host/` reads enters a user and a mount namespace of its own
++— `unshare` with `CLONE_NEWUSER | CLONE_NEWNS`, its uid and gid mapped to root
++inside — mounts an empty `tmpfs` over `/etc`, and writes each case there
++before it asks, by syscalls in its own text. The mount is the namespace's: the
++machine's `/etc` is never touched. Nothing in the runner changes, and a
++refusal is the precondition's, with codes no assertion uses (V-1d) — 20
++`unshare`, 21 … 23 the maps, 24 the mount. `tests/probe/probe22_private_etc.npk`
++measures the shape, and the kernel's longest link target, 4 095 bytes. **The
++machine must allow it**: Ubuntu 24.04 lets an unprivileged process create the
++namespace and denies it the capabilities inside unless
++`kernel.apparmor_restrict_unprivileged_userns` is 0
++(`../research/user-namespaces.md`), and CI lifts the restriction in a step of
++its own before the harness, on a runner that lives for one job.
++
+ ## 3. The exhaustive gates
+ 
+ **Rule V-2 (TM-026) — where a property can be checked over its whole domain, it
+diff --git a/nitpick.toml b/nitpick.toml
+index 792213b6402ced65493e09abf8e6d333dbffad4e..0f2d1857cf0a5136eea1ce5a3e563d3e18b792fe 100644
+--- a/nitpick.toml
++++ b/nitpick.toml
+@@ -68,8 +68,9 @@ lld-flags     = ["-static"]
+ #
+ # AND THE OTHER HALF OF THAT RULE, LEARNED AT 0.0.1: an entry whose `kind`
+ # disagrees with the files under its path is worse than an empty one, because
+-# it fails for a reason that is not the library's. `tests/probe/` holds 29
+-# positive probes [[sweep: probe_exit=29]] (28 until cycle 0.2.4b) and 29 that
++# it fails for a reason that is not the library's. `tests/probe/` holds 30
++# positive probes [[sweep: probe_exit=30]] (29 until cycle 0.3.2, 28 until
++# cycle 0.2.4b) and 29 that
+ # MUST NOT COMPILE [[sweep: probe_error=29]] (23 until cycle 0.2.1, 21 until
+ # 0.2.0), and the
+ # schema selects by
+@@ -84,8 +85,9 @@ lld-flags     = ["-static"]
+ # and again through `opt -O2`, the same exit required both times (B-3).
+ #
+ # NOT `recursive`, and the omission is the point: a plain glob is
+-# `tests/probe/*.npk`, which is exactly the 58 probe programs
+-# [[sweep: probe_dir=58]] (57 until cycle 0.2.4b) and EXCLUDES the two
++# `tests/probe/*.npk`, which is exactly the 59 probe programs
++# [[sweep: probe_dir=59]] (58 until cycle 0.3.2, 57 until cycle 0.2.4b) and
++# EXCLUDES the two
+ # subdirectories that must never
+ # be run as tests --
+ #   tests/probe/support/  four library modules -- three probe 11 imports, and
+@@ -134,8 +136,8 @@ path  = "tests/probe"
+ #   `parse`   HAS NO ENTRY BY DESIGN, not by omission (TM-123). It is a
+ #             WHOLE-TREE stage: `BUILD.md` §3's Directory column for it reads
+ #             "every `.npk` in the tree", and that is where its value is — of
+-#             the 151 files here [[sweep: npk_total=151]] (150 until cycle
+-#             0.3.2, 149 until 0.3.0, 147 until 0.2.4b), 40 are put in front of the compiler
++#             the 152 files here [[sweep: npk_total=152]] (151 and 150 until
++#             cycle 0.3.2's two first steps, 149 until 0.3.0, 147 until 0.2.4b), 40 are put in front of the compiler
+ #             by nothing else (41 until cycle 0.3.0, when the library build
+ #             began to reach `src/host/host.npk`). An entry would narrow it to one directory and silently
+ #             un-cover the rest, so `stage = "parse"` is REFUSED BY NAME.
+diff --git a/tests/probe/README.md b/tests/probe/README.md
+index 824d96bc524400cb94da07aef8cdd6d0cfd8436e..e51cea1bf11f29da6c982993dd902dc38ed8ac51 100644
+--- a/tests/probe/README.md
++++ b/tests/probe/README.md
+@@ -158,6 +158,7 @@ by the harness as ordinary `program`-stage entries from cycle 0.0.2.
+ | `probe20g_construction_from_numbers.npk` | a consumer builds an `Instant` from a `Timestamp`'s numbers through `instant_of`, and a `Timestamp` back through `timestamp_of`, with no `wild` and no `=>!` — the construction M-3 does not refuse | M-3, TM-216, TM-243 — the positive twin of `probe20b` … `probe20f` |
+ | `probe21_timestamp_literal_refused.npk` | *(must not compile)* a denormalised `Timestamp` built by a consumer's struct literal | M-7, TM-219 — `NITPICK-TYPE-079`, twice: one report per sealed field |
+ | `probe21b_timestamp_field_write_refused.npk` | *(must not compile)* a consumer's write to a `Timestamp`'s `nanos` | M-7, TM-219 — `NITPICK-TYPE-079` |
++| `probe22_private_etc.npk` *(cycle 0.3.2)* | a program enters a user and a mount namespace of its own, mounts an empty `tmpfs` over `/etc`, and makes a link there that reads back whole and a file whose bytes read back; the kernel refuses a link target of 4 096 bytes and holds one of 4 095 | `TESTING.md` V-1m, `HOST.md` H-15, TM-255 — the shape `tests/unit/system_zone_etc.npk` stands on; 20 … 24 the machine's refusal (V-1d) |
+ 
+ *(Cycle 0.1.3b: the three `probe17` rows are new. **Probes 12 to 16 — cycles
+ 0.0.4 to 0.1.0c — are not in this table**, and the heading above says "What is
+diff --git a/tests/probe/probe22_private_etc.npk b/tests/probe/probe22_private_etc.npk
+new file mode 100644
+index 0000000000000000000000000000000000000000..21d1092391c375555b50212c5320b8e4d74c69b3
+--- /dev/null
++++ b/tests/probe/probe22_private_etc.npk
+@@ -0,0 +1,158 @@
++// expect-exit: 0
++//
++// PROBE 22 -- a program gives itself a PRIVATE `/etc`, by syscalls in its own
++// text, and the machine's is never touched (cycle 0.3.2, TM-255).
++//
++// ASKS: can a test program enter a user namespace and a mount namespace of
++// its own -- `unshare` (272) with `CLONE_NEWUSER | CLONE_NEWNS`, its uid and
++// gid mapped to root inside -- mount an empty `tmpfs` over `/etc` (`mount`,
++// 165), and then write there what `src/host/` reads: a symbolic link
++// (`symlink`, 88) whose target `readlink` (89) hands back whole, and a file
++// whose bytes read back? And what is the longest link target the kernel
++// holds?
++//
++// MATTERS BECAUSE `host_system_zone` reads `/etc/localtime`'s link target and
++// `/etc/timezone`'s first line (`HOST.md` H-13), so a test of what it answers
++// on a machine with none of the three, or with a link no distribution ships,
++// needs a machine it can set. This file measures that the shape is spellable
++// and works, so `tests/unit/system_zone_etc.npk` can rest on it; and it
++// measures H-15's fourth fact where it bites: a link target of 4 096 bytes --
++// `NTIME_PATH_MAX` -- is REFUSED by the kernel, so a `readlink` into a buffer
++// of that size is never truncated by a link the kernel made.
++//
++// THE PRECONDITION, AND ITS CODES (V-1d): the machine must allow an
++// unprivileged user namespace. Ubuntu 24.04 restricts one through AppArmor
++// unless `kernel.apparmor_restrict_unprivileged_userns` is 0, which CI sets
++// before the harness runs. A refusal exits a code no assertion here uses:
++// 20 `unshare` refused; 21, 22 and 23 the `setgroups`, uid and gid maps not
++// written; 24 the `tmpfs` not mounted. Each says the machine refused the
++// namespace, not that the language did.
++//
++// EXIT CODES, clear of every arm code (TM-152): 30 `/etc` not empty after the
++// mount -- `/etc/localtime` still a link; 31 `/etc/timezone` still there; 32
++// the link not made, or its target not read back exactly; 33 the file not
++// written, or its bytes not read back; 34 a link target of 4 096 bytes
++// accepted; 35 one of 4 095 refused, or not read back whole; 36 the link not
++// removed.
++mod:probe22_private_etc;
++
++error:EProbe;
++
++fixed int64:SYS_UNSHARE   = 272i64;
++fixed int64:SYS_MOUNT     = 165i64;
++fixed int64:SYS_SYMLINK   = 88i64;
++fixed int64:SYS_READLINK  = 89i64;
++fixed int64:SYS_UNLINK    = 87i64;
++fixed int64:SYS_GETUID    = 102i64;
++fixed int64:SYS_GETGID    = 104i64;
++fixed int64:CLONE_NEWUSER = 268435456i64;    // 0x10000000
++fixed int64:CLONE_NEWNS   = 131072i64;       // 0x00020000
++fixed int64:PATH_MAX      = 4096i64;
++
++// Write `text` to `path`, created or truncated: one `write`, all of it.
++func:put = NIL(string:path, string:text) {
++    cstring:c = relay to_cstring(path);
++    fd:f = relay open(c, ((((O_WRONLY | O_CREAT) | O_TRUNC) => int32) => int64), 420i64);
++    uint8[]:b = string_bytes(text);
++    if (b.len > 0i64) {
++        int64:n = relay write(f, b.ptr, b.len);
++        if (n != b.len) { fail EProbe; }
++    }
++    discard(relay close(f));
++    pass NIL;
++};
++
++// The namespace: 0, or the precondition's code.
++func:enter = int32() {
++    int64:me = relay sys(SYS_GETUID);
++    int64:mg = relay sys(SYS_GETGID);
++    Result<int64>:u = sys(SYS_UNSHARE, CLONE_NEWUSER | CLONE_NEWNS);
++    if (u.is_error) { pass 20i32; }
++    Result<NIL>:g = put("/proc/self/setgroups", "deny");
++    if (g.is_error) { pass 21i32; }
++    Result<NIL>:um = put("/proc/self/uid_map",
++                         string_concat(string_concat("0 ", int_to_string(me)), " 1"));
++    if (um.is_error) { pass 22i32; }
++    Result<NIL>:gm = put("/proc/self/gid_map",
++                         string_concat(string_concat("0 ", int_to_string(mg)), " 1"));
++    if (gm.is_error) { pass 23i32; }
++    cstring:fs = relay to_cstring("tmpfs");
++    cstring:at = relay to_cstring("/etc");
++    Result<int64>:m = sys(SYS_MOUNT, fs.ptr, at.ptr, fs.ptr, 0i64, 0i64);
++    if (m.is_error) { pass 24i32; }
++    pass 0i32;
++};
++
++// Does `path`'s link read back exactly `want`?
++func:reads_back = bool(cstring:path, string:want) {
++    buffer:b = buffer_new(PATH_MAX);
++    Result<int64>:r = sys(SYS_READLINK, path.ptr, b.ptr, PATH_MAX);
++    if (r.is_error) { pass false; }
++    string:got = string_from_bytes(b.ptr, r.value);
++    pass string_equals(got, want);
++};
++
++func:main = int32(cstring[]:_~argv) {
++    int32:pre = enter() ?! EProbe;
++    if (pre != 0i32) { exit pre; }
++    cstring:lt = to_cstring("/etc/localtime") ?! EProbe;
++    cstring:tz = to_cstring("/etc/timezone") ?! EProbe;
++
++    // ---- the mount: `/etc` is empty ----------------------------------------
++    buffer:b0 = buffer_new(PATH_MAX);
++    Result<int64>:l0 = sys(SYS_READLINK, lt.ptr, b0.ptr, PATH_MAX);
++    if (!(l0.is_error)) { exit 30i32; }
++    Result<fd>:t0 = open(tz, ((O_RDONLY => int32) => int64), 0i64);
++    if (!(t0.is_error)) { exit 31i32; }
++
++    // ---- a link, and its target read back ----------------------------------
++    string:target = "/usr/share/zoneinfo/Europe/London";
++    cstring:tc = to_cstring(target) ?! EProbe;
++    Result<int64>:s = sys(SYS_SYMLINK, tc.ptr, lt.ptr);
++    if (s.is_error) { exit 32i32; }
++    if (!(reads_back(lt, target) ?! EProbe)) { exit 32i32; }
++
++    // ---- a file, and its bytes read back -----------------------------------
++    Result<NIL>:w = put("/etc/timezone", "Asia/Tokyo\n");
++    if (w.is_error) { exit 33i32; }
++    string:back = read_file(tz) ?! EProbe;
++    if (!(string_equals(back, "Asia/Tokyo\n"))) { exit 33i32; }
++
++    // ---- the longest link target: 4 095 bytes, and not 4 096 ----------------
++    discard(sys(SYS_UNLINK, lt.ptr) ?! EProbe);
++    string:long = "/";
++    for (int64:i in 1i64..(PATH_MAX - 2i64)) { long = string_concat(long, "a"); }
++    if (string_byte_length(long) != (PATH_MAX - 1i64)) { exit 35i32; }
++    string:over = string_concat(long, "a");
++    cstring:oc = to_cstring(over) ?! EProbe;
++    Result<int64>:s4096 = sys(SYS_SYMLINK, oc.ptr, lt.ptr);
++    if (!(s4096.is_error)) { exit 34i32; }
++    cstring:lc = to_cstring(long) ?! EProbe;
++    Result<int64>:s4095 = sys(SYS_SYMLINK, lc.ptr, lt.ptr);
++    if (s4095.is_error) { exit 35i32; }
++    if (!(reads_back(lt, long) ?! EProbe)) { exit 35i32; }
++
++    // ---- and removed --------------------------------------------------------
++    Result<int64>:un = sys(SYS_UNLINK, lt.ptr);
++    if (un.is_error) { exit 36i32; }
++    buffer:b1 = buffer_new(PATH_MAX);
++    Result<int64>:l1 = sys(SYS_READLINK, lt.ptr, b1.ptr, PATH_MAX);
++    if (!(l1.is_error)) { exit 36i32; }
++    exit 0i32;
++};
++
++func:failsafe = int32(Error:e) {
++    pick (e) {
++        (EProbe)            { exit 80i32; },
++        (HeapBadRequest)    { exit 91i32; },
++        (HeapOom)           { exit 92i32; },
++        (IntOverflow)       { exit 93i32; },
++        (OutOfBounds)       { exit 94i32; },
++        (Unreachable)       { exit 95i32; },
++        (WildLeak)          { exit 96i32; },
++        (StackExhausted)    { exit 106i32; },
++        (MachineFault)      { exit 107i32; },
++        (*)                 { exit 99i32; }
++    }
++    exit 9i32;
++};

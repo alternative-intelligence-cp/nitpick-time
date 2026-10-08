@@ -1,0 +1,9 @@
+# 0.3.2's omission sweep for step 1, block 1b -- one extended regular expression per
+# line, each read by `sweep.py` line by line AND across line breaks, case-insensitive.
+# Each is a fact step 1 moved: what reads a generic function nobody instantiates, the
+# question it answers, the truncation's arms, the plant count, and the tree's counts.
+nobody instantiates|in no emission|no emission (holds|does|reads)|read by spelling alone|generic read by spelling|generic function no|unless it is generic|a generic one
+O-X12
+are new to (its|the) module|new to (a|its|the) (module|consumer)|LimitViolated. (it arms )?are new
+one hundred and (twelve|sixteen)|\b(112|116)\b.{0,30}(plant|tree-check|violation)
+\b(150|151)\b.{0,40}(files|\.npk)|suite roots \d+

@@ -1,0 +1,881 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 7f5751fb06759e31c12ac2d3e3f673eec2252584..e4c482babada9bcef3c29793879584cabdc27a08 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -188,7 +188,12 @@
+ # (until 0.3.1's verification this said "every builtin and prelude function",
+ # and until its fix's it called the generic case a hole) -- and
+ # `check_host_isolation` reads every name `src/host/` makes public (TM-252,
+-# TM-253).
++# TM-253). AND SINCE CYCLE 0.3.2 EVERY GENERIC FUNCTION OF `src/` IS READ IN AN
++# EMISSION TOO: `tests/unit/generic_instances.npk` instantiates each, step 7
++# emits it beside the umbrella, and both readings read its instances, so a
++# generic function that reaches past the program's own memory -- by a drop, an
++# alias or an `await` -- or that nobody instantiates is red here (TM-254,
++# `meta/OPEN_QUESTIONS.md` O-X12 answered).
+ #
+ # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
+ # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 1dd6542ec72cb937d9838c7cac4e17cc771c55df..eed0d80b009732bfc3d8301da0d59362a0ae15ad 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -46,7 +46,10 @@ the only thing that answers "did this module touch the kernel" (TM-250,
+ integer wider than `i64` in that emission to `SPAN_MODEL.md` §5's sites,
+ spelled or not, so a call's wide result is a finding (TM-251, O-X11
+ answered). Neither reads a generic function nobody instantiates in the
+-umbrella — `src/core/vec.npk`'s nine — which the spelling checks read. The
++umbrella — `src/core/vec.npk`'s nine — which the spelling checks read.
++*(Both read them since cycle 0.3.2, in the emission of
++`tests/unit/generic_instances.npk`, which instantiates every generic function
++`src/` declares — TM-254, `meta/OPEN_QUESTIONS.md` O-X12 answered.)* The
+ cycle README's two plants, a `mono_now()` in `src/cal/cal.npk` and a
+ `host_now_utc()` in `src/fmt/fmt.npk`, fail by name: a full run over a copy
+ holding both is RED, four checks naming them. The self-check plants 112
+diff --git a/harness/README.md b/harness/README.md
+index 466606ae71b6b456f28a62e81daa2a1c3b676163..d17154f4c48e5c7b04f2633e87b71101eaecf93e 100644
+--- a/harness/README.md
++++ b/harness/README.md
+@@ -59,11 +59,16 @@ running unlisted since cycle 0.0.6)*:
+   a code named once for two sites and three times for two (TM-210). Case 6
+   (a generator differing by one line) is **pending until 0.5** and prints as
+   pending rather than passing.
+-- **One hundred and twelve planted violations across the tree checks since
+-  cycle 0.3.1** (one hundred and six after its first step, ninety-five from
++- **One hundred and sixteen planted violations across the tree checks since
++  cycle 0.3.2** (one hundred and twelve from cycle 0.3.1, one hundred and six
++  after its first step, ninety-five from
+   cycle 0.3.0, ninety-two from cycle 0.2.4a, eighty-two from cycle 0.2.3a,
+   forty-four from cycle 0.1.5's second half, forty after its first half,
+-  twenty-three before it; 0.3.1's second step's six are `check_purity`'s
++  twenty-three before it; 0.3.2's four are `check_call_edges`' three — a
++  generic function no emission holds an instance of, an instance reaching the
++  kernel, and no instances' emission where `src/` declares a generic — and
++  `check_wide_types`' wide instance in the instances' emission (TM-254);
++  0.3.1's second step's six are `check_purity`'s
+   five — a thread count, an error's chain and a standard stream, which its six
+   names passed, `open` beside a pure `reopen`, and a method of a banned name —
+   and `check_host_isolation`'s `HostClock`; its first step's eleven
+diff --git a/harness/checks.py b/harness/checks.py
+index 2468f49280ff99fe0a06868edf8a988fe41d8a1b..a2c7d35d2d0b145e70d81b4866030c2ac067043d 100644
+--- a/harness/checks.py
++++ b/harness/checks.py
+@@ -45,6 +45,13 @@ WHAT check_purity IS, AND WHAT NOTHING ELSE CAN BE READ AS.
+   source's spellings, which reach a generic function nobody instantiates,
+   where no emission does. The symbol scan still answers neither. The
+   paragraph above said "the ONLY thing" until then.
++
++  AND SINCE CYCLE 0.3.2 AN EMISSION HOLDS EVERY GENERIC FUNCTION TOO (TM-254,
++  `OPEN_QUESTIONS.md` O-X12): `tests/unit/generic_instances.npk` instantiates
++  each one `src/` declares, `run.py`'s step 7 emits it beside the umbrella,
++  and both readings of the emission read its instances -- so "where no
++  emission does" above is history, and a generic no instance holds is a
++  finding of `check_call_edges`.
+ """
+ 
+ import os
+@@ -1291,7 +1298,10 @@ def check_raw_index(tree, **_):
+ # `check_purity`'s docstring below, with where each is read: a call of one is
+ # legal only in an `async func`, which `check_call_edges` refuses in `src/`
+ # unless it is generic, and a generic one the arm bill refuses, its `await`
+-# or spawn arming `DeadlineExceeded` (TM-252's dated note). Until 0.3.1's
++# or spawn arming `DeadlineExceeded` (TM-252's dated note) -- and since cycle
++# 0.3.2 `check_call_edges` too, which holds every generic function `src/`
++# declares to an instance and none can be written for an `async` one in a
++# synchronous root (TM-254). Until 0.3.1's
+ # verification this said "every public function of its prelude", which three
+ # `pub async` ones off the list falsify. What it leaves answers from its
+ # arguments and what they point at: the allocator, the string floor,
+@@ -1401,13 +1411,27 @@ def check_purity(tree, **_):
+     red, by the ARM BILL and not by a purity reading: each arms
+     `DeadlineExceeded`, which no consumer of `src/` owes, so
+     `check_failsafe_arms` and REACH-002 in the units refuse the run. A generic
+-    `list_truncate` of a `List<ByteReader>` is red the same way only where the
+-    `DecreasesViolated` and `LimitViolated` it arms are new to its module's
+-    consumers -- in `cal`, and not in `src/core/bytes.npk`, where the run is
++    `list_truncate` of a `List<ByteReader>` is red the same way only where ANY
++    of the `DecreasesViolated` and `LimitViolated` it arms is new to its
++    module's consumers -- both in `cal`, `DecreasesViolated` alone in
++    `src/core/vec.npk`, and neither in `src/core/bytes.npk`, where the run is
+     GREEN. Dormant: `src/`'s generic functions are `src/core/vec.npk`'s nine,
+     synchronous, calling the allocator alone. (Until the verification of
+     0.3.1's fix this said all three "pass every check", from these checks'
+-    runs alone.)
++    runs alone. And until cycle 0.3.2 it said "only where the
++    `DecreasesViolated` and `LimitViolated` it arms are new", which
++    `vec.npk`'s red run falsified, only one of the two new there -- 0.3.1's
++    verification, corrected @@RUN_DATE@@.)
++
++    AND SINCE CYCLE 0.3.2 AN EMISSION HOLDS EVERY GENERIC FUNCTION `src/`
++    DECLARES (TM-254, `OPEN_QUESTIONS.md` O-X12): `tests/unit/
++    generic_instances.npk` instantiates each, and `check_call_edges` reads its
++    emission beside the umbrella's -- so each shape above, in a generic
++    function, is that check's finding: with no instance, as a generic no
++    emission holds; with one, the drop and the truncation reach
++    `npk_ofd_close`, the alias is refused where it is instantiated
++    (`NITPICK-EMIT-002`), and the `await` can be written in no synchronous
++    root (`NITPICK-TYPE-043`). The paragraph above is what held until then.
+     """
+     files = [f for f in src_files(tree) if not f.startswith(HOST_DIR)]
+     total = len(src_files(tree))
+@@ -1473,7 +1497,9 @@ def check_host_isolation(tree, **_):
+     instantiates, no purity check reads it, and a full run is red only where
+     the arm bill meets an identity no consumer owed, as an `await`'s
+     `DeadlineExceeded`. `check_purity`'s docstring says which. "By a name on
+-    its list" was added at 0.3.1's verification.)
++    its list" was added at 0.3.1's verification. Since cycle 0.3.2 the
++    emission holds every generic function `src/` declares, in
++    `tests/unit/generic_instances.npk`'s -- TM-254.)
+ 
+     `src/lib.npk` is exempt because it is the umbrella: it re-exports `host`'s
+     public names -- four of H-1's five functions since cycle 0.3.0, and
+@@ -1540,6 +1566,19 @@ def check_host_isolation(tree, **_):
+ # function `src/` declares but the nine generic ones of `src/core/vec.npk`,
+ # which a module holds only where a caller instantiates them.
+ EMISSION = "build/ntime.ll"
++# AND EVERY GENERIC FUNCTION `src/` DECLARES, IN AN EMISSION OF ITS OWN (cycle
++# 0.3.2, TM-254; `OPEN_QUESTIONS.md` O-X12). The umbrella instantiates no
++# generic function, so until then neither reading below read one, and a
++# generic function that let a `ByteReader` it took by `move` die, or called
++# `mono_now` through a function-typed local, passed a full run
++# (`meta/roadmap/0.3/0.3.1.md`'s third addendum). `INSTANCES_ROOT` calls every
++# generic function `src/` declares, each at a type its bounds admit; `run.py`'s
++# step 7 emits it to `INSTANCES` beside the umbrella, and both checks read each
++# instance of a function of `src/` there as they read the umbrella's functions.
++# What an instance shows is what the generic's own text reaches at that type;
++# what it reaches through its type argument is that argument's (TM-252).
++INSTANCES_ROOT = "tests/unit/generic_instances.npk"
++INSTANCES = "build/generic_instances.ll"
+ _IR_NAME = r'@("[^"]+"|[A-Za-z0-9_.$]+)'
+ _IR_DEFINE = re.compile(r"^define [^\n]*?" + _IR_NAME + r"\(.*?^}$", re.S | re.M)
+ _IR_DECLARE = re.compile(r"^declare [^\n]*?" + _IR_NAME + r"\(", re.M)
+@@ -1706,7 +1745,7 @@ def _declared_functions(tree):
+     return out
+ 
+ 
+-def check_call_edges(tree, emission=None, **_):
++def check_call_edges(tree, emission=None, instances=None, **_):
+     """No function of `src/` outside `src/host/` reaches, in `npkc`'s emission,
+     a runtime symbol the reviewed allowlist does not hold, a function of
+     `src/host/`, a call through a value, or inline assembly (S-7, H-2, TM-250).
+@@ -1717,13 +1756,22 @@ def check_call_edges(tree, emission=None, **_):
+     reaching, or a re-pin that names functions otherwise, is a finding here
+     and not a smaller denominator. A call is direct, and followed; or through
+     a value, or inline assembly, and refused, since nobody can read what it
+-    calls. WHAT IT CANNOT READ: a generic function nobody instantiates in the
+-    umbrella -- `src/core/vec.npk`'s nine -- which an emission holds only
+-    where a caller instantiates it, and which `check_purity` reads as spelled;
+-    and what an allowed symbol does inside the runtime, which is what its
+-    row's review says. And it reads calls: a read of memory through an address
+-    made from an integer (`#wild_ptr`, which no file of `src/` writes) calls
+-    nothing, and is not this check's question.
++    calls. AND EVERY GENERIC FUNCTION `src/` DECLARES, in a second emission
++    (cycle 0.3.2, TM-254): `INSTANCES_ROOT` instantiates each, `run.py`'s step
++    7 emits it to `INSTANCES`, and each instance of a function of `src/` there
++    is read as the umbrella's functions are -- so a generic function no
++    emission holds an instance of is a finding, as a non-generic one the
++    umbrella does not reach is. (Until cycle 0.3.2 this said "WHAT IT CANNOT
++    READ: a generic function nobody instantiates in the umbrella --
++    `src/core/vec.npk`'s nine -- which an emission holds only where a caller
++    instantiates it, and which `check_purity` reads as spelled", and a generic
++    function that let a `ByteReader` die, or aliased `mono_now`, passed a full
++    run: `OPEN_QUESTIONS.md` O-X12.) WHAT IT CANNOT READ: what an allowed
++    symbol does inside the runtime, which is what its row's review says; and
++    what a generic reaches through a type argument no instance names, which is
++    that argument's (TM-252). And it reads calls: a read of memory through an
++    address made from an integer (`#wild_ptr`, which no file of `src/` writes)
++    calls nothing, and is not this check's question.
+ 
+     AND A POSITIVE CONTROL ON EVERY RUN: where the emission defines a function
+     of `src/host/`, one of them reaches a symbol outside the allowlist --
+@@ -1732,52 +1780,59 @@ def check_call_edges(tree, emission=None, **_):
+     got = read_emission(path)
+     if got is None:
+         return _no_emission("check_call_edges", path)
+-    defines, declares, globs = got
++    ipath = instances or os.path.join(tree, INSTANCES)
++    inst = read_emission(ipath)
+     mods, host = _src_modules(tree)
+-    fns = sorted(n for n in defines if _ir_module(n) in mods)
+-    starts = [n for n in fns if _ir_module(n) not in host]
+-    problems, reached = [], set()
+-    for n in starts:
+-        symbols, src, odd = _reach(n, defines, declares, globs, mods)
+-        for sym in sorted(symbols):
+-            reached.add(sym)
+-            if not _allowed(sym):
+-                problems.append(
+-                    "`%s` reaches `%s` outside `src/host/`, and the reviewed "
+-                    "allowlist does not hold it: %s. Every function of `ntime` "
+-                    "outside `src/host/` is a pure function of its arguments "
+-                    "(S-7, TM-018). If `%s` touches the kernel, the clock, the "
+-                    "environment or a descriptor, the call belongs in "
+-                    "`src/host/`; if it only allocates from its inputs, review "
+-                    "it and give it a row of `CALL_EDGE_ALLOW`, with its "
+-                    "reason, in the same commit." % (n, sym, symbols[sym], sym))
+-        for f in sorted(src):
+-            if _ir_module(f) in host:
++    problems, reached, host_reach = [], set(), set()
++    fns, starts, umbrella = [], [], []
++    for defines, declares, globs in [got] + ([inst] if inst is not None else []):
++        here = sorted(n for n in defines
++                      if _ir_module(n) in mods and n not in fns)
++        if not umbrella:
++            umbrella = here
++        fns += here
++        for n in here:
++            symbols, src, odd = _reach(n, defines, declares, globs, mods)
++            if _ir_module(n) in host:
++                host_reach |= {s for s in symbols if not _allowed(s)}
++                continue
++            starts.append(n)
++            for sym in sorted(symbols):
++                reached.add(sym)
++                if not _allowed(sym):
++                    problems.append(
++                        "`%s` reaches `%s` outside `src/host/`, and the "
++                        "reviewed allowlist does not hold it: %s. Every "
++                        "function of `ntime` outside `src/host/` is a pure "
++                        "function of its arguments (S-7, TM-018). If `%s` "
++                        "touches the kernel, the clock, the environment or a "
++                        "descriptor, the call belongs in `src/host/`; if it "
++                        "only allocates from its inputs, review it and give it "
++                        "a row of `CALL_EDGE_ALLOW`, with its reason, in the "
++                        "same commit." % (n, sym, symbols[sym], sym))
++            for f in sorted(src):
++                if _ir_module(f) in host:
++                    problems.append(
++                        "`%s` calls into `src/host/`: %s. Nothing outside "
++                        "`src/host/` calls a function of `host` (HOST.md H-2, "
++                        "B-17): a function that needs \"now\" takes it as a "
++                        "parameter (S-9)." % (n, src[f]))
++            for where, what in odd:
+                 problems.append(
+-                    "`%s` calls into `src/host/`: %s. Nothing outside "
+-                    "`src/host/` calls a function of `host` (HOST.md H-2, "
+-                    "B-17): a function that needs \"now\" takes it as a "
+-                    "parameter (S-9)." % (n, src[f]))
+-        for where, what in odd:
+-            problems.append(
+-                "`%s` holds %s%s, and nobody can read what it calls. A "
+-                "function of `ntime` outside `src/host/` takes no callback (a "
+-                "layout is data, not a callback: SAFETY.md §1, D-018) and "
+-                "writes no assembly, so S-7's claim is about every call it "
+-                "makes; call the function by its name."
+-                % (n, what, "" if where == n
+-                   else " (in `%s`, which it reaches)" % where))
+-    host_reach = set()
+-    for n in fns:
+-        if _ir_module(n) in host:
+-            symbols, _src, _odd = _reach(n, defines, declares, globs, mods)
+-            host_reach |= {s for s in symbols if not _allowed(s)}
++                    "`%s` holds %s%s, and nobody can read what it calls. A "
++                    "function of `ntime` outside `src/host/` takes no "
++                    "callback (a layout is data, not a callback: SAFETY.md "
++                    "§1, D-018) and writes no assembly, so S-7's claim is "
++                    "about every call it makes; call the function by its "
++                    "name." % (n, what, "" if where == n
++                               else " (in `%s`, which it reaches)" % where))
+     if any(_ir_module(n) in host for n in fns) and not host_reach:
+         problems.append(
+             "check_call_edges read the emission's `src/host/` and found it "
+             "reaching nothing outside the allowlist. H-1's clocks read the "
+             "kernel, so this reader is not reading the emission's calls, and "
+             "its silence above is evidence of nothing.")
++    declares = got[1]
+     for sym in sorted(CALL_EDGE_ALLOW):
+         if sym not in declares:
+             problems.append(
+@@ -1791,7 +1846,8 @@ def check_call_edges(tree, emission=None, **_):
+                 "emission declares: a row that outlived its family (V-1c)."
+                 % pat)
+     declared = _declared_functions(tree)
+-    emitted = {(_ir_module(n), n[len("npk.%s." % _ir_module(n)):]) for n in fns}
++    emitted = {(_ir_module(n), n[len("npk.%s." % _ir_module(n)):])
++               for n in umbrella}
+     plain = [d for d in declared if not d[3]]
+     for rel, mod, name, _generic in plain:
+         if (mod, name) not in emitted:
+@@ -1801,16 +1857,43 @@ def check_call_edges(tree, emission=None, **_):
+                 "its functions otherwise. Either way this reading has not read "
+                 "it, and a function no reading reaches is one the purity and "
+                 "width claims say nothing about." % (rel, name, mod, name))
++    # EVERY GENERIC FUNCTION `src/` DECLARES, HELD TO AN INSTANCE (TM-254). A
++    # generic's instance is `npk.<module>.<name><...>`; one in either emission
++    # will do, and none is a finding -- the instances' emission absent first.
++    generic = [d for d in declared if d[3]]
++    instanced = {(_ir_module(n), _ir_source_name(n)) for n in fns if "<" in n}
++    if generic and inst is None:
++        problems.append(
++            "check_call_edges read no instances' emission at %s, and `src/` "
++            "declares %d generic function(s). `run.py`'s step 7 emits `%s` "
++            "there, beside the umbrella, so that every generic function of "
++            "`src/` is read as the rest are (TM-254); a check that read "
++            "nothing has checked nothing (V-1b)."
++            % (ipath, len(generic), INSTANCES_ROOT))
++    elif generic:
++        for rel, mod, name, _generic in generic:
++            if (mod, name) not in instanced:
++                problems.append(
++                    "%s declares the generic `%s`, and no emission this check "
++                    "reads holds an instance of it, `npk.%s.%s<...>`. `%s` "
++                    "instantiates every generic function `src/` declares, so "
++                    "that its calls are read as every other function's are "
++                    "(OPEN_QUESTIONS.md O-X12, TM-254): call `%s` there, at a "
++                    "type its bounds admit, in the same commit. A function no "
++                    "reading reaches is one the purity and width claims say "
++                    "nothing about." % (rel, name, mod, name, INSTANCES_ROOT,
++                                        name))
+     outside = sorted(s for s in reached if not _allowed(s))
+-    headline = ("%d function(s) of src/'s modules in the emission, %d outside "
++    headline = ("%d function(s) of src/'s modules in the emissions, %d outside "
+                 "src/host/, reaching %d runtime symbol(s), %d outside the "
+                 "reviewed allowlist; src/host/ reaches %s; %d of %d non-generic "
+-                "function(s) src/ declares in it, %d generic read by spelling "
+-                "alone"
++                "function(s) src/ declares in the umbrella's, %d of %d generic "
++                "in the instances' (%s)"
+                 % (len(fns), len(starts), len(reached), len(outside),
+                    ", ".join(sorted(host_reach)) or "nothing outside it",
+                    sum(1 for d in plain if (d[1], d[2]) in emitted), len(plain),
+-                   len(declared) - len(plain)))
++                   sum(1 for d in generic if (d[1], d[2]) in instanced),
++                   len(generic), INSTANCES_ROOT))
+     return Result("check_call_edges", headline, problems)
+ 
+ 
+@@ -1837,7 +1920,10 @@ def check_call_edges(tree, emission=None, **_):
+ # there. What this one cannot read is `check_call_edges`' limit: a generic
+ # function nobody instantiates in the umbrella. And a mark that outlived its
+ # reason is the spelling check's to fail; here a marked function the emission
+-# defines with no wide type is named in the headline.
++# defines with no wide type is named in the headline. (Since cycle 0.3.2 it
++# reads `INSTANCES` too, the emission that holds an instance of every generic
++# function `src/` declares, so "nobody instantiates" names no function of
++# `src/` -- TM-254.)
+ _IR_WIDE = re.compile(r"(?<![A-Za-z0-9_.%@$\"])i([0-9]+)(?![A-Za-z0-9_])")
+ 
+ 
+@@ -1846,15 +1932,23 @@ def _ir_widths(text):
+     return sorted({int(w) for w in _IR_WIDE.findall(text) if int(w) > 64})
+ 
+ 
+-def check_wide_types(tree, emission=None, **_):
++def check_wide_types(tree, emission=None, instances=None, **_):
+     """Every integer type wider than `i64` in `npkc`'s emission of a function
+     of `src/` stands in a function `SPAN_MODEL.md` §5 marks, and in no global
+-    of `src/`'s modules -- N-20's wide values, spelled or not (TM-251)."""
++    of `src/`'s modules -- N-20's wide values, spelled or not (TM-251). The
++    emissions are the umbrella's and, since cycle 0.3.2, `INSTANCES`, where
++    every generic function `src/` declares has an instance (TM-254)."""
+     path = emission or os.path.join(tree, EMISSION)
+     got = read_emission(path)
+     if got is None:
+         return _no_emission("check_wide_types", path)
+-    defines, _declares, globs = got
++    inst = read_emission(instances or os.path.join(tree, INSTANCES))
++    defines, globs = dict(got[0]), dict(got[2])
++    if inst is not None:
++        for n, body in inst[0].items():
++            defines.setdefault(n, body)
++        for g, init in inst[2].items():
++            globs.setdefault(g, init)
+     sites, problems = int128_sites(tree)
+     problems = list(problems)
+     mods, _host = _src_modules(tree)
+@@ -1885,9 +1979,9 @@ def check_wide_types(tree, emission=None, **_):
+     emitted = {_ir_source_name(n) for n in fns}
+     quiet = sorted(s for s in sites if s in emitted and s not in holders)
+     absent = sorted(s for s in sites if s not in emitted)
+-    headline = ("%d of %d function(s) of src/'s modules in the emission hold an "
+-                "integer wider than i64%s; %d site(s) §5 marks, %d not in the "
+-                "emission%s%s"
++    headline = ("%d of %d function(s) of src/'s modules in the emissions hold "
++                "an integer wider than i64%s; %d site(s) §5 marks, %d not in "
++                "them%s%s"
+                 % (len(holders), len(fns),
+                    " (" + ", ".join(sorted(holders)) + ")" if holders else "",
+                    len(sites), len(absent),
+diff --git a/harness/run.py b/harness/run.py
+index 4b90aaace232fb1a2a396478fc35798fb7ac52db..368208a3661a73d95ec01518ecc0919e1ec6c79c 100644
+--- a/harness/run.py
++++ b/harness/run.py
+@@ -636,16 +636,18 @@ def run_parse(rep, root, bld):
+     """Every `.npk` in the tree in front of the real parser, each exactly once.
+ 
+     THE DENOMINATOR IS THE WHOLE TREE AND THAT IS WHY THE STAGE IS WORTH ITS
+-    COST. Re-measured at cycle 0.3.0: of the 150 `.npk` files
+-    here [[sweep: npk_total=150]] the library build roots 7
+-    [[sweep: lib_reach=7]], the suite roots 99 [[sweep: suite_roots=99]]
++    COST. Re-measured at cycle 0.3.2's first step: of the 151 `.npk` files
++    here [[sweep: npk_total=151]] the library build roots 7
++    [[sweep: lib_reach=7]], the suite roots 100 [[sweep: suite_roots=100]]
+     (127 and 77 from cycle 0.1.3c until `tests/unit/civil_total_edges.npk`
+     joined; 128 and 78 from then until cycle 0.2.0b retired the churn pair,
+     TM-214; 126 and 76 until cycle 0.2.0 added `span`'s body to the
+     library's reach and a unit and two probes to the suite; 130 and 79 until
+     cycle 0.2.1 added two units and six probes; 138 and 87 until cycle 0.2.2
+     added two units and two sweeps; 142 and 91 until cycle 0.2.3 added five
+-    units; 147 and 96 until cycle 0.2.4b added a unit and a probe; 149, 6
++    units; 147 and 96 until cycle 0.2.4b added a unit and a probe; 150, 7 and
++    99 from cycle 0.3.0 until cycle 0.3.2 added the unit that instantiates
++    every generic function, TM-254; 149, 6
+     and 98 until cycle 0.3.0 gave `host` a body the library reaches and added
+     its unit), and of the 4
+     support modules [[sweep: support_total=4]] 3 are reached by `use` from
+@@ -768,11 +770,26 @@ def build_library(rep, root, bld):
+     rep.say("[7/%d] library -- %s, reaching %d source(s) by `use`"
+             % (STEPS, entry, len(reached)))
+     ll = os.path.join(bld.out_dir, "ntime.ll")
++    # AND THE INSTANCES' EMISSION BESIDE IT (cycle 0.3.2, TM-254): the unit
++    # that instantiates every generic function `src/` declares, emitted here
++    # so the two readings below read its instances as they read the
++    # umbrella's functions -- the umbrella instantiates no generic function.
++    # A tree without the unit -- the self-check's scratch trees -- emits none,
++    # and `check_call_edges` says so if `src/` declares a generic function.
++    ill = os.path.join(bld.out_dir, os.path.basename(checks_mod.INSTANCES))
+     try:
+         bld.emit(entry, ll)
+         rep.say("  ok    npkc            %9d B of IR" % os.path.getsize(ll))
+-        _report_check(rep, checks_mod.check_call_edges(root, emission=ll))
+-        _report_check(rep, checks_mod.check_wide_types(root, emission=ll))
++        if os.path.isfile(os.path.join(root, checks_mod.INSTANCES_ROOT)):
++            bld.emit(checks_mod.INSTANCES_ROOT, ill)
++            rep.say("  ok    npkc            %9d B of IR, the instances (%s)"
++                    % (os.path.getsize(ill), checks_mod.INSTANCES_ROOT))
++        elif os.path.exists(ill):
++            os.remove(ill)
++        _report_check(rep, checks_mod.check_call_edges(root, emission=ll,
++                                                       instances=ill))
++        _report_check(rep, checks_mod.check_wide_types(root, emission=ll,
++                                                       instances=ill))
+         obj = os.path.join(bld.out_dir, "ntime.o")
+         bld.assemble(ll, obj)
+         bld.scan(obj)
+diff --git a/harness/selfcheck.py b/harness/selfcheck.py
+index 0410dbfe463fd597ebd6a1db204a293273090efa..2dca0d9d28190d8ba0f0cdc5fcfe4e33e8b2039a 100644
+--- a/harness/selfcheck.py
++++ b/harness/selfcheck.py
+@@ -939,12 +939,24 @@ def _ir(*parts, omit=()):
+     return ("build/ntime.ll", decl + "".join(parts))
+ 
+ 
++# AND THE INSTANCES' EMISSION (cycle 0.3.2, TM-254) -- `checks.INSTANCES`,
++# spelled out so the plants run against the checks before it, which name no
++# such constant: the same declarations as `_ir`'s, so a symbol a plant
++# reaches is one the reader knows.
++def _inst(*parts):
++    return ("build/generic_instances.ll", _ir(*parts)[1])
++
++
+ def _fn(name, body):
+     return ('define { i64, i32 } @"%s"() {\nentry:\n%s'
+             "  ret { i64, i32 } zeroinitializer\n}\n" % (name, body))
+ 
+ 
+ _CALL = "  %%r = call %s\n"
++# A generic function, declared: the source `check_call_edges` holds to an
++# instance since cycle 0.3.2 (TM-254).
++_GEN_SRC = ("src/core/vec.npk",
++            "mod:vec;\nfunc:g<T: Copy> = NIL(T:x) never fails { pass NIL; };\n")
+ _HOST_FN = _fn("npk.host.h", _CALL % ("i64 @npk_sys6(i64 228, i64 0, i64 0, "
+                                      "i64 0, i64 0, i64 0, i64 0)"))
+ _WIDE_FN = _fn("npk.span.wide", "  %w = add i256 7, 0\n")
+@@ -1654,6 +1666,40 @@ PLANTED = [
+      [_span5((("`wide`", "**yes**"),)), ("src/core/vec.npk", "mod:vec;\n"),
+       _ir(_fn("npk.vec.vec_push<int64>", "  %s = add i64 %a, 1\n"))],
+      "§5's table marks no `int128` site in `vec_push`"),
++    # ---- CYCLE 0.3.2: EVERY GENERIC FUNCTION, IN AN EMISSION (TM-254,
++    # `OPEN_QUESTIONS.md` O-X12). `src/core/vec.npk` declares one generic
++    # function in each row, and `_inst` writes the second emission.
++    #
++    # A GENERIC NO EMISSION HOLDS AN INSTANCE OF -- the shape that passed a
++    # full run at 0.3.1's fix -- beside the same generic, instantiated.
++    (checks_mod.check_call_edges,
++     [_GEN_SRC, _ir(), _inst(_fn("npk.vec.h<int64>", ""))],
++     [_GEN_SRC, _ir(), _inst(_fn("npk.vec.g<int64>", ""))],
++     "declares the generic `g`, and no emission this check reads holds an "
++     "instance of it"),
++    # AN INSTANCE THAT REACHES THE KERNEL, read as any function is -- beside
++    # the instance allocating.
++    (checks_mod.check_call_edges,
++     [_GEN_SRC, _ir(), _inst(_fn("npk.vec.g<int64>",
++                                 _CALL % "i64 @npk_sys6(i64 39, i64 0, i64 0, "
++                                         "i64 0, i64 0, i64 0, i64 0)"))],
++     [_GEN_SRC, _ir(), _inst(_fn("npk.vec.g<int64>",
++                                 _CALL % "ptr @npk_alloc(i64 8)"))],
++     "`npk.vec.g<int64>` reaches `npk_sys6` outside `src/host/`"),
++    # NO INSTANCES' EMISSION AT ALL, where `src/` declares a generic: a reading
++    # of nothing (V-1b) -- beside the emission written.
++    (checks_mod.check_call_edges,
++     [_GEN_SRC, _ir()],
++     [_GEN_SRC, _ir(), _inst(_fn("npk.vec.g<int64>", ""))],
++     "check_call_edges read no instances' emission"),
++    # A WIDE INSTANCE IN THE INSTANCES' EMISSION -- read there, as in the
++    # umbrella's -- beside the instance in `i64`.
++    (checks_mod.check_wide_types,
++     [_span5((("`wide`", "**yes**"),)), _GEN_SRC, _ir(),
++      _inst(_fn("npk.vec.g<int128>", "  %s = add i128 %a, 1\n"))],
++     [_span5((("`wide`", "**yes**"),)), _GEN_SRC, _ir(),
++      _inst(_fn("npk.vec.g<int64>", "  %s = add i64 %a, 1\n"))],
++     "§5's table marks no `int128` site in `g`"),
+     # ---- CYCLE 0.3.1: THE TWO BAN LISTS, REVIEWED (TM-252, TM-253). The
+     # first five rows are the new classes and the pattern's left boundary, each a
+     # plant cycle 0.0.3's six names passed beside a control a check matching
+diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
+index 5631c7dd60f3240de9e65524aed53618817c0ad2..867bc83805d290c12784a36836810b5eb49ca0b4 100644
+--- a/meta/DECISIONS.md
++++ b/meta/DECISIONS.md
+@@ -7969,6 +7969,15 @@ their own; the other two are the review of the two ban lists the cycle README
+ names.
+ 
+ ### TM-250 — O-X9 answered: `check_call_edges` reads every call a function of `src/` outside `src/host/` makes in `npkc`'s emission of the umbrella, and holds what it reaches to a reviewed allowlist — a second reading of S-7, beside `check_purity` and never instead of it
++> **SUPERSEDED IN PART by TM-254 (@@RUN_DATE@@, cycle 0.3.2)**: its
++> *"`check_purity` stays — it reads a generic function nobody instantiates,
++> which no emission holds"* is no longer true of what this check reads.
++> Every generic function `src/` declares has an instance in
++> `tests/unit/generic_instances.npk`'s emission since then, which this check
++> reads beside the umbrella's and holds each generic to — one root written for
++> the purpose, where the alternative declined below read every test program's.
++> `check_purity` stays, for the reason it always had. The text below is left
++> exactly as written.
+ 
+ **2026-10-08, cycle 0.3.1 (the plan's PD-95). Strikes `meta/OPEN_QUESTIONS.md`
+ O-X9; adds `TESTING.md` §2's row and moves V-1a's counts; dates `SAFETY.md`
+@@ -8033,6 +8042,9 @@ a syscall** — O-X9's own reason for waiting was a scan with nothing to check,
+ and `host` names two.
+ 
+ ### TM-251 — O-X11 answered: `check_wide_types` reads every integer type wider than `i64` in `npkc`'s emission of a function of `src/`, and holds it to §5's sites — a second reading of N-20, beside `check_int128_sites`
++> **And TM-254 (@@RUN_DATE@@, cycle 0.3.2)**: the same reading covers
++> `tests/unit/generic_instances.npk`'s emission, where every generic function
++> `src/` declares has an instance. The text below is left exactly as written.
+ 
+ **2026-10-08, cycle 0.3.1 (the plan's PD-96). Strikes `meta/OPEN_QUESTIONS.md`
+ O-X11; adds `TESTING.md` §2's row; dates `TESTING.md` V-1 and `SPAN_MODEL.md`
+@@ -8122,6 +8134,18 @@ lines.
+ > `LimitViolated` are new to the module's consumers — in `cal` — and GREEN in
+ > `src/core/bytes.npk`, whose consumers owe both. No purity check reads any of
+ > them.
++>
++> **And corrected @@RUN_DATE@@ at cycle 0.3.2 — a further dated sentence; the
++> notes above stand as written.** Its *"only where its `DecreasesViolated` and
++> `LimitViolated` are new to the module's consumers"* reads *any of*: the
++> third addendum's own table has the truncation red in `src/core/vec.npk`,
++> where only `DecreasesViolated` was new — `NITPICK-REACH-002` in five units,
++> naming it alone — as it is in `cal`, where both were. And what the first
++> note left undecided is decided: by TM-254, every generic function `src/`
++> declares is instantiated in `tests/unit/generic_instances.npk`, whose
++> emission `check_call_edges` reads, so each shape above is that check's
++> finding in a generic function, and a generic no instance holds is one
++> too (`meta/OPEN_QUESTIONS.md` O-X12).
+ 
+ **2026-10-08, cycle 0.3.1 (the plan's PD-97). Supersedes TM-018 in its list of
+ names; dates `SAFETY.md` S-10 and S-10b; restates `TESTING.md` §2's row; the
+@@ -8211,3 +8235,75 @@ in the check** — a list that goes stale the day 0.3.2 adds two; **the check
+ retired, `check_layering` and `check_call_edges` standing for it** — a third
+ reading of B-17's boundary costs nothing, and it is the one that reads a file
+ the umbrella does not reach, such as `src/fmt/fmt.npk` today.
++
++# Cycle 0.3.2 — every generic function read, a unit's own `/etc`, and the system zone, ratified @@RUN_DATE@@
++
++Four decisions, drafted at planning (`meta/roadmap/0.3/0.3.2.md` §2, PD-99 …
++PD-102, in that order), accepted by the orchestrator before the subcycle's
++dispatch, and each measured at compiler `5fbaf4a`. The first answers the
++question cycle 0.3.1's fix raised, `meta/OPEN_QUESTIONS.md` O-X12, in a
++commit of its own; the second is the instrument the system zone's tests stand
++on, in a commit of its own because CI meets it there first; the other two are
++the system zone and its tests.
++
++### TM-254 — O-X12 answered: every generic function `src/` declares is instantiated in `tests/unit/generic_instances.npk`, whose emission `check_call_edges` and `check_wide_types` read beside the umbrella's — and a generic function no instance holds is a finding
++
++**@@RUN_DATE@@, cycle 0.3.2 (the plan's PD-99). Strikes `meta/OPEN_QUESTIONS.md`
++O-X12; supersedes TM-250 in its clause on what reads a generic function, and
++widens TM-251's reading; dates `TESTING.md` §2's three rows, V-1 and V-14c,
++`SAFETY.md` S-10 and S-10b and `SPAN_MODEL.md` N-20; and gives TM-252's note a
++further dated sentence, which reads its "and" as "any of".**
++
++**What was found** (`0.3.2.md` §1). A generic function is emitted only where a
++caller instantiates it, and the umbrella instantiates none, so the two
++readings of the emission read no generic function of `src/`, and
++`check_purity` reads its spellings alone. Four shapes, each a generic function
++appended to a copy's `src/cal/cal.npk`: one that lets a `ByteReader` it takes
++by `move` die, one that truncates a `List<ByteReader>`, one that calls
++`mono_now` through a function-typed local, and one that awaits
++`text_read_line`. Cycle 0.3.1's fix measured them in full runs — the first and
++third GREEN, the others red only by the arm bill (`0.3.1.md`'s third
++addendum). With a unit that instantiates every generic function `src/`
++declares, emitted beside the umbrella, and the declared-function rule held to
++the generic ones, each is a finding of `check_call_edges`: with no instance,
++as a generic no emission holds; with one, the drop and the truncation reach
++`npk_ofd_close` through the drop glue, the alias is refused where it is
++instantiated (`NITPICK-EMIT-002`), and the `await` can be written in no
++synchronous root (`NITPICK-TYPE-043`). Over the tree the nine functions of
++`src/core/vec.npk`, each instantiated at `int64`, reach the allocator, the
++error route and LLVM's arithmetic — `npk_alloc`, `npk_ralloc`, `npk_dalloc`,
++`npk_trap`, `npk_chain_reset` and three overflow intrinsics, every one in the
++allowlist — and hold no integer wider than `i64`.
++
++**The decision.** *`tests/unit/generic_instances.npk` calls every generic
++function `src/` declares, each at a type its bounds admit — `vec.npk`'s nine
++at `int64` today — and runs as a unit. `run.py`'s step 7 emits it beside the
++umbrella, to `build/generic_instances.ll`, and `check_call_edges` and
++`check_wide_types` read each instance of a function of `src/` in it as they
++read the umbrella's functions. `check_call_edges`' declared-function rule holds
++every generic function `src/` declares to an instance in an emission it reads:
++one with none is a finding, and so is no instances' emission where `src/`
++declares one. What an instance shows is what the generic's own text reaches at
++that type; what it reaches through its type argument is that argument's
++(TM-252's reading). Four plants, each an emission's text. And TM-252's note
++gains a further dated sentence: its "the `DecreasesViolated` and
++`LimitViolated` it arms are new" reads "any of" — in `src/core/vec.npk` only
++`DecreasesViolated` was new, and the run was red — as `check_purity`'s
++docstring does, corrected where it stands.*
++
++*Alternatives declined:* **the three token checks** the 0.3.1 fix recommended,
++each plantable — no `async` in `src/` outside `src/host/`, no function-typed
++local in `src/`, no descriptor-owning prelude type (`ByteReader`,
++`ByteWriter`, `OwnedFd`, `TextReader`, `TextWriter`, `LineBufWriter`) named in
++`src/` outside `src/host/` — the third weighed against this subcycle's own
++code and compatible with it, since the system zone's one descriptor is
++`src/host/`'s; declined because each reads the shape it names, and a list of
++shapes is a list of names as 0.3.1 measured them — a shape nobody listed would
++still be read by spelling alone, where an emission holds every call the code
++makes; **every test program's emission read** — TM-250's declined
++alternative, a hundred roots' emissions for nine functions, and a generic no
++test instantiates still unread; **no generic function outside
++`src/core/vec.npk`** — a rule about where code may live, where the question is
++what reads it; **instances generated by the harness from the signatures** — a
++generator of programs the harness would have to get right for every bound,
++where a unit states each call once.
+diff --git a/meta/OPEN_QUESTIONS.md b/meta/OPEN_QUESTIONS.md
+index 3421942ace1664dc7b51286665a446dfa4895ea5..73d29989d1e98c1d27fdf789650e473a85bcd3cd 100644
+--- a/meta/OPEN_QUESTIONS.md
++++ b/meta/OPEN_QUESTIONS.md
+@@ -1107,7 +1107,17 @@ pointer here (`meta/roadmap/0.3/0.3.0.md` §7).
+ 
+ ---
+ 
+-### O-X12 — a generic function of `src/` that nobody instantiates is in no emission: what reads it?
++### ~~O-X12 — a generic function of `src/` that nobody instantiates is in no emission: what reads it?~~ — **SETTLED @@RUN_DATE@@ (TM-254): an emission — every generic function `src/` declares is instantiated in `tests/unit/generic_instances.npk`, whose emission `check_call_edges` and `check_wide_types` read beside the umbrella's, and a generic no instance holds is a finding**
++
++> The recommendation, taken at cycle 0.3.2. Measured at compiler `5fbaf4a`
++> (`meta/roadmap/0.3/0.3.2.md` §1.3): each of the four shapes below, in a
++> generic function appended to a copy's `src/cal/cal.npk`, is a finding of
++> `check_call_edges` with no instance — the drop and the truncation reach
++> `npk_ofd_close` with one, the alias is refused where it is instantiated,
++> and the `await` can be written in no synchronous root. Over the tree,
++> `src/core/vec.npk`'s nine, instantiated at `int64`, reach the allocator, the
++> error route and LLVM's arithmetic — every symbol in the allowlist. The
++> question below is left as it was asked.
+ 
+ **Raised 2026-10-08 by cycle 0.3.1's fix** (`s2-ntime-0.3.1-0752`, `74844ac`),
+ measured again in full runs by that fix's verification (`30bd704`), held in the
+diff --git a/meta/roadmap/0.3/README.md b/meta/roadmap/0.3/README.md
+index d3add3684ae28d77d28a3d6488c39e831b06b5ef..ea63419acb5e08c651fc091fe458a34516a4bde0 100644
+--- a/meta/roadmap/0.3/README.md
++++ b/meta/roadmap/0.3/README.md
+@@ -106,8 +106,8 @@ them.)*
+ 0.3.1's fix raised and its verifier's nit, in a commit before the zone; the
+ instrument the zone's tests stand on, in a commit of its own; and the tests.
+ The eight above keep their words.)*
+-- [ ] **O-X12**: every generic function `src/` declares instantiated in `tests/unit/generic_instances.npk`, its emission read by `check_call_edges` and `check_wide_types` beside the umbrella's, and a generic no instance holds a finding (PD-99)
+-- [ ] the 0.3.1 verifier's nit: `check_purity`'s docstring and TM-252's note say a truncation of descriptors is red "only where the `DecreasesViolated` and `LimitViolated` it arms are new" — it is *any of* them, `DecreasesViolated` alone in `src/core/vec.npk` — corrected by dated notes, not rewritten
++- [x] **O-X12**: every generic function `src/` declares instantiated in `tests/unit/generic_instances.npk`, its emission read by `check_call_edges` and `check_wide_types` beside the umbrella's, and a generic no instance holds a finding (PD-99) — **TM-254**: four plants caught and four controls silent, each unseen by the checks before it; over the tree `vec.npk`'s nine, at `int64`, reach the allocator, the error route and LLVM's arithmetic, every symbol in the allowlist
++- [x] the 0.3.1 verifier's nit: `check_purity`'s docstring and TM-252's note say a truncation of descriptors is red "only where the `DecreasesViolated` and `LimitViolated` it arms are new" — it is *any of* them, `DecreasesViolated` alone in `src/core/vec.npk` — corrected by dated notes, not rewritten — the docstring in place, recording its words, and TM-252's note by a further dated sentence
+ - [ ] a unit makes its own `/etc` — a user and a mount namespace and an empty `tmpfs`, by its own syscalls; `probe22` measures the shape and the kernel's longest link, and CI lifts Ubuntu 24.04's restriction on the namespace (PD-100)
+ - [ ] the tests: one unit of nineteen machines in a namespace of its own, the lowest free descriptor held across every call; three units of `$TZ`; every exit seen red on a mutant of `host`, and the mutants no test can see named (PD-102)
+ 
+diff --git a/meta/specs/BUILD.md b/meta/specs/BUILD.md
+index 7cf494085f248222533857d3ebb2a7be971b9abe..64813a5e5a5798921cc62cc0bd8c947221b7262c 100644
+--- a/meta/specs/BUILD.md
++++ b/meta/specs/BUILD.md
+@@ -324,9 +324,10 @@ list kept the old code until cycle 0.2.0), `BORROW-001`, `BORROW-012`,
+ `RESOLVE-001`, `RESOLVE-002` (since cycle 0.2.0, `probe20b`),
+ `REACH-002` and `REACH-003`, and every family
+ after the first three runs only on something that parsed. Re-measured at pin
+-`5fbaf4a`, cycle 0.3.0: **150 files = 105 parse cleanly + 43
++`5fbaf4a`, cycle 0.3.2's first step: **151 files = 106 parse cleanly + 43
+ parse and are refused later + 2 do not parse**
+-<!-- [[sweep: npk_total=150]] --> (`127 = 90 + 35 + 2` from cycle 0.1.3c until
++<!-- [[sweep: npk_total=151]] --> (`150 = 105 + 43 + 2` from cycle 0.3.0 until
++cycle 0.3.2 added `tests/unit/generic_instances.npk`, TM-254; `127 = 90 + 35 + 2` from cycle 0.1.3c until
+ `tests/unit/civil_total_edges.npk` joined, `128 = 91 + 35 + 2` from then
+ until cycle 0.2.0b retired the churn pair, TM-214, `126 = 89 + 35 + 2`
+ until cycle 0.2.0 added `Instant`'s unit, its two refusals and the relay
+diff --git a/meta/specs/SAFETY.md b/meta/specs/SAFETY.md
+index 789f68c0f6ebe7b8de12b75fd4acf399ae85f1be..8e50f8febc4c4ee10b3ba526d7ba88378811b49c 100644
+--- a/meta/specs/SAFETY.md
++++ b/meta/specs/SAFETY.md
+@@ -376,7 +376,13 @@ it, but a full run is red by the arm bill, since its `await` or `drop` spawn
+ arms `DeadlineExceeded`, which no consumer of `src/` owes —
+ `check_failsafe_arms`, and `NITPICK-REACH-002` in the units (until the
+ verification of 0.3.1's fix this said it "passes every check", measured by
+-the checks alone). TM-252's dated note has the rest.)*
++the checks alone). TM-252's dated note has the rest.)* *(Cycle 0.3.2, TM-254 —
++`../OPEN_QUESTIONS.md` O-X12 answered: a generic one is in an emission since.
++`tests/unit/generic_instances.npk` instantiates every generic function `src/`
++declares, `check_call_edges` reads its emission beside the umbrella's and
++holds each generic to an instance there, and none can be written for an
++`async` one in a synchronous root — so a generic function that reaches past
++the program's own memory is a finding, whatever it reaches it by.)*
+ 
+ **Rule S-10b (TM-126) — it is a SOURCE-LEVEL check, it is LIVE, and it has been
+ SEEN TO FAIL.** Three separate claims, and each was missing:
+@@ -397,6 +403,9 @@ SEEN TO FAIL.** Three separate claims, and each was missing:
+   makes — a call through a name no ban list knows is a call like any other
+   there — and cannot read a generic function nobody instantiates in it, which
+   this check reads as spelled. The symbol scan still answers neither.)*
++  *(Since cycle 0.3.2 it reads every generic function `src/` declares, in the
++  emission of `tests/unit/generic_instances.npk`, which instantiates each —
++  TM-254.)*
+ - **Live from cycle 0.0.3**, not from 0.3. It runs over the six non-`host`
+   files today and reports `0` findings with the denominator printed, which is
+   the same answer `check_no_owning_fields` gives over an empty set and is
+diff --git a/meta/specs/SPAN_MODEL.md b/meta/specs/SPAN_MODEL.md
+index 459353bc606648821269ed913bd9ab56a54b36b1..408b3c94c4f4ac0bbf1e733ed7bf2d65ad4c9df7 100644
+--- a/meta/specs/SPAN_MODEL.md
++++ b/meta/specs/SPAN_MODEL.md
+@@ -266,6 +266,9 @@ a function of the umbrella's emission, spelled or not, stands in a function
+ the table marks — so the call's result above is a finding there. Two
+ readings hold the rule, of the spelling and of the emission; a generic
+ function nobody instantiates in the umbrella is read by spelling alone.)*
++*(Cycle 0.3.2, TM-254: none is, since — every generic function `src/`
++declares has an instance in `tests/unit/generic_instances.npk`'s emission,
++which `check_wide_types` reads beside the umbrella's.)*
+ 
+ **Rule N-20b (TM-105) — the range check at each of those sites is mandatory
+ library code, because the language provides no checked narrowing.** Measured at
+diff --git a/meta/specs/TESTING.md b/meta/specs/TESTING.md
+index 6b2495869ed35b08ad228c2efcfef02dcdb5c6da..25da90f515539c121d3125ca7f9ab7480d5d92a1 100644
+--- a/meta/specs/TESTING.md
++++ b/meta/specs/TESTING.md
+@@ -17,7 +17,7 @@ than sampled. Where that is possible it is the gate, and §3 says where.
+ 
+ | Stage | Answers |
+ |---|---|
+-| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **40 files of 150 that no other stage roots** <!-- [[sweep: npk_total=150]] --> *(41 of 149 until cycle 0.3.0, when the library build began to reach `src/host/host.npk`)* |
++| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **40 files of 151 that no other stage roots** <!-- [[sweep: npk_total=151]] --> *(40 of 150 until cycle 0.3.2's first step added a unit; 41 of 149 until cycle 0.3.0, when the library build began to reach `src/host/host.npk`)* |
+ | `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
+ | `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
+ | `check` | every documented refusal actually refuses, with exactly its code |
+@@ -35,10 +35,10 @@ them found something on its first run.
+ 
+ | Check | Diffs |
+ |---|---|
+-| `check_purity` | `src/` outside `src/host/` against a ban list — since cycle 0.3.1 (TM-252) every bare-name builtin and every synchronous public prelude function at the pin that reaches past the program's own memory: the kernel, the clock and the machine (`sys`, `mono_now`, `environ`, `hardware_concurrency`); descriptors and files (`open`, `close`, `read`, `write`, `read_file`, `write_file`, `read_stdin`, `path_exists`, `own_fd`, `release_fd`); the executor and what threads share (`io_watch`, `io_unwatch`, `suspend_io`, `suspend_until`, `channel`, `mutex`, `rwlock`, `condvar`, `barrier`); processes and executable memory (`clone_exec`, `driver_retire`, `wildx_alloc`, `wildx_seal`, `wildx_call`, `wildx_free`); state no argument names (`wild_live_count`, `wild_release_all`, `chain_depth`, `chain_site`); arenas (`arena_make`, `shared_arena_make`); and the prelude's (`std_in`, `std_out`, `std_err`, `byte_reader_open`, `byte_writer_create`, `sleep`, `io_ready`, `io_ready2`) — each matched as a CALL: the name, with no identifier character on its left, the lexer's whitespace, a newline included, and `(` (V-1l; until cycle 0.1.5 the spelling `name(`, which `mono_now ()` passed). *(Corrected 2026-10-08 by cycle 0.3.1's verification, where the row said "every bare-name builtin and public prelude function": the asynchronous prelude names that reach past the program's own memory and are not on the list — the functions `text_read_line`, `text_write_str` and `text_write_line`, and the methods `ByteReader.seek` and `LineBufWriter.flush` — are callable only from an `async func` (`NITPICK-TYPE-043` anywhere else), and `check_call_edges` refuses a non-generic `async func` in `src/` by its declared-function rule, while a generic one nobody instantiates is in no emission and read by no purity check — a full run is red by the arm bill instead, its `await` or `drop` spawn arming `DeadlineExceeded`, which no consumer of `src/` owes: `check_failsafe_arms`, and `NITPICK-REACH-002` in the units (until the verification of 0.3.1's fix this said it "passes every check", measured by the checks alone); TM-252's dated note.)* *(Until cycle 0.3.1 the list was cycle 0.0.3's six — `sys`, `mono_now`, `environ`, `read_file`, `open`, `write` — which a function calling `hardware_concurrency()`, `read_stdin()`, `chain_depth()`, `arena_make()` or the prelude's `std_out()` passed, measured, and its pattern read `reopen(` as a call of `open`.)* **`SAFETY.md` S-10, and the most important check in the suite.** It is also the **only** one that answers the question: the build's undefined-symbol scan cannot FLAG a syscall, because `npk_sys6` is the runtime's own and is in its allowlist by construction (`BUILD.md` B-2c, TM-118, TM-153, `nitpick-regex`'s RX-120) *(One of two that answer it since cycle 0.3.1: `check_call_edges`, below, reads the calls in the library's emission, TM-250. The row said "the **only** one" until then.)* |
++| `check_purity` | `src/` outside `src/host/` against a ban list — since cycle 0.3.1 (TM-252) every bare-name builtin and every synchronous public prelude function at the pin that reaches past the program's own memory: the kernel, the clock and the machine (`sys`, `mono_now`, `environ`, `hardware_concurrency`); descriptors and files (`open`, `close`, `read`, `write`, `read_file`, `write_file`, `read_stdin`, `path_exists`, `own_fd`, `release_fd`); the executor and what threads share (`io_watch`, `io_unwatch`, `suspend_io`, `suspend_until`, `channel`, `mutex`, `rwlock`, `condvar`, `barrier`); processes and executable memory (`clone_exec`, `driver_retire`, `wildx_alloc`, `wildx_seal`, `wildx_call`, `wildx_free`); state no argument names (`wild_live_count`, `wild_release_all`, `chain_depth`, `chain_site`); arenas (`arena_make`, `shared_arena_make`); and the prelude's (`std_in`, `std_out`, `std_err`, `byte_reader_open`, `byte_writer_create`, `sleep`, `io_ready`, `io_ready2`) — each matched as a CALL: the name, with no identifier character on its left, the lexer's whitespace, a newline included, and `(` (V-1l; until cycle 0.1.5 the spelling `name(`, which `mono_now ()` passed). *(Corrected 2026-10-08 by cycle 0.3.1's verification, where the row said "every bare-name builtin and public prelude function": the asynchronous prelude names that reach past the program's own memory and are not on the list — the functions `text_read_line`, `text_write_str` and `text_write_line`, and the methods `ByteReader.seek` and `LineBufWriter.flush` — are callable only from an `async func` (`NITPICK-TYPE-043` anywhere else), and `check_call_edges` refuses a non-generic `async func` in `src/` by its declared-function rule, while a generic one nobody instantiates is in no emission and read by no purity check — a full run is red by the arm bill instead, its `await` or `drop` spawn arming `DeadlineExceeded`, which no consumer of `src/` owes: `check_failsafe_arms`, and `NITPICK-REACH-002` in the units (until the verification of 0.3.1's fix this said it "passes every check", measured by the checks alone); TM-252's dated note.)* *(And since cycle 0.3.2 a generic one is `check_call_edges`' finding too: it holds every generic function `src/` declares to an instance in `tests/unit/generic_instances.npk`'s emission, and none can be written for an `async` one in a synchronous root — TM-254, `../OPEN_QUESTIONS.md` O-X12.)* *(Until cycle 0.3.1 the list was cycle 0.0.3's six — `sys`, `mono_now`, `environ`, `read_file`, `open`, `write` — which a function calling `hardware_concurrency()`, `read_stdin()`, `chain_depth()`, `arena_make()` or the prelude's `std_out()` passed, measured, and its pattern read `reopen(` as a call of `open`.)* **`SAFETY.md` S-10, and the most important check in the suite.** It is also the **only** one that answers the question: the build's undefined-symbol scan cannot FLAG a syscall, because `npk_sys6` is the runtime's own and is in its allowlist by construction (`BUILD.md` B-2c, TM-118, TM-153, `nitpick-regex`'s RX-120) *(One of two that answer it since cycle 0.3.1: `check_call_edges`, below, reads the calls in the library's emission, TM-250. The row said "the **only** one" until then.)* |
+ | `check_host_isolation` | no module outside `src/host/` and `src/lib.npk` names a `host_` symbol, or any name `src/host/` makes public — since cycle 0.3.1 (TM-253), read from `src/host/`'s own `pub` declarations, `HostClock` today, so a name cycle 0.3.2 adds is held the day it is written *(the row named the prefix alone until then, and `HostClock`, public since cycle 0.3.0, passed it)* |
+-| `check_call_edges` (TM-250) | **no function of `src/` outside `src/host/` reaches, in `npkc`'s emission of the umbrella, a runtime symbol the reviewed allowlist does not hold, a function of `src/host/`, a call through a value or inline assembly** — `SAFETY.md` S-7 and `HOST.md` H-2 read from the CALLS the compiler emitted, before `opt`, where `check_purity` reads the source's spellings. From each function every symbol it names is followed, through the prelude, the drop glue and every global; the allowlist is the allocator at S-18's places, the string floor, the error route and LLVM's arithmetic, and it is an ALLOW-list — a symbol a re-pin adds is a finding until a row reviews it, and a row the emission no longer declares is a finding too (V-1c). Every non-generic function `src/` declares must be in the emission, and `src/host/`'s must reach past the allowlist — the reader's own control, on every run. **What it cannot read**: a generic function nobody instantiates in the umbrella — `src/core/vec.npk`'s nine — which `check_purity` reads as spelled. `run.py` drives it at step 7, over the library's emission. *(`../OPEN_QUESTIONS.md` O-X9, raised 2026-09-25 and answered at cycle 0.3.1, once `src/host/` named the kernel.)* |
+-| `check_wide_types` (TM-251) | **every integer type wider than `i64` in `npkc`'s emission of a function of `src/` stands in a function `SPAN_MODEL.md` §5 marks, and in no global of `src/`'s modules** — N-20 read from the TYPES the compiler emitted, before `opt`, beside `check_int128_sites`, which reads spellings: a call's result, wide with no width written, is a finding here (`../OPEN_QUESTIONS.md` O-X11). A generic's instance is held by its source name. **What it cannot read** is `check_call_edges`' limit; a mark that outlived its reason is `check_int128_sites`' to fail, and this one names it. `run.py` drives it at step 7. |
++| `check_call_edges` (TM-250) | **no function of `src/` outside `src/host/` reaches, in `npkc`'s emission of the umbrella, a runtime symbol the reviewed allowlist does not hold, a function of `src/host/`, a call through a value or inline assembly** — `SAFETY.md` S-7 and `HOST.md` H-2 read from the CALLS the compiler emitted, before `opt`, where `check_purity` reads the source's spellings. From each function every symbol it names is followed, through the prelude, the drop glue and every global; the allowlist is the allocator at S-18's places, the string floor, the error route and LLVM's arithmetic, and it is an ALLOW-list — a symbol a re-pin adds is a finding until a row reviews it, and a row the emission no longer declares is a finding too (V-1c). Every non-generic function `src/` declares must be in the emission, and `src/host/`'s must reach past the allowlist — the reader's own control, on every run. **What it cannot read**: a generic function nobody instantiates in the umbrella — `src/core/vec.npk`'s nine — which `check_purity` reads as spelled. *(Read since cycle 0.3.2, TM-254: `tests/unit/generic_instances.npk` instantiates every generic function `src/` declares, `run.py`'s step 7 emits it beside the umbrella, and this check reads its instances as it reads the umbrella's functions — a generic no instance holds is a finding, and so is no instances' emission where `src/` declares one; `../OPEN_QUESTIONS.md` O-X12. Until then the sentence before this note stood alone.)* `run.py` drives it at step 7, over the library's emission. *(`../OPEN_QUESTIONS.md` O-X9, raised 2026-09-25 and answered at cycle 0.3.1, once `src/host/` named the kernel.)* |
++| `check_wide_types` (TM-251) | **every integer type wider than `i64` in `npkc`'s emission of a function of `src/` stands in a function `SPAN_MODEL.md` §5 marks, and in no global of `src/`'s modules** — N-20 read from the TYPES the compiler emitted, before `opt`, beside `check_int128_sites`, which reads spellings: a call's result, wide with no width written, is a finding here (`../OPEN_QUESTIONS.md` O-X11). A generic's instance is held by its source name. **What it cannot read** is `check_call_edges`' limit *(none of `src/`'s since cycle 0.3.2: it reads `tests/unit/generic_instances.npk`'s emission too, where every generic function `src/` declares has an instance — TM-254)*; a mark that outlived its reason is `check_int128_sites`' to fail, and this one names it. `run.py` drives it at step 7. |
+ | `check_tables_regenerate` | every committed generated file against a fresh run of its generator, byte for byte: the zone tables from cycle 0.5, and the civil cross-oracle's corpus (V-6), which exists from cycle 0.1.4 and joins the check when it goes live (TM-183) |
+ | `check_table_invariants` | every transition slice sorted and strictly increasing; every type index in range; every name-pool offset in range; the zone-name index lexicographically sorted |
+ | `check_error_budget` | the count and names of the `error:` declarations in `src/`, public AND private (*"public"* until 2026-09-27, though the check has counted both since TM-203 — TM-213), against `SAFETY.md` §2's table — each identity QUALIFIED BY ITS DECLARING MODULE, as `NITPICK-REACH-003` counts it, and held to the module S-4's table names for it (TM-203): a budgeted name declared in two modules, or outside its module, is a second arm in every consumer. *(Until cycle 0.1.5's second half the count was keyed by the bare name, and `cal.ETimeValue` beside `zone.ETimeValue` read as one identity — the cycle audit's C2.)* |
+@@ -97,7 +97,10 @@ beside `check_int128_sites`, `check_wide_types` reads every integer type wider
+ than `i64` in a function of the emission, spelled or not — O-X11 answered —
+ so the call's result above is a finding. A generic function nobody
+ instantiates in the umbrella is read by spelling alone, and `src/` holds none
+-with a wide type.)*
++with a wide type.)* *(Cycle 0.3.2, TM-254 — `../OPEN_QUESTIONS.md` O-X12
++answered: no generic function of `src/` is read by spelling alone since. Each
++is instantiated in `tests/unit/generic_instances.npk`, whose emission both
++second readings read beside the umbrella's.)*
+ 
+ **Rule V-1a (TM-126) — a check runs from the cycle it can be written, and its
+ pending siblings are PRINTED.** The table above has **22**
+@@ -620,7 +623,7 @@ been driven. Cycle 0.0.6 made the sentence true rather than softening it:
+ 
+ | Commissioned by | What it drives |
+ |---|---|
+-| `selfcheck.PLANTED` | the tree checks of `checks.LIVE` that fail a run — 12 of its 13 since cycle 0.2.3a (`check_check_registry`, `check_no_view_returns` and `check_int128_sites` joined, with six, five and six rows; 9 of 10 since cycle 0.1.1, when `check_literal_divisors` joined with four); and since cycle 0.3.1 the two `run.py` drives over the library's emission, `check_call_edges` with eight rows and `check_wide_types` with three (TM-250, TM-251), each plant an emission's text, never compiled — at least one planted violation and one clean control each |
++| `selfcheck.PLANTED` | the tree checks of `checks.LIVE` that fail a run — 12 of its 13 since cycle 0.2.3a (`check_check_registry`, `check_no_view_returns` and `check_int128_sites` joined, with six, five and six rows; 9 of 10 since cycle 0.1.1, when `check_literal_divisors` joined with four); and since cycle 0.3.1 the two `run.py` drives over the library's emission, `check_call_edges` with eight rows and `check_wide_types` with three (TM-250, TM-251) — eleven and four since cycle 0.3.2, whose four plant the instances' emission (TM-254) — each plant an emission's text, never compiled — at least one planted violation and one clean control each |
+ | `selfcheck.part_b` directly | `check_layering`'s **node** half — the fault is a file that is NOT there, which no `PLANTED` row can express |
+ | `selfcheck.part_b_specs_current` | `check_specs_current`, which reports and never fails, so it is shown REPORTING |
+ | `selfcheck.part_b_view_exempt` (cycle 0.2.3a) | `check_no_view_returns`' one named exemption, which applies to this repository's tree and to a scratch tree only when handed one: five plants, each falsifying one part of S-22's reason for it — the function gone, no view returned, no pointer to its container, no container, S-22 silent about it — beside a control where every part holds (TM-228) |
+diff --git a/nitpick.toml b/nitpick.toml
+index 2b6424a41dabef7af28db451d35df81753922864..792213b6402ced65493e09abf8e6d333dbffad4e 100644
+--- a/nitpick.toml
++++ b/nitpick.toml
+@@ -134,8 +134,8 @@ path  = "tests/probe"
+ #   `parse`   HAS NO ENTRY BY DESIGN, not by omission (TM-123). It is a
+ #             WHOLE-TREE stage: `BUILD.md` §3's Directory column for it reads
+ #             "every `.npk` in the tree", and that is where its value is — of
+-#             the 150 files here [[sweep: npk_total=150]] (149 until cycle
+-#             0.3.0, 147 until 0.2.4b), 40 are put in front of the compiler
++#             the 151 files here [[sweep: npk_total=151]] (150 until cycle
++#             0.3.2, 149 until 0.3.0, 147 until 0.2.4b), 40 are put in front of the compiler
+ #             by nothing else (41 until cycle 0.3.0, when the library build
+ #             began to reach `src/host/host.npk`). An entry would narrow it to one directory and silently
+ #             un-cover the rest, so `stage = "parse"` is REFUSED BY NAME.
+diff --git a/tests/unit/generic_instances.npk b/tests/unit/generic_instances.npk
+new file mode 100644
+index 0000000000000000000000000000000000000000..301d060908c7d1e964a46255e9dd1af147f62c41
+--- /dev/null
++++ b/tests/unit/generic_instances.npk
+@@ -0,0 +1,65 @@
++// expect-exit: 0
++//
++// EVERY GENERIC FUNCTION `src/` DECLARES, INSTANTIATED ONCE -- the second
++// emission the library's two readings of `npkc`'s output read (cycle 0.3.2,
++// TM-254; `meta/OPEN_QUESTIONS.md` O-X12).
++//
++// ASKS nothing of its own beyond running clean: each call below is here so
++// that the function it names is IN AN EMISSION. A generic function is emitted
++// only where a caller instantiates it, and the umbrella instantiates none, so
++// until this file `check_call_edges` and `check_wide_types` read no generic
++// function of `src/` at all, and `check_purity` read its spellings alone --
++// a generic one that let a `ByteReader` it took by `move` die, or called
++// `mono_now` through a function-typed local, passed a full run (cycle 0.3.1's
++// third addendum). `run.py`'s step 7 emits this file beside the umbrella, and
++// both checks read every instance of a function of `src/` in it as they read
++// the umbrella's functions.
++//
++// SO A NEW GENERIC FUNCTION OF `src/` IS A RED RUN UNTIL A CALL OF IT IS
++// ADDED HERE, at a type its bounds admit: `check_call_edges` holds every
++// generic `src/` declares to an instance in an emission it reads, as it holds
++// every non-generic one to the umbrella's. What an instance shows is what the
++// generic's own text reaches at that type; what it reaches THROUGH its type
++// argument is that argument's (TM-252's reading). `src/core/vec.npk`'s nine
++// are `T: Copy`, and `int64` is a type the bound admits.
++//
++// EXIT CODES, clear of every arm code (TM-152): 10 `vec_at` read back what
++// `vec_set` did not write; 11 `vec_pop` the same.
++//
++// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
++// `src/core/vec.npk`: the floor, `IntOverflow`, `OutOfBounds`,
++// `DecreasesViolated` and `LimitViolated` -- `vec_boundaries.npk`'s set.
++mod:generic_instances;
++
++use "../../src/core/vec.npk".*;
++
++func:main = int32(cstring[]:_~argv) {
++    Vec<int64>:v = raw vec_init::<int64>(2i64);
++    drop vec_reserve(@v, 4i64);
++    drop vec_push(@v, 1i64);
++    drop vec_set(@v, 0i64, 2i64);
++    if (raw vec_at(v, 0i64) != 2i64) { exit 10i32; }
++    if (raw vec_pop(@v) != 2i64)     { exit 11i32; }
++    drop vec_push(@v, 3i64);
++    drop vec_truncate(@v, 0i64);
++    drop vec_clear(@v);
++    drop vec_free(@v);
++    exit 0i32;
++};
++
++func:failsafe = int32(Error:e) {
++    pick (e) {
++        (HeapBadRequest)    { exit 91i32; },
++        (HeapOom)           { exit 92i32; },
++        (IntOverflow)       { exit 93i32; },
++        (OutOfBounds)       { exit 94i32; },
++        (Unreachable)       { exit 95i32; },
++        (WildLeak)          { exit 96i32; },
++        (StackExhausted)    { exit 106i32; },
++        (MachineFault)      { exit 107i32; },
++        (DecreasesViolated) { exit 108i32; },
++        (LimitViolated)     { exit 109i32; },
++        (*)                 { exit 99i32; }
++    }
++    exit 9i32;
++};

@@ -35,13 +35,21 @@ whether a check that reads types rather than spellings is in scope, and when
 0.3.1 — `0.3.1.md`'s PD-96, a second reading of the library's emission
 beside `check_int128_sites`, over the reader O-X9's scan is built on.)*
 
+**And one more since, blocking nothing: `meta/OPEN_QUESTIONS.md` O-X12**, ours
+— raised by 0.3.1's fix on 2026-10-08, and registered at 0.3.2's planning: a
+generic function of `src/` that nobody instantiates is in no emission, so the
+two readings of the emission read it not at all and `check_purity` reads its
+spellings alone. Dormant, and older than 0.3.1. *(Decided at 0.3.2's
+planning, 2026-10-08: every generic function `src/` declares instantiated in
+an emission the two readings read — `0.3.2.md`'s PD-99, its first step.)*
+
 ## Subcycles
 
 | # | Topic | Ends with |
 |---|---|---|
 | 0.3.0 | **The clocks** — `clock_gettime` through `sys`, the three readings — **[`0.3.0.md`](0.3.0.md)**, written at cycle 0.2's close, measured at `5fbaf4a`, and rehearsed from its blocks in its real position on 2026-10-07 and 2026-10-08 (its §8); it opens with the instrument the close handed on | a `Timestamp` from the machine, range-checked |
 | 0.3.1 | **`check_purity` goes live** — the dormant check from 0.0.3, turned on — **[`0.3.1.md`](0.3.1.md)**: its ban list and `check_host_isolation`'s reviewed against the language at the pin and `src/host/`'s body, each seen to fail in a real module, and two readings of the library's emission beside the spelling checks, the calls (O-X9) and the wide values (O-X11) — planned at `5fbaf4a` and rehearsed from its blocks in its real position on 2026-10-08 (its §8) | the library's reproducibility claim, enforced |
-| 0.3.2 | **The system zone** — the four-step discovery, and what it reports | a program can ask, and is told which mechanism answered |
+| 0.3.2 | **The system zone** — the four-step discovery, and what it reports — **[`0.3.2.md`](0.3.2.md)**: `host_system_zone` answering the name each step finds and the mechanism that answered, the lookup the caller's at cycle 0.6, its tests in a user and mount namespace each unit makes with an `/etc` of its own; and first every generic function of `src/` read in an emission (O-X12) — planned at `5fbaf4a` and rehearsed from its blocks in its real position on 2026-10-08 (its §8) | a program can ask, and is told which mechanism answered |
 | 0.3.3 | **The double** — the test host module, in `tests/` | every clock-dependent behaviour reproducible |
 | 0.3.4 | **Close** | `done/0.3/`, `0.4.0.md` written |
 
@@ -78,14 +86,30 @@ the two ban lists' decisions. The four above keep their words.)*
 - [x] `check_host_isolation`'s: every name `src/host/` makes public, `HostClock` among them, beside the `host_` prefix (PD-98) — **TM-253**: its plant unseen before and caught after
 
 ### 0.3.2 — the system zone
-- [ ] `SystemZone` and `ZoneSource` as `HOST.md` §4 defines them
+*(Restated at 0.3.2's planning, 2026-10-08, to `0.3.2.md`'s drafted
+decisions, PD-99 … PD-102: `ZoneId` and the compiled table it indexes are
+cycles 0.5's and 0.6's, so `SystemZone` holds the NAME each step finds, and
+the lookup — a rule string's refusal with it — is the caller's, at 0.6
+(PD-101); and a machine with none of the three is one the unit makes (PD-100).
+The items keep their words; the first and third carry what PD-101 makes of
+them.)*
+- [ ] `SystemZone` and `ZoneSource` as `HOST.md` §4 defines them — *as PD-101 amends §4: the name, where H-12 held a `ZoneId`, and `EtcTimezone`, where it named `TzDirLink`*
 - [ ] the four steps in order, stopping at the first that answers (H-13)
-- [ ] `$TZ` with a leading `:` stripped; **a POSIX rule string refused** with `ETimeZone`/`Unknown` (H-13.1), not parsed
+- [ ] `$TZ` with a leading `:` stripped; **a POSIX rule string refused** with `ETimeZone`/`Unknown` (H-13.1), not parsed — *as PD-101 places it: reported as the text it is, never parsed, and refused by the lookup, cycle 0.6's `zone_by_name`*
 - [ ] `/etc/localtime` read as a **symlink target**, never as bytes (H-14)
 - [ ] `readlink`'s four facts honoured (H-15): the length is the authority, the result is not NUL-terminated, `NTIME_PATH_MAX` bounds it, a truncated result is not-found
 - [ ] `/etc/timezone` as step 3
 - [ ] **not-found is `found: false`, not UTC** (H-13.4) — a test asserts it on a machine with none of the three
 - [ ] the descriptor closed on every path (S-20)
+
+*(Four more, from 0.3.2's planning on 2026-10-08 — `0.3.2.md`: the question
+0.3.1's fix raised and its verifier's nit, in a commit before the zone; the
+instrument the zone's tests stand on, in a commit of its own; and the tests.
+The eight above keep their words.)*
+- [ ] **O-X12**: every generic function `src/` declares instantiated in `tests/unit/generic_instances.npk`, its emission read by `check_call_edges` and `check_wide_types` beside the umbrella's, and a generic no instance holds a finding (PD-99)
+- [ ] the 0.3.1 verifier's nit: `check_purity`'s docstring and TM-252's note say a truncation of descriptors is red "only where the `DecreasesViolated` and `LimitViolated` it arms are new" — it is *any of* them, `DecreasesViolated` alone in `src/core/vec.npk` — corrected by dated notes, not rewritten
+- [ ] a unit makes its own `/etc` — a user and a mount namespace and an empty `tmpfs`, by its own syscalls; `probe22` measures the shape and the kernel's longest link, and CI lifts Ubuntu 24.04's restriction on the namespace (PD-100)
+- [ ] the tests: one unit of nineteen machines in a namespace of its own, the lowest free descriptor held across every call; three units of `$TZ`; every exit seen red on a mutant of `host`, and the mutants no test can see named (PD-102)
 
 ### 0.3.3 — the double
 - [ ] the fake host module in `tests/`, **not** in `src/` (H-10)

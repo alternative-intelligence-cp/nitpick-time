@@ -1,0 +1,14 @@
+# 0.3.2's omission sweep for step 3, block 3b -- one extended regular expression per
+# line, each read by `sweep.py` line by line AND across line breaks, case-insensitive.
+# Each is a fact step 3 moved: the system zone's types and function, its three sources,
+# readlink's buffer, the subcycle and what is next, the counts it moves, and how many
+# names `host` makes public.
+ZoneId|TzDirLink|EtcTimezone|SystemZone|ZoneSource
+host_system_zone
+/etc/timezone|/etc/localtime
+readlink|NTIME_PATH_MAX
+(is|are|comes) next
+\b(81|84)\b.{0,20}(names|public)|eighty-(one|four)
+\b(134|140)\b.{0,20}units?|\b(184|188)\b.{0,20}decision|(eight|nine) questions
+ETimeZone.{0,10}\(0\.3\)|for the name lookup
+\bfour of (H-1.s|the) five\b|\bfive names\b|\beight names\b

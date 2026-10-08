@@ -1,0 +1,43 @@
+# 0.3.2 -- the mutants, one row each: the step whose file they mutate, a name, the text, its
+# replacement, TAB-separated, "\n" a newline. `env.sh`'s `mutants <step>` swaps each ONCE in a
+# copy -- step 1 a copy of harness/, its plants run against it; step 3 a copy of src/ and
+# the system zone's four units, each built and run on both legs in the environment its
+# header names -- and prints what each is seen by. The plan's §1.9 holds both tables.
+1	instances_unread	    for defines, declares, globs in [got] + ([inst] if inst is not None else []):	    for defines, declares, globs in [got]:
+1	generic_rule_off	            if (mod, name) not in instanced:	            if False:
+1	no_instances_rule_off	    if generic and inst is None:	    if False:
+1	wide_instances_unread	    if inst is not None:\n        for n, body in inst[0].items():	    if False:\n        for n, body in inst[0].items():
+3	tz_prefix_no_eq	if ((eb[0i64] == 84u8) && (eb[1i64] == 90u8) && (eb[2i64] == 61u8)) {	if ((eb[0i64] == 84u8) && (eb[1i64] == 90u8)) {
+3	notfound_utc	    pass SystemZone{ name: "", source: ZoneSource.NotFound, found: false };	    pass SystemZone{ name: "UTC", source: ZoneSource.NotFound, found: false };
+3	notfound_found	    pass SystemZone{ name: "", source: ZoneSource.NotFound, found: false };	    pass SystemZone{ name: "", source: ZoneSource.NotFound, found: true };
+3	timezone_skipped	    z = raw zone_from_timezone();	    z = raw zone_none();
+3	timezone_whole_read	        if (fb[i] == 10u8) { e = i; break; }	        if (fb[i] == 0u8) { e = i; break; }
+3	fd_unowned	    OwnedFd:d = own_fd(o.value);\n    buffer:b = buffer_new(NTIME_PATH_MAX);\n    int64:n = read(d.value, b.ptr, NTIME_PATH_MAX) ?| -1i64;	    fd:d = o.value;\n    buffer:b = buffer_new(NTIME_PATH_MAX);\n    int64:n = read(d, b.ptr, NTIME_PATH_MAX) ?| -1i64;
+3	steps_2_3_swapped	    z = raw zone_from_localtime();\n    if (z.found) { pass z; }\n    z = raw zone_from_timezone();	    z = raw zone_from_timezone();\n    if (z.found) { pass z; }\n    z = raw zone_from_localtime();
+3	localtime_skipped	    z = raw zone_from_localtime();	    z = raw zone_none();
+3	mark_no_slash	    string:mark = "zoneinfo/";	    string:mark = "zoneinfo";
+3	length_from_buffer	    string:target = string_from_bytes(b.ptr, n);	    string:target = string_from_bytes(b.ptr, NTIME_PATH_MAX - 1i64);
+3	relative_refused	    if (n >= NTIME_PATH_MAX) { pass raw zone_none(); }                  // truncated	    if (n >= NTIME_PATH_MAX) { pass raw zone_none(); }                  // truncated\n    if ((<-(#ptr_add<uint8>(b.ptr, 0i64))) != 47u8) { pass raw zone_none(); }
+3	dangling_refused	    cstring:path = to_cstring("/etc/localtime") ?| #unreachable();	    cstring:path = to_cstring("/etc/localtime") ?| #unreachable();\n    if (!(path_exists(path))) { pass raw zone_none(); }
+3	boundary_dropped	        if (i > 0i64) { same = (tb[i - 1i64] == 47u8); }                // `/`	        if (i > 0i64) { same = true; }
+3	first_zoneinfo	        if (same) { lo = i + mb.len; }	        if (same && (lo < 0i64)) { lo = i + mb.len; }
+3	empty_tail_answers	    if (lo >= tb.len) { pass raw zone_none(); }	    if (lo > tb.len) { pass raw zone_none(); }
+3	localtime_bytes_read	    if (n <= 0i64) { pass raw zone_none(); }\n    if (n >= NTIME_PATH_MAX) { pass raw zone_none(); }                  // truncated	    if (n <= 0i64) {\n        string:c = read_file(path) ?| "";\n        if (string_byte_length(c) > 0i64) { pass SystemZone{ name: move(c), source: ZoneSource.EtcLocaltime, found: true }; }\n        pass raw zone_none();\n    }\n    if (n >= NTIME_PATH_MAX) { pass raw zone_none(); }                  // truncated
+3	mark_at_start_refused	        bool:same = true;	        bool:same = false;
+3	truncation_off_by_one	    if (n >= NTIME_PATH_MAX) { pass raw zone_none(); }                  // truncated	    if (n >= (NTIME_PATH_MAX - 1i64)) { pass raw zone_none(); }
+3	timezone_needs_newline	    int64:e = fb.len;	    int64:e = 0i64;
+3	timezone_last_newline	        if (fb[i] == 10u8) { e = i; break; }	        if (fb[i] == 10u8) { e = i; }
+3	timezone_cr_trimmed	        if (fb[i] == 10u8) { e = i; break; }	        if ((fb[i] == 10u8) || (fb[i] == 13u8)) { e = i; break; }
+3	timezone_empty_line_answers	    if (e == 0i64) { pass raw zone_none(); }	
+3	fd_leaked_on_no_read	    if (n <= 0i64) { pass raw zone_none(); }\n    if (n >= NTIME_PATH_MAX) { pass raw zone_none(); }                  // longer than a name	    if (n <= 0i64) { fd:lk = release_fd(move(d)); pass raw zone_none(); }\n    if (n >= NTIME_PATH_MAX) { pass raw zone_none(); }                  // longer than a name
+3	timezone_full_answers	    if (n >= NTIME_PATH_MAX) { pass raw zone_none(); }                  // longer than a name	
+3	tz_skipped	    SystemZone:z = raw zone_from_tz();	    SystemZone:z = raw zone_none();
+3	tz_empty_passes	                string:name = string_slice(entry, lo, eb.len) ?| #unreachable();	                if (lo >= eb.len) { pass raw zone_none(); }\n                string:name = string_slice(entry, lo, eb.len) ?| #unreachable();
+3	tz_first_dropped	                int64:lo = 3i64;	                int64:lo = 4i64;
+3	tz_colon_kept	if (eb[3i64] == 58u8) { lo = 4i64; }	if (eb[3i64] == 58u8) { lo = 3i64; }
+3	tz_empty_utc	                string:name = string_slice(entry, lo, eb.len) ?| #unreachable();	                if (lo >= eb.len) { pass SystemZone{ name: "UTC", source: ZoneSource.TzEnvironment, found: true }; }\n                string:name = string_slice(entry, lo, eb.len) ?| #unreachable();
+3	tz_len_edge	                if (eb.len > 3i64) {	                if (eb.len >= 3i64) {
+3	truncation_unchecked	    if (n >= NTIME_PATH_MAX) { pass raw zone_none(); }                  // truncated	
+3	length_by_nul_scan	    string:target = string_from_bytes(b.ptr, n);	    int64:z0 = 0i64;\n    for (int64:q in 0i64..(NTIME_PATH_MAX - 1i64)) { if (z0 == 0i64) { if ((<-(#ptr_add<uint8>(b.ptr, q))) == 0u8) { z0 = q; } } }\n    string:target = string_from_bytes(b.ptr, z0);
+3	nonblock_dropped	((((O_RDONLY | O_NONBLOCK) | O_CLOEXEC) => int32) => int64)	(((O_RDONLY | O_CLOEXEC) => int32) => int64)
+3	cloexec_dropped	((((O_RDONLY | O_NONBLOCK) | O_CLOEXEC) => int32) => int64)	(((O_RDONLY | O_NONBLOCK) => int32) => int64)

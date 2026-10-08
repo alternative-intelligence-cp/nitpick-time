@@ -1,0 +1,8 @@
+# 0.3.2's omission sweep for step 2, block 2b -- one extended regular expression per
+# line, each read by `sweep.py` line by line AND across line breaks, case-insensitive.
+# Each is a fact step 2 moved: a unit's own /etc and what makes it, the probe, and the
+# counts a probe moves.
+user namespace|mount namespace|unshare|(own|private) .?/etc|apparmor
+probe22
+\b(29|30)\b.{0,30}(positive|expect-exit|files carrying)|\b(58|59)\b.{0,20}probe
+\b(151|152)\b.{0,40}(files|\.npk)

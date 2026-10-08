@@ -243,7 +243,7 @@ PY
 # Every single-site mutant of the system zone's section of `src/host/host.npk`,
 # `mutate.py`'s, against the system zone's seven units: the counts, the exits each
 # unit is seen to reach, and every mutant that exits 0 (`enumerate.py all`). Eight
-# at a time; about two minutes.
+# at a time; about three minutes.
 #     enumerate
 enumerate() {
   free -g | awk '/^Mem:/ {print "available GiB:", $7}'

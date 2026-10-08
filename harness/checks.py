@@ -1787,8 +1787,8 @@ def check_call_edges(tree, emission=None, **_):
                 "%s declares `%s`, and the emission defines no `npk.%s.%s`: "
                 "the umbrella does not reach it, or the pinned compiler names "
                 "its functions otherwise. Either way this reading has not read "
-                "it, and a function no reading reaches is one the purity claim "
-                "says nothing about." % (rel, name, mod, name))
+                "it, and a function no reading reaches is one the purity and "
+                "width claims say nothing about." % (rel, name, mod, name))
     outside = sorted(s for s in reached if not _allowed(s))
     headline = ("%d function(s) of src/'s modules in the emission, %d outside "
                 "src/host/, reaching %d runtime symbol(s), %d outside the "

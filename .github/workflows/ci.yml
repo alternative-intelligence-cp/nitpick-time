@@ -178,7 +178,10 @@
 # finding (TM-251, O-X11 answered); and no function of `src/` outside
 # `src/host/` reaches, in that emission, a runtime symbol outside a reviewed
 # allowlist -- the kernel, the clock, the environment, a descriptor -- whatever
-# name it reaches it through (TM-250, O-X9 answered).
+# name it reaches it through (TM-250, O-X9 answered). And `check_purity`'s list
+# is every builtin and prelude function at the pin that reaches past the
+# program's own memory, where it was six names, and `check_host_isolation`
+# reads every name `src/host/` makes public (TM-252, TM-253).
 #
 # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
 # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,

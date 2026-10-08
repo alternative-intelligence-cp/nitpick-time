@@ -64,18 +64,18 @@ beside `check_int128_sites`, over the reader O-X9's scan is built on.)*
 
 ### 0.3.1 — `check_purity` goes live
 *(Stale in its title, found at cycle 0.2.0's planning: `check_purity` has been live since cycle 0.0.3, TM-126. What this subcycle owes is the review of its ban list against a `src/` with a real `host/` — the last item below — and the two plants. `done/0.2/0.2.0.md` §7.)*
-- [ ] the dormant check from 0.0.3 turned on and green
-- [ ] **seen to fail**: a deliberately planted `mono_now()` in `src/cal/` fails the build, by name
-- [ ] `check_host_isolation` likewise: a planted `host_now_utc()` call in `src/fmt/` fails
-- [ ] both checks' ban lists reviewed against what `src/` actually contains now, rather than what 0.0.3 guessed
+- [x] the dormant check from 0.0.3 turned on and green — live since cycle 0.0.3 (TM-126), and green over `src/host/`'s body: 0 findings over the eight files outside `src/host/` and `src/lib.npk`, at 0.3.1 as at 0.3.0
+- [x] **seen to fail**: a deliberately planted `mono_now()` in `src/cal/` fails the build, by name — TM-252: a full run over a copy with `mono_now()` appended to `src/cal/cal.npk` is RED, `check_purity` naming the file, the line and `mono_now`, and `check_call_edges` the function and `npk_mono_now` (`0.3.1.md`'s record)
+- [x] `check_host_isolation` likewise: a planted `host_now_utc()` call in `src/fmt/` fails — TM-253: the same run names `src/fmt/fmt.npk`'s `host_now_utc`, and `check_layering` its import of `host`
+- [x] both checks' ban lists reviewed against what `src/` actually contains now, rather than what 0.0.3 guessed — and against what the language offers at the pin: the two items below
 
 *(Four more, from 0.3.1's planning on 2026-10-08 — `0.3.1.md`: the two
 questions handed on, which share one reader of the library's emission, and
 the two ban lists' decisions. The four above keep their words.)*
 - [x] **O-X9**: the call-edge scan — every call a function of `src/` outside `src/host/` makes, read from `npkc`'s emission of the umbrella and held to a reviewed allowlist (PD-95) — **TM-250**, `check_call_edges`: eight plants caught and eight controls silent; over the tree 0 findings, `src/host/` reaching `npk_mono_now` and `npk_sys6`, every non-generic function `src/` declares in the emission
 - [x] **O-X11**: the wide values — every integer wider than `i64` in that emission held to §5's sites, spelled or not (PD-96) — **TM-251**, `check_wide_types`: three plants caught; over the tree exactly §5's three marked functions hold one
-- [ ] `check_purity`'s list: every builtin and prelude function at the pin that reaches past the program's own memory, matched as a call with an identifier boundary on its left (PD-97)
-- [ ] `check_host_isolation`'s: every name `src/host/` makes public, `HostClock` among them, beside the `host_` prefix (PD-98)
+- [x] `check_purity`'s list: every builtin and prelude function at the pin that reaches past the program's own memory, matched as a call with an identifier boundary on its left (PD-97) — **TM-252**: forty-three names in seven classes; five plants red against the six names before it and caught after, and `reopen(` a finding before and none after
+- [x] `check_host_isolation`'s: every name `src/host/` makes public, `HostClock` among them, beside the `host_` prefix (PD-98) — **TM-253**: its plant unseen before and caught after
 
 ### 0.3.2 — the system zone
 - [ ] `SystemZone` and `ZoneSource` as `HOST.md` §4 defines them
@@ -121,6 +121,15 @@ unchanged tree at both pins before it changes anything, as 0.1.0b, 0.1.4c and
    D-341; cycle 0.2 added none.
 5. **Each CI's pin bump**, and the emission row CI asserts (TM-212), in the
    adoption's own commit.
+6. **The compiler's builtin table and prelude re-read against
+   `check_purity`'s list** (TM-252) — `src/frontend/builtins.npk` and
+   `src/prelude/prelude.npk` at the new pin: a name that reaches past the
+   program's own memory joins the list, and a runtime symbol
+   `check_call_edges` finds unreviewed joins `CALL_EDGE_ALLOW` or is refused,
+   in the adoption's own commit (TM-250). And the emission's names —
+   `npk.<module>.<name>` at `5fbaf4a` — read again: `check_call_edges` holds
+   every non-generic function `src/` declares to it, so a re-pin that renames
+   them is a red run.
 
 ## Gate
 

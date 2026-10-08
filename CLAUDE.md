@@ -8,13 +8,40 @@ Guidance for Claude Code sessions working in this repository.
 safety-critical systems language at `../../nitpick`.
 
 **Status: cycle 0.3, the host boundary, IN PROGRESS — 0.3.0, the clocks,
-DONE (2026-10-08): `src/host/` reads the machine's clocks, and 0.3.1, the review
-of `check_purity`'s ban list against that body, is next. Cycle 0.2 CLOSED
+DONE (2026-10-08): `src/host/` reads the machine's clocks; 0.3.1, the purity
+boundary's instruments, DONE (2026-10-08): `check_purity`'s ban list reviewed, and
+the library's emission read beside the spelling checks; and 0.3.2, the system
+zone, is next. Cycle 0.2 CLOSED
 (2026-10-02), archived at `meta/roadmap/done/0.2/` — instants and timestamps:
 `Instant` and its two clocks, `Timestamp` and its one constructor, the
 conversions to and from the civil scale in UTC with their exhaustive gate on
 every run, and the `Duration` interop — after cycle 0.1, the civil calendar,
 CLOSED 2026-09-26 and archived at `meta/roadmap/done/0.1/`.**
+
+**After cycle 0.3.1: the purity boundary's instruments.** `check_purity`'s ban
+list is the review's (TM-252): every bare-name builtin and public prelude
+function of the pinned compiler that reaches past the program's own memory —
+forty-three names in seven classes, where cycle 0.0.3 guessed six, which a
+function calling `hardware_concurrency()`, `read_stdin()`, `chain_depth()`,
+`arena_make()` or the prelude's `std_out()` passed — each matched as a whole
+name called, so a pure `reopen` is no call of `open`. `check_host_isolation`
+reads every name `src/host/` makes public, `HostClock` among them (TM-253).
+And **the library's emission is read beside the spelling checks**, before
+`opt`: `check_call_edges` follows every call a function of `src/` outside
+`src/host/` makes in `npkc`'s output for the umbrella, through the prelude,
+and holds what it reaches to a reviewed allowlist — the allocator, the string
+floor, the error route and LLVM's arithmetic — so `check_purity` is no longer
+the only thing that answers "did this module touch the kernel" (TM-250,
+`meta/OPEN_QUESTIONS.md` O-X9 answered); and `check_wide_types` holds every
+integer wider than `i64` in that emission to `SPAN_MODEL.md` §5's sites,
+spelled or not, so a call's wide result is a finding (TM-251, O-X11
+answered). Neither reads a generic function nobody instantiates in the
+umbrella — `src/core/vec.npk`'s nine — which the spelling checks read. The
+cycle README's two plants, a `mono_now()` in `src/cal/cal.npk` and a
+`host_now_utc()` in `src/fmt/fmt.npk`, fail by name: a full run over a copy
+holding both is RED, four checks naming them. The self-check plants 112
+tree-check violations. A full invocation is **134 units green** at pin
+`5fbaf4a`.
 
 **After cycle 0.3.0: the clocks.** `src/host/` has a body. `host_now_utc`
 reads `CLOCK_REALTIME` through `sys` into a 16-byte `timespec` and builds its
@@ -703,7 +730,8 @@ what to do when a cross-stream gate is not ready yet.
   differently from all three — and it is a **major** version (TM-013).
 - **Only `src/host/` is impure** (TM-018). No syscall, no clock, no environment
   read, no file read anywhere else. `check_purity` enforces it, and it is the
-  single most important check in the suite.
+  single most important check in the suite — with `check_call_edges` beside it
+  since cycle 0.3.1, reading the calls in the library's emission (TM-250).
 - **`ntime` declares no `Duration`** (TM-004). The prelude's is the ecosystem's
   one span type. A second would immediately become the type everybody converts
   to and from.

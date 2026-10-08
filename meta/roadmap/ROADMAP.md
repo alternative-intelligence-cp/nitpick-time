@@ -33,7 +33,10 @@ answered A, `instant_of` keeping its name, TM-248.)* *(And at 0.3.0's
 verification, 2026-10-08: **ten questions are open** — the compiler's four, and
 six ours, O-X11 raised: `check_int128_sites` reads spellings, and a wide value
 no width is spelled for passes it, dormant, for 0.3.1's planner. The decisions
-stand at 180.)*
+stand at 180.)* *(Re-derived at cycle 0.3.1: **184 decisions are settled**,
+the subcycle's four, TM-250 … TM-253; **eight questions are open** — the
+compiler's four, O-N1, O-N2, O-N3 and O-N34, and four ours, O-X1, O-B1, O-X4
+and O-X8: O-X9 and O-X11 are answered, TM-250 and TM-251.)*
 
 ## How this is organised
 
@@ -93,7 +96,7 @@ sibling libraries.
 | ~~**0.0**~~ | **Foundations** — the language probes, the harness, `src/core/` — **CLOSED 2026-09-06, archived at [`done/0.0/`](done/0.0/README.md)** | — |
 | ~~**0.1**~~ | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **CLOSED 2026-09-26, archived at [`done/0.1/`](done/0.1/README.md)** | 0.0 ✓ |
 | ~~**0.2**~~ | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **CLOSED 2026-10-02, archived at [`done/0.2/`](done/0.2/README.md)** | 0.1 ✓ |
-| **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double — **IN PROGRESS**: [`0.3/0.3.0.md`](0.3/0.3.0.md), the clocks, DONE 2026-10-08; 0.3.1, `check_purity`'s review against the clocks' body, next | 0.2 ✓ |
+| **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double — **IN PROGRESS**: [`0.3/0.3.0.md`](0.3/0.3.0.md), the clocks, DONE 2026-10-08; [`0.3/0.3.1.md`](0.3/0.3.1.md), `check_purity` reviewed and the library's emission read beside it, DONE 2026-10-08; 0.3.2, the system zone, next | 0.2 ✓ |
 | **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate | 0.2 |
 | **0.5** | **The zone table** — the generator, the committed tables, the size measurement | 0.1 |
 | **0.6** | **Zoned time** — offset lookup, the four resolution modes, the transition sweep | 0.4, 0.5 |

@@ -59,10 +59,14 @@ running unlisted since cycle 0.0.6)*:
   a code named once for two sites and three times for two (TM-210). Case 6
   (a generator differing by one line) is **pending until 0.5** and prints as
   pending rather than passing.
-- **One hundred and six planted violations across the tree checks since cycle
-  0.3.1's first step** (ninety-five from cycle 0.3.0, ninety-two from cycle
-  0.2.4a, eighty-two from cycle 0.2.3a, forty-four from cycle 0.1.5's second
-  half, forty after its first half, twenty-three before it; 0.3.1's eleven
+- **One hundred and twelve planted violations across the tree checks since
+  cycle 0.3.1** (one hundred and six after its first step, ninety-five from
+  cycle 0.3.0, ninety-two from cycle 0.2.4a, eighty-two from cycle 0.2.3a,
+  forty-four from cycle 0.1.5's second half, forty after its first half,
+  twenty-three before it; 0.3.1's second step's six are `check_purity`'s
+  five — a thread count, an error's chain and a standard stream, which its six
+  names passed, `open` beside a pure `reopen`, and a method of a banned name —
+  and `check_host_isolation`'s `HostClock`; its first step's eleven
   are `check_call_edges`' eight — a runtime symbol outside the allowlist
   called directly and through the prelude, a call into `host`, inline
   assembly, a call through a value, a declared function the emission lacks,
@@ -483,6 +487,20 @@ unchanged at 36; the library reaching **7** sources and its IR **309 729 B**,
 `host`'s four readings; and library + repro + suite at **99** (**58 probe**,
 **32 unit**, **8 sweep**). `134 = 35 + 99`. A full invocation about 211 s;
 the unit costs under a second, both legs and eighty runs, compile included.
+
+**At cycle 0.3.1, the same pin, 134 units**: no test added and `src/`
+unchanged. The self-check plants 12 of V-14's 13 cases, **112** tree-check
+violations with 112 clean controls — `check_call_edges`' eight and
+`check_wide_types`' three, each an emission's text, and `check_purity`'s five
+and `check_host_isolation`'s one —
+4 arm specimens and 4 verdict specimens; step 7 reads the library's
+emission twice, **90** functions of `src/`'s modules, 81 outside
+`src/host/`, reaching 15 runtime symbols, every one in the allowlist, and 3
+holding an integer wider than `i64`, the three §5 marks; parse over 150 files,
+`105 + 43 + 2`; the defect corpus unchanged at 36; the library reaching 7
+sources and its IR **309 729 B**; and library + repro + suite at **99**.
+`134 = 35 + 99`. A full invocation about 210 s; the two readings of the
+emission cost milliseconds.
 
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the

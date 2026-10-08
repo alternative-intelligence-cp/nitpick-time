@@ -1279,19 +1279,56 @@ def check_raw_index(tree, **_):
 # check_purity -- SAFETY.md S-10. THE MOST IMPORTANT CHECK IN THE SUITE.
 # ---------------------------------------------------------------------------
 
-# S-10's ban list, verbatim. Each is matched CALL-SHAPED (`name(`) rather than
-# as a bare word, because `open` and `write` are ordinary English and this check
-# reads code, not prose -- see `strip_comments` above for the other half of that
-# argument, which this tree needed on its first run.
-PURITY_BAN = ("sys(", "mono_now(", "environ(", "read_file(", "open(", "write(")
+# S-10's ban list, REVIEWED AT CYCLE 0.3.1 (TM-252). Each is matched
+# CALL-SHAPED (`name(`) rather than as a bare word, because `open` and `write`
+# are ordinary English and this check reads code, not prose -- see
+# `strip_comments` above for the other half of that argument, which this tree
+# needed on its first run. The list is every bare-name builtin of the pinned
+# compiler -- fifty-seven at `5fbaf4a`, its `src/frontend/builtins.npk`,
+# generated from `BUILTIN_REFERENCE.md`'s marked rows -- and every public
+# function of its prelude, that reaches past the program's own memory. What
+# it leaves answers from its arguments and what they point at: the allocator,
+# the string floor, `buffer_new`, `to_cstring`, `atomic_from_ptr`, and the
+# site tables' `site_line` and `site_path`. Until then it was cycle 0.0.3's
+# six -- `sys`, `mono_now`, `environ`, `read_file`, `open`, `write` -- and a
+# function in a copy's `src/cal/` calling `hardware_concurrency()`,
+# `read_stdin()`, `chain_depth()`, `arena_make()` or the prelude's `std_out()`
+# compiled and passed it, measured (`meta/roadmap/0.3/0.3.1.md` §1).
+PURITY_BAN = (
+    # the kernel, the clock and the machine (S-7)
+    "sys(", "mono_now(", "environ(", "hardware_concurrency(",
+    # descriptors and files (S-7, S-20)
+    "open(", "close(", "read(", "write(", "read_file(", "write_file(",
+    "read_stdin(", "path_exists(", "own_fd(", "release_fd(",
+    # the executor -- readiness, suspension -- and what threads share (S-21)
+    "io_watch(", "io_unwatch(", "suspend_io(", "suspend_until(", "channel(",
+    "mutex(", "rwlock(", "condvar(", "barrier(",
+    # processes, and memory the kernel makes executable (S-21, S-7)
+    "clone_exec(", "driver_retire(", "wildx_alloc(", "wildx_seal(",
+    "wildx_call(", "wildx_free(",
+    # state no argument names: the allocator's live count, the in-flight
+    # error's chain (S-7: a pure function of its ARGUMENTS)
+    "wild_live_count(", "wild_release_all(", "chain_depth(", "chain_site(",
+    # arenas: an allocation S-18 does not place
+    "arena_make(", "shared_arena_make(",
+    # the prelude's: a standard stream, a file, a wait -- each reaching the
+    # kernel through the floor, and none by a name above
+    "std_in(", "std_out(", "std_err(", "byte_reader_open(",
+    "byte_writer_create(", "sleep(", "io_ready(", "io_ready2(",
+)
 HOST_DIR = "src/host/"
 # THE CALL SHAPE IS THE LEXER'S, NOT A SPELLING (TM-200): a banned name, then the
 # lexer's whitespace -- a newline included -- then `(`. `mono_now ()`, and a
 # `sys` whose `(` begins the next line, are calls to the compiler (measured at
 # `c970483`, `0.1.5.md` section 1.4) and neither contains `sys(`; so each entry
 # above is matched over the file's WHOLE comment-blanked text, never a line.
+# AND A NAME IS A WHOLE NAME (cycle 0.3.1, TM-252): no identifier character
+# before it, so `reopen(` is no call of `open` -- it was, for a pure function
+# so named, measured -- while a method of a banned name, `w.read(`, is read
+# as the call it may be: a `.` is no identifier character.
 _PURITY_CALL = re.compile(
-    "(%s)%s*\\(" % ("|".join(re.escape(b[:-1]) for b in PURITY_BAN), _W))
+    "(?<![A-Za-z0-9_])(%s)%s*\\("
+    % ("|".join(re.escape(b[:-1]) for b in PURITY_BAN), _W))
 
 
 def check_purity(tree, **_):
@@ -1318,6 +1355,21 @@ def check_purity(tree, **_):
     reached through a name it does not know -- an alias, or a helper in a file
     it is not scanning. The defence against that is `check_host_isolation` plus
     B-17's layering, which together make `host` a leaf nothing may import.
+    Since cycle 0.3.1 the list holds every bare-name builtin and public
+    module-level prelude function at the pin that reaches past the program's
+    own memory (TM-252). A prelude METHOD that does is not on the list --
+    `ByteReader.seek`, through `sys(8i64, ...)` -- and such a method is
+    callable only from an `async func` (`NITPICK-TYPE-043` anywhere else),
+    whose body `check_call_edges` refuses by its declared-function rule: the
+    emission names that body `npk.resume.<module>.<name>`, and defines no
+    `npk.<module>.<name>`. What else is left is a name a later pin adds -- the
+    adoption re-reads the builtin table and the prelude against this list --
+    and an alias: a banned builtin bound to a function-typed local, or passed
+    as an argument, is admitted by the frontend and refused by the emitter at
+    the pin, `NITPICK-EMIT-002`, the compiler's own
+    "a defect in the compiler"; a function-typed local named after one is
+    `NITPICK-RESOLVE-001` (its D-296). Both are `check_call_edges`' to read: it
+    follows every call the emission holds, and refuses one through a value.
     """
     files = [f for f in src_files(tree) if not f.startswith(HOST_DIR)]
     total = len(src_files(tree))
@@ -1348,10 +1400,30 @@ def check_purity(tree, **_):
 
 _HOST_SYMBOL = re.compile(r"\bhost_[A-Za-z0-9_]*")
 HOST_ISOLATION_EXEMPT = ("src/lib.npk",)
+# AND EVERY NAME `src/host/` MAKES PUBLIC (cycle 0.3.1, TM-253). The prefix
+# reads H-1's five functions, and `host` has declared `HostClock` since cycle
+# 0.3.0, which no `host_` pattern reads. So the names are read from
+# `src/host/`'s own code -- every `pub` declaration of a function, an enum, a
+# struct, a trait, an error or a `fixed` binding -- and a name 0.3.2 adds,
+# `SystemZone` or `ZoneSource`, is held the day it is written.
+_HOST_PUB = re.compile(
+    r"(?<![A-Za-z0-9_.])pub%s+(?:(?:func|enum|struct|trait|error)%s*|fixed%s[^:;]*)"
+    r":%s*([A-Za-z_][A-Za-z0-9_]*)" % (_W, _W, _W, _W))
+
+
+def host_public_names(tree):
+    """Every name `src/host/` declares `pub`, read from its code, sorted."""
+    names = set()
+    for rel in src_files(tree):
+        if rel.startswith(HOST_DIR):
+            code = blank_code(lexical.read(os.path.join(tree, rel)))
+            names |= set(_HOST_PUB.findall(code))
+    return sorted(names)
 
 
 def check_host_isolation(tree, **_):
-    """No module outside `src/host/` and `src/lib.npk` names a `host_` symbol.
+    """No module outside `src/host/` and `src/lib.npk` names a `host_` symbol,
+    or any name `src/host/` makes public (TM-253).
 
     The second half of the purity boundary. `check_purity` catches a module
     that reaches the kernel ITSELF; this catches one that reaches it through
@@ -1366,9 +1438,21 @@ def check_host_isolation(tree, **_):
     files = [f for f in src_files(tree)
              if not f.startswith(HOST_DIR) and f not in HOST_ISOLATION_EXEMPT]
     total = len(src_files(tree))
+    public = [n for n in host_public_names(tree) if not n.startswith("host_")]
+    named = (re.compile(r"(?<![A-Za-z0-9_])(%s)(?![A-Za-z0-9_])"
+                        % "|".join(re.escape(n) for n in public))
+             if public else None)
     problems = []
     for rel in files:
         for lineno, line in code_lines(os.path.join(tree, rel)):
+            for m in (named.finditer(line) if named else ()):
+                problems.append(
+                    "%s:%d names `%s`, which `src/host/` makes public. Nothing "
+                    "outside `src/host/` and `src/lib.npk` may name what `host` "
+                    "declares (B-17, H-2): to name it a module imports the one "
+                    "impure module, which no pure one may. A function that "
+                    "needs \"now\" takes a `Timestamp` as a parameter (S-9)."
+                    % (rel, lineno, m.group(1)))
             for m in _HOST_SYMBOL.finditer(line):
                 problems.append(
                     "%s:%d names `%s`. Nothing outside `src/host/` and "
@@ -1377,9 +1461,11 @@ def check_host_isolation(tree, **_):
                     "transitive import. A function that needs `now` takes a "
                     "`Timestamp` as a parameter (S-9)."
                     % (rel, lineno, m.group(0)))
-    headline = ("%d `host_` mention(s) over %d of %d file(s) in src/ (%s and "
-                "%s exempt)" % (len(problems), len(files), total, HOST_DIR,
-                                ", ".join(HOST_ISOLATION_EXEMPT)))
+    headline = ("%d mention(s) of `src/host/`'s names -- the `host_` prefix, and "
+                "%d public name(s) beside it (%s) -- over %d of %d file(s) in "
+                "src/ (%s and %s exempt)"
+                % (len(problems), len(public), ", ".join(public) or "none",
+                   len(files), total, HOST_DIR, ", ".join(HOST_ISOLATION_EXEMPT)))
     return Result("check_host_isolation", headline, problems)
 
 

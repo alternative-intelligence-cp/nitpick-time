@@ -357,6 +357,15 @@ outside `src/host/` for `sys(`, `mono_now`, `environ`, `read_file`, `open` and
 `write`, and fails on any hit. The rule is not a convention if nothing checks
 it, and this is the check.
 
+*(Cycle 0.3.1, TM-252: the list is the review's — every bare-name builtin
+and public prelude function at the pin that reaches past the program's own
+memory, forty-three names in seven classes, each matched as a call with no
+identifier character on its left; `TESTING.md` §2's row lists them. The six
+above were cycle 0.0.3's guess, and a function calling
+`hardware_concurrency()` or the prelude's `std_out()` passed them. And since
+TM-250 a second reading holds the rule from the library's emission,
+`check_call_edges`.)*
+
 **Rule S-10b (TM-126) — it is a SOURCE-LEVEL check, it is LIVE, and it has been
 SEEN TO FAIL.** Three separate claims, and each was missing:
 
@@ -386,7 +395,11 @@ SEEN TO FAIL.** Three separate claims, and each was missing:
   is not decoration: `src/host/host.npk`'s own header names `mono_now()` while
   explaining this rule, and `src/lib.npk`'s names `host_now_utc` while showing
   the shape of a re-export line, so a check that read prose would fail this
-  repository on its own documentation — and the first draft did.
+  repository on its own documentation — and the first draft did. *(And at
+  cycle 0.3.1 in the real module, once: a full run over a copy with a
+  `mono_now()` appended to `src/cal/cal.npk` is RED, this check naming the
+  file, the line and the name, and `check_call_edges` the function and
+  `npk_mono_now` — `meta/roadmap/0.3/0.3.1.md`'s record; TM-252.)*
 
 The matching statement for `check_host_isolation` is the same three, with
 `src/lib.npk` as its one **named** exemption (V-1c) rather than a pattern.

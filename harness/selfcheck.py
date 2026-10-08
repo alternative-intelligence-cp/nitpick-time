@@ -1654,6 +1654,59 @@ PLANTED = [
      [_span5((("`wide`", "**yes**"),)), ("src/core/vec.npk", "mod:vec;\n"),
       _ir(_fn("npk.vec.vec_push<int64>", "  %s = add i64 %a, 1\n"))],
      "§5's table marks no `int128` site in `vec_push`"),
+    # ---- CYCLE 0.3.1: THE TWO BAN LISTS, REVIEWED (TM-252, TM-253). The
+    # first five rows are the new classes and the pattern's left boundary, each a
+    # plant cycle 0.0.3's six names passed beside a control a check matching
+    # by prefix or substring fires on.
+    #
+    # A BUILTIN THE LIST DID NOT HOLD: the machine's thread count.
+    (checks_mod.check_purity,
+     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() never fails "
+                         "{ pass hardware_concurrency(); };\n"),
+     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() never fails "
+                         "{ pass hardware_concurrency_hint(); };\n"),
+     "calls `hardware_concurrency` outside `src/host/`"),
+    # STATE NO ARGUMENT NAMES: the in-flight error's chain.
+    (checks_mod.check_purity,
+     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int32() never fails "
+                         "{ pass chain_depth(); };\n"),
+     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int32() never fails "
+                         "{ pass chain_depths(); };\n"),
+     "calls `chain_depth` outside `src/host/`"),
+    # THE PRELUDE'S: a standard stream, which reaches `sys` through a helper
+    # no ban list of builtins names.
+    (checks_mod.check_purity,
+     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() "
+                         "{ discard(relay std_out()); pass 0i64; };\n"),
+     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() "
+                         "{ discard(relay std_outline()); pass 0i64; };\n"),
+     "calls `std_out` outside `src/host/`"),
+    # A NAME IS A WHOLE NAME: the GOOD column is the point -- `reopen` is no
+    # call of `open`, and the pattern without its left boundary fired on it.
+    (checks_mod.check_purity,
+     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() "
+                         "{ pass relay open(c, 0i64, 0i64); };\n"),
+     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() "
+                         "{ pass relay reopen(c, 0i64, 0i64); };\n"),
+     "calls `open` outside `src/host/`"),
+    # A METHOD OF A BANNED NAME is read as the call it may be -- a reader's
+    # `read` -- beside a method whose name only ends in one.
+    (checks_mod.check_purity,
+     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() "
+                         "{ pass relay w.read(b, d); };\n"),
+     ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64() "
+                         "{ pass relay w.reread(b, d); };\n"),
+     "calls `read` outside `src/host/`"),
+    # EVERY NAME `src/host/` MAKES PUBLIC (TM-253): `HostClock`, which no
+    # `host_` pattern reads, beside a name that only begins with it.
+    (checks_mod.check_host_isolation,
+     [("src/host/host.npk", "mod:host;\npub enum:HostClock = { Realtime; };\n"),
+      ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64(HostClock:c) never fails "
+                          "{ pass 0i64; };\n")],
+     [("src/host/host.npk", "mod:host;\npub enum:HostClock = { Realtime; };\n"),
+      ("src/cal/cal.npk", "mod:cal;\nfunc:f = int64(HostClocks:c) never fails "
+                          "{ pass 0i64; };\n")],
+     "names `HostClock`, which `src/host/` makes public"),
 ]
 
 

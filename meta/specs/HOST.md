@@ -34,6 +34,11 @@ the converse — that no syscall appears outside this module — and a second ch
 enforces this one: no module outside `src/host/` names a `host_` symbol except
 `src/lib.npk`'s re-export.
 
+*(Cycle 0.3.1: or any name `src/host/` makes public — `HostClock` since cycle
+0.3.0 — read from its own declarations, TM-253; and a third reading holds
+this rule from the library's emission, `check_call_edges`, which refuses a
+call into `src/host/` from any function outside it, TM-250.)*
+
 **Rule H-3 — this module has no state.** No cached clock, no memoised zone, no
 lazy initialisation. Two calls to `host_now_utc()` are two syscalls, which is
 what the caller asked for.

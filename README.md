@@ -33,7 +33,9 @@ answer on every machine.
 > than wrapping it. Since cycle 0.3.0 `src/host/`, the one module that touches
 > the machine, reads its clocks: the realtime clock as a `Timestamp`,
 > range-checked, the monotonic and boot clocks as `Instant`s, and each
-> clock's resolution. Zones and formats are still
+> clock's resolution; and since cycle 0.3.1 two readings hold the rest of
+> the library pure, of its source and of the compiler's own output for it.
+> Zones and formats are still
 > placeholders, each replaced by the cycle
 > [`meta/roadmap/ROADMAP.md`](meta/roadmap/ROADMAP.md) names. The specification
 > set is in [`meta/specs/`](meta/specs/) and the plan in

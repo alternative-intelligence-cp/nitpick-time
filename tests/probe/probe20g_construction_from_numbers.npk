@@ -17,9 +17,10 @@
 // What it cannot refuse is a CONSTRUCTION from numbers, which names in
 // writing the clock it claims to have read. ANSWER, measured at `5fbaf4a`:
 // YES, exit 0 on both legs. THIS FILE PINS THE PATH, so the restated M-3 is
-// checked rather than stated: if a later change refuses it -- the author's
-// answer to `meta/OPEN_QUESTIONS.md` Q-7 may rename `instant_of` -- this file
-// stops compiling, and M-3 is restated with it.
+// checked rather than stated: if a later change refuses it -- a rename of
+// `instant_of`, which the author's answer to `meta/OPEN_QUESTIONS.md` Q-7
+// declined on 2026-10-02 (TM-248) -- this file stops compiling, and M-3 is
+// restated with it.
 //
 // EXIT CODES, clear of every arm code (TM-152): 10 `timestamp_of` refused the
 // reading; 11 the `Instant` holds another number; 12 `instant_since` refused

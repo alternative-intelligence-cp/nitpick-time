@@ -990,6 +990,13 @@ PLANTED = [
      ("src/cal/cal.npk", "mod:cal;\nuse \"../host/host.npk\".*;\n"),
      ("src/cal/cal.npk", "mod:cal;\nuse \"../core/core.npk\".*;\n"),
      "NOTHING imports `host`"),
+    # `host` IMPORTS WHAT B-17 DRAWS AND NOTHING ELSE (cycle 0.3.0, TM-247):
+    # `span` since the clocks, whose readings only `span`'s constructors build,
+    # beside `fmt`, which it may never import.
+    (checks_mod.check_layering,
+     ("src/host/host.npk", "mod:host;\nuse \"../fmt/fmt.npk\".*;\n"),
+     ("src/host/host.npk", "mod:host;\nuse \"../span/span.npk\".*;\n"),
+     "`host` may import"),
     (checks_mod.check_error_budget,
      ("src/cal/cal.npk", "mod:cal;\npub error:ETimeOops;\n"),
      ("src/cal/cal.npk", "mod:cal;\npub error:ETimeValue;\n"),

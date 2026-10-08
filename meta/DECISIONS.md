@@ -7594,6 +7594,11 @@ restated instead** — the six rows cost a line each and are what the sentence
 promises.
 
 ### TM-243 — M-3 claims what the type enforces: no conversion function, no implicit conversion, no cast, no literal, no write; an `Instant` built from numbers is a construction in writing, pinned by a probe, and whether its constructor should say so is the author's
+> **TM-248 (2026-10-08, cycle 0.3.0) records the author's answer to the question
+> this decision registered:** Q-7 is answered A — `instant_of` keeps its name
+> (2026-10-02, the workbench's question 21) — and is struck with TM-248's
+> number. This decision's *"whether its constructor should say so is the
+> author's"* is answered, and nothing it decided moves.
 
 **2026-10-02, cycle 0.2.4b (the plan's PD-88) — the cycle audit's C2 and K6. Dates
 `TIME_MODEL.md` M-3, `CLAUDE.md`'s cycle 0.2.0 paragraph and the cycle README's
@@ -7768,3 +7773,129 @@ finding; **the IR's wide arithmetic read instead** — every `i256` operation
 the emission holds, but a claim about the lowering and the optimiser, which may
 fold a literal product away; **every wide literal a finding** —
 `bytes_put_int`'s `0i128` is a marked site's correct literal.
+
+### TM-247 — `BUILD.md` B-17 draws `host` → `span`: `host` imports the readings' types and their constructors, because both types' fields are sealed and only `span` builds them
+
+**2026-10-08, cycle 0.3.0 (the plan's PD-92). Amends `BUILD.md` B-17's diagram;
+moves `checks.HOST_MAY_IMPORT`; dates `HOST.md` H-6's and H-8's notes.**
+
+**What was found** (`0.3.0.md` §1.6). `host_now_instant` and `host_now_boot`
+return `Instant`s and `host_now_utc` a `Timestamp`; both types' fields are
+sealed (TM-215, TM-219), so only `span`'s constructors build them. Over a copy
+holding the clocks' module, `check_layering` reports five findings, one per
+`use` of `span` — *"`host` may import cal, core, zone and nothing else
+(B-17)"* — and B-17 is the authority it reads. H-6's note had said so since
+cycle 0.2.0: `host` importing `span` was cycle 0.3's, *"with a `BUILD.md` B-17
+arrow it does not have yet"*.
+
+**The decision.** *B-17 draws `host` → `span`, for the readings' types and
+their constructors, above `zone`, `cal` and `core`; `checks.HOST_MAY_IMPORT`
+gains `span`, its comment with it; `src/host/host.npk`'s "WHAT IT MAY IMPORT"
+says so; and a self-check plant holds the rest of the rule — `host` importing
+`fmt` red, beside `host` importing `span`. `span` is pure, so the arrow costs
+the purity boundary nothing: it still points one way, into `host`'s callees.*
+
+*Alternatives declined:* **`host` writing the readings itself through `wild`
+storage** — the library forging its own sealed types, the opt-out C-8c leaves
+to consumers; **`host` importing the umbrella** — the umbrella imports `host`,
+a `use` cycle (D-086) that B-17 calls a decomposition mistake; **the clocks
+moved into `span`** — `span` would turn impure, and S-7 is the property every
+other module's testability rests on.
+
+### TM-248 — the clocks, as `HOST.md` H-1 names them: `host_now_utc`, `host_now_instant`, `host_now_boot` and `host_clock_res` over `HostClock`, each reading checked and none trapped; and `instant_of` keeps its name, the author's answer to Q-7
+
+**2026-10-08, cycle 0.3.0 (the plan's PD-93). Declares `HostClock`; dates
+`HOST.md` H-1 and H-4 and `SAFETY.md` S-8; measures `SAFETY.md` S-4's `host`
+row; records the author's answer to `meta/OPEN_QUESTIONS.md` Q-7, which it
+strikes, and reads one clause of TM-243.**
+
+**What was found** (`0.3.0.md` §1.3 … §1.11). H-1 names `host_clock_res =
+Duration(HostClock:which)` and no specification declares `HostClock`, and
+`span`'s `InstantClock` has no realtime clock and must not gain one:
+`instant_of(ns, InstantClock.Realtime)` would build an `Instant` from the wall
+clock under the type's own name, M-3's hazard. `SAFETY.md` S-8 calls the
+function `host_clock_resolution(which)`, where every other site says
+`host_clock_res`; H-4's table says `CLOCK_MONOTONIC` is "not used", and
+`host_clock_res` hands it to `clock_getres`. `clock_gettime` is 228 in the
+compiler's runtime at the pin, `npk_mono_now`'s call; `clock_getres`, 229, is
+in no file of the compiler's tree, and the kernel's own table names it
+(`meta/research/CURRENCY.md`), its behaviour measured on both legs: `{0 s,
+1 ns}` for clocks 0, 1 and 7 and an errno in the `Result` for 99. The module
+compiles; a root importing it alone owes eleven identities, by
+`NITPICK-REACH-003` and by `arms.compute_bill` alike — `cal.ETimeValue`, the
+floor of six and the four arithmetic arms — and the umbrella with its five new
+names owes thirteen, as before. Its IR holds no global that is not `constant`.
+**And the author answered Q-7 on 2026-10-02** — the workbench's question 21,
+*"go with the recommendations"*: **A, keep `instant_of`**, so the two
+`Instant` readings build through it as drafted.
+
+**The decision.** *`host_now_utc = Timestamp()`: `clock_gettime(CLOCK_REALTIME)`
+through `sys` into a 16-byte `buffer`, `probe03`'s shape (H-4); the kernel's
+errno forwarded verbatim, `fail r.err` (H-7, S-5); the answer `relay
+timestamp_of(secs, nanos)`, whose `YearRange` and `NanoRange` refusals are
+H-8's range check. `host_now_instant = Instant() never fails`: `raw
+instant_of(mono_now(), InstantClock.Monotonic)` (H-5). `host_now_boot =
+Instant()`: `clock_gettime(CLOCK_BOOTTIME)`, the errno forwarded, the
+`timespec` turned into nanoseconds by a private `timespec_ns` that refuses,
+`cal`'s `ETimeValue`, a reading an `int64` of nanoseconds cannot hold — a
+negative second, a nanosecond field outside one second, or past
+`NTIME_DURATION_NS_MAX` — before it multiplies; the answer `raw
+instant_of(ns, InstantClock.Boottime)`. `host_clock_res =
+Duration(HostClock:which)`: `clock_getres` (229) on the clock `which` names,
+the errno forwarded, the `timespec` through `timespec_ns`, the answer `raw
+duration_ns(ns)`. `pub enum:HostClock = { Realtime; Monotonic; Boottime; }`,
+deriving `Eq`, `Clone`, `Debug` and `Copy`, declared in `host`. The numbers —
+228, 229, and the clock ids 0, 1 and 7 — are private `fixed int64`s in
+`host.npk`, each with its source in a comment. The umbrella re-exports the five
+public names, and `SAFETY.md` S-4's `host` row is measured, 11. H-1, H-4 and
+S-8 are dated, and the cycle README's first item restated. `instant_of` keeps
+its name: Q-7 is struck with this decision's number, and TM-243 is marked.*
+
+*Alternatives declined:* **`host_now_boot` `never fails`, its overflow a
+trap** — a new S-12 exception for a reading that is already fallible;
+**`timespec_ns` in `int128`** — a §5 site for a range a comparison states
+exactly; **`InstantClock` for `host_clock_res`** — it has no realtime clock,
+and must not gain one; **`clock_gettime` for the monotonic reading too** — H-5:
+a second reading of one clock through a second path; **the numbers in
+`src/host/sys.npk`** — two numbers read by one module, where a second file is a
+second module the layering, the parse sweep and the counts all carry, and
+`mod:sys;` beside the builtin compiles (`0.3.0.md` §1.5), so cycle 0.3.2 may
+move them if its syscalls make a table worth a file; **a header on this
+machine as the numbers' source** — the compiler's runtime at the pin and the
+kernel's table are where they are; **Q-7's B, a name that says it takes a raw
+reading** — the author's answer is A, and Q-7 records why: no name closes the
+reverse direction.
+
+### TM-249 — `tests/unit/host_clocks.npk`, `// stress: 40`: each reading asserted where a test can see it — its clock, its range, and its ADVANCE, H-3's "two calls are two syscalls" made observable — and the four mutants no test can see named where a reader looks
+
+**2026-10-08, cycle 0.3.0 (the plan's PD-94). Dates `HOST.md` H-3.**
+
+**What was found** (`0.3.0.md` §1.8 and §1.9). The unit exits 0 on both legs,
+forty runs each, under a millisecond a run. Of fourteen one-line mutants of
+`src/host/host.npk`, ten are red at the exit each is aimed at, on both legs —
+10 … 14, 16, 17 and 19 … 21 — and four exit 0 on both: the boot clock read
+through `CLOCK_MONOTONIC` under the `Boottime` tag, `Boottime`'s resolution
+asked of `CLOCK_REALTIME`, `host_now_utc`'s errno branch deleted, and
+`timespec_ns`'s `secs > top` refusal deleted. `CLOCK_BOOTTIME` and
+`CLOCK_MONOTONIC` differ by the time the machine has spent suspended, which a
+CI runner never has; every clock's resolution here is 1 ns; and the errno
+branch and `timespec_ns`'s refusals need a kernel that breaks its contract.
+
+**The decision.** *One unit, `// stress: 40` (V-11): the realtime second inside
+`probe03`'s window; each reading's clock; each reading ADVANCING within a
+million reads — a cached or computed reading never advances, so the advance is
+the test of the property, not of the clock's speed; the boot reading refused
+beside a monotonic one (H-6); and each resolution in (0, 1 s]. Every exit a
+mutant of `host` can reach was seen red on one; exits 15 and 18 are belts on
+`span`'s own refusal of two clocks, which `tests/unit/instant_ops.npk` sees
+red. The four mutants no test can see are named in the unit's header and in a
+dated note under H-3, with what holds each — the constant's name at each `sys`
+site, the `pick`'s three arms, and `probe03`'s measured errno — so the next
+reader does not take a green run for more than it is.*
+
+*Alternatives declined:* **asserting the syscall count** — no counter the
+runtime exposes, and `strace` is no instrument of this harness; **a test that
+suspends the machine** to tell `BOOTTIME` from `MONOTONIC` — not a unit; **a
+double for the kernel's broken answers now** — the double is cycle 0.3.3's, and
+it replaces `host`, so it cannot test `host`'s own refusals either; the honest
+statement is the note.

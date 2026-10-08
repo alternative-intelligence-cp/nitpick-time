@@ -316,17 +316,18 @@ list kept the old code until cycle 0.2.0), `BORROW-001`, `BORROW-012`,
 `RESOLVE-001`, `RESOLVE-002` (since cycle 0.2.0, `probe20b`),
 `REACH-002` and `REACH-003`, and every family
 after the first three runs only on something that parsed. Re-measured at pin
-`5fbaf4a`, cycle 0.2.4b: **149 files = 104 parse cleanly + 43
+`5fbaf4a`, cycle 0.3.0: **150 files = 105 parse cleanly + 43
 parse and are refused later + 2 do not parse**
-<!-- [[sweep: npk_total=149]] --> (`127 = 90 + 35 + 2` from cycle 0.1.3c until
+<!-- [[sweep: npk_total=150]] --> (`127 = 90 + 35 + 2` from cycle 0.1.3c until
 `tests/unit/civil_total_edges.npk` joined, `128 = 91 + 35 + 2` from then
 until cycle 0.2.0b retired the churn pair, TM-214, `126 = 89 + 35 + 2`
 until cycle 0.2.0 added `Instant`'s unit, its two refusals and the relay
 specimen, `130 = 91 + 37 + 2` until cycle 0.2.1 added `Timestamp`'s two
 units and six refusals, `138 = 93 + 43 + 2` until cycle 0.2.2 added the
 conversions' two units and two sweeps, `142 = 97 + 43 + 2` until cycle
-0.2.3 added the interop's five units, and `147 = 102 + 43 + 2` until cycle
-0.2.4b added a unit and a probe), and the two
+0.2.3 added the interop's five units, `147 = 102 + 43 + 2` until cycle
+0.2.4b added a unit and a probe, and `149 = 104 + 43 + 2` until cycle 0.3.0
+added the clocks' unit), and the two
 are `probe02d_wide_literal_refused.npk` (LEX-004, PARSE-002) and
 `probe14_error_payload_refused.npk` (PARSE-001, TM-147). It read
 `50 = 36 + 13 + 1` for three subcycles after the tree stopped being that size,
@@ -452,7 +453,11 @@ Specifically and deliberately:
   out of that repository into an `nlibc` sibling, so importing them today is
   importing a path that is scheduled to change. The four syscall numbers
   `ntime` needs are x86-64 ABI facts and are declared in `src/host/sys.npk`
-  with the same shape `nsys` uses.
+  with the same shape `nsys` uses. *(Cycle 0.3.0, TM-248: the clocks' two,
+  `clock_gettime` 228 and `clock_getres` 229, are private `fixed int64`s in
+  `src/host/host.npk`, each with its source — the compiler's runtime at the
+  pin and the kernel's table — and no header; a file of their own is cycle
+  0.3.2's to choose, when its syscalls join them.)*
 - **not `nitpick-parse`**, even though the two overlap on datetime scanning —
   `nparse`'s TOML plugin needs the four TOML datetime types and `ntime` is
   where they belong. Recorded as O-X1 and resolvable when dependency
@@ -567,7 +572,8 @@ consumer writes one import.
          │                     │         │          ▲
          └─────────────────────┴─────────┴──────────┘
 
-        host ──►  zone (for the name lookup)
+        host ──►  span (for the readings' types and their constructors)
+             ──►  zone (for the name lookup)
              ──►  cal  (for the range check)
              ──►  core
 ```
@@ -575,6 +581,14 @@ consumer writes one import.
 `core` depends on nothing. **Nothing depends on `host`** except `src/lib.npk`
 and an application — which is `SAFETY.md` §3's purity boundary expressed as a
 layering rule, and `check_layering` enforces it.
+
+*(Cycle 0.3.0, TM-247: `host` → `span` is drawn. `host_now_instant` and
+`host_now_boot` return `Instant`s and `host_now_utc` a `Timestamp`, both types'
+fields are sealed (TM-215, TM-219), and only `span`'s constructors build them.
+`span` is pure, so the arrow costs the purity boundary nothing: it still points
+one way, into `host`'s callees. Until then `host` reached `zone`, `cal` and
+`core` alone, and `check_layering` refused the arrow — five findings over the
+module, one per `use` of `span`.)*
 
 A `use` cycle is legal in the language (D-086) and is still a decomposition
 mistake; `ntime`'s layers are acyclic and the harness says so.

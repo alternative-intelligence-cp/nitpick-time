@@ -164,7 +164,7 @@ last clause: a live `requires i >= 0 && i < v.count` on `vec_at` adds
 `RequiresViolated` to a consumer's bill and makes an index past the end stop at
 116 where the slice guard stops it at 94.)*
 
-### ~~Q-7 — should `Instant`'s constructor say, in its name, that it takes a raw reading — before 1.0?~~ — **ANSWERED 2026-10-02: A, keep `instant_of` — the author's answer to the workbench's question 21**
+### ~~Q-7 — should `Instant`'s constructor say, in its name, that it takes a raw reading — before 1.0?~~ — **SETTLED 2026-10-08 (TM-248): A, the author's answer of 2026-10-02 — `instant_of` keeps its name**
 
 **Raised 2026-10-02 by the stream-2 planner at cycle 0.2's close, from the
 cycle audit's C2** (the workbench's `meta/audits/nitpick-time-0.2-2026-10-02.md`;
@@ -927,7 +927,10 @@ host boundary, where the first syscall enters `src/`. *Why it stays open until
 then:* it waits for something to check. Today no module but the placeholder
 `host` could name a syscall, `check_purity` refuses the spelling everywhere
 else, and a scan with nothing to find would be commissioned only against
-plants.
+plants. *(Cycle 0.3.0: `host` names two syscalls now, `clock_gettime` and
+`clock_getres`, through `sys`, so the scan has something to check; cycle
+0.3.1, which reviews `check_purity`'s ban list against that body, is where it
+is built or declined.)*
 
 *(Cycle 0.1.5: two more spellings `check_purity` did not refuse were measured
 and closed at the close — `mono_now ()`, and a banned call after a `//` inside a

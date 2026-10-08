@@ -7,13 +7,39 @@ Guidance for Claude Code sessions working in this repository.
 `ntime` — a date, time and time-zone library for **Nitpick**, the
 safety-critical systems language at `../../nitpick`.
 
-**Status: cycle 0.2 CLOSED (2026-10-02), archived at `meta/roadmap/done/0.2/`
-— instants and timestamps: `Instant` and its two clocks, `Timestamp` and its
-one constructor, the conversions to and from the civil scale in UTC with their
-exhaustive gate on every run, and the `Duration` interop — after cycle 0.1, the
-civil calendar, CLOSED 2026-09-26 and archived at `meta/roadmap/done/0.1/`.
-Cycle 0.3, the host boundary, is next: `meta/roadmap/0.3/0.3.0.md`, the
-clocks, was written at the close.**
+**Status: cycle 0.3, the host boundary, IN PROGRESS — 0.3.0, the clocks,
+DONE (2026-10-08): `src/host/` reads the machine's clocks, and 0.3.1, the review
+of `check_purity`'s ban list against that body, is next. Cycle 0.2 CLOSED
+(2026-10-02), archived at `meta/roadmap/done/0.2/` — instants and timestamps:
+`Instant` and its two clocks, `Timestamp` and its one constructor, the
+conversions to and from the civil scale in UTC with their exhaustive gate on
+every run, and the `Duration` interop — after cycle 0.1, the civil calendar,
+CLOSED 2026-09-26 and archived at `meta/roadmap/done/0.1/`.**
+
+**After cycle 0.3.0: the clocks.** `src/host/` has a body. `host_now_utc`
+reads `CLOCK_REALTIME` through `sys` into a 16-byte `timespec` and builds its
+`Timestamp` through `timestamp_of`, whose refusal of a `secs` outside the range
+is `HOST.md` H-8's range check; `host_now_instant` is the floor's `mono_now()`,
+`never fails`; `host_now_boot` reads `CLOCK_BOOTTIME` and refuses, in a
+private `timespec_ns`, a reading an `int64` of nanoseconds cannot hold before
+it multiplies; and `host_clock_res` asks `clock_getres` — syscall 229, which
+no file of the compiler names and the kernel's table does — about the clock a
+`HostClock` names, `host`'s own enum, since `InstantClock` must not gain a
+realtime clock (TM-248). The kernel's errno is forwarded verbatim, so `host`
+declares no error: it owes **11** arms and the umbrella **13** still,
+re-exporting 81 <!-- [[sweep: lib_reexports=81]] --> names. **`BUILD.md` B-17
+draws `host` → `span`**, because both readings' types are sealed and only
+`span` builds them (TM-247). **`tests/unit/host_clocks.npk` reads every clock
+under `// stress: 40`** and asserts each reading ADVANCES — H-3's "two calls
+are two syscalls", which a cached or computed reading fails — with ten of
+fourteen one-line mutants of the module red at their exits and the four no
+test can see named in its header and under H-3 (TM-249). **`instant_of` keeps
+its name**: the author's answer to Q-7 (TM-248). And first, in a commit of its
+own, **`check_int128_sites` reads a numeric literal's width suffix** as it
+reads a type's name, so `(3i256 * 5i256) =>! int64` — a computation of
+literals alone, which narrowed a constant in silence — is a finding outside
+§5's sites (TM-246). The self-check plants 95 tree-check violations. A full
+invocation is **134 units green** at pin `5fbaf4a`.
 
 **After cycle 0.2.4: cycle 0.2's close.** The cycle audit (ACCEPT, twenty-two
 findings: eight contradictions, two dormant, five stale, seven cosmetic; no
@@ -104,7 +130,7 @@ past `Duration`'s two ends — `NTIME_DURATION_NS_MAX` and
 end exactly, from both sides (TM-236; `check_int128_sites` holds it to §5's
 marked row). `timestamp_until` is cycle 0.7.3's, beside `date_until`
 (TM-237). `span` owes **11** arms and the umbrella **13** still, and the
-umbrella re-exports 76 <!-- [[sweep: lib_reexports=76]] --> names. A full
+umbrella re-exports 76 names. A full
 invocation is **131 units green** at pin `5fbaf4a`.
 
 **After cycle 0.2.3a: the instruments.** The tree checks' family is one list:

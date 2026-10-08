@@ -59,11 +59,12 @@ running unlisted since cycle 0.0.6)*:
   a code named once for two sites and three times for two (TM-210). Case 6
   (a generator differing by one line) is **pending until 0.5** and prints as
   pending rather than passing.
-- **Ninety-four planted violations across the tree checks since cycle 0.3.0**
+- **Ninety-five planted violations across the tree checks since cycle 0.3.0**
   (ninety-two from cycle 0.2.4a, eighty-two from cycle 0.2.3a, forty-four from
   cycle 0.1.5's second half, forty after its first half, twenty-three before
-  it; 0.3.0's two are `check_int128_sites`' wide literals, one in a function
-  and one at module level; 0.2.4a's ten are
+  it; 0.3.0's three are `check_int128_sites`' wide literals, one in a function
+  and one at module level, and `check_layering`'s `host` importing `fmt`
+  beside `host` importing `span`; 0.2.4a's ten are
   `check_constants_named`'s six — a `core` number in `core` outside
   `limits.npk`, a `cal` number in `core`, a bound spelled by its value, the
   folded minimum by its value, a small bound left to review, and an
@@ -154,10 +155,11 @@ against the summary line rather than left to review.
   since 0.1.1, swept over the whole range since 0.1.2 — and the suite is
   evidence about both — and about `src/span/`'s `Instant` since cycle 0.2.0,
   its `Timestamp` since 0.2.1, the conversions between a `Timestamp` and its
-  civil reading since 0.2.2, and the `Duration` interop since 0.2.3;
-  the other three `src/` directories are still placeholders, so nothing here
-  converts a time to a zone, or between a time and text. *(It said "a
-  timestamp to a date" too until cycle 0.2.2, and four placeholders until
+  civil reading since 0.2.2, and the `Duration` interop since 0.2.3 — and
+  about `src/host/`'s clocks since 0.3.0; the other two `src/` directories
+  are still placeholders, so nothing here converts a time to a zone, or
+  between a time and text. *(It said three placeholders until cycle 0.3.0,
+  "a timestamp to a date" too until cycle 0.2.2, and four placeholders until
   cycle 0.2.0. This read "there is none yet; `src/` is
   placeholders" for two subcycles after `src/core/` landed — C6. And until
   cycle 0.1.2 it read "the other five `src/` directories are still
@@ -456,6 +458,20 @@ reaching 6 sources and its IR **288 795 B**, `instant_since`'s `int128` and
 probe**, **31 unit**, **8 sweep**). `133 = 35 + 98`. A full invocation about
 207 s; the two units cost about a second together, both legs, compile
 included.
+
+**At cycle 0.3.0, the same pin, 134 units**: one test added —
+`tests/unit/host_clocks.npk`, the clocks under `// stress: 40` (TM-249) — and
+`src/host/` given its body (TM-247, TM-248), after `check_int128_sites` began
+reading a literal's width in a commit of its own (TM-246). The self-check
+plants 12 of V-14's 13 cases, **95** tree-check violations with 95 clean
+controls — the three new are `check_int128_sites`' two wide literals and
+`check_layering`'s `host` importing `fmt` — 4 arm specimens and 4 verdict
+specimens; `check_int128_sites` counts 15 wide spellings, `bytes_put_int`'s
+`0i128` among them; parse over 150 files, `105 + 43 + 2`; the defect corpus
+unchanged at 36; the library reaching **7** sources and its IR **309 729 B**,
+`host`'s four readings; and library + repro + suite at **99** (**58 probe**,
+**32 unit**, **8 sweep**). `134 = 35 + 99`. A full invocation about 211 s;
+the unit costs under a second, both legs and eighty runs, compile included.
 
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the

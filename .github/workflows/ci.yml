@@ -48,10 +48,10 @@
 # and `src/span/` since 0.2.0, `Instant` and its four operations, and since
 # 0.2.1 `Timestamp` and its constructor, since 0.2.2 the two conversions
 # between a `Timestamp` and its civil reading, and since 0.2.3 the `Duration`
-# interop --
-# re-exported together as 76 public names [[sweep: lib_reexports=76]],
-# so this IS evidence about behaviour, of the 133 units the runner reports at
-# compiler `5fbaf4a` since cycle 0.2.4b (131 at cycles 0.2.3 and 0.2.4a, 126 at cycles 0.2.2 and 0.2.3a, 122 at cycle 0.2.1, 114 at cycle 0.2.0, 111 at 0.2.0b, 113 at 0.2.0a and at
+# interop -- and `src/host/` since 0.3.0, the clocks --
+# re-exported together as 81 public names [[sweep: lib_reexports=81]],
+# so this IS evidence about behaviour, of the 134 units the runner reports at
+# compiler `5fbaf4a` since cycle 0.3.0 (133 at cycles 0.2.4b and 0.2.4, 131 at cycles 0.2.3 and 0.2.4a, 126 at cycles 0.2.2 and 0.2.3a, 122 at cycle 0.2.1, 114 at cycle 0.2.0, 111 at 0.2.0b, 113 at 0.2.0a and at
 # `c970483` at cycle 0.1.5's second half; 62 at cycle 0.0.6, 67 at 0.1.0,
 # 70 at 0.1.0b, 75 at 0.1.0c, 78 at 0.1.1, 81 at 0.1.2, 86 at 0.1.3, 90 at
 # 0.1.3b, 91 at 0.1.4 and 0.1.4b, all at `c3bdae2` from 0.1.0b on, 101 at
@@ -164,7 +164,10 @@
 # numbers compiles and runs, which M-3 now says (TM-241 ... TM-243). AND
 # SINCE CYCLE 0.3.0: a literal of a width past `int64` -- `3i256` -- is held to
 # §5's sites as the type's name is, where a computation of literals alone
-# narrowed a constant in silence and passed every check (TM-246).
+# narrowed a constant in silence and passed every check (TM-246); and the
+# clocks: each reading of the clock it names, the realtime one range-checked
+# by `timestamp_of`, each ADVANCING within a million reads -- forty runs a leg
+# -- and each resolution in (0, 1 s] (TM-247 ... TM-249).
 #
 # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
 # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
@@ -192,8 +195,9 @@
 # Until 0.0.3 that was the honest gap here, and it was written in this comment
 # for three cycles.
 #
-# WHAT IT IS STILL NOT EVIDENCE OF. Three of the six `src/` directories are
-# still placeholders -- `zone/`, `fmt/`, `host/` -- and `span/` holds `Instant`
+# WHAT IT IS STILL NOT EVIDENCE OF. Two of the six `src/` directories are
+# still placeholders -- `zone/` and `fmt/` (three, `host/` among them, until
+# cycle 0.3.0 gave it the clocks) -- and `span/` holds `Instant`
 # since cycle 0.2.0, `Timestamp` since 0.2.1, the conversions between a
 # `Timestamp` and its civil reading since 0.2.2 and the `Duration` interop
 # since 0.2.3, so nothing here converts a

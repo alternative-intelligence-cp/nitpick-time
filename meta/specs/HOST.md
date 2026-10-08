@@ -19,6 +19,15 @@ pub func:host_clock_res      = Duration(HostClock:which);
 pub func:host_system_zone    = SystemZone();
 ```
 
+*(Cycle 0.3.0, TM-248: four of the five are in `src/host/host.npk` —
+`host_system_zone` is cycle 0.3.2's — beside `HostClock`, the argument
+`host_clock_res` takes, which no specification declared until then: `pub
+enum:HostClock = { Realtime; Monotonic; Boottime; }`, `host`'s own, because
+`span`'s `InstantClock` has no realtime clock and must not gain one. "Nothing
+else" is no sixth PUBLIC function: the module also holds five private `fixed`
+numbers — the two syscalls and H-4's three clock ids — and one private helper,
+`timespec_ns`.)*
+
 **Rule H-2 (TM-018) — nothing else in the library calls any of them.** A function that
 needs "now" takes it as a parameter (`SAFETY.md` S-9). `check_purity` enforces
 the converse — that no syscall appears outside this module — and a second check
@@ -28,6 +37,18 @@ enforces this one: no module outside `src/host/` names a `host_` symbol except
 **Rule H-3 — this module has no state.** No cached clock, no memoised zone, no
 lazy initialisation. Two calls to `host_now_utc()` are two syscalls, which is
 what the caller asked for.
+
+*(Cycle 0.3.0, TM-249: `tests/unit/host_clocks.npk` makes this observable —
+each reading ADVANCES within a million reads, which a cached or computed
+reading never does — forty runs a leg (`TESTING.md` V-11); and the module's IR
+holds no global that is not `constant`. **Four mutants of the module no test
+can see** are named in the unit's header, each held by reading instead: the
+boot clock read through `CLOCK_MONOTONIC` under the `Boottime` tag — the two
+differ by the time the machine has spent suspended, which a CI runner never
+has; `Boottime`'s resolution asked of `CLOCK_REALTIME` — every clock's
+resolution here is 1 ns; the forwarded errno's branch deleted; and
+`timespec_ns`'s range check deleted — each of the last two needs a kernel that
+breaks its contract. A green run is not evidence about these four.)*
 
 ---
 
@@ -49,6 +70,13 @@ and the field offsets rather than trusting this paragraph.
 | `CLOCK_REALTIME` | 0 | `host_now_utc` |
 | `CLOCK_MONOTONIC` | 1 | *(not used — see H-5)* |
 | `CLOCK_BOOTTIME` | 7 | `host_now_boot` |
+
+*(Cycle 0.3.0, TM-248: the `CLOCK_MONOTONIC` row's "not used" holds for the
+READINGS, by H-5, and `host_clock_res(HostClock.Monotonic)` hands id 1 to
+**`clock_getres`, syscall 229**, which this rule did not name — the kernel's
+own table (`../research/CURRENCY.md`), its behaviour measured at cycle 0.3.0's
+planning: `{0 s, 1 ns}` for clocks 0, 1 and 7. Both numbers and the three ids
+are private `fixed int64`s in `src/host/host.npk`, each with its source.)*
 
 **Rule H-5 — `host_now_instant()` calls the floor's `mono_now()`, not
 `clock_gettime`.** (There is no floor builtin for the *wall* clock, which is
@@ -75,7 +103,8 @@ boottime` — and a `uint8` holds 254 values that are no clock (`SAFETY.md`
 S-15c), so the tag is an enum; both fields are sealed, so `host` builds its
 readings through `span`'s `instant_of`; and `instant_cmp` refuses two clocks as
 `instant_since` does. `host` importing `span` is cycle 0.3's, with a
-`BUILD.md` B-17 arrow it does not have yet.)*
+`BUILD.md` B-17 arrow it does not have yet.)* *(Cycle 0.3.0, TM-247: `host`
+imports `span`, and B-17 draws the arrow.)*
 
 **Rule H-7 — `host_now_utc` forwards the kernel's errno verbatim**
 (`SAFETY.md` S-5), so it declares no error and costs no `failsafe` arm.
@@ -102,7 +131,8 @@ reading from a machine whose clock is unset can be anything; if it is outside
 *(Cycle 0.2.1, TM-219 and TM-220: `Timestamp`'s fields are sealed, so
 `host_now_utc` builds its reading through `span`'s `timestamp_of`, whose
 refusal of a `secs` outside the range is this rule's `YearRange` — the `host`
-→ `span` arrow cycle 0.3's README owes for `Instant` already.)*
+→ `span` arrow cycle 0.3's README owes for `Instant` already.)* *(Drawn at
+cycle 0.3.0, TM-247: `host_now_utc`'s reading is `timestamp_of`'s.)*
 
 ---
 

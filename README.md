@@ -6,11 +6,12 @@ the safety-critical systems language. No dependencies, no libc, no
 compiled in from a pinned IANA release, so the same program gives the same
 answer on every machine.
 
-> **Status: cycle 0.2, instants and timestamps, CLOSED on 2026-10-02, archived at
+> **Status: cycle 0.3, the host boundary, is in progress — its first
+> subcycle, the clocks, done on 2026-10-08 — after cycle 0.2, instants and
+> timestamps, CLOSED on 2026-10-02, archived at
 > [`meta/roadmap/done/0.2/`](meta/roadmap/done/0.2/README.md)**, as cycle 0.1,
 > the civil calendar, was on 2026-09-26 ([`meta/roadmap/done/0.1/`](meta/roadmap/done/0.1/README.md))
-> — each with its code, its gate and its audit done — **and cycle 0.3, the host
-> boundary, is next.**
+> — each with its code, its gate and its audit done.
 > What exists: `src/core/` — `Vec<T>`, `Bytes` and the named limits — since
 > cycle 0.0, its `Vec` holding only `Copy` elements since cycle 0.2.0b; and
 > `src/cal/` — `CivilDate`,
@@ -29,7 +30,10 @@ answer on every machine.
 > prelude's `Duration` — a day
 > exactly 86 400 seconds, not a calendar day — moves a `Timestamp` by one, and
 > gives the span between two, refusing one past `Duration`'s ±292 years rather
-> than wrapping it. Zones, formats and the clocks are still
+> than wrapping it. Since cycle 0.3.0 `src/host/`, the one module that touches
+> the machine, reads its clocks: the realtime clock as a `Timestamp`,
+> range-checked, the monotonic and boot clocks as `Instant`s, and each
+> clock's resolution. Zones and formats are still
 > placeholders, each replaced by the cycle
 > [`meta/roadmap/ROADMAP.md`](meta/roadmap/ROADMAP.md) names. The specification
 > set is in [`meta/specs/`](meta/specs/) and the plan in
@@ -45,7 +49,8 @@ answer on every machine.
 > 0.2.0a had opened; until cycle 0.2.1, that timestamps were placeholders
 > too; and until cycle 0.2.2, that an `Instant` could not be "converted to a
 > wall-clock time" — a civil reading, in `meta/specs/GLOSSARY.md`'s words,
-> where the conversion refused is to a point on the UTC scale, TM-226.)*
+> where the conversion refused is to a point on the UTC scale, TM-226; and
+> until cycle 0.3.0, that cycle 0.3 "is next" and the clocks placeholders.)*
 
 ---
 
@@ -69,8 +74,9 @@ accident: what you can write is a construction, `instant_of` handed a number
 computed from a `Timestamp`, which names in writing the clock it claims to have
 read. *(Until cycle 0.2.4b this said an `Instant` "cannot be built from a
 number", and that the bug cannot be written at all — the cycle audit's C2,
-TM-243; `meta/OPEN_QUESTIONS.md` Q-7 asks whether `instant_of`'s name should
-say so.)* *(Until cycle 0.2.2 this
+TM-243; `meta/OPEN_QUESTIONS.md` Q-7 asked whether `instant_of`'s name should
+say so, and the author's answer, on 2026-10-02, is that it keeps its name —
+TM-248.)* *(Until cycle 0.2.2 this
 paragraph called the realtime clock's reading "a wall-clock reading" — the
 words `meta/specs/GLOSSARY.md` keeps for a civil reading, which a `Timestamp`
 is not — and the clock itself "the wall clock" twice, TM-226.)* *(Until cycle

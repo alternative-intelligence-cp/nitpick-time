@@ -1,9 +1,6 @@
-// THE ONLY IMPURE MODULE IN THE LIBRARY — the PLACEHOLDER (0.0.1 P-7, P-11).
-//
-// EMPTY ON PURPOSE: see `../core/core.npk` for why a placeholder exists at all.
-// It is REPLACED at the cycle below, never deleted. The rule below is carried
-// from day one, deliberately: it is what a reader meets before a check
-// enforces it.
+// THE ONLY IMPURE MODULE IN THE LIBRARY — the clocks, since cycle 0.3.0
+// (`meta/roadmap/0.3/0.3.0.md`, TM-247 … TM-249). Governed by
+// `meta/specs/HOST.md`.
 //
 // ============================ THE PURITY RULE ============================
 // NO SYSCALL, NO CLOCK, NO ENVIRONMENT READ AND NO FILE READ EXISTS ANYWHERE
@@ -19,21 +16,148 @@
 // as a layering rule, and `check_layering` enforces it.
 // =========================================================================
 //
-// WHAT FILLS IT: five functions and nothing else — `host_now_utc`,
-// `host_now_instant`, `host_now_boot`, `host_clock_res`, `host_system_zone` —
-// with `clock_gettime` reached through `sys` and a 16-byte `timespec` laid out
-// in a `buffer` (probe 03 pinned that shape). Governed by
-// `meta/specs/HOST.md`.
-// WHEN: cycle 0.3 (`meta/roadmap/0.3/README.md`), which is also when
-// `check_purity` goes live and must be SEEN TO FAIL against a planted
-// `mono_now()` outside this directory. (Dated at cycle 0.2.4, cycle 0.2's
-// close -- its audit's S4: `check_purity` has been live since cycle 0.0.3,
-// TM-126, and the self-check plants a `mono_now()` outside this directory on
-// every run; cycle 0.3 reviews its ban list against this module's body.)
+// WHAT FILLS IT: five public functions and nothing else (H-1) — four since
+// cycle 0.3.0: `host_now_utc`, `host_now_instant`, `host_now_boot` and
+// `host_clock_res`, with `HostClock`, the argument H-1 names; and
+// `host_system_zone`, which is cycle 0.3.2's. Beside them, nothing public: the
+// five numbers below and one helper, `timespec_ns`. `clock_gettime` and
+// `clock_getres` are reached through `sys` with a 16-byte `timespec` laid out
+// in a `buffer` (probe 03 pinned that shape), and the monotonic reading is the
+// floor's `mono_now()` (H-5).
+// WHEN: cycle 0.3 (`meta/roadmap/0.3/README.md`) — the clocks at 0.3.0, the
+// review of `check_purity`'s ban list against this body at 0.3.1, the system
+// zone at 0.3.2 and the double at 0.3.3. (Until cycle 0.3.0 this file was the
+// PLACEHOLDER of 0.0.1 P-7 and P-11, replaced and never deleted, and it said
+// cycle 0.3 "is also when `check_purity` goes live and must be SEEN TO FAIL
+// against a planted `mono_now()` outside this directory". Dated at cycle
+// 0.2.4, cycle 0.2's close -- its audit's S4: `check_purity` has been live
+// since cycle 0.0.3, TM-126, and the self-check plants a `mono_now()` outside
+// this directory on every run; cycle 0.3 reviews its ban list against this
+// module's body.)
 //
-// WHAT IT MAY IMPORT: `zone` (for the name lookup), `cal` (for the range
-// check) and `core` (`BUILD.md` B-17).
+// WHAT IT MAY IMPORT: `span` (the readings' types and their constructors:
+// `Instant`'s and `Timestamp`'s fields are sealed, so only `span` builds them),
+// `cal` (the range check's identity) and `core` (`BUILD.md` B-17, TM-247) — and
+// `zone`, for the name lookup, when cycle 0.3.2 needs it.
 //
-// THE ERRORS IT RAISES: none of its own — kernel errnos are FORWARDED VERBATIM
-// (`SAFETY.md` S-5), exactly as `lib/nsys.npk` does.
+// THE ERRORS IT RAISES: none of its own. `cal`'s `ETimeValue`, relayed from
+// `timestamp_of` (H-8's range check) or raised by `timespec_ns`; and the
+// kernel's errno, FORWARDED VERBATIM (`SAFETY.md` S-5), exactly as
+// `lib/nsys.npk` does — a dynamic operand, which arms nothing. A root that
+// imports this module alone owes eleven identities, measured: `cal.ETimeValue`,
+// the floor of six and the four arithmetic arms (`SAFETY.md` S-4).
 mod:host;
+
+use "../cal/cal.npk".ETimeValue;
+use "../core/limits.npk".NTIME_NANOS_PER_SEC;
+use "../core/limits.npk".NTIME_DURATION_NS_MAX;
+use "../span/span.npk".Instant;
+use "../span/span.npk".InstantClock;
+use "../span/span.npk".Timestamp;
+use "../span/span.npk".instant_of;
+use "../span/span.npk".timestamp_of;
+
+// The syscall numbers, x86-64 (TM-008), and the clock ids (H-4). 228 is the
+// one the compiler's runtime calls in `npk_mono_now` at the pin (`git show
+// 5fbaf4a:runtime/npkrt.ll`: `@npk_sys6(i64 228, i64 1, ...)`) and the kernel's
+// table names `clock_gettime`; 229 is in no file of the compiler's tree, and
+// the kernel's table names it `clock_getres` (`arch/x86/entry/syscalls/
+// syscall_64.tbl`, `meta/research/CURRENCY.md`), its behaviour measured at
+// cycle 0.3.0's planning: `{0 s, 1 ns}` for clocks 0, 1 and 7, and an errno in
+// the `Result` for 99. 0 and 7 are H-4's, and `probe03` measures them apart on
+// every run; 1 is the id the runtime's own call passes.
+fixed int64:SYS_CLOCK_GETTIME = 228i64;
+fixed int64:SYS_CLOCK_GETRES  = 229i64;
+fixed int64:CLOCK_REALTIME    = 0i64;
+fixed int64:CLOCK_MONOTONIC   = 1i64;
+fixed int64:CLOCK_BOOTTIME    = 7i64;
+
+// THE CLOCK `host_clock_res` IS ASKED ABOUT (H-1, TM-248). `host`'s own, three
+// variants, because `span`'s `InstantClock` has no realtime clock and must not
+// gain one: `instant_of(ns, InstantClock.Realtime)` would build an `Instant`
+// from the wall clock under the type's own name, the hazard M-3 exists for.
+#[derive(Eq, Clone, Debug, Copy)]
+pub enum:HostClock = { Realtime; Monotonic; Boottime; };
+
+// A `timespec`'s two fields as nanoseconds, or `ETimeValue` for a reading an
+// `int64` of nanoseconds cannot hold -- checked BEFORE the multiplication, so
+// nothing here traps (H-7's posture, `SAFETY.md` S-12). The range it answers
+// in is 0 ... `NTIME_DURATION_NS_MAX`; outside it -- a negative second among
+// it -- the detail is `ValueFault.Overflow`, and a nanosecond field outside one
+// second is `NanoRange`, each written here until `meta/OPEN_QUESTIONS.md` O-X8
+// says how a refusal hands its detail back. A kernel keeping its contract
+// meets none of them: the boot clock counts up from zero and a resolution is
+// a nanosecond here, so each is held by reading, not by a test (TM-249).
+func:timespec_ns = int64(int64:secs, int64:nanos) {
+    if (secs < 0i64)                  { fail ETimeValue; }     // Overflow
+    if (nanos < 0i64)                 { fail ETimeValue; }     // NanoRange
+    if (nanos >= NTIME_NANOS_PER_SEC) { fail ETimeValue; }     // NanoRange
+    int64:top = NTIME_DURATION_NS_MAX / NTIME_NANOS_PER_SEC;
+    if (secs > top)                   { fail ETimeValue; }     // Overflow
+    if (secs == top) {                                         // Overflow
+        if (nanos > (NTIME_DURATION_NS_MAX % NTIME_NANOS_PER_SEC)) { fail ETimeValue; }
+    }
+    pass (secs * NTIME_NANOS_PER_SEC) + nanos;
+};
+
+// `HOST.md` H-4, H-7 and H-8: `clock_gettime(CLOCK_REALTIME)`. The kernel's
+// errno is forwarded verbatim; the reading becomes a `Timestamp` through
+// `timestamp_of`, whose refusal of a `secs` outside the range (`YearRange`)
+// and of a `nanos` outside one second (`NanoRange`) IS H-8's range check -- an
+// unset machine clock is `ETimeValue`, not a value that fails later.
+//
+// THE TWO READS are of a 16-byte `buffer` at the offsets the `timespec` fixes,
+// slot 0 the seconds and slot 1 the nanoseconds -- in bounds by construction,
+// and through the bare pointer a `buffer` is indexed by, which no check here
+// can bound (`SAFETY.md` S-17b's fourth row). So it is said here.
+pub func:host_now_utc = Timestamp() {
+    buffer:ts = buffer_new(16i64);
+    Result<int64>:r = sys(SYS_CLOCK_GETTIME, CLOCK_REALTIME, ts.ptr);
+    if (r.is_error) { fail r.err; }
+    int64:secs = <-(#ptr_add<int64>(ts.ptr, 0i64));
+    int64:nanos = <-(#ptr_add<int64>(ts.ptr, 1i64));
+    pass (relay timestamp_of(secs, nanos));
+};
+
+// `HOST.md` H-5: the floor's `mono_now()`, not `clock_gettime` -- the clock the
+// deadline substrate reads, so an `Instant` from here and an executor deadline
+// are on one timeline by construction. `never fails`, as `mono_now` is, and
+// `raw` before `instant_of`, which is `never fails` too: the compiler asks for
+// it before a callee whose value is used.
+pub func:host_now_instant = Instant() never fails {
+    pass raw instant_of(mono_now(), InstantClock.Monotonic);
+};
+
+// `HOST.md` H-4 and H-6: `clock_gettime(CLOCK_BOOTTIME)`, which counts
+// suspend; the errno forwarded, the `timespec` turned into nanoseconds by
+// `timespec_ns`, and the `Instant` tagged `Boottime`, so `instant_since`
+// refuses it beside a `Monotonic` reading. The reads, as `host_now_utc`'s.
+pub func:host_now_boot = Instant() {
+    buffer:ts = buffer_new(16i64);
+    Result<int64>:r = sys(SYS_CLOCK_GETTIME, CLOCK_BOOTTIME, ts.ptr);
+    if (r.is_error) { fail r.err; }
+    int64:secs = <-(#ptr_add<int64>(ts.ptr, 0i64));
+    int64:nanos = <-(#ptr_add<int64>(ts.ptr, 1i64));
+    int64:ns = relay timespec_ns(secs, nanos);
+    pass raw instant_of(ns, InstantClock.Boottime);
+};
+
+// `HOST.md` H-1 and H-4: `clock_getres` on the clock `which` names -- the one
+// use of `CLOCK_MONOTONIC` here, H-5 holding for the reading -- the errno
+// forwarded, and the `timespec` through `timespec_ns` into a `Duration`. The
+// reads, as `host_now_utc`'s.
+pub func:host_clock_res = Duration(HostClock:which) {
+    int64:id = CLOCK_REALTIME;
+    pick (which) {
+        (HostClock.Realtime)  { id = CLOCK_REALTIME; },
+        (HostClock.Monotonic) { id = CLOCK_MONOTONIC; },
+        (HostClock.Boottime)  { id = CLOCK_BOOTTIME; }
+    }
+    buffer:ts = buffer_new(16i64);
+    Result<int64>:r = sys(SYS_CLOCK_GETRES, id, ts.ptr);
+    if (r.is_error) { fail r.err; }
+    int64:secs = <-(#ptr_add<int64>(ts.ptr, 0i64));
+    int64:nanos = <-(#ptr_add<int64>(ts.ptr, 1i64));
+    int64:ns = relay timespec_ns(secs, nanos);
+    pass raw duration_ns(ns);
+};

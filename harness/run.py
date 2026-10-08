@@ -35,9 +35,10 @@ WHAT A GREEN RUN HERE IS, AND IS NOT.
   about both, and since 0.2.0 about `src/span/`'s `Instant` -- and since
   0.2.1 its `Timestamp`, since 0.2.2 the conversions between a
   `Timestamp` and its civil reading, and since 0.2.3 the `Duration`
-  interop. The other three
+  interop -- and since 0.3.0 about `src/host/`'s clocks. The other two
   `src/` directories are still placeholders, so nothing here converts a time
-  to a zone, or between a time and text. (It said "a timestamp to a date"
+  to a zone, or between a time and text. (It said three until cycle 0.3.0
+  gave `host/` its clocks. It said "a timestamp to a date"
   too until cycle 0.2.2. It said four until
   cycle 0.2.0. Until cycle 0.1.2 this said "the other five ... so nothing here
   dates anything" -- false since 0.1.0 gave `cal/` a body, and since 0.1.1
@@ -630,22 +631,25 @@ def run_parse(rep, root, bld):
     """Every `.npk` in the tree in front of the real parser, each exactly once.
 
     THE DENOMINATOR IS THE WHOLE TREE AND THAT IS WHY THE STAGE IS WORTH ITS
-    COST. Re-measured at cycle 0.2.4b: of the 149 `.npk` files
-    here [[sweep: npk_total=149]] the library build roots 6
-    [[sweep: lib_reach=6]], the suite roots 98 [[sweep: suite_roots=98]]
+    COST. Re-measured at cycle 0.3.0: of the 150 `.npk` files
+    here [[sweep: npk_total=150]] the library build roots 7
+    [[sweep: lib_reach=7]], the suite roots 99 [[sweep: suite_roots=99]]
     (127 and 77 from cycle 0.1.3c until `tests/unit/civil_total_edges.npk`
     joined; 128 and 78 from then until cycle 0.2.0b retired the churn pair,
     TM-214; 126 and 76 until cycle 0.2.0 added `span`'s body to the
     library's reach and a unit and two probes to the suite; 130 and 79 until
     cycle 0.2.1 added two units and six probes; 138 and 87 until cycle 0.2.2
     added two units and two sweeps; 142 and 91 until cycle 0.2.3 added five
-    units; 147 and 96 until cycle 0.2.4b added a unit and a probe), and of the 4
+    units; 147 and 96 until cycle 0.2.4b added a unit and a probe; 149, 6
+    and 98 until cycle 0.3.0 gave `host` a body the library reaches and added
+    its unit), and of the 4
     support modules [[sweep: support_total=4]] 3 are reached by `use` from
     a suite root -- and since cycle 0.1.4 so is the civil cross-oracle's
-    corpus, which only its member imports -- so 41 are put in front of the
-    compiler by NOTHING ELSE. Four of those are the remaining `src/`
-    placeholders, the layer note `src/core/core.npk` among them (five until
-    cycle 0.2.0 gave `span/` a body); 36 are the reproductions under
+    corpus, which only its member imports -- so 40 are put in front of the
+    compiler by NOTHING ELSE. Three of those are the remaining `src/`
+    placeholders, the layer note `src/core/core.npk` among them (four until
+    cycle 0.3.0 gave `host/` a body, five until cycle 0.2.0 gave `span/`
+    one); 36 are the reproductions under
     `tests/probe/defect/` [[sweep: defect_total=36]] -- the directory whose
     files went two days with no expectation at all (TM-115), and whose markers
     then went three cycles asserted by nothing (TM-141), for exactly this
@@ -653,7 +657,7 @@ def run_parse(rep, root, bld):
     a support module no suite root imports, which only its part C compiles
     (TM-217).
 
-        149 = 6 (library) + 98 (suite roots) + 3 + 1 (reached by `use`) + 41
+        150 = 7 (library) + 99 (suite roots) + 3 + 1 (reached by `use`) + 40
 
     (It read `116 = 5 + 66 + 3 + 1 + 41` from cycle 0.1.4c until cycle 0.1.3c
     added eleven suite roots -- seven probes and four unit tests -- and none
@@ -662,8 +666,9 @@ def run_parse(rep, root, bld):
     when `civil_total_edges` joined, and found at 0.2.0b's planning;
     `130 = 6 + 79 + 3 + 1 + 41` until cycle 0.2.1;
     `138 = 6 + 87 + 3 + 1 + 41` until cycle 0.2.2;
-    `142 = 6 + 91 + 3 + 1 + 41` until cycle 0.2.3; and
-    `147 = 6 + 96 + 3 + 1 + 41` until cycle 0.2.4b.)
+    `142 = 6 + 91 + 3 + 1 + 41` until cycle 0.2.3;
+    `147 = 6 + 96 + 3 + 1 + 41` until cycle 0.2.4b; and
+    `149 = 6 + 98 + 3 + 1 + 41` until cycle 0.3.0.)
 
     EVERY NUMBER IN THAT SENTENCE IS TAGGED AND CHECKED (TM-142). It read
     `50 = 1 + 27 + 3 + 19` until cycle 0.0.6, three subcycles after the tree

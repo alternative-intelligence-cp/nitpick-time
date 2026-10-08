@@ -19,8 +19,9 @@
 // deliberate. Adding a line here is the moment a name becomes public and, by
 // TM-013, a thing a MAJOR version is needed to take away.
 //
-// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 76
-// names now [[sweep: lib_reexports=76]], below -- 68 until cycle 0.2.3 added
+// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 81
+// names now [[sweep: lib_reexports=81]], below -- 76 until cycle 0.3.0 added
+// `host`'s five, 68 until cycle 0.2.3 added
 // `Duration`'s two ends and `span`'s six for the `Duration` interop, 66 until
 // cycle 0.2.2 added
 // `timestamp_to_utc` and `civil_to_utc`, 64 until cycle 0.2.1 added
@@ -320,3 +321,23 @@ pub use "./span/span.npk".duration_days;
 pub use "./span/span.npk".duration_weeks;
 pub use "./span/span.npk".timestamp_add;
 pub use "./span/span.npk".timestamp_since;
+
+// ===========================================================================
+// host -- the clocks (cycle 0.3.0). THE ONE IMPURE MODULE, AND NO NEW
+// IDENTITY.
+// ===========================================================================
+//
+// Four of the five readings `HOST.md` H-1 names, and `HostClock`, the argument
+// `host_clock_res` takes (TM-248); `host_system_zone` is cycle 0.3.2's. `host`
+// declares no error: it relays `cal`'s `ETimeValue` from `timestamp_of` --
+// H-8's range check -- and from its own `timespec_ns`, and forwards the
+// kernel's errno, which arms nothing (`SAFETY.md` S-5). So it costs what
+// importing `span` costs: 11 for `host` alone [[sweep: arms_host=11]] and 13
+// here [[sweep: arms_lib=13]], measured. This file is the only one in the
+// library that imports `host` (B-17). FIVE NAMES, each a MAJOR version to take
+// away (TM-013).
+pub use "./host/host.npk".HostClock;
+pub use "./host/host.npk".host_now_utc;
+pub use "./host/host.npk".host_now_instant;
+pub use "./host/host.npk".host_now_boot;
+pub use "./host/host.npk".host_clock_res;

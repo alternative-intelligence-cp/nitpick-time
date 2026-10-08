@@ -10,9 +10,10 @@
 // §9, TM-222); and the `Duration` interop -- the four constructors `ntime` adds
 // to the prelude's, `timestamp_add` and `timestamp_since` (cycle 0.2.3;
 // `SPAN_MODEL.md` N-2 and §5, `TIME_MODEL.md` M-18 and M-20, TM-233 ...
-// TM-236). The clocks themselves are cycle 0.3's: `host_now_instant` and
-// `host_now_boot` will build their answers through `instant_of`, and
-// `host_now_utc` through `timestamp_of`, which is why both are public. (Until
+// TM-236). The clocks themselves are `host`'s, since cycle 0.3.0 (TM-248):
+// `host_now_instant` and `host_now_boot` build their answers through
+// `instant_of`, and `host_now_utc` through `timestamp_of`, which is why both
+// are public -- "cycle 0.3's", and "will build", until then. (Until
 // cycle 0.2.2 this said the conversions were that cycle's, and until cycle
 // 0.2.3 that the interop was.)
 //
@@ -27,7 +28,8 @@
 // fields becomes an `Instant` that names, in writing, the clock it claims to
 // have read -- TM-216's opt-out in writing, which `probe20g` compiles and
 // runs, so this paragraph is checked (TM-243; `meta/OPEN_QUESTIONS.md` Q-7
-// asks the author whether the constructor's name should say so). (Until cycle
+// asked the author whether the constructor's name should say so, and the
+// answer, A, is that it keeps its name: TM-248). (Until cycle
 // 0.2.4b this said a consumer could not build an `Instant` from a number --
 // the cycle audit's C2.) The compiler's runtime says the same of its own
 // deadline clock -- `runtime/npkrt.ll` at the pin, the block headed "the
@@ -235,8 +237,8 @@ pub struct:Instant = { sealed int64:ns; sealed InstantClock:clock; };
 // any `int64` on either clock, so `VERIFICATION.md` P-3 asks no contract of
 // it. A number computed from anything -- a `Timestamp`'s fields included --
 // becomes a reading that names, in writing, the clock it claims to have read
-// (TM-216; `meta/OPEN_QUESTIONS.md` Q-7 asks whether the name should say
-// so).
+// (TM-216; `meta/OPEN_QUESTIONS.md` Q-7 asked whether the name should say
+// so, and the author's answer is that it keeps its name: TM-248).
 pub func:instant_of = Instant(int64:ns, InstantClock:clock) never fails {
     pass Instant{ ns: ns, clock: clock };
 };

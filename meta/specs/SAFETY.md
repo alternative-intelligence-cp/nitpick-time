@@ -90,7 +90,7 @@ import-scoped:
 | `ntime/span.npk` | — (raises `cal`'s) | one arm | **11** <!-- [[sweep: arms_span=11]] --> (—) — since cycle 0.2.0, measured: `cal.ETimeValue`, which `span` raises for two clocks' readings (TM-216), since cycle 0.2.1 for a `secs` outside the range or a `nanos` outside one second handed to `timestamp_of` (TM-220), since cycle 0.2.2 for a civil reading `civil_to_utc` cannot convert, `timestamp_of`'s refusal relayed (TM-222), and since cycle 0.2.3 for a sum `timestamp_add` cannot keep in the range, relayed the same way (TM-234), and a difference `timestamp_since` cannot hold in a `Duration` (TM-236), and since cycle 0.2.4b for a `secs` handed to `timestamp_add` outside the range (TM-241) and a difference `instant_since` cannot hold (TM-242); the floor of six; and `cal`'s four arithmetic arms, which reach every importer of `span` because `span` imports `cal`. **No new identity**: the umbrella's row stays 13. *(A placeholder until cycle 0.2.0, the row read **6** (4), the floor, "meaningless until cycle 0.2 gives the module a body".)* |
 | `ntime/zone.npk` | `ETimeZone` | two arms | placeholder; **6** <!-- [[sweep: arms_zone=6]] --> (4) today (cycle 0.3) |
 | `ntime/fmt.npk` | `ETimeParse` | three arms | placeholder; **6** <!-- [[sweep: arms_fmt=6]] --> (4) today (cycle 0.4) |
-| `ntime/host.npk` | — (forwards errnos) | one arm | placeholder; **6** <!-- [[sweep: arms_host=6]] --> (4) today |
+| `ntime/host.npk` | — (forwards errnos) | one arm | **11** <!-- [[sweep: arms_host=11]] --> (—) — since cycle 0.3.0, measured (TM-248): `cal.ETimeValue`, which `host` relays from `timestamp_of` (H-8) and raises in `timespec_ns`; the floor of six; and `cal`'s four arithmetic arms, which reach `host` through `span`. A forwarded errno is a dynamic operand and arms nothing (S-5). **No new identity**: the umbrella's row stays 13. *(A placeholder until cycle 0.3.0, the row read "placeholder; **6** (4) today" — the floor.)* |
 
 *(Amended at cycle 0.1.0b: the column read "MEASURED at pin `aaffb87`" with the
 bracketed numbers, and had no umbrella row. At compiler `c3bdae2` every row
@@ -336,11 +336,15 @@ purpose. It contains exactly:
 - `host_now_utc()` — `clock_gettime(CLOCK_REALTIME)` → `Timestamp`
 - `host_now_instant()` — `mono_now()` → `Instant`
 - `host_now_boot()` — `clock_gettime(CLOCK_BOOTTIME)` → `Instant`
-- `host_clock_resolution(which)` — `clock_getres`
+- `host_clock_res(which)` — `clock_getres`
 - `host_system_zone()` — reads `$TZ`, then `/etc/localtime`, and **says which
   it used**
 
 and nothing else. Nothing elsewhere in the library calls any of them.
+
+*(Cycle 0.3.0, TM-248: the fourth read `host_clock_resolution(which)`.
+`HOST.md` H-1, the module's specification, and every other site call it
+`host_clock_res`, which `src/host/host.npk` declares, over `HostClock`.)*
 
 **Rule S-9 — the clock is a parameter, never an ambient.** A function that
 needs "now" takes a `Timestamp` or an `Instant`. `ntime` provides `host_now_*`

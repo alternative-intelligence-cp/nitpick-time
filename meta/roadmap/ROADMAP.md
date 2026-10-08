@@ -26,7 +26,10 @@ settled**, TM-208 … TM-245 the cycle's thirty-eight, the close's eight among
 them; **ten questions are open** — four the compiler's, O-N1, O-N2, O-N3 and
 O-N34, restated at 0.2.4b (TM-245); five ours, O-X1, O-B1, O-X4, O-X8 and O-X9;
 and one the author's, Q-7, raised at the close (TM-243), which blocks nothing
-before cycle 1.0's freeze of the public names.)*
+before cycle 1.0's freeze of the public names.)* *(Re-derived at cycle 0.3.0:
+**180 decisions are settled**, the subcycle's four, TM-246 … TM-249; **nine
+questions are open** — the compiler's four and our five above — and Q-7 is
+answered A, `instant_of` keeping its name, TM-248.)*
 
 ## How this is organised
 
@@ -86,7 +89,7 @@ sibling libraries.
 | ~~**0.0**~~ | **Foundations** — the language probes, the harness, `src/core/` — **CLOSED 2026-09-06, archived at [`done/0.0/`](done/0.0/README.md)** | — |
 | ~~**0.1**~~ | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **CLOSED 2026-09-26, archived at [`done/0.1/`](done/0.1/README.md)** | 0.0 ✓ |
 | ~~**0.2**~~ | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **CLOSED 2026-10-02, archived at [`done/0.2/`](done/0.2/README.md)** | 0.1 ✓ |
-| **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double — **NEXT**: `0.3/0.3.0.md`, the clocks, written at cycle 0.2's close | 0.2 ✓ |
+| **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double — **IN PROGRESS**: [`0.3/0.3.0.md`](0.3/0.3.0.md), the clocks, DONE 2026-10-08; 0.3.1, `check_purity`'s review against the clocks' body, next | 0.2 ✓ |
 | **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate | 0.2 |
 | **0.5** | **The zone table** — the generator, the committed tables, the size measurement | 0.1 |
 | **0.6** | **Zoned time** — offset lookup, the four resolution modes, the transition sweep | 0.4, 0.5 |
@@ -185,7 +188,8 @@ a `Timestamp`; one adoption, to compiler `5fbaf4a` (TM-208 … TM-213);
 `Vec<T: Copy>` (TM-214); the tree checks' family one list, and three checks
 live (TM-227 … TM-232), each read again at the close (TM-238 … TM-240); and 133
 units green. `timestamp_until` moved to cycle 0.7.3 (TM-237); whether
-`instant_of`'s name should say it takes a raw reading is the author's, Q-7.
+`instant_of`'s name should say it takes a raw reading is the author's, Q-7
+*(answered A on 2026-10-02: it keeps its name, TM-248)*.
 The table row read *"IN PROGRESS: …"* with each subcycle's file linked, and
 `done/0.2/README.md` keeps that list. `done/0.2/0.2.4.md`'s record holds what
 the cycle found and taught.

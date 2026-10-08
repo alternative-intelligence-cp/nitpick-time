@@ -90,7 +90,8 @@ it claims to have read (TM-216), and it is what M-3 does not refuse: the
 guarantee is that a timeout cannot be written against the realtime clock BY
 ACCIDENT. Whether `instant_of`'s name should say it takes a raw reading is
 `../OPEN_QUESTIONS.md` Q-7, the author's, before 1.0; this note is true under
-either answer.)*
+either answer.)* *(Answered A on 2026-10-02: `instant_of` keeps its name,
+TM-248.)*
 
 **Rule M-4 — the only thing you can do with two `Instant`s is subtract them**,
 and the result is a `Duration` — or compare them; and both refuse a pair from

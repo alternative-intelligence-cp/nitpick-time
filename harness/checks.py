@@ -178,13 +178,15 @@ class Result:
 # ---------------------------------------------------------------------------
 
 # B-17's diagram as a partial order. `core` is the base; each layer may import
-# strictly below itself. `host` is NOT in the chain: it may reach zone, cal and
-# core, and NOTHING may reach IT except `src/lib.npk` -- which is `SAFETY.md`
+# strictly below itself. `host` is NOT in the chain: it may reach span, zone,
+# cal and core -- `span` since cycle 0.3.0 (TM-247), because `Instant`'s and
+# `Timestamp`'s fields are sealed and only `span`'s constructors build them --
+# and NOTHING may reach IT except `src/lib.npk` -- which is `SAFETY.md`
 # §3's purity boundary expressed as a layering rule, and the reason this check
 # and `check_host_isolation` are two checks rather than one. They fail on
 # different things: an `import` of host, and a mention of a `host_` name.
 LAYER = {"core": 0, "cal": 1, "span": 2, "zone": 3, "fmt": 4}
-HOST_MAY_IMPORT = {"zone", "cal", "core"}
+HOST_MAY_IMPORT = {"span", "zone", "cal", "core"}
 
 
 def check_layering(tree, **_):
@@ -275,10 +277,11 @@ def check_layering(tree, **_):
                 "every sweep that counts files, which is why this is an "
                 "assertion and not a denominator." % layer)
 
-    # The umbrella's reach, reported rather than asserted. It is 6 since cycle
-    # 0.2.0 -- `src/lib.npk`, the three `src/core/` modules, `src/cal/cal.npk`
-    # and `src/span/span.npk`, 5 from cycle 0.1.0 until `span` had a body --
-    # and the three remaining placeholders, with `core.npk`'s layer note, are
+    # The umbrella's reach, reported rather than asserted. It is 7 since cycle
+    # 0.3.0 -- `src/lib.npk`, the three `src/core/` modules, `src/cal/cal.npk`,
+    # `src/span/span.npk` and `src/host/host.npk`; 6 from cycle 0.2.0 until
+    # `host` had a body, 5 from cycle 0.1.0 until `span` had one -- and the two
+    # remaining placeholders, with `core.npk`'s layer note, are
     # reached by no root at all,
     # which is exactly why the `parse` stage roots every file in the tree rather
     # than trusting the module graph. (It said "4 today" and "five remaining"
@@ -1344,7 +1347,8 @@ def check_host_isolation(tree, **_):
     the impure module unreachable rather than merely discouraged.
 
     `src/lib.npk` is exempt because it is the umbrella: it re-exports `host`'s
-    five functions and is the ONE file that may (B-17). Its exemption is named
+    public names -- four of H-1's five functions since cycle 0.3.0, and
+    `HostClock` -- and is the ONE file that may (B-17). Its exemption is named
     here rather than pattern-matched, per V-1c.
     """
     files = [f for f in src_files(tree)

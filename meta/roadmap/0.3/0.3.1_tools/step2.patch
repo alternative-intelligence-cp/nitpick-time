@@ -157,7 +157,7 @@ index 0d14719faff8caf46b4f82e7c15751a5b8c214e4..466606ae71b6b456f28a62e81daa2a1c
  so a `npkc` invocation on anything that compiles costs a fixed amount and the
  run makes about 200 of them. One that does *not* compile costs ~0.03 s.
 diff --git a/harness/checks.py b/harness/checks.py
-index fc7c423161c8f1ca495195ac1a483762e9cf7e61..a57262c31be6029cc04050c87870ad8a9635891d 100644
+index fc7c423161c8f1ca495195ac1a483762e9cf7e61..1a938ff54aeac6880d76db1a2df6fd4d0cf1d93a 100644
 --- a/harness/checks.py
 +++ b/harness/checks.py
 @@ -1279,19 +1279,56 @@ def check_raw_index(tree, **_):
@@ -223,23 +223,29 @@ index fc7c423161c8f1ca495195ac1a483762e9cf7e61..a57262c31be6029cc04050c87870ad8a
  
  
  def check_purity(tree, **_):
-@@ -1318,6 +1355,15 @@ def check_purity(tree, **_):
+@@ -1318,6 +1355,21 @@ def check_purity(tree, **_):
      reached through a name it does not know -- an alias, or a helper in a file
      it is not scanning. The defence against that is `check_host_isolation` plus
      B-17's layering, which together make `host` a leaf nothing may import.
-+    Since cycle 0.3.1 the list holds every name the pinned compiler and its
-+    prelude offer that reaches past the program's own memory (TM-252), so what
-+    is left is a name a later pin adds -- the adoption re-reads the builtin
-+    table and the prelude against this list -- and an alias: a banned builtin
-+    bound to a function-typed local, or passed as an argument, is admitted by
-+    the frontend and refused by the emitter at the pin, `NITPICK-EMIT-002`, the
-+    compiler's own "a defect in the compiler"; a local NAMED after one is
++    Since cycle 0.3.1 the list holds every bare-name builtin and public
++    module-level prelude function at the pin that reaches past the program's
++    own memory (TM-252). A prelude METHOD that does is not on the list --
++    `ByteReader.seek`, through `sys(8i64, ...)` -- and such a method is
++    callable only from an `async func` (`NITPICK-TYPE-043` anywhere else),
++    whose body `check_call_edges` refuses by its declared-function rule: the
++    emission names that body `npk.resume.<module>.<name>`, and defines no
++    `npk.<module>.<name>`. What else is left is a name a later pin adds -- the
++    adoption re-reads the builtin table and the prelude against this list --
++    and an alias: a banned builtin bound to a function-typed local, or passed
++    as an argument, is admitted by the frontend and refused by the emitter at
++    the pin, `NITPICK-EMIT-002`, the compiler's own
++    "a defect in the compiler"; a function-typed local named after one is
 +    `NITPICK-RESOLVE-001` (its D-296). Both are `check_call_edges`' to read: it
 +    follows every call the emission holds, and refuses one through a value.
      """
      files = [f for f in src_files(tree) if not f.startswith(HOST_DIR)]
      total = len(src_files(tree))
-@@ -1348,10 +1394,30 @@ def check_purity(tree, **_):
+@@ -1348,10 +1400,30 @@ def check_purity(tree, **_):
  
  _HOST_SYMBOL = re.compile(r"\bhost_[A-Za-z0-9_]*")
  HOST_ISOLATION_EXEMPT = ("src/lib.npk",)
@@ -271,7 +277,7 @@ index fc7c423161c8f1ca495195ac1a483762e9cf7e61..a57262c31be6029cc04050c87870ad8a
  
      The second half of the purity boundary. `check_purity` catches a module
      that reaches the kernel ITSELF; this catches one that reaches it through
-@@ -1366,9 +1432,21 @@ def check_host_isolation(tree, **_):
+@@ -1366,9 +1438,21 @@ def check_host_isolation(tree, **_):
      files = [f for f in src_files(tree)
               if not f.startswith(HOST_DIR) and f not in HOST_ISOLATION_EXEMPT]
      total = len(src_files(tree))
@@ -293,7 +299,7 @@ index fc7c423161c8f1ca495195ac1a483762e9cf7e61..a57262c31be6029cc04050c87870ad8a
              for m in _HOST_SYMBOL.finditer(line):
                  problems.append(
                      "%s:%d names `%s`. Nothing outside `src/host/` and "
-@@ -1377,9 +1455,11 @@ def check_host_isolation(tree, **_):
+@@ -1377,9 +1461,11 @@ def check_host_isolation(tree, **_):
                      "transitive import. A function that needs `now` takes a "
                      "`Timestamp` as a parameter (S-9)."
                      % (rel, lineno, m.group(0)))

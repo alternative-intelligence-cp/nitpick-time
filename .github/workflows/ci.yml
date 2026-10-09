@@ -49,9 +49,10 @@
 # 0.2.1 `Timestamp` and its constructor, since 0.2.2 the two conversions
 # between a `Timestamp` and its civil reading, and since 0.2.3 the `Duration`
 # interop -- and `src/host/` since 0.3.0, the clocks --
-# re-exported together as 81 public names [[sweep: lib_reexports=81]],
-# so this IS evidence about behaviour, of the 134 units the runner reports at
-# compiler `5fbaf4a` since cycle 0.3.0 (133 at cycles 0.2.4b and 0.2.4, 131 at cycles 0.2.3 and 0.2.4a, 126 at cycles 0.2.2 and 0.2.3a, 122 at cycle 0.2.1, 114 at cycle 0.2.0, 111 at 0.2.0b, 113 at 0.2.0a and at
+# re-exported together as 84 public names [[sweep: lib_reexports=84]] (81
+# until cycle 0.3.2 added the system zone's three),
+# so this IS evidence about behaviour, of the 143 units the runner reports at
+# compiler `5fbaf4a` since cycle 0.3.2 (134 at cycles 0.3.0 and 0.3.1, 133 at cycles 0.2.4b and 0.2.4, 131 at cycles 0.2.3 and 0.2.4a, 126 at cycles 0.2.2 and 0.2.3a, 122 at cycle 0.2.1, 114 at cycle 0.2.0, 111 at 0.2.0b, 113 at 0.2.0a and at
 # `c970483` at cycle 0.1.5's second half; 62 at cycle 0.0.6, 67 at 0.1.0,
 # 70 at 0.1.0b, 75 at 0.1.0c, 78 at 0.1.1, 81 at 0.1.2, 86 at 0.1.3, 90 at
 # 0.1.3b, 91 at 0.1.4 and 0.1.4b, all at `c3bdae2` from 0.1.0b on, 101 at
@@ -196,7 +197,13 @@
 # `meta/OPEN_QUESTIONS.md` O-X12 answered). And a unit can make the machine
 # `src/host/` reads: `probe22` enters a user and a mount namespace of its own
 # and mounts an empty `tmpfs` over `/etc`, once the step below has lifted
-# Ubuntu 24.04's restriction on the namespace (TM-255, `TESTING.md` V-1m).
+# Ubuntu 24.04's restriction on the namespace (TM-255, `TESTING.md` V-1m). AND
+# SINCE CYCLE 0.3.2 THE SYSTEM ZONE: `host_system_zone` answers the zone's name
+# and the mechanism that gave it -- `$TZ`, `/etc/localtime`'s link or
+# `/etc/timezone` -- or that none did, never UTC, asserted over thirty
+# machines a unit makes in a namespace of its own, the lowest free descriptor
+# held across every call, over five `TZ` values, and over two environments a
+# unit makes by `execve` of itself, forty runs a leg each (TM-256, TM-257).
 #
 # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
 # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,

@@ -507,6 +507,24 @@ sources and its IR **309 729 B**; and library + repro + suite at **99**.
 `134 = 35 + 99`. A full invocation about 210 s; the two readings of the
 emission cost milliseconds.
 
+**At cycle 0.3.2, the same pin, 143 units**: nine tests added —
+`tests/unit/generic_instances.npk`, every generic function of `src/`
+instantiated (TM-254); `tests/probe/probe22_private_etc.npk`, a program's own
+`/etc` (TM-255); and the system zone's seven, `system_zone_etc`, five of `$TZ`
+and `system_zone_tz_raw`, forty runs a leg (TM-257) — and `src/host/` given its fifth function
+(TM-256). The self-check plants 12 of V-14's 13 cases, **116** tree-check
+violations with 116 clean controls — `check_call_edges`' three and
+`check_wide_types`' one over the instances' emission — 4 arm specimens and 4
+verdict specimens; step 7 emits the instances beside the umbrella and reads
+both, **108** functions of `src/`'s modules, 90 outside `src/host/`, reaching
+17 runtime symbols, every one in the allowlist, `src/host/` reaching
+`npk_environ`, `npk_mono_now`, `npk_ofd_close`, `npk_open`, `npk_read` and
+`npk_sys6`; parse over 159 files, `114 + 43 + 2`; the defect corpus unchanged
+at 36; the library reaching 7 sources and its IR **366 527 B**; and library +
+repro + suite at **108**. `143 = 35 + 108`. A full invocation about 230 s; the
+namespace unit's eighty runs cost about 11 s of it, each run a namespace,
+thirty machines, the 4 095-byte link and file built byte by byte.
+
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the
 run makes about 200 of them. One that does *not* compile costs ~0.03 s.

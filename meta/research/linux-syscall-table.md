@@ -30,6 +30,67 @@ to make an `/etc` of their own (`TESTING.md` V-1m), and the two flags
 and https://raw.githubusercontent.com/torvalds/linux/master/include/uapi/linux/sched.h,
 each retrieved 2026-10-08, on `master`. 89 is the day before's, unchanged.
 
+**And for cycle 0.3.2's third step, as revised the same day**: the numbers
+the system zone's units use beyond those — `mknod` and `alarm`, by which the
+namespace unit makes a FIFO and bounds the open it must not block on;
+`execve`, by which the raw unit makes its two environments; and the constants
+they pass, `MS_RDONLY` and `MS_REMOUNT` for the read-only remount and
+`S_IFIFO` for the FIFO's mode — read by a research request from the same table
+and from the kernel's `include/uapi/linux/mount.h` and
+`include/uapi/linux/stat.h`. `execve`'s row is in the `64` ABI, not
+`common`; the x32 ABI's is a row of its own, 520:
+
+```text
+37	common	alarm			sys_alarm
+59	64	execve			sys_execve
+133	common	mknod			sys_mknod
+520	x32	execve			compat_sys_execve
+```
+
+```text
+#define MS_RDONLY	 1	/* Mount read-only */
+#define MS_REMOUNT	32	/* Alter flags of a mounted FS */
+```
+
+```text
+#define S_IFIFO  0010000
+```
+
+— https://raw.githubusercontent.com/torvalds/linux/master/arch/x86/entry/syscalls/syscall_64.tbl,
+https://raw.githubusercontent.com/torvalds/linux/master/include/uapi/linux/mount.h
+and https://raw.githubusercontent.com/torvalds/linux/master/include/uapi/linux/stat.h,
+each retrieved 2026-10-08, on `master`. `S_IFIFO` is octal, 4096 in decimal
+as the unit writes it; `stat.h` defines it under `#if defined(__KERNEL__) ||
+!defined(__GLIBC__) || (__GLIBC__ < 2)`, which decides whether a C program
+built against the GNU C library sees the kernel's definition, and not the
+value.
+
+**And the four constants this library and this plan's programs declare that
+had no row** — `src/host/host.npk`'s three clock ids, declared since cycle
+0.3.0, sourced there to `HOST.md` H-4 and measured apart by `probe03`; and
+`probe22`'s `PATH_MAX`, whose 4 096 its exits 34 and 35 measure — read by a
+second research request from the kernel's `include/uapi/linux/time.h` and
+`include/uapi/linux/limits.h`. Each define stands outside any conditional but
+its file's include guard, and `PATH_MAX` counts the NUL, so the longest path
+a buffer of it holds is 4 095 bytes:
+
+```text
+#define CLOCK_REALTIME			0
+#define CLOCK_MONOTONIC			1
+#define CLOCK_BOOTTIME			7
+```
+
+```text
+#define PATH_MAX        4096	/* # chars in a path name including nul */
+```
+
+— https://raw.githubusercontent.com/torvalds/linux/master/include/uapi/linux/time.h
+and https://raw.githubusercontent.com/torvalds/linux/master/include/uapi/linux/limits.h,
+each retrieved 2026-10-08, on `master`, whose last change to `time.h` is
+`9094c72c3d81bf2416b7c79d12c8494ab8fbac20` (2025-06-19) and to `limits.h`
+`54d50897d544c874562253e2a8f70dfcad22afe8` (2019-03-08), by the repository's
+API the same day.
+
 ## Answer
 
 `clock_gettime` is **228**, `clock_getres` is **229** and `readlink` is **89**,

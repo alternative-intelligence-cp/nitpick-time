@@ -1,0 +1,54 @@
+// expect-exit: 0
+// stress: 40
+// env: TZ=GMT0BST,M3.5.0/1,M10.5.0
+//
+// The system zone's step 1, `$TZ` (cycle 0.3.2; `HOST.md` H-13.1, TM-256 and
+// TM-257).
+//
+// `TZ` set to a POSIX RULE STRING, `GMT0BST,M3.5.0/1,M10.5.0` -- `HOST.md`
+// H-13.1's own example. Step 1 answers, and reports the value as the text it
+// is: not parsed (`ZONE_MODEL.md` Z-12), not refused here, and not passed by
+// for `/etc/localtime`. Its refusal is the lookup's, cycle 0.6's
+// `zone_by_name`, which holds no zone of that name (TM-256). And with no `:`,
+// nothing is stripped: a step 1 that dropped the value's first byte reads
+// `MT0BST,...`.
+//
+// ON ANY MACHINE: `TZ` is step 1, so it answers before `/etc/localtime` and
+// `/etc/timezone` are read -- and on every machine this suite runs on, CI's
+// included, `/etc/localtime` is a link that WOULD answer, so a discovery that
+// tried the files first answers `EtcLocaltime` here, and is red.
+//
+// EXIT CODES, clear of every arm code (TM-152): 10 the answer's source not
+// `TzEnvironment`; 11 not found; 12 its name not `GMT0BST,M3.5.0/1,M10.5.0`.
+//
+// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
+// `host`: its eleven (`SAFETY.md` S-4).
+mod:system_zone_tz;
+
+use "../../src/host/host.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    SystemZone:z = raw host_system_zone();
+    if (z.source != ZoneSource.TzEnvironment) { exit 10i32; }
+    if (!(z.found))                           { exit 11i32; }
+    if (!(string_equals(z.name, "GMT0BST,M3.5.0/1,M10.5.0"))) { exit 12i32; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

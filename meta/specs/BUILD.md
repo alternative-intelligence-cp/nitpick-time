@@ -324,9 +324,10 @@ list kept the old code until cycle 0.2.0), `BORROW-001`, `BORROW-012`,
 `RESOLVE-001`, `RESOLVE-002` (since cycle 0.2.0, `probe20b`),
 `REACH-002` and `REACH-003`, and every family
 after the first three runs only on something that parsed. Re-measured at pin
-`5fbaf4a`, cycle 0.3.2's second step: **152 files = 107 parse cleanly + 43
+`5fbaf4a`, cycle 0.3.2: **159 files = 114 parse cleanly + 43
 parse and are refused later + 2 do not parse**
-<!-- [[sweep: npk_total=152]] --> (`151 = 106 + 43 + 2` from cycle 0.3.2's
+<!-- [[sweep: npk_total=159]] --> (`152 = 107 + 43 + 2` from its second step
+until its third added the system zone's seven units, TM-257; `151 = 106 + 43 + 2` from cycle 0.3.2's
 first step, which added `tests/unit/generic_instances.npk`, TM-254, until its
 second added `probe22`, TM-255; `150 = 105 + 43 + 2` from cycle 0.3.0 until
 then; `127 = 90 + 35 + 2` from cycle 0.1.3c until
@@ -599,7 +600,10 @@ fields are sealed (TM-215, TM-219), and only `span`'s constructors build them.
 `span` is pure, so the arrow costs the purity boundary nothing: it still points
 one way, into `host`'s callees. Until then `host` reached `zone`, `cal` and
 `core` alone, and `check_layering` refused the arrow — five findings over the
-module, one per `use` of `span`.)*
+module, one per `use` of `span`.)* *(Cycle 0.3.2, TM-256: `host` → `zone` stays
+drawn and is not taken. `host_system_zone` answers the zone's NAME, and the
+lookup is the caller's, `zone_by_name` at cycle 0.6, so a program that reads a
+clock owes no zone arm; "for the name lookup" names what `host` does not do.)*
 
 A `use` cycle is legal in the language (D-086) and is still a decomposition
 mistake; `ntime`'s layers are acyclic and the harness says so.
@@ -630,6 +634,7 @@ these reads like an ordinary local name and is not:
 | `prove`, `assert_static`, `requires`, `ensures`, `acquires`, `gives`, `invariant` | the rest of the same production |
 | `decreases`, `unbounded` | **the loop clause's two words** (D-304), in the same production since compiler `c3bdae2` — and "unbounded" is what an open range wants to be called (TM-151) |
 | `sealed`, `hidden` | **field qualifiers** (D-313, D-314) since compiler `c3bdae2` — and "hidden" is what a flag wants to be called |
+| `uid`, `gid`, `pid`, `tid`, `fd`, `thread`, `cfg`, `arena` | **refused as local names**, `NITPICK-PARSE-002` at the declaration — measured at pin `5fbaf4a` (cycle 0.3.2), each by declaring `int64:<name> = 1i64;`, with `ppid` compiling beside them. The first two are what a user namespace's maps want: `probe22` and the system zone's unit write `me` and `mg`; `fd` is the prelude's descriptor type |
 
 **Rule B-18 (TM-130) — the ten `VerificationKeyword` spellings are reserved as
 ordinary names, and the diagnostic will not tell you.** Measured one at a time

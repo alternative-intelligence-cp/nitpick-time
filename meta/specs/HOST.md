@@ -16,7 +16,7 @@ pub func:host_now_utc        = Timestamp();          // CLOCK_REALTIME
 pub func:host_now_instant    = Instant() never fails;// mono_now()
 pub func:host_now_boot       = Instant();            // CLOCK_BOOTTIME
 pub func:host_clock_res      = Duration(HostClock:which);
-pub func:host_system_zone    = SystemZone();
+pub func:host_system_zone    = SystemZone() never fails;
 ```
 
 *(Cycle 0.3.0, TM-248: four of the five are in `src/host/host.npk` —
@@ -26,7 +26,12 @@ enum:HostClock = { Realtime; Monotonic; Boottime; }`, `host`'s own, because
 `span`'s `InstantClock` has no realtime clock and must not gain one. "Nothing
 else" is no sixth PUBLIC function: the module also holds five private `fixed`
 numbers — the two syscalls and H-4's three clock ids — and one private helper,
-`timespec_ns`.)*
+`timespec_ns`.)* *(Cycle 0.3.2, TM-256: the fifth is written, and `never
+fails` — the block read `SystemZone();` — beside `SystemZone` and
+`ZoneSource`, what it answers (H-12): a step that cannot read its source has
+not answered, so nothing is left to fail but a trap. And beside the five, one
+more private number, `readlink`'s 89, and four more helpers, the system zone's
+three steps and its not-found answer.)*
 
 **Rule H-2 (TM-018) — nothing else in the library calls any of them.** A function that
 needs "now" takes it as a parameter (`SAFETY.md` S-9). `check_purity` enforces
@@ -54,6 +59,11 @@ has; `Boottime`'s resolution asked of `CLOCK_REALTIME` — every clock's
 resolution here is 1 ns; the forwarded errno's branch deleted; and
 `timespec_ns`'s range check deleted — each of the last two needs a kernel that
 breaks its contract. A green run is not evidence about these four.)*
+
+*(Cycle 0.3.2, TM-257: and no memoised zone, observed —
+`tests/unit/system_zone_etc.npk` asks `host_system_zone()` thirty times in
+one process, `/etc` rewritten between each, and every answer is that
+`/etc`'s.)*
 
 ---
 
@@ -174,12 +184,24 @@ it found:
 
 ```nitpick
 pub struct:SystemZone = {
-    ZoneId:zone;
+    string:name;
     ZoneSource:source;
     bool:found;
 };
-pub enum:ZoneSource = { TzEnvironment; EtcLocaltime; TzDirLink; NotFound; };
+pub enum:ZoneSource = { TzEnvironment; EtcLocaltime; EtcTimezone; NotFound; };
 ```
+
+*(Amended at cycle 0.3.2, TM-256. The block read `ZoneId:zone;` and named
+the third variant `TzDirLink`. `ZoneId`, and the compiled table it indexes,
+are cycles 0.5's and 0.6's — this cycle is gated on 0.2 alone — so what the
+discovery answers is the zone's NAME as the mechanism gave it, and a program
+turns it into a zone with the lookup, `zone_by_name` (cycle 0.6), whose
+`ETimeZone`/`Unknown` refuses a name the table lacks. `host` looks nothing up,
+imports nothing from `zone`, and raises nothing: a program that reads a clock
+owes no zone arm (TM-017's decomposition). And `TzDirLink` named no mechanism
+H-13 has — step 3 reads a one-line text file, through no link and no `TZDIR` —
+so the variant is `EtcTimezone`, beside `EtcLocaltime`. `found` is false only
+with `NotFound`, and `name` is then empty.)*
 
 **Rule H-13 — the discovery order**, and it stops at the first that answers:
 
@@ -199,10 +221,39 @@ pub enum:ZoneSource = { TzEnvironment; EtcLocaltime; TzDirLink; NotFound; };
    decide what to do, and a library that quietly substitutes UTC has made that
    decision badly on its behalf.
 
+*(Cycle 0.3.2, TM-256 — each step made exact, and the lookup placed. **Step 1**
+reads the first entry of `environ()` that begins `TZ=`, in place; one leading
+`:` is stripped — POSIX leaves what follows it to the implementation, and the
+GNU C library strips it too (`../research/tz-environment.md`) — and the rest is
+the name, verbatim, the empty value included: a set `TZ` answers, because the
+GNU C library reads an empty one as UTC, and moving on to `/etc/localtime`
+would answer a question the environment did not ask. A rule string is reported
+as the text it is, never parsed; "**refused** — `ETimeZone`/`Unknown`" is the
+lookup's, at cycle 0.6, as a name no table holds, and not this step's — the
+author's decision, his answer to the workbench's question 26, 2026-10-08.
+**Step 2**'s name is the tail after the LAST `zoneinfo/` that begins the
+target or follows a `/`; none, or an empty tail, and the step does not
+answer. **Step 3**'s name is the bytes before the file's first newline, every
+other byte as the file holds it; an empty first line, an empty file, or a
+read that fills its buffer of `NTIME_PATH_MAX` bytes, and the step does not
+answer. And **in every step an error is that step's not answering**: nothing
+is forwarded, so `host_system_zone` is `never fails` (H-1).)*
+
+*(Cycle 0.3.2, TM-257: step 1 asserted — five units set `TZ`, a rule string,
+a name behind a `:`, a `:` alone, a path and the empty value; one makes by
+`execve` an environment whose first entry is `TZ`, a second after it, and
+one whose entries of no, one and two bytes come before its `TZ=`; and the
+namespace unit's environment holds seven names that begin like `TZ=` and are
+not it.)*
+
 **Rule H-14 — the file that is never read is `/etc/localtime` itself.** Step 2
 reads the *link target*, not the TZif content. If `/etc/localtime` is a regular
 file rather than a symlink — which happens — step 2 does not answer and step 3
 is tried. Reading its bytes is the post-1.0 opt-in of Z-3 and nothing here.
+
+*(Cycle 0.3.2, TM-257: asserted — a regular file at `/etc/localtime` holding
+a zone's name is passed by for step 3, and a dangling link answers with its
+target's tail, each in `tests/unit/system_zone_etc.npk`.)*
 
 **Rule H-15 — `readlink` is syscall 89** (`readlinkat` is 267); the buffer is
 `NTIME_PATH_MAX` (4096) bytes, the result is not NUL-terminated by the kernel
@@ -210,8 +261,37 @@ and the returned length is the authority, and a truncated result is treated as
 not-found rather than as a shorter name. Every one of those four facts is a
 place a careless implementation is wrong.
 
+*(Cycle 0.3.2, TM-256 and TM-257 — where each is kept. The length is the
+authority: the view of the target is built from `n`, the syscall's answer, and
+nothing scans for a NUL — `tests/unit/system_zone_etc.npk` reads a link of
+4 095 bytes whole. The buffer is `NTIME_PATH_MAX`, `src/core/limits.npk`'s. A
+truncated result does not answer: `n >= NTIME_PATH_MAX` passes it by. **Two of
+the four are held by reading, not by a test**: the kernel refuses a link
+target of 4 096 bytes and holds one of 4 095 (`tests/probe/probe22_private_etc.npk`),
+so no link it made fills the buffer — the refusal deleted or weakened is
+unseen, and so are step 2's buffer and `readlink`'s cap a byte off, which
+differ only on such a link; and a scan for the first NUL in place of `n` stops
+where `n` does, because the buffer is born zeroed — unseen too. A green run is
+not evidence about these.)*
+
 **Rule H-16 — the descriptor is closed on every path.** `SAFETY.md` S-20: the
 module holds nothing across a call.
+
+*(Cycle 0.3.2, TM-256: by construction. The descriptor is `/etc/timezone`'s,
+step 3's — `readlink` opens none — and it is an `OwnedFd` the moment `open`
+returns it, so its drop closes it on every path out; the close's verdict is not
+observed, which for a descriptor opened read-only carries nothing the answer
+could use. Opened `O_NONBLOCK`, so a FIFO there never blocks the open
+(`SAFETY.md` S-21), and `O_CLOEXEC`, so it never outlives the call into an
+`exec`. TM-257: the lowest free descriptor is the same after every call as
+before it, through each path step 3 takes. **`O_NONBLOCK` is seen**: a FIFO
+nothing writes, at `/etc/timezone`, under the unit's own alarm of five seconds
+— without the flag the open blocks, and `SIGALRM` ends the process, red; and
+opened read-only, the step answers from a read-only `/etc`. **`O_CLOEXEC` is
+held by reading**: the descriptor lives only inside the call, so only an
+`exec` during it — another thread's — could see it. And so is step 3's buffer
+a byte short of its read: the byte a read of 4 096 bytes writes past it lands
+in the allocator's rounding, short of its guard, measured.)*
 
 ---
 

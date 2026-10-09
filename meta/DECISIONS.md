@@ -8359,3 +8359,174 @@ test can call, or a switch in the shipped module, H-10's objection to a
 second code path; **`sudo` in the harness** — it runs as the user, on the
 workbench and in CI alike, and a step of CI's own lifts what the runner
 restricts.
+
+### TM-256 — the system zone: `host_system_zone = SystemZone() never fails` answers the zone's NAME and the mechanism that gave it — `SystemZone = { string:name; ZoneSource:source; bool:found; }`, `ZoneSource = { TzEnvironment; EtcLocaltime; EtcTimezone; NotFound; }` — by H-13's four steps, each made exact, and the lookup is the caller's
+
+**2026-10-08, cycle 0.3.2 (the plan's PD-101) — the author's decision: his answer
+to the workbench's question 26, 2026-10-08 — "i read the recommendations. they
+look fine." Amends `HOST.md` H-1 and H-12, and H-13.1: its refusal of a
+POSIX rule string moves to cycle 0.6's lookup, `zone_by_name`, and here the
+string is reported verbatim. Dates H-13 … H-16, `SAFETY.md` S-8, S-18, S-20
+and §2's "`ETimeZone` (0.3)", and `BUILD.md` B-17's `zone` arrow; restates the
+cycle README's 0.3.2 items; and notes cycle 0.6's `zone_by_name` item.**
+
+**What was found** (`0.3.2.md` §1). H-12's `SystemZone` holds a `ZoneId`, and
+H-13's first step looks a name up "in the compiled table" — and `ZoneId` is
+declared nowhere, the table is cycle 0.5's and its lookup, `zone_by_name`,
+cycle 0.6's, while cycle 0.3 is gated on 0.2 alone (`ROADMAP.md`). H-12's
+third variant, `TzDirLink`, names no mechanism H-13 has: step 3 reads a
+one-line text file, through no link and no `TZDIR`. H-13 says nothing of an
+empty `$TZ`, of which `zoneinfo/` a link with two names, or of what step 3
+takes from its file. POSIX leaves what follows a leading `:` in `TZ` to the
+implementation, and the GNU C library strips the `:` and reads an empty `TZ`
+as UTC (`meta/research/tz-environment.md`). Measured at the pin: the module
+compiles as a root and in the umbrella, and a root that imports `host` alone
+owes eleven identities, as before, the umbrella thirteen — the steps' loops are
+`for` loops, which state no measure, so `DecreasesViolated` stays out of
+`host`'s bill, where one `while` puts it, twelve; `check_host_isolation`
+reads `SystemZone` and `ZoneSource` among the names `src/host/` makes public;
+and `check_call_edges` reads `src/host/` reaching `npk_environ`,
+`npk_mono_now`, `npk_ofd_close`, `npk_open`, `npk_read` and `npk_sys6`.
+
+**The decision.** *`pub enum:ZoneSource = { TzEnvironment; EtcLocaltime;
+EtcTimezone; NotFound; }`, deriving `Eq`, `Clone`, `Debug` and `Copy` — H-12's,
+its third variant `/etc/timezone`'s. `pub struct:SystemZone = { string:name;
+ZoneSource:source; bool:found; }` — H-12's, its `zone` the NAME the mechanism
+gave: a program turns it into a zone with `zone_by_name` (cycle 0.6), whose
+`ETimeZone`/`Unknown` refuses a name the table lacks, a POSIX rule string and
+the empty `$TZ` among them, so `host` imports nothing from `zone` and raises
+nothing. `pub func:host_system_zone = SystemZone() never fails` — the four
+steps in order, stopping at the first that answers, each a private function:
+(1) `$TZ` — the first entry of `environ()` that begins `TZ=`, read in place,
+one leading `:` stripped, the rest the name verbatim, the empty value
+included: a set `TZ` answers, and a POSIX rule string is reported as its text
+— H-13.1's refusal of it is the lookup's, at cycle 0.6, and not this step's;
+(2) `/etc/localtime` — `readlink` (89) into
+`NTIME_PATH_MAX` bytes, the target and never the file, its length the
+syscall's answer and no NUL looked for, a result that fills the buffer not an
+answer, the name the tail after the last `zoneinfo/` that begins the target or
+follows a `/`, and no such `zoneinfo/` or an empty tail not an answer; (3)
+`/etc/timezone` — opened `O_RDONLY | O_NONBLOCK | O_CLOEXEC`, an `OwnedFd` at
+once, whose drop closes it on every path out, one read of up to
+`NTIME_PATH_MAX` bytes, a read that fills the buffer not an answer, the name
+the bytes before the first newline, every other byte as the file holds it,
+and an empty first line not an answer; (4) `{ "", NotFound, false }` — not
+UTC. In every step, an error is that step's not answering, so nothing is
+forwarded and nothing is left to fail but a trap. `SYS_READLINK` is a private
+`fixed int64` beside the clocks' numbers, its source the kernel's table. The
+umbrella re-exports the three names, 84 in all. H-1 and H-12 amended; H-13 …
+H-16, S-8, S-18, S-20, §2's sentence and B-17 dated; the cycle README's
+items restated at planning and ticked; cycle 0.6's `zone_by_name` item noted.*
+
+*Alternatives declined:* **`ZoneId` declared now, holding a name** — a type
+whose promise, a zone the table holds, no value of it could keep until cycle
+0.6, and whose shape that cycle would change; **the system zone moved after
+cycle 0.6** — `host`'s syscall shapes are measured while the library is small,
+the cycle README's reason for the cycle's place, and the double of 0.3.3
+reproduces all five of H-1's signatures; **`ETimeZone` declared in `zone` now,
+and `host` refusing a rule string by its shape** — every program that reads a
+clock, importing `host`, would owe a zone arm, which TM-017's decomposition
+exists to spare it, and a shape test would be a second judge of a name beside
+the table; **an errno forwarded, `EACCES` or `EIO`** — which errno means
+"absent" is a list to keep, and a caller can do nothing with `EIO` it cannot do
+with `NotFound`; **an empty `TZ` read as unset** — the GNU C library reads it
+as UTC, so moving on to `/etc/localtime` would answer, in silence, a question
+the environment did not ask; reported, the lookup refuses it and the program
+decides (TM-019); **the first `zoneinfo/`, or any**, not one at a component's
+start — a target that holds two names the second, and `myzoneinfo/` is no
+directory of zones; **`posix/` stripped from a tail** — a rewrite of what the
+machine says, where the lookup is the one judge of a name; **the whole of
+`/etc/timezone`, or its first line trimmed of white space** — a byte the file
+holds is reported, not interpreted; **`read_file` for `/etc/timezone`** —
+unbounded: a link to `/dev/zero` is read until memory runs out; **a `close`
+on each path, the verdict observed** — a careless path is a leaked descriptor,
+and a read-only descriptor's close carries nothing the answer could use;
+**`O_NOCTTY`** — the prelude's own stream open passes the three flags above,
+and a terminal at `/etc/timezone` is a machine past what this library guards;
+**H-1's fallible signature kept** — nothing in it can fail, and `never fails`
+says so where it is called; **`while` loops for the steps' scans** — each
+`while … decreases` arms `DecreasesViolated` in every program that imports
+`host`, which owes twelve arms where a `for` over a range leaves it eleven
+(`0.3.2.md` §1.7).
+
+### TM-257 — the system zone's tests: one unit in a namespace of its own, thirty machines in one run and the lowest free descriptor held across every call; five units of `$TZ`, and one that makes by `execve` the environments the harness cannot; every exit but the belts seen red on a mutant of `host`; every single-site mutant of the system zone's section run, and each that exits 0 named with why
+
+**2026-10-08, cycle 0.3.2 (the plan's PD-102). Dates `HOST.md` H-3, H-13,
+H-14, H-15 and H-16 and `SAFETY.md` S-21; extends `TESTING.md` V-1m to an
+environment.**
+
+**What was found** (`0.3.2.md` §1). In a namespace of its own (TM-255),
+`tests/unit/system_zone_etc.npk` asks `host_system_zone` thirty times, `/etc`
+written between each, with no `TZ` and seven variables a careless step 1
+would read as one: each case's source, name and `found`, and the lowest free
+descriptor — what `open` hands out next — the same after the call as before
+it. Five units set `TZ` through the harness (V-1e): a POSIX rule string, a
+name behind a `:`, a `:` alone, a path, and the empty value; and
+`tests/unit/system_zone_tz_raw.npk` makes, by `execve` of itself, the two
+environments no harness line can — `TZ` the first entry and a second `TZ=`
+after it, and entries of no, one and two bytes before the first `TZ=`. All
+exit 0 on both legs, forty runs a leg. **Every single-site mutant of the
+section was run**: 293, fourteen operators at every site each matches (the
+plan's `mutate.py`). The compiler refuses 28; 237 are red on both legs; and
+28 exit 0, none of which a unit here can tell from the section. Twenty are
+equivalent — the same answer for every input, as `n == NTIME_PATH_MAX` beside
+`n >= NTIME_PATH_MAX`, where no syscall returns more than it was asked for.
+Six differ only on a link target of 4 096 bytes or more, which the kernel
+refuses to make (`probe22`): the truncation refusal deleted or weakened,
+three, and step 2's buffer or `readlink`'s cap a byte off, three. And two no
+exit shows: step 3's `O_CLOEXEC` dropped, which only an `exec` during the
+call could see, and step 3's buffer a byte short of its read, whose one-byte
+overrun on a read of 4 096 bytes lands in the allocator's rounding, short of
+its guard — measured. Of thirty-five named shapes of a careless
+implementation, thirty-two are red and three exit 0: the truncation refusal
+deleted, the target's length read by a scan for a NUL — the buffer is born
+zeroed, so the scan stops where the syscall's answer does — and `O_CLOEXEC`
+dropped. *(The plan's first draft claimed every case a careless
+implementation gets wrong was a machine the unit writes, and named four
+mutants no test could see; its verifier generated the section's single-site
+mutants, and found ones a machine kills unseen, and one of the four,
+`O_NONBLOCK` dropped, seen by a FIFO under an alarm. This decision's machines
+are the ones that enumeration asked for.)*
+
+**The decision.** *`tests/unit/system_zone_etc.npk`, `// stress: 40`, in a
+user and a mount namespace of its own with an empty `/etc` (TM-255): nothing;
+`/etc/timezone` alone; a link beside it — step 2 before step 3; a relative
+link; a dangling link — the target, never the file; `zoneinfo/` not at a
+component's start; two, the last; an empty tail; a regular file; the mark at
+the target's start; a link of 4 095 bytes; `/etc/timezone` with no newline,
+two lines, a CR before the newline, an empty first line, empty, a link to
+`/dev/zero`, a directory, and 4 096 bytes; six more shapes of the mark — two,
+the last ending the target; `.zoneinfo/`; `xzoneinfo/`, the mark at the
+second byte; `Zoneinfo/`; `zoneinfo-leaps/`; `zoneinfo2/` — and five more of
+step 3 — one byte; 4 095 bytes; a tab before the newline; a FIFO nothing
+writes, under the unit's own `alarm` of five seconds, so an open that blocks
+ends the process by `SIGALRM`, which the harness reads as red; and a
+read-only `/etc` — each its exit, and each with the lowest free descriptor
+held. Its environment holds seven names that a step 1 comparing a byte of
+`TZ=` by anything but equality, or looking past an entry's start, reads as
+`TZ`. `tests/unit/system_zone_tz.npk`, `system_zone_tz_colon.npk`,
+`system_zone_tz_colon_bare.npk`, `system_zone_tz_path.npk` and
+`system_zone_tz_empty.npk`, `// stress: 40`, each a `TZ` the harness sets; and
+`tests/unit/system_zone_tz_raw.npk`, `// stress: 40`, its two environments by
+`execve` (V-1m). Every exit was seen red on a mutant of `host` but the belts:
+47, a directory, whose failed read is an empty file's path, which a mutant
+reddens at 45 first; 48, a file of 4 096 bytes, passed by as `/dev/zero` is,
+which a mutant reddens at 46 first; 58, the FIFO's answer, which the mutant it
+is there for never reaches, the alarm ending the process first; each `$TZ`
+unit's 11, the raw unit's too, not found beside `TzEnvironment`, which no single
+site writes; and the raw unit's 14 and 15, whose misreadings a mutant makes in
+its first image first, at 12. Every mutant that exits 0 is named with why in
+the plan's §1.9; the six of the kernel's limit and the two no exit shows, in
+dated notes under H-15 and H-16, with what holds each.*
+
+*Alternatives declined:* **one unit per machine** — thirty files and thirty
+namespaces for what one process asks in sequence, and the descriptor held
+across all of them; **the cases built by the harness** — TM-255's declined
+marker; **a timeout in the harness, to see the FIFO's hang** — machinery in the
+runner, where the unit's own `alarm` turns a hang into a signal the runner
+already reports; **a marker for an environment the harness cannot make** — a
+second spelling, in the runner, of what `execve` takes in one call;
+**asserting the close's verdict** — `OwnedFd`'s drop does not report it, and
+the lowest free descriptor is what a leak moves; **no `// stress:`** — V-11
+counts `host`'s five functions, and forty runs a leg cost the namespace unit
+about 11 s of a full run.

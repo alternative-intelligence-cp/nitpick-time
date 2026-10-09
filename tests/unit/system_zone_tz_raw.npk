@@ -1,0 +1,124 @@
+// expect-exit: 0
+// stress: 40
+//
+// The system zone's step 1, `$TZ`, under environments the harness cannot make
+// (cycle 0.3.2; `HOST.md` H-13.1, `TESTING.md` V-1m, TM-256 and TM-257).
+//
+// ASKS: is `TZ` found when it is the environment's FIRST entry; when two
+// entries begin `TZ=`, does the FIRST answer; and is an entry shorter than
+// `TZ=` -- empty, `T`, `TZ` -- passed by, with no byte read past its end?
+//
+// MATTERS BECAUSE the harness builds every environment as `NAME=VALUE`
+// entries after its own `NTIME_HARNESS=1`, and refuses a name twice (V-1e):
+// so no unit it sets up has `TZ` first, two `TZ` entries, or an entry with no
+// `=`, and a step 1 that skipped the first entry, kept the last `TZ=`, or
+// read three bytes of a shorter entry passes every one of them. The kernel
+// takes any array of strings as an environment, so this unit makes each of
+// its two by `execve` of itself -- `/proc/self/exe`, the `argv` naming which
+// image it is and an `envp` the unit lays out -- and the image the kernel
+// starts asks `host_system_zone`. Nothing in the harness changes.
+//
+// THE PRECONDITION, AND ITS CODES (V-1d): 20 the first `execve` refused, 21
+// the second; 22 and 23 an image whose environment is not the one laid out;
+// 24 an `argv` this unit did not write -- each the machine's, not the
+// library's.
+//
+// EXIT CODES, clear of every arm code (TM-152). The first image's
+// environment is `TZ=Europe/Paris` then `TZ=Asia/Tokyo`: 10 the answer's
+// source not `TzEnvironment`; 11 not found; 12 its name not `Europe/Paris`.
+// The second's is the empty entry, `T`, `TZ` and `TZ=Africa/Cairo`: 13, 14
+// and 15 the same, the name `Africa/Cairo` -- and a read past an entry's end
+// traps, `OutOfBounds`, 94.
+//
+// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
+// `host`: its eleven (`SAFETY.md` S-4).
+mod:system_zone_tz_raw;
+
+use "../../src/host/host.npk".*;
+
+fixed int64:SYS_EXECVE = 59i64;
+
+// This program again, as image `a`: its environment `TZ=Europe/Paris`, then
+// `TZ=Asia/Tokyo`. Each pointer array is a zeroed `buffer`, so the slot after
+// the last entry is the NULL `execve` reads to; the strings are this frame's,
+// alive until the kernel has copied them. It returns only if `execve` failed.
+func:exec_a = int32() never fails {
+    cstring:self = to_cstring("/proc/self/exe") ?| #unreachable();
+    cstring:w = to_cstring("a") ?| #unreachable();
+    cstring:e0 = to_cstring("TZ=Europe/Paris") ?| #unreachable();
+    cstring:e1 = to_cstring("TZ=Asia/Tokyo") ?| #unreachable();
+    buffer:ab = buffer_new(24i64);
+    buffer:eb = buffer_new(24i64);
+    wild int8->->:av = ab.ptr =>! wild int8->->;
+    wild int8->->:ev = eb.ptr =>! wild int8->->;
+    av[0i64] = self.ptr =>! wild int8->;
+    av[1i64] = w.ptr =>! wild int8->;
+    ev[0i64] = e0.ptr =>! wild int8->;
+    ev[1i64] = e1.ptr =>! wild int8->;
+    discard(sys(SYS_EXECVE, self.ptr, ab.ptr, eb.ptr) ?| 0i64);
+    pass 20i32;
+};
+
+// And as image `b`: the empty entry, `T`, `TZ`, then `TZ=Africa/Cairo`.
+func:exec_b = int32() never fails {
+    cstring:self = to_cstring("/proc/self/exe") ?| #unreachable();
+    cstring:w = to_cstring("b") ?| #unreachable();
+    cstring:e0 = to_cstring("") ?| #unreachable();
+    cstring:e1 = to_cstring("T") ?| #unreachable();
+    cstring:e2 = to_cstring("TZ") ?| #unreachable();
+    cstring:e3 = to_cstring("TZ=Africa/Cairo") ?| #unreachable();
+    buffer:ab = buffer_new(24i64);
+    buffer:eb = buffer_new(40i64);
+    wild int8->->:av = ab.ptr =>! wild int8->->;
+    wild int8->->:ev = eb.ptr =>! wild int8->->;
+    av[0i64] = self.ptr =>! wild int8->;
+    av[1i64] = w.ptr =>! wild int8->;
+    ev[0i64] = e0.ptr =>! wild int8->;
+    ev[1i64] = e1.ptr =>! wild int8->;
+    ev[2i64] = e2.ptr =>! wild int8->;
+    ev[3i64] = e3.ptr =>! wild int8->;
+    discard(sys(SYS_EXECVE, self.ptr, ab.ptr, eb.ptr) ?| 0i64);
+    pass 21i32;
+};
+
+func:main = int32(cstring[]:argv) {
+    if (argv.len < 2i64) { exit raw exec_a(); }
+    string:which = string_from_bytes(argv[1i64].ptr, argv[1i64].len);
+    cstring[]:env = environ();
+    if (string_equals(which, "a")) {
+        if (env.len != 2i64) { exit 22i32; }
+        SystemZone:za = raw host_system_zone();
+        if (za.source != ZoneSource.TzEnvironment) { exit 10i32; }
+        if (!(za.found))                            { exit 11i32; }
+        if (!(string_equals(za.name, "Europe/Paris"))) { exit 12i32; }
+        exit raw exec_b();
+    }
+    if (string_equals(which, "b")) {
+        if (env.len != 4i64) { exit 23i32; }
+        if ((env[0i64].len != 0i64) || (env[1i64].len != 1i64) || (env[2i64].len != 2i64)) { exit 23i32; }
+        SystemZone:zb = raw host_system_zone();
+        if (zb.source != ZoneSource.TzEnvironment) { exit 13i32; }
+        if (!(zb.found))                            { exit 14i32; }
+        if (!(string_equals(zb.name, "Africa/Cairo"))) { exit 15i32; }
+        exit 0i32;
+    }
+    exit 24i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

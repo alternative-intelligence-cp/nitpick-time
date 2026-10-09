@@ -33,8 +33,11 @@ answer on every machine.
 > than wrapping it. Since cycle 0.3.0 `src/host/`, the one module that touches
 > the machine, reads its clocks: the realtime clock as a `Timestamp`,
 > range-checked, the monotonic and boot clocks as `Instant`s, and each
-> clock's resolution; and since cycle 0.3.1 two readings hold the rest of
-> the library pure, of its source and of the compiler's own output for it.
+> clock's resolution; since cycle 0.3.1 two readings hold the rest of
+> the library pure, of its source and of the compiler's own output for it;
+> and since cycle 0.3.2 it says which zone the machine names, and by which
+> mechanism — `$TZ`, `/etc/localtime`'s link or `/etc/timezone` — or that
+> none does, never UTC.
 > Zones and formats are still
 > placeholders, each replaced by the cycle
 > [`meta/roadmap/ROADMAP.md`](meta/roadmap/ROADMAP.md) names. The specification
@@ -52,7 +55,8 @@ answer on every machine.
 > too; and until cycle 0.2.2, that an `Instant` could not be "converted to a
 > wall-clock time" — a civil reading, in `meta/specs/GLOSSARY.md`'s words,
 > where the conversion refused is to a point on the UTC scale, TM-226; and
-> until cycle 0.3.0, that cycle 0.3 "is next" and the clocks placeholders.)*
+> until cycle 0.3.0, that cycle 0.3 "is next" and the clocks placeholders;
+> and until cycle 0.3.2, that `src/host/` read its clocks and nothing more.)*
 
 ---
 

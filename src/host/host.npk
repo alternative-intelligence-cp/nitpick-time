@@ -19,11 +19,15 @@
 // WHAT FILLS IT: five public functions and nothing else (H-1) — four since
 // cycle 0.3.0: `host_now_utc`, `host_now_instant`, `host_now_boot` and
 // `host_clock_res`, with `HostClock`, the argument H-1 names; and
-// `host_system_zone`, which is cycle 0.3.2's. Beside them, nothing public: the
-// five numbers below and one helper, `timespec_ns`. `clock_gettime` and
-// `clock_getres` are reached through `sys` with a 16-byte `timespec` laid out
-// in a `buffer` (probe 03 pinned that shape), and the monotonic reading is the
-// floor's `mono_now()` (H-5).
+// `host_system_zone`, since cycle 0.3.2, with `SystemZone` and `ZoneSource`,
+// what it answers (TM-256). Beside them, nothing public: six numbers and five
+// helpers -- `timespec_ns`, and the system zone's three steps and its
+// not-found answer. `clock_gettime` and `clock_getres` are reached through
+// `sys` with a 16-byte `timespec` laid out in a `buffer` (probe 03 pinned that
+// shape), and the monotonic reading is the floor's `mono_now()` (H-5);
+// `readlink` through `sys` into a `buffer` of `NTIME_PATH_MAX` bytes, and
+// `/etc/timezone` through the floor's `open` and `read`, its descriptor an
+// `OwnedFd` -- the library's one (`SAFETY.md` S-20).
 // WHEN: cycle 0.3 (`meta/roadmap/0.3/README.md`) — the clocks at 0.3.0, the
 // review of `check_purity`'s ban list against this body at 0.3.1, the system
 // zone at 0.3.2 and the double at 0.3.3. (Until cycle 0.3.0 this file was the
@@ -38,19 +42,26 @@
 // WHAT IT MAY IMPORT: `span` (the readings' types and their constructors:
 // `Instant`'s and `Timestamp`'s fields are sealed, so only `span` builds them),
 // `cal` (the range check's identity) and `core` (`BUILD.md` B-17, TM-247) — and
-// `zone`, for the name lookup, when cycle 0.3.2 needs it.
+// `zone`, for the name lookup, when cycle 0.3.2 needs it. (Cycle 0.3.2,
+// TM-256: it does not. `host_system_zone` answers the zone's NAME, and the
+// lookup is the caller's, `zone`'s pure `zone_by_name` at cycle 0.6, so a
+// program that reads the clock owes no zone arm.)
 //
 // THE ERRORS IT RAISES: none of its own. `cal`'s `ETimeValue`, relayed from
 // `timestamp_of` (H-8's range check) or raised by `timespec_ns`; and the
 // kernel's errno, FORWARDED VERBATIM (`SAFETY.md` S-5), exactly as
 // `lib/nsys.npk` does — a dynamic operand, which arms nothing. A root that
 // imports this module alone owes eleven identities, measured: `cal.ETimeValue`,
-// the floor of six and the four arithmetic arms (`SAFETY.md` S-4).
+// the floor of six and the four arithmetic arms (`SAFETY.md` S-4). The system
+// zone raises nothing and forwards nothing (TM-256): a step that cannot read
+// its source has not answered, and its loops are `for` loops, which state no
+// measure -- so the eleven stand.
 mod:host;
 
 use "../cal/cal.npk".ETimeValue;
 use "../core/limits.npk".NTIME_NANOS_PER_SEC;
 use "../core/limits.npk".NTIME_DURATION_NS_MAX;
+use "../core/limits.npk".NTIME_PATH_MAX;
 use "../span/span.npk".Instant;
 use "../span/span.npk".InstantClock;
 use "../span/span.npk".Timestamp;
@@ -160,4 +171,153 @@ pub func:host_clock_res = Duration(HostClock:which) {
     int64:nanos = <-(#ptr_add<int64>(ts.ptr, 1i64));
     int64:ns = relay timespec_ns(secs, nanos);
     pass raw duration_ns(ns);
+};
+
+// ---------------------------------------------------------------------------
+// The system zone -- `HOST.md` H-12 ... H-16, cycle 0.3.2 (TM-256)
+// ---------------------------------------------------------------------------
+
+// `readlink`, x86-64: H-15's number, and the kernel's table's
+// (`arch/x86/entry/syscalls/syscall_64.tbl`, `meta/research/CURRENCY.md`).
+fixed int64:SYS_READLINK = 89i64;
+
+// WHICH MECHANISM ANSWERED (H-12, TM-256). The third variant is
+// `/etc/timezone`'s: H-12 named it `TzDirLink`, which names no mechanism H-13
+// has -- step 3 reads a one-line text file, through no link and no `TZDIR`.
+#[derive(Eq, Clone, Debug, Copy)]
+pub enum:ZoneSource = { TzEnvironment; EtcLocaltime; EtcTimezone; NotFound; };
+
+// WHAT THE DISCOVERY FOUND, AND WHERE (H-12, TM-256). `name` is the zone's
+// NAME, as the mechanism gave it -- H-12's `ZoneId:zone`, whose type and the
+// compiled table it indexes are cycles 0.5's and 0.6's. A program turns the
+// name into a zone with the lookup (`zone_by_name`, cycle 0.6), whose
+// `ETimeZone`/`Unknown` refuses a name the table lacks, a POSIX rule string
+// and the empty value among them; so this module looks nothing up, imports
+// nothing from `zone`, and raises nothing. `found` is false only with
+// `NotFound`, and `name` is then empty -- never UTC (H-13.4).
+pub struct:SystemZone = { string:name; ZoneSource:source; bool:found; };
+
+func:zone_none = SystemZone() never fails {
+    pass SystemZone{ name: "", source: ZoneSource.NotFound, found: false };
+};
+
+// STEP 1, `$TZ` (H-13.1): the first entry of `environ()` that begins `TZ=` --
+// the `=` part of the prefix, so `TZX=` is another variable -- read in place,
+// as `probe09` measured the entries' bytes are the kernel's and stay. One
+// leading `:` is stripped (POSIX), and the rest is the name, VERBATIM: a
+// POSIX rule string is reported as the text it is, never parsed (Z-12), and
+// the empty value is reported empty. A set `TZ` always answers, because a
+// program run with `TZ` set was asked for that zone, and moving on to
+// `/etc/localtime` would answer a question the environment did not ask --
+// the GNU C library reads an empty `TZ` as UTC
+// (`meta/research/tz-environment.md`), and a silent fall to the machine's
+// zone would disagree with the C programs beside it. The copy is
+// `string_slice`'s, in bounds by construction: `lo` is 3 or 4 and at most
+// `eb.len`, so its refusal is `#unreachable()` (`SAFETY.md` S-15c).
+func:zone_from_tz = SystemZone() never fails {
+    cstring[]:env = environ();
+    for (int64:k in 0i64..(env.len - 1i64)) {
+        string:entry = string_from_bytes(env[k].ptr, env[k].len);
+        uint8[]:eb = string_bytes(entry);
+        if (eb.len >= 3i64) {
+            if ((eb[0i64] == 84u8) && (eb[1i64] == 90u8) && (eb[2i64] == 61u8)) {   // `TZ=`
+                int64:lo = 3i64;
+                if (eb.len > 3i64) {
+                    if (eb[3i64] == 58u8) { lo = 4i64; }                        // `:`
+                }
+                string:name = string_slice(entry, lo, eb.len) ?| #unreachable();
+                pass SystemZone{ name: move(name), source: ZoneSource.TzEnvironment, found: true };
+            }
+        }
+    }
+    pass raw zone_none();
+};
+
+// STEP 2, `/etc/localtime`'s link (H-13.2, H-14, H-15): `readlink` into a
+// buffer of `NTIME_PATH_MAX` bytes, and the TARGET read, never the file -- a
+// regular file is `EINVAL`, and a dangling link still names its zone. H-15's
+// four facts, each where it is kept: the RETURNED LENGTH is the authority --
+// the view is `n` bytes, and no NUL is looked for, since the kernel writes
+// none; the buffer is `NTIME_PATH_MAX`; and a result that fills it may be a
+// prefix, so it does not answer (the kernel refuses a link of 4 096 bytes,
+// `probe22`, so a link it made never fills it). The name is the tail after
+// the LAST `zoneinfo/` that begins the target or follows a `/` -- the last,
+// so a path that holds two names the second; at a component's start, so
+// `myzoneinfo/` is not one. No such `zoneinfo/`, an empty tail, or any error
+// -- no link, a regular file, a path the process cannot search -- and the
+// step does not answer. The tail is reported as the target holds it:
+// `posix/Europe/London` is the lookup's to judge. The view is of the buffer,
+// which outlives it; the copy is `string_slice`'s, `lo` at most `tb.len`.
+func:zone_from_localtime = SystemZone() never fails {
+    cstring:path = to_cstring("/etc/localtime") ?| #unreachable();
+    buffer:b = buffer_new(NTIME_PATH_MAX);
+    int64:n = sys(SYS_READLINK, path.ptr, b.ptr, NTIME_PATH_MAX) ?| -1i64;
+    if (n <= 0i64) { pass raw zone_none(); }
+    if (n >= NTIME_PATH_MAX) { pass raw zone_none(); }                  // truncated
+    string:target = string_from_bytes(b.ptr, n);
+    uint8[]:tb = string_bytes(target);
+    string:mark = "zoneinfo/";
+    uint8[]:mb = string_bytes(mark);
+    int64:lo = -1i64;
+    for (int64:i in 0i64..(tb.len - mb.len)) {
+        bool:same = true;
+        if (i > 0i64) { same = (tb[i - 1i64] == 47u8); }                // `/`
+        for (int64:j in 0i64..(mb.len - 1i64)) {
+            if (tb[i + j] != mb[j]) { same = false; }
+        }
+        if (same) { lo = i + mb.len; }
+    }
+    if (lo < 0i64) { pass raw zone_none(); }
+    if (lo >= tb.len) { pass raw zone_none(); }
+    string:name = string_slice(target, lo, tb.len) ?| #unreachable();
+    pass SystemZone{ name: move(name), source: ZoneSource.EtcLocaltime, found: true };
+};
+
+// STEP 3, `/etc/timezone` (H-13.3, H-16, `SAFETY.md` S-20): the library's one
+// descriptor. Opened `O_RDONLY | O_NONBLOCK | O_CLOEXEC` -- `O_NONBLOCK` so a
+// FIFO at that path never blocks the open (S-21: `ntime` blocks on nothing),
+// `O_CLOEXEC` so the descriptor never outlives the call into an `exec` -- and
+// owned at once by an `OwnedFd`, whose drop closes it: every `pass` below is a
+// path out, and each one closes it, by construction rather than by a `close`
+// on each path. ONE read of up to `NTIME_PATH_MAX` bytes: a read that fills
+// the buffer is longer than any name, and does not answer -- a link to
+// `/dev/zero` is read once, and is not a name. The name is the bytes before
+// the first newline, every other byte reported as the file holds it; an empty
+// first line, an empty file (the floor's `E_EOF`), or any error -- no file, a
+// directory, a FIFO with no writer -- and the step does not answer.
+func:zone_from_timezone = SystemZone() never fails {
+    cstring:path = to_cstring("/etc/timezone") ?| #unreachable();
+    Result<fd>:o = open(path, ((((O_RDONLY | O_NONBLOCK) | O_CLOEXEC) => int32) => int64),
+                        ((S_NONE => int32) => int64));
+    if (o.is_error) { pass raw zone_none(); }
+    OwnedFd:d = own_fd(o.value);
+    buffer:b = buffer_new(NTIME_PATH_MAX);
+    int64:n = read(d.value, b.ptr, NTIME_PATH_MAX) ?| -1i64;
+    if (n <= 0i64) { pass raw zone_none(); }
+    if (n >= NTIME_PATH_MAX) { pass raw zone_none(); }                  // longer than a name
+    string:text = string_from_bytes(b.ptr, n);
+    uint8[]:fb = string_bytes(text);
+    int64:e = fb.len;
+    for (int64:i in 0i64..(fb.len - 1i64)) {
+        if (fb[i] == 10u8) { e = i; break; }                            // `\n`
+    }
+    if (e == 0i64) { pass raw zone_none(); }
+    string:name = string_slice(text, 0i64, e) ?| #unreachable();
+    pass SystemZone{ name: move(name), source: ZoneSource.EtcTimezone, found: true };
+};
+
+// `HOST.md` H-12 and H-13: the four steps, in order, stopping at the first
+// that answers; the fourth is `NotFound`, `found: false` -- not UTC, and not
+// an error (TM-019). `never fails`: a step whose source cannot be read has not
+// answered, so nothing is left to fail but what traps -- an allocation, or a
+// copy out of bounds that cannot happen. Two calls are two discoveries (H-3):
+// nothing is kept between them.
+pub func:host_system_zone = SystemZone() never fails {
+    SystemZone:z = raw zone_from_tz();
+    if (z.found) { pass z; }
+    z = raw zone_from_localtime();
+    if (z.found) { pass z; }
+    z = raw zone_from_timezone();
+    if (z.found) { pass z; }
+    pass raw zone_none();
 };

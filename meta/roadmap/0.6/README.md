@@ -22,7 +22,7 @@ settled.
 ## Checklist
 
 ### 0.6.0 — the lookup
-- [ ] `zone_by_name` — binary search over the sorted name index (Z-9); an unknown name is `ETimeZone`/`Unknown`
+- [ ] `zone_by_name` — binary search over the sorted name index (Z-9); an unknown name is `ETimeZone`/`Unknown` — *and it is how a program turns `host_system_zone`'s name into a zone: a POSIX rule string `$TZ` held, and the empty `$TZ`, are names no table holds, refused here and nowhere earlier (cycle 0.3.2, TM-256)*
 - [ ] `zone_offset_at(zone, instant)` — binary search over the zone's transition slice (Z-8)
 - [ ] **one accessor pair guards the slice bound** (S-17), and nothing outside `src/zone/` indexes the raw tables
 - [ ] the search's invariant and termination as `prove`-shaped comments (`VERIFICATION.md` §6)

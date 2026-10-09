@@ -1502,8 +1502,10 @@ def check_host_isolation(tree, **_):
     `tests/unit/generic_instances.npk`'s -- TM-254.)
 
     `src/lib.npk` is exempt because it is the umbrella: it re-exports `host`'s
-    public names -- four of H-1's five functions since cycle 0.3.0, and
-    `HostClock` -- and is the ONE file that may (B-17). Its exemption is named
+    public names -- H-1's five functions, four since cycle 0.3.0 and the fifth
+    since 0.3.2, and `HostClock`, `SystemZone` and `ZoneSource` -- and is the
+    ONE file that may (B-17). (It said "four of H-1's five functions since
+    cycle 0.3.0, and `HostClock`" until cycle 0.3.2.) Its exemption is named
     here rather than pattern-matched, per V-1c.
     """
     files = [f for f in src_files(tree)

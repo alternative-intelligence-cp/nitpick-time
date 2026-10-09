@@ -93,14 +93,14 @@ the lookup — a rule string's refusal with it — is the caller's, at 0.6
 (PD-101); and a machine with none of the three is one the unit makes (PD-100).
 The items keep their words; the first and third carry what PD-101 makes of
 them.)*
-- [ ] `SystemZone` and `ZoneSource` as `HOST.md` §4 defines them — *as PD-101 amends §4: the name, where H-12 held a `ZoneId`, and `EtcTimezone`, where it named `TzDirLink`*
-- [ ] the four steps in order, stopping at the first that answers (H-13)
-- [ ] `$TZ` with a leading `:` stripped; **a POSIX rule string refused** with `ETimeZone`/`Unknown` (H-13.1), not parsed — *as PD-101 places it: reported as the text it is, never parsed, and refused by the lookup, cycle 0.6's `zone_by_name`*
-- [ ] `/etc/localtime` read as a **symlink target**, never as bytes (H-14)
-- [ ] `readlink`'s four facts honoured (H-15): the length is the authority, the result is not NUL-terminated, `NTIME_PATH_MAX` bounds it, a truncated result is not-found
-- [ ] `/etc/timezone` as step 3
-- [ ] **not-found is `found: false`, not UTC** (H-13.4) — a test asserts it on a machine with none of the three
-- [ ] the descriptor closed on every path (S-20)
+- [x] `SystemZone` and `ZoneSource` as `HOST.md` §4 defines them — *as PD-101 amends §4: the name, where H-12 held a `ZoneId`, and `EtcTimezone`, where it named `TzDirLink`* — **TM-256**, H-12 amended; both re-exported, and read by `check_host_isolation` among `src/host/`'s public names
+- [x] the four steps in order, stopping at the first that answers (H-13) — each a private function, `host_system_zone` `never fails`; `tests/unit/system_zone_etc.npk`'s exit 32 sees step 2 answer before step 3, and every `$TZ` unit sees step 1 answer before the machine's `/etc/localtime`
+- [x] `$TZ` with a leading `:` stripped; **a POSIX rule string refused** with `ETimeZone`/`Unknown` (H-13.1), not parsed — *as PD-101 places it: reported as the text it is, never parsed, and refused by the lookup, cycle 0.6's `zone_by_name`* — `tests/unit/system_zone_tz.npk`, `_colon.npk`, `_colon_bare.npk`, `_path.npk` and `_empty.npk`, and `_raw.npk`'s two environments by `execve`; cycle 0.6's item noted
+- [x] `/etc/localtime` read as a **symlink target**, never as bytes (H-14) — `readlink`, 89; exits 34 (a dangling link answers) and 38 (a regular file is passed by)
+- [x] `readlink`'s four facts honoured (H-15): the length is the authority, the result is not NUL-terminated, `NTIME_PATH_MAX` bounds it, a truncated result is not-found — each kept where H-15's dated note says; a link of 4 095 bytes read whole (exit 40), and the two no test can see named: the kernel never makes a link that fills the buffer, and a zeroed buffer hides a NUL scan
+- [x] `/etc/timezone` as step 3 — its first line; exits 31, 41 … 48 and 55 … 59
+- [x] **not-found is `found: false`, not UTC** (H-13.4) — a test asserts it on a machine with none of the three — exit 30, an empty `/etc` in the unit's own namespace (TM-255)
+- [x] the descriptor closed on every path (S-20) — an `OwnedFd`, closed by its drop; the lowest free descriptor held across all thirty calls
 
 *(Four more, from 0.3.2's planning on 2026-10-08 — `0.3.2.md`: the question
 0.3.1's fix raised and its verifier's nit, in a commit before the zone; the
@@ -109,7 +109,7 @@ The eight above keep their words.)*
 - [x] **O-X12**: every generic function `src/` declares instantiated in `tests/unit/generic_instances.npk`, its emission read by `check_call_edges` and `check_wide_types` beside the umbrella's, and a generic no instance holds a finding (PD-99) — **TM-254**: four plants caught and four controls silent, each unseen by the checks before it; over the tree `vec.npk`'s nine, at `int64`, reach the allocator, the error route and LLVM's arithmetic, every symbol in the allowlist
 - [x] the 0.3.1 verifier's nit: `check_purity`'s docstring and TM-252's note say a truncation of descriptors is red "only where the `DecreasesViolated` and `LimitViolated` it arms are new" — it is *any of* them, `DecreasesViolated` alone in `src/core/vec.npk` — corrected by dated notes, not rewritten — the docstring in place, recording its words, and TM-252's note by a further dated sentence
 - [x] a unit makes its own `/etc` — a user and a mount namespace and an empty `tmpfs`, by its own syscalls; `probe22` measures the shape and the kernel's longest link, and CI lifts Ubuntu 24.04's restriction on the namespace (PD-100) — **TM-255**: `probe22` exit 0 on both legs, here and in CI after the step that lifts the restriction; `TESTING.md` V-1m
-- [ ] the tests: one unit of thirty machines in a namespace of its own, the lowest free descriptor held across every call; five units of `$TZ`, and one that makes by `execve` the environments no harness line can; every exit seen red on a mutant of `host` but the belts, each named; every single-site mutant of the system zone's section run; and each no test can see named, with why (PD-102)
+- [x] the tests: one unit of thirty machines in a namespace of its own, the lowest free descriptor held across every call; five units of `$TZ`, and one that makes by `execve` the environments no harness line can; every exit seen red on a mutant of `host` but the belts, each named; every single-site mutant of the system zone's section run; and each no test can see named, with why (PD-102) — **TM-257**: seven units, forty runs a leg; of 293 single-site mutants, 28 stillborn, 237 red and 28 named; the mutants in `0.3.2.md`'s record
 
 *(The fourth was restated at the plan's revision, 2026-10-08, after its
 verifier measured what it claimed. It said "one unit of nineteen machines …;

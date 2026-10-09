@@ -19,9 +19,10 @@
 // deliberate. Adding a line here is the moment a name becomes public and, by
 // TM-013, a thing a MAJOR version is needed to take away.
 //
-// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 81
-// names now [[sweep: lib_reexports=81]], below -- 76 until cycle 0.3.0 added
-// `host`'s five, 68 until cycle 0.2.3 added
+// IT WAS EMPTY UNTIL CYCLE 0.0.4 AND THAT WAS THE POINT; it re-exports 84
+// names now [[sweep: lib_reexports=84]], below -- 81 until cycle 0.3.2 added
+// `host`'s system zone, its function and its two types, 76 until cycle 0.3.0
+// added `host`'s five, 68 until cycle 0.2.3 added
 // `Duration`'s two ends and `span`'s six for the `Duration` interop, 66 until
 // cycle 0.2.2 added
 // `timestamp_to_utc` and `civil_to_utc`, 64 until cycle 0.2.1 added
@@ -328,7 +329,8 @@ pub use "./span/span.npk".timestamp_since;
 // ===========================================================================
 //
 // Four of the five readings `HOST.md` H-1 names, and `HostClock`, the argument
-// `host_clock_res` takes (TM-248); `host_system_zone` is cycle 0.3.2's. `host`
+// `host_clock_res` takes (TM-248); `host_system_zone` is cycle 0.3.2's, below
+// (TM-256). `host`
 // declares no error: it relays `cal`'s `ETimeValue` from `timestamp_of` --
 // H-8's range check -- and from its own `timespec_ns`, and forwards the
 // kernel's errno, which arms nothing (`SAFETY.md` S-5). So it costs what
@@ -341,3 +343,8 @@ pub use "./host/host.npk".host_now_utc;
 pub use "./host/host.npk".host_now_instant;
 pub use "./host/host.npk".host_now_boot;
 pub use "./host/host.npk".host_clock_res;
+// THE SYSTEM ZONE (cycle 0.3.2, TM-256): the fifth of H-1's functions, and what
+// it answers. It raises nothing, so the bills above stand. EIGHT NAMES now.
+pub use "./host/host.npk".ZoneSource;
+pub use "./host/host.npk".SystemZone;
+pub use "./host/host.npk".host_system_zone;

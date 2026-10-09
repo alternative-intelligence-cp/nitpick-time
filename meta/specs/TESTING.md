@@ -17,7 +17,7 @@ than sampled. Where that is possible it is the gate, and §3 says where.
 
 | Stage | Answers |
 |---|---|
-| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **40 files of 152 that no other stage roots** <!-- [[sweep: npk_total=152]] --> *(40 of 151 until cycle 0.3.2's second step added a probe, and of 150 until its first added a unit; 41 of 149 until cycle 0.3.0, when the library build began to reach `src/host/host.npk`)* |
+| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **40 files of 159 that no other stage roots** <!-- [[sweep: npk_total=159]] --> *(40 of 152 until cycle 0.3.2's third step added seven units, of 151 until its second added a probe, and of 150 until its first added a unit; 41 of 149 until cycle 0.3.0, when the library build began to reach `src/host/host.npk`)* |
 | `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
 | `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
 | `check` | every documented refusal actually refuses, with exactly its code |
@@ -358,8 +358,8 @@ so it allows the whitespace on both sides now, and a plant spells it across a
 line end. No exposure: outside their modules `items` and `body` are `hidden`,
 `NITPICK-TYPE-080`.)*
 
-**Rule V-1m (TM-255) — what the runner cannot construct, a unit makes: an
-`/etc` of its own.** V-1e builds each program's environment; `/etc` is the
+**Rule V-1m (TM-255, TM-257) — what the runner cannot construct, a unit makes:
+an `/etc` of its own, and an environment.** V-1e builds each program's environment; `/etc` is the
 machine's, and `src/host/` reads it — `/etc/localtime`'s link and
 `/etc/timezone` (`HOST.md` H-13) — so a test of what the system zone answers
 on a machine with none of the three, a link no distribution ships, or a
@@ -376,7 +376,13 @@ machine must allow it**: Ubuntu 24.04 lets an unprivileged process create the
 namespace and denies it the capabilities inside unless
 `kernel.apparmor_restrict_unprivileged_userns` is 0
 (`../research/user-namespaces.md`), and CI lifts the restriction in a step of
-its own before the harness, on a runner that lives for one job.
+its own before the harness, on a runner that lives for one job. **And an
+environment** (TM-257): V-1e's are `NAME=VALUE` entries after
+`NTIME_HARNESS=1`, each name once, so `TZ` as the first entry, two `TZ=`
+entries, or an entry with no `=` comes from no marker. A unit that needs one
+`execve`s itself — `/proc/self/exe`, an `argv` naming the image, an `envp` it
+lays out — and asks in the image the kernel starts; a refused `execve` is the
+precondition's, with a code no assertion uses.
 
 ## 3. The exhaustive gates
 

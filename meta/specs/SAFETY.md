@@ -88,7 +88,7 @@ import-scoped:
 | `ntime/core.npk` | — | nothing | **6** <!-- [[sweep: arms_core=6]] --> (4) — the floor; `core` is not yet reachable as its own public module, and its code is billed through the umbrella's row |
 | `ntime/cal.npk` | `ETimeValue` | one arm | **11** <!-- [[sweep: arms_cal=11]] --> (9) — measured 2026-09-06 and 2026-09-25 |
 | `ntime/span.npk` | — (raises `cal`'s) | one arm | **11** <!-- [[sweep: arms_span=11]] --> (—) — since cycle 0.2.0, measured: `cal.ETimeValue`, which `span` raises for two clocks' readings (TM-216), since cycle 0.2.1 for a `secs` outside the range or a `nanos` outside one second handed to `timestamp_of` (TM-220), since cycle 0.2.2 for a civil reading `civil_to_utc` cannot convert, `timestamp_of`'s refusal relayed (TM-222), and since cycle 0.2.3 for a sum `timestamp_add` cannot keep in the range, relayed the same way (TM-234), and a difference `timestamp_since` cannot hold in a `Duration` (TM-236), and since cycle 0.2.4b for a `secs` handed to `timestamp_add` outside the range (TM-241) and a difference `instant_since` cannot hold (TM-242); the floor of six; and `cal`'s four arithmetic arms, which reach every importer of `span` because `span` imports `cal`. **No new identity**: the umbrella's row stays 13. *(A placeholder until cycle 0.2.0, the row read **6** (4), the floor, "meaningless until cycle 0.2 gives the module a body".)* |
-| `ntime/zone.npk` | `ETimeZone` | two arms | placeholder; **6** <!-- [[sweep: arms_zone=6]] --> (4) today (cycle 0.3) |
+| `ntime/zone.npk` | `ETimeZone` | two arms | placeholder; **6** <!-- [[sweep: arms_zone=6]] --> (4) today (cycle 0.3) *(its identity arrives with the lookup, `zone_by_name`, at cycle 0.6 — the system zone raises none: cycle 0.3.2, TM-256)* |
 | `ntime/fmt.npk` | `ETimeParse` | three arms | placeholder; **6** <!-- [[sweep: arms_fmt=6]] --> (4) today (cycle 0.4) |
 | `ntime/host.npk` | — (forwards errnos) | one arm | **11** <!-- [[sweep: arms_host=11]] --> (—) — since cycle 0.3.0, measured (TM-248): `cal.ETimeValue`, which `host` relays from `timestamp_of` (H-8) and raises in `timespec_ns`; the floor of six; and `cal`'s four arithmetic arms, which reach `host` through `span`. A forwarded errno is a dynamic operand and arms nothing (S-5). **No new identity**: the umbrella's row stays 13. *(A placeholder until cycle 0.3.0, the row read "placeholder; **6** (4) today" — the floor.)* |
 
@@ -154,7 +154,9 @@ module doing the same kind of arithmetic adds nothing. So S-4b's system-arm
 half is **front-loaded** — it arrives with the first module that computes
 anything and never grows again — while the identity half grows one per module
 that declares *and raises*. `ETimeParse` (0.4) and `ETimeZone` (0.3) are the two
-still to come, and `import.npk` is where each will first show.
+still to come, and `import.npk` is where each will first show. *(Cycle 0.3.2,
+TM-256: `ETimeZone` is cycle 0.6's — the lookup's, `zone_by_name`; the system
+zone answers a name and raises nothing.)*
 
 *(Cycle 0.1.5's second half, the cycle audit's C7: "never grows again" is true
 of the four ARITHMETIC arms and of nothing else. The machinery half grew twice
@@ -338,7 +340,8 @@ purpose. It contains exactly:
 - `host_now_boot()` — `clock_gettime(CLOCK_BOOTTIME)` → `Instant`
 - `host_clock_res(which)` — `clock_getres`
 - `host_system_zone()` — reads `$TZ`, then `/etc/localtime`, and **says which
-  it used**
+  it used** *(and then `/etc/timezone`, H-13's third step, answering the name
+  each step finds — cycle 0.3.2, TM-256)*
 
 and nothing else. Nothing elsewhere in the library calls any of them.
 
@@ -817,6 +820,9 @@ checks where the `Vec` is written (S-18d's amendment).)*
 
 **Rule S-18.** `ntime` allocates only where it returns a `string` — formatting,
 and the zone name lookup. Everything else is value arithmetic on the stack.
+*(Cycle 0.3.2, TM-256: and `host_system_zone`, whose answer holds the zone's
+name — its two buffers of `NTIME_PATH_MAX` bytes and a `cstring` of each path
+freed before it returns.)*
 Growable storage is the library's own `Vec<T>` (`BUILD.md` §5), whose block is
 `wild` and whose lifetime is its owner's scope; every `wild` byte is released
 on every path, so `exit 0` never trips D-151.
@@ -1236,10 +1242,16 @@ measured false on 2026-09-25, and re-measured here.)*
 
 **Rule S-20.** `ntime` opens **no descriptor** except in `host_system_zone()`,
 which reads `/etc/localtime`'s *link target*, closes what it opened before
-returning, and holds nothing across a call.
+returning, and holds nothing across a call. *(Cycle 0.3.2, TM-256: the link
+target is read by `readlink`, which opens no descriptor; the one descriptor is
+`/etc/timezone`'s, step 3's, an `OwnedFd` the moment it is opened and closed by
+its drop on every path — `HOST.md` H-16.)*
 
 **Rule S-21.** `ntime` spawns no processes, installs no signal handler, starts
-no thread, and blocks on nothing.
+no thread, and blocks on nothing. *(Cycle 0.3.2, TM-257: asserted for the
+system zone's one `open` — a FIFO nothing writes, at `/etc/timezone`, is passed
+by, where an `open` without `O_NONBLOCK` would block until the unit's own alarm
+ended it.)*
 
 **Rule S-22 (TM-109, amended by TM-110) — a view is a parameter, never a return
 value; and this rule is a BELT, deliberately stricter than the language.** §1's

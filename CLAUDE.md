@@ -10,13 +10,50 @@ safety-critical systems language at `../../nitpick`.
 **Status: cycle 0.3, the host boundary, IN PROGRESS — 0.3.0, the clocks,
 DONE (2026-10-08): `src/host/` reads the machine's clocks; 0.3.1, the purity
 boundary's instruments, DONE (2026-10-08): `check_purity`'s ban list reviewed, and
-the library's emission read beside the spelling checks; and 0.3.2, the system
-zone, is next. Cycle 0.2 CLOSED
+the library's emission read beside the spelling checks; 0.3.2, the system zone,
+DONE (2026-10-08): `host_system_zone` says which zone the machine names, and
+how; and 0.3.3, the double, is next. Cycle 0.2 CLOSED
 (2026-10-02), archived at `meta/roadmap/done/0.2/` — instants and timestamps:
 `Instant` and its two clocks, `Timestamp` and its one constructor, the
 conversions to and from the civil scale in UTC with their exhaustive gate on
 every run, and the `Duration` interop — after cycle 0.1, the civil calendar,
 CLOSED 2026-09-26 and archived at `meta/roadmap/done/0.1/`.**
+
+**After cycle 0.3.2: the system zone.** `host_system_zone()` — the fifth of
+`HOST.md` H-1's functions, `never fails` — answers `SystemZone { string:name;
+ZoneSource:source; bool:found; }`: the zone's NAME as the machine gives it, and
+which of H-13's steps gave it — `$TZ`, read in place from `environ()`, one
+leading `:` stripped and the rest verbatim, a POSIX rule string reported and
+never parsed, an empty value reported empty; `/etc/localtime`'s LINK TARGET,
+by `readlink` into `NTIME_PATH_MAX` bytes, the tail after its last `zoneinfo/`
+at a component's start; or `/etc/timezone`'s first line, the library's one
+descriptor an `OwnedFd` closed by its drop on every path — or `NotFound`,
+`found: false`, never UTC. H-12's `ZoneId` and the table it indexes are cycles
+0.5's and 0.6's, so the lookup is the caller's, `zone_by_name` at 0.6, which
+refuses a rule string and the empty `TZ` as names no table holds; `host`
+imports nothing from `zone` and raises nothing, and still owes **11** arms,
+the umbrella **13**, re-exporting 84 <!-- [[sweep: lib_reexports=84]] -->
+names (TM-256). **Its tests make their own machine** (TM-255, `TESTING.md`
+V-1m): `tests/unit/system_zone_etc.npk` enters a user and a mount namespace of
+its own and mounts an empty `tmpfs` over `/etc`, by its own syscalls, and asks
+thirty machines in one run — none of the three, a dangling link, a regular
+file, a link of 4 095 bytes, a `/etc/timezone` that is a directory, a link to
+`/dev/zero` or a FIFO under the unit's own alarm, a read-only `/etc` — holding
+the lowest free descriptor across every call; five units set `$TZ`, and one
+makes by `execve` the environments no harness line can. Every single-site
+mutant of the section was run — 293: 28 refused by the compiler, 237 red, 28
+exit 0 and each named with why — and every exit is seen red but the belts:
+three in the namespace unit, each `$TZ` unit's 11 and the raw unit's 14 and 15
+(TM-257). `probe22` measures the shape, and CI lifts
+Ubuntu 24.04's restriction on the namespace in a step before the harness. And
+first, in a commit of its own, **every generic function of `src/` is read in
+an emission**: `tests/unit/generic_instances.npk` instantiates each, step 7
+emits it beside the umbrella, and `check_call_edges` and `check_wide_types`
+read its instances — a generic no instance holds is a finding, so the shapes
+0.3.1's fix measured passing a full run in a generic nobody instantiated are
+red (TM-254, `meta/OPEN_QUESTIONS.md` O-X12 answered); TM-252's note reads
+"any of" where it said "and". The self-check plants 116 tree-check
+violations. A full invocation is **143 units green** at pin `5fbaf4a`.
 
 **After cycle 0.3.1: the purity boundary's instruments.** `check_purity`'s ban
 list is the review's (TM-252): every bare-name builtin and every synchronous
@@ -67,7 +104,7 @@ no file of the compiler names and the kernel's table does — about the clock a
 `HostClock` names, `host`'s own enum, since `InstantClock` must not gain a
 realtime clock (TM-248). The kernel's errno is forwarded verbatim, so `host`
 declares no error: it owes **11** arms and the umbrella **13** still,
-re-exporting 81 <!-- [[sweep: lib_reexports=81]] --> names. **`BUILD.md` B-17
+re-exporting 81 names. **`BUILD.md` B-17
 draws `host` → `span`**, because both readings' types are sealed and only
 `span` builds them (TM-247). **`tests/unit/host_clocks.npk` reads every clock
 under `// stress: 40`** and asserts each reading ADVANCES — H-3's "two calls
@@ -820,7 +857,10 @@ disagrees with an artefact is the tell.
 `meta/specs/BUILD.md` §7 has the table. The ones this domain wants most:
 `unit` (a rounding granularity), `end` (a range's upper bound), `limit` (a
 bound), `in`, `on`, `mod` (a modulus), `fixed` (as in "fixed offset"), `range`,
-`error`, `buffer`, `raw`, `move`, `any`, `is`, `never`, `fails`.
+`error`, `buffer`, `raw`, `move`, `any`, `is`, `never`, `fails`. And since
+cycle 0.3.2, measured: `uid` and `gid`, which a user namespace's maps want,
+and `pid`, `tid`, `fd`, `thread`, `cfg` and `arena` — `NITPICK-PARSE-002` at
+the declaration; this library writes `me` and `mg`.
 
 The substitutes this library uses, so the tree stays consistent: **`gran`** for
 a rounding granularity, **`hi`**/**`lo`** for range bounds, **`rem`** for a

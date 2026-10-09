@@ -1,0 +1,349 @@
+// expect-exit: 0
+// stress: 40
+// env: TZX=Asia/Tokyo
+// env: ATZ=Africa/Lagos
+// env: SZ=Asia/Dubai
+// env: UZ=Asia/Dubai
+// env: TY=Asia/Dubai
+// env: Ta=Asia/Dubai
+// env: TZ0=Asia/Dubai
+//
+// The system zone's steps 2, 3 and 4, on a machine this unit makes (cycle
+// 0.3.2; `HOST.md` H-12 ... H-16, `SAFETY.md` S-20; TM-256 and TM-257).
+//
+// ASKS: with no `TZ`, which mechanism answers, with what name, on each
+// `/etc` below -- and is the lowest free descriptor the same after every call
+// as before it, so that `/etc/timezone`'s descriptor is closed on every path
+// step 3 takes (H-16, S-20)?
+//
+// MATTERS BECAUSE no machine this suite runs on has none of the three, a link
+// no distribution ships, a `/etc/timezone` that is a directory or a FIFO, or a
+// read-only `/etc` -- and the cycle README asks for each of H-15's facts and
+// the not-found answer as a test. So the unit enters a user and a mount
+// namespace of its own and mounts an empty `tmpfs` over `/etc`, by its own
+// syscalls -- `probe22`'s shape (TM-255) -- and writes each case there before
+// it asks. The machine's `/etc` is never touched: the mount is the namespace's.
+//
+// THE ENVIRONMENT holds no `TZ`, and seven variables a careless step 1 would
+// read as one: `TZX=Asia/Tokyo`, which begins `TZ` but not `TZ=`;
+// `ATZ=Africa/Lagos`, which holds `TZ=` past its start; and, for each of the
+// prefix's three bytes, a name whose byte there is one below it and one above
+// -- `SZ=` and `UZ=` the `T`, `TY=` and `Ta=` the `Z`, `TZ0=` and `TZX=` the
+// `=` -- so a step 1 that compared a byte by anything but equality reads one.
+// A step 1 that read any of them answers every case below `TzEnvironment`.
+//
+// THE PRECONDITION, AND ITS CODES (V-1d), `probe22`'s: 20 `unshare` refused;
+// 21, 22 and 23 the `setgroups`, uid and gid maps not written; 24 the `tmpfs`
+// not mounted -- each says the machine refused the namespace, and CI lifts
+// Ubuntu 24.04's restriction before the harness runs.
+//
+// EXIT CODES, one per case, clear of every arm code (TM-152) -- the source,
+// the name and `found` each case asserts, and the descriptor:
+//   30  `/etc` empty: `NotFound`, `""`, false -- not UTC (H-13.4)
+//   31  `/etc/timezone` alone, `Asia/Tokyo\n`: `EtcTimezone`, `Asia/Tokyo`
+//   32  beside it, `/etc/localtime` -> `/usr/share/zoneinfo/Europe/London`:
+//       `EtcLocaltime`, `Europe/London` -- step 2 before step 3
+//   33  a relative link, `../usr/share/zoneinfo/Asia/Kolkata`: `Asia/Kolkata`
+//   34  a dangling link, `/nonexistent/zoneinfo/Pacific/Auckland`:
+//       `Pacific/Auckland` -- the target is read, never the file (H-14)
+//   35  `/usr/share/myzoneinfo/Europe/Paris`, no `zoneinfo/` at a component's
+//       start: step 2 does not answer, `EtcTimezone`, `Asia/Tokyo`
+//   36  `/opt/zoneinfo/x/zoneinfo/Europe/Rome`: the LAST, `Europe/Rome`
+//   37  `/usr/share/zoneinfo/`, an empty tail: step 2 does not answer
+//   38  `/etc/localtime` a regular file holding `Europe/Berlin\n`: never
+//       read as bytes (H-14), step 3 answers
+//   39  `zoneinfo/Africa/Cairo`, the mark at the target's start: `Africa/Cairo`
+//   40  a link of 4 095 bytes, the longest the kernel holds, ending
+//       `/zoneinfo/Europe/Oslo`: `Europe/Oslo` -- the length is the authority
+//   41  `/etc/timezone` `Asia/Tokyo`, no newline: `Asia/Tokyo`
+//   42  `Asia/Tokyo\nEurope/Paris\n`: the first line, `Asia/Tokyo`
+//   43  `Asia/Tokyo\r\n`: `Asia/Tokyo\r` -- every byte but the newline reported
+//   44  `\nAsia/Tokyo\n`, an empty first line: `NotFound`
+//   45  an empty file: `NotFound`
+//   46  `/etc/timezone` -> `/dev/zero`: one read fills the buffer, `NotFound`
+//   47  `/etc/timezone` a directory: the read refused, `NotFound`
+//   48  a file of 4 096 bytes, `NTIME_PATH_MAX`: longer than a name, `NotFound`
+// and, `/etc/timezone` `Asia/Tokyo\n` behind each of the next six links, so
+// step 3 answers `EtcTimezone`, `Asia/Tokyo`, when step 2 does not:
+//   49  `/usr/share/zoneinfo/Europe/zoneinfo/`: the LAST mark ends the target,
+//       its tail empty -- step 2 does not answer
+//   50  `/opt/.zoneinfo/Asia/Dubai`: a `.` before the mark, not a component's
+//       start -- does not answer
+//   51  `xzoneinfo/Asia/Dubai`: the mark at the second byte, after an `x`
+//   52  `/usr/share/Zoneinfo/Asia/Dubai`: a capital `Z`
+//   53  `/usr/share/zoneinfo-leaps/Asia/Dubai`: `zoneinfo` and then a `-`
+//   54  `/usr/share/zoneinfo2/Asia/Dubai`: `zoneinfo` and then a `2`
+// and step 3's last five, with no link:
+//   55  `/etc/timezone` `X`, one byte: `EtcTimezone`, `X`
+//   56  `Asia/Tokyo\n` and then 4 084 bytes, 4 095 in all: `Asia/Tokyo` -- the
+//       longest read that answers
+//   57  `Asia/Tokyo\t\n`: `Asia/Tokyo\t` -- a tab is a byte of the name
+//   58  `/etc/timezone` a FIFO nothing writes, under the unit's own alarm of
+//       five seconds: the open does not block (S-21), `NotFound`
+//   59  `/etc` remounted read-only, `/etc/timezone` `Asia/Tokyo\n`:
+//       `Asia/Tokyo` -- opened read-only, it answers from a read-only root
+// and 80 a setup syscall of the unit's own refused after the namespace.
+//
+// SEEN RED AT PLANNING, on mutants of `src/host/host.npk` in a copy of the
+// tree, on both legs (`meta/roadmap/0.3/0.3.2.md` §1.9): every exit above is
+// reached by one -- of the thirty-five named shapes of a careless
+// implementation, or of the section's every single-site mutant -- but three
+// BELTS. 47: a directory's failed read takes the path an empty file's does,
+// which a mutant reddens at 45 first. 48: a file of 4 096 bytes is passed by
+// as `/dev/zero` is, which one reddens at 46 first. 58: the FIFO's answer --
+// the mutant it is there for, `O_NONBLOCK` dropped, blocks the open, and the
+// alarm ends the process by `SIGALRM` before any exit, which the harness's
+// runner reports as `-14`.
+//
+// WHAT IT CANNOT SEE, AND WHAT HOLDS EACH (TM-257; `HOST.md` H-15 and H-16).
+// A green run here is evidence about the exits above, and not about these:
+// step 2's `n >= NTIME_PATH_MAX` refusal deleted or weakened, and its buffer
+// or `readlink`'s cap a byte off -- each differs only on a link target of
+// 4 096 bytes or more, which the kernel refuses to make (`probe22`); the
+// target's length read by scanning for a NUL in place of `n` -- `buffer_new`
+// zeroes the buffer, so the scan stops where `n` does; `O_CLOEXEC` dropped
+// from step 3's open -- only an `exec` during the call could see it; and step
+// 3's buffer a byte short of its read -- the byte a read of 4 096 bytes writes
+// past it lands in the allocator's rounding, short of its guard. Each is held
+// by reading: the `?|` that takes `n` from the syscall's answer, the view built
+// from `n`, the open's one line, and `NTIME_PATH_MAX`, the one constant both
+// buffers and both caps are. Every other mutant of the section that exits 0
+// answers as the section does for every input; §1.9 names each.
+//
+// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
+// `host`: its eleven (`SAFETY.md` S-4) -- no loop here states a measure.
+mod:system_zone_etc;
+
+use "../../src/host/host.npk".*;
+
+error:ESetup;
+
+fixed int64:SYS_UNSHARE   = 272i64;
+fixed int64:SYS_MOUNT     = 165i64;
+fixed int64:SYS_SYMLINK   = 88i64;
+fixed int64:SYS_UNLINK    = 87i64;
+fixed int64:SYS_MKDIR     = 83i64;
+fixed int64:SYS_RMDIR     = 84i64;
+fixed int64:SYS_GETUID    = 102i64;
+fixed int64:SYS_GETGID    = 104i64;
+fixed int64:CLONE_NEWUSER = 268435456i64;    // 0x10000000
+fixed int64:CLONE_NEWNS   = 131072i64;       // 0x00020000
+fixed int64:SYS_MKNOD     = 133i64;
+fixed int64:SYS_ALARM     = 37i64;
+fixed int64:S_IFIFO       = 4096i64;         // 0o010000
+fixed int64:MS_RDONLY     = 1i64;
+fixed int64:MS_REMOUNT    = 32i64;
+
+// Write `text` to `path`, created or truncated: one `write`, all of it.
+func:put = NIL(string:path, string:text) {
+    cstring:c = relay to_cstring(path);
+    fd:f = relay open(c, ((((O_WRONLY | O_CREAT) | O_TRUNC) => int32) => int64), 420i64);
+    uint8[]:b = string_bytes(text);
+    if (b.len > 0i64) {
+        int64:n = relay write(f, b.ptr, b.len);
+        if (n != b.len) { fail ESetup; }
+    }
+    discard(relay close(f));
+    pass NIL;
+};
+
+// The namespace, `probe22`'s: 0, or the precondition's code.
+func:enter = int32() {
+    int64:me = relay sys(SYS_GETUID);
+    int64:mg = relay sys(SYS_GETGID);
+    Result<int64>:u = sys(SYS_UNSHARE, CLONE_NEWUSER | CLONE_NEWNS);
+    if (u.is_error) { pass 20i32; }
+    Result<NIL>:g = put("/proc/self/setgroups", "deny");
+    if (g.is_error) { pass 21i32; }
+    Result<NIL>:um = put("/proc/self/uid_map",
+                         string_concat(string_concat("0 ", int_to_string(me)), " 1"));
+    if (um.is_error) { pass 22i32; }
+    Result<NIL>:gm = put("/proc/self/gid_map",
+                         string_concat(string_concat("0 ", int_to_string(mg)), " 1"));
+    if (gm.is_error) { pass 23i32; }
+    cstring:fs = relay to_cstring("tmpfs");
+    cstring:at = relay to_cstring("/etc");
+    Result<int64>:m = sys(SYS_MOUNT, fs.ptr, at.ptr, fs.ptr, 0i64, 0i64);
+    if (m.is_error) { pass 24i32; }
+    pass 0i32;
+};
+
+func:link = NIL(string:target, string:path) {
+    cstring:t = relay to_cstring(target);
+    cstring:p = relay to_cstring(path);
+    discard(relay sys(SYS_SYMLINK, t.ptr, p.ptr));
+    pass NIL;
+};
+
+func:unlink = NIL(string:path) {
+    cstring:p = relay to_cstring(path);
+    discard(relay sys(SYS_UNLINK, p.ptr));
+    pass NIL;
+};
+
+// A FIFO at `path`, which nothing writes.
+func:fifo = NIL(string:path) {
+    cstring:p = relay to_cstring(path);
+    discard(relay sys(SYS_MKNOD, p.ptr, S_IFIFO | 420i64, 0i64));
+    pass NIL;
+};
+
+// `/etc` read-only, as on a machine whose root filesystem is: the namespace's
+// own `tmpfs`, remounted.
+func:remount_ro = NIL() {
+    cstring:fs = relay to_cstring("tmpfs");
+    cstring:at = relay to_cstring("/etc");
+    discard(relay sys(SYS_MOUNT, fs.ptr, at.ptr, fs.ptr, MS_REMOUNT | MS_RDONLY, 0i64));
+    pass NIL;
+};
+
+// The lowest descriptor free: what `open` hands out next.
+func:lowest_fd = int64() {
+    cstring:p = relay to_cstring("/dev/null");
+    fd:f = relay open(p, ((O_RDONLY => int32) => int64), 0i64);
+    int64:k = f =>! int64;
+    discard(relay close(f));
+    pass k;
+};
+
+// One case: the answer's source, name and `found`, and the lowest free
+// descriptor the same after the call as before it.
+func:case_ok = bool(ZoneSource:src, string:want, bool:found) {
+    int64:before = relay lowest_fd();
+    SystemZone:z = raw host_system_zone();
+    int64:after = relay lowest_fd();
+    if (after != before) { pass false; }
+    if (z.source != src) { pass false; }
+    if (z.found != found) { pass false; }
+    pass string_equals(z.name, want);
+};
+
+func:main = int32(cstring[]:_~argv) {
+    int32:pre = enter() ?! ESetup;
+    if (pre != 0i32) { exit pre; }
+    string:lt = "/etc/localtime";
+    string:tz = "/etc/timezone";
+    string:tokyo = "Asia/Tokyo";
+
+    if (!(case_ok(ZoneSource.NotFound, "", false) ?! ESetup))               { exit 30i32; }
+    put(tz, "Asia/Tokyo\n") ?! ESetup;
+    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 31i32; }
+
+    // ---- step 2, with step 3's answer behind it ---------------------------
+    link("/usr/share/zoneinfo/Europe/London", lt) ?! ESetup;
+    if (!(case_ok(ZoneSource.EtcLocaltime, "Europe/London", true) ?! ESetup)) { exit 32i32; }
+    unlink(lt) ?! ESetup;
+    link("../usr/share/zoneinfo/Asia/Kolkata", lt) ?! ESetup;
+    if (!(case_ok(ZoneSource.EtcLocaltime, "Asia/Kolkata", true) ?! ESetup)) { exit 33i32; }
+    unlink(lt) ?! ESetup;
+    link("/nonexistent/zoneinfo/Pacific/Auckland", lt) ?! ESetup;
+    if (!(case_ok(ZoneSource.EtcLocaltime, "Pacific/Auckland", true) ?! ESetup)) { exit 34i32; }
+    unlink(lt) ?! ESetup;
+    link("/usr/share/myzoneinfo/Europe/Paris", lt) ?! ESetup;
+    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 35i32; }
+    unlink(lt) ?! ESetup;
+    link("/opt/zoneinfo/x/zoneinfo/Europe/Rome", lt) ?! ESetup;
+    if (!(case_ok(ZoneSource.EtcLocaltime, "Europe/Rome", true) ?! ESetup)) { exit 36i32; }
+    unlink(lt) ?! ESetup;
+    link("/usr/share/zoneinfo/", lt) ?! ESetup;
+    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 37i32; }
+    unlink(lt) ?! ESetup;
+    put(lt, "Europe/Berlin\n") ?! ESetup;
+    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 38i32; }
+    unlink(lt) ?! ESetup;
+    link("zoneinfo/Africa/Cairo", lt) ?! ESetup;
+    if (!(case_ok(ZoneSource.EtcLocaltime, "Africa/Cairo", true) ?! ESetup)) { exit 39i32; }
+    unlink(lt) ?! ESetup;
+    string:long = "/";
+    for (int64:i in 1i64..4073i64) { long = string_concat(long, "a"); }
+    long = string_concat(long, "/zoneinfo/Europe/Oslo");
+    if (string_byte_length(long) != 4095i64)                                 { exit 80i32; }
+    link(long, lt) ?! ESetup;
+    if (!(case_ok(ZoneSource.EtcLocaltime, "Europe/Oslo", true) ?! ESetup)) { exit 40i32; }
+    unlink(lt) ?! ESetup;
+
+    // ---- step 3's shapes, with no link ------------------------------------
+    put(tz, "Asia/Tokyo") ?! ESetup;
+    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 41i32; }
+    put(tz, "Asia/Tokyo\nEurope/Paris\n") ?! ESetup;
+    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 42i32; }
+    put(tz, "Asia/Tokyo\r\n") ?! ESetup;
+    if (!(case_ok(ZoneSource.EtcTimezone, "Asia/Tokyo\r", true) ?! ESetup)) { exit 43i32; }
+    put(tz, "\nAsia/Tokyo\n") ?! ESetup;
+    if (!(case_ok(ZoneSource.NotFound, "", false) ?! ESetup))               { exit 44i32; }
+    put(tz, "") ?! ESetup;
+    if (!(case_ok(ZoneSource.NotFound, "", false) ?! ESetup))               { exit 45i32; }
+    unlink(tz) ?! ESetup;
+    link("/dev/zero", tz) ?! ESetup;
+    if (!(case_ok(ZoneSource.NotFound, "", false) ?! ESetup))               { exit 46i32; }
+    unlink(tz) ?! ESetup;
+    cstring:tzc = to_cstring(tz) ?! ESetup;
+    discard(sys(SYS_MKDIR, tzc.ptr, 493i64) ?! ESetup);
+    if (!(case_ok(ZoneSource.NotFound, "", false) ?! ESetup))               { exit 47i32; }
+    discard(sys(SYS_RMDIR, tzc.ptr) ?! ESetup);
+    string:big = "";
+    for (int64:i in 1i64..4096i64) { big = string_concat(big, "a"); }
+    put(tz, big) ?! ESetup;
+    if (!(case_ok(ZoneSource.NotFound, "", false) ?! ESetup))               { exit 48i32; }
+
+    // ---- more of step 2's mark, with step 3's answer behind it ------------
+    put(tz, "Asia/Tokyo\n") ?! ESetup;
+    link("/usr/share/zoneinfo/Europe/zoneinfo/", lt) ?! ESetup;
+    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 49i32; }
+    unlink(lt) ?! ESetup;
+    link("/opt/.zoneinfo/Asia/Dubai", lt) ?! ESetup;
+    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 50i32; }
+    unlink(lt) ?! ESetup;
+    link("xzoneinfo/Asia/Dubai", lt) ?! ESetup;
+    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 51i32; }
+    unlink(lt) ?! ESetup;
+    link("/usr/share/Zoneinfo/Asia/Dubai", lt) ?! ESetup;
+    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 52i32; }
+    unlink(lt) ?! ESetup;
+    link("/usr/share/zoneinfo-leaps/Asia/Dubai", lt) ?! ESetup;
+    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 53i32; }
+    unlink(lt) ?! ESetup;
+    link("/usr/share/zoneinfo2/Asia/Dubai", lt) ?! ESetup;
+    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 54i32; }
+    unlink(lt) ?! ESetup;
+
+    // ---- more of step 3's shapes ------------------------------------------
+    put(tz, "X") ?! ESetup;
+    if (!(case_ok(ZoneSource.EtcTimezone, "X", true) ?! ESetup))           { exit 55i32; }
+    string:padded = "Asia/Tokyo\n";
+    for (int64:i in 1i64..4084i64) { padded = string_concat(padded, "a"); }
+    if (string_byte_length(padded) != 4095i64)                               { exit 80i32; }
+    put(tz, padded) ?! ESetup;
+    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 56i32; }
+    put(tz, "Asia/Tokyo\t\n") ?! ESetup;
+    if (!(case_ok(ZoneSource.EtcTimezone, "Asia/Tokyo\t", true) ?! ESetup)) { exit 57i32; }
+    unlink(tz) ?! ESetup;
+    fifo(tz) ?! ESetup;
+    discard(sys(SYS_ALARM, 5i64) ?! ESetup);
+    if (!(case_ok(ZoneSource.NotFound, "", false) ?! ESetup))               { exit 58i32; }
+    discard(sys(SYS_ALARM, 0i64) ?! ESetup);
+    unlink(tz) ?! ESetup;
+    put(tz, "Asia/Tokyo\n") ?! ESetup;
+    remount_ro() ?! ESetup;
+    if (!(case_ok(ZoneSource.EtcTimezone, tokyo, true) ?! ESetup))         { exit 59i32; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (ESetup)            { exit 80i32; },
+        (cal.ETimeValue)    { exit 81i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

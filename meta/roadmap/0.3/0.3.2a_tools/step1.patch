@@ -1,0 +1,592 @@
+diff --git a/harness/checks.py b/harness/checks.py
+index 98c7a22867d3e33511a9b1765f52ee023ea2f7e8..85153b59c8c744cf5b07bab40befbbc8ed9357f3 100644
+--- a/harness/checks.py
++++ b/harness/checks.py
+@@ -2639,9 +2639,11 @@ def check_no_view_returns(tree, exempt=None, **_):
+             continue
+         problems.append(
+             "%s:%d `%s` returns `%s` -- %s. No function in `src/` returns a "
+-            "view (SAFETY.md S-22): a parser takes a `uint8[]` and returns a "
+-            "value and an offset. A view out of its owner's frame is what "
+-            "O-N9 measured reading freed memory at exit 0. If this one must, "
++            "view (SAFETY.md S-22): a parser takes a `fixed uint8[]` -- the "
++            "read-only view a string's bytes are since compiler `7e91730`, "
++            "TM-258 -- and returns a value and an offset. A view out of its "
++            "owner's frame is what O-N9 measured reading freed memory at "
++            "exit 0. If this one must, "
+             "it is a decision that loosens S-22 and names the function there."
+             % (rel, lineno, name, result, why))
+     sp = _s22_text(tree)
+diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
+index 5858816389a77d3eabccf09a88cdf2f2b490ffad..49941d0734f8142b29395d94fb99ad5e2b7c0fef 100644
+--- a/meta/DECISIONS.md
++++ b/meta/DECISIONS.md
+@@ -8530,3 +8530,71 @@ second spelling, in the runner, of what `execve` takes in one call;
+ the lowest free descriptor is what a leak moves; **no `// stress:`** — V-11
+ counts `host`'s five functions, and forty runs a leg cost the namespace unit
+ about 11 s of a full run.
++
++# Cycle 0.3.2a — the adoption of compiler `7e91730`, ratified @@DATE032A@@
++
++Two decisions, drafted at planning (`meta/roadmap/0.3/0.3.2a.md` §2, PD-105 and
++PD-106, in that order), accepted by the orchestrator at the plan's
++verification, and each measured at both compilers, the one this repository
++leaves, `5fbaf4a`, and the one it adopts, `7e91730` — the libraries' one re-pin,
++by the author's word of 2026-10-08. The first is the re-spelling the new
++compiler requires, made at the OLD pin first, so that the old compiler testifies
++it changed no answer; the second moves the pin.
++
++### TM-258 — the read-only view: every slot a string's bytes reach is `fixed uint8[]` — forty-four in sixteen files, each one the new compiler refuses plain — and a parser takes one
++
++**@@DATE032A@@, cycle 0.3.2a (the plan's PD-105) — the adoption of compiler
++`7e91730`, its landing 103 (the compiler's D-348 step (ii), D-350, D-351).
++Re-spells `src/core/bytes.npk`'s `bytes_extend` and `src/host/host.npk`'s four
++readers, and thirty-four slots in fourteen test files; dates `SAFETY.md` S-22
++and its example, `FORMAT_MODEL.md` F-16, cycle 0.4's README, and the comments
++in `bytes.npk`, `limits.npk` and `probe10` that state a plain slice; and words
++`check_no_view_returns`' message as S-22's note does. Five return types are
++the batch's second decision's, written once the pin has moved.**
++
++**What was found** (`0.3.2a.md` §1). At `7e91730` `string_bytes` returns
++`fixed uint8[]`, the read-only view: a plain `uint8[]` converts to it, nothing
++converts it back (`NITPICK-TYPE-007`), and a write through one is
++`NITPICK-TYPE-086`. The unchanged tree is refused there at 32 distinct sites in
++16 files, 85 when a site is counted once per root that reaches it, over 31
++roots — the compiler side's list, which counts per root and was taken before
++cycle 0.3.2's code, said 35 over 21 — and five of them are `src/`'s:
++`bytes_extend_str`'s argument, and the four locals cycle 0.3.2 gave the system
++zone's steps. Every one is a reader. Each re-spelling exposes the next — a local
++made `fixed` hands its view to a helper's plain parameter — and letting the
++compiler name each next slot until none was left finds 44: 39 parameters,
++locals and fields, spellable at both pins, and five return types, which
++`5fbaf4a` reads as meaning nothing (the compiler's DEF-247) and which the
++batch's second decision writes. Each of the 44, undone alone, is
++`NITPICK-TYPE-007` at `7e91730`, and none is written through: a write through
++one and a `fixed` parameter reassigned, which `5fbaf4a` compiles in silence
++(DEF-230, DEF-248), are `NITPICK-TYPE-086` and `NITPICK-ASSIGN-002` at
++`7e91730`, and the tree holds neither. With the 39 re-spelled every file gives
++`5fbaf4a` the codes and sites it gave before, and the full run is green there.
++
++**The decision.** *Every slot a string's bytes reach is `fixed uint8[]` — the
++locals that bind `string_bytes`'s view, the parameters it flows into
++(`bytes_extend`'s source among them, a public function a writable buffer's view
++still converts to), and the two test structs' fields that hold it; a function
++that writes through its slice keeps `uint8[]`. A parser takes `fixed uint8[]`:
++S-22 and F-16 say so in dated notes, and so does `check_no_view_returns`'
++message, which quoted S-22's sentence, and cycle 0.4's README, whose parsers
++meet it. Twelve slots stay plain, each written
++through or reached by no string's bytes: `bytes.npk`'s `into` and two `room`s
++and `civil_total_edges.npk`'s `bw`, written; `bytes_view`'s result, the six
++test locals that bind it, and `bytes_reserve`'s `from`, each a view of a
++`Bytes`' body.*
++
++*Alternatives declined:* **every slot no write passes through, as
++`nitpick-regex`'s RX-230 has it** — eight more: `bytes_view`'s result read-only,
++its six readers and `from`. `bytes_view` is public, and a read-only result is
++an API change of its own — a consumer's write through its answer reaches the
++sink's `hidden` body, at both pins, measured — which the compiler's D-341,
++`buffer`'s checked indexing, settled and not built at `7e91730` and naming
++`bytes.npk` its consumer, will reopen; and nothing the new compiler requires
++moves it. **A copy at each call** — an allocation for bytes nothing writes.
++**The grouped `(fixed uint8[]):v`** — a re-pointable binding nothing here
++re-points, and a spelling `5fbaf4a` cannot parse. **`string` parameters** — a
++writable buffer's view would need a copy into a `string` first. **The five
++returns at this step** — `5fbaf4a` would read each as meaning nothing, the
++silent shape a re-pin does not write where the old compiler reads it.
+diff --git a/meta/roadmap/0.4/README.md b/meta/roadmap/0.4/README.md
+index 8508706ac3bffeec965eee4169adf1099c0224c4..1936104a8962c6530c69707024e93aafd03d8dd1 100644
+--- a/meta/roadmap/0.4/README.md
++++ b/meta/roadmap/0.4/README.md
+@@ -93,7 +93,9 @@ documented exceptions and a test that counts them.
+   the reserved spelling.
+ - **S-22's "a view is a parameter, never a return value" is a BELT, not the
+   language's constraint** (TM-109, corrected and superseded by **TM-110**).
+-  This is the cycle that meets it: every parser here takes a `uint8[]`.
++  This is the cycle that meets it: every parser here takes a `uint8[]` — a
++  `fixed uint8[]`, the read-only view a string's bytes are, since compiler
++  `7e91730`: `SAFETY.md` S-22's note, cycle 0.3.2a, TM-258.
+ 
+   **DEF-3 HAS LANDED and the rule was MEASURED on 2026-09-04** at pin
+   `94874ce`, so plan against this table and not against the prediction that
+diff --git a/meta/specs/FORMAT_MODEL.md b/meta/specs/FORMAT_MODEL.md
+index 4d322cc99898d244781d270f8bc634e8d7fc4327..eedcad27a492198dcaa2f3970dbb1cee48638745 100644
+--- a/meta/specs/FORMAT_MODEL.md
++++ b/meta/specs/FORMAT_MODEL.md
+@@ -186,7 +186,10 @@ pub enum:ParseExpect = { Digit; Separator; TimeDesignator; OffsetSign;
+ straight-line scan over a `uint8[]` with a stated maximum input length
+ (`NTIME_PARSE_MAX`, 128 bytes — no time text is longer). There is no recursion,
+ so there is no depth to blow, which is the playbook's adversarial-input rule
+-satisfied by construction rather than by a limit.
++satisfied by construction rather than by a limit. *(A `fixed uint8[]` since
++compiler `7e91730` — the read-only view a string's bytes are, which a
++writable buffer's view converts to as well: `SAFETY.md` S-22's note, cycle
++0.3.2a, TM-258.)*
+ 
+ **Rule F-17 — parsers consume UTF-8 bytes and never decode.** Every character
+ in every format this library parses is ASCII. A non-ASCII byte is a parse
+diff --git a/meta/specs/SAFETY.md b/meta/specs/SAFETY.md
+index a6ef7a7daf8c831ea550d479bcf2e34f57be8b94..a65dec81d090d8d92b47b35dc79d1dbb9b0ae1d9 100644
+--- a/meta/specs/SAFETY.md
++++ b/meta/specs/SAFETY.md
+@@ -1263,6 +1263,16 @@ offset — which is what `FORMAT_MODEL.md` already specifies, so the rule costs
+ this library nothing. `check_no_view_returns` on cycle 0.0.3's harness list is
+ what makes it enforced rather than remembered.
+ 
++*(@@DATE032A@@, cycle 0.3.2a, TM-258 — the adoption of compiler `7e91730`.)* **A
++parser takes `fixed uint8[]`.** Since that compiler a string's bytes are a
++READ-ONLY view: `string_bytes` yields `fixed uint8[]`, a plain `uint8[]`
++converts to it, nothing converts it back (`NITPICK-TYPE-007`), and a write
++through it is `NITPICK-TYPE-086` (the compiler's D-348, D-350, D-351). So a
++parser's slice is `fixed uint8[]`, which a writable buffer's view converts to
++as well, and a function that writes through its slice keeps `uint8[]`. A
++`fixed uint8[]` result is a view like any other, and `check_no_view_returns`
++reads it as one, measured.
++
+ *(Amended at cycle 0.1.5's second half, TM-204 — the cycle audit's C3.)* **Both
+ sentences were false of this library from cycle 0.0.4.** `pub func:bytes_view
+ = uint8[] (Bytes->:b)` returns a view of a `Bytes`' body and the umbrella
+@@ -1359,6 +1369,10 @@ string:joined = string_concat(a, b);   // bind it: the view has an owner,
+ uint8[]:v = string_bytes(joined);      // and the temporary is no longer one
+ ```
+ 
++*(Since compiler `7e91730` the second line is `fixed uint8[]:v` — a string's
++bytes are the read-only view, and a plain slot refuses them: S-22's note,
++cycle 0.3.2a, TM-258.)*
++
+ **So: keep the rule, and do not mistake it for the constraint.** A later cycle
+ that finds `src/fmt/` wanting to return a view of one of its own parameters is
+ meeting the belt, not the language, and the question to ask is whether to
+diff --git a/src/core/bytes.npk b/src/core/bytes.npk
+index cb4f8716506193a1f94db1e3a14e559c1890cb29..66aa9ba660b1ca95293b85b01ec0a86dd8e8e912 100644
+--- a/src/core/bytes.npk
++++ b/src/core/bytes.npk
+@@ -156,7 +156,7 @@ pub func:bytes_push = NIL(Bytes->:b, uint8:x) never fails {
+ //
+ // ONE RESERVE FOR THE WHOLE RUN, not one per byte: appending an n-byte slice
+ // must not be n doublings.
+-pub func:bytes_extend = NIL(Bytes->:b, uint8[]:src) never fails {
++pub func:bytes_extend = NIL(Bytes->:b, fixed uint8[]:src) never fails {
+     drop bytes_reserve(b, src.len);
+     uint8[]:room = #wild_slice<uint8>(b.body.ptr, b.body.cap);
+     int64:i = 0i64;
+@@ -177,6 +177,9 @@ pub func:bytes_extend_str = NIL(Bytes->:b, string:src) never fails {
+     // is the byte-slice case and not a second copy of it. A `string` is
+     // `{ptr, len, cap}` over `char8`, and going through the view keeps the
+     // bounds guard on both sides rather than indexing `src.ptr` raw.
++    // (A `fixed uint8[]` since compiler `7e91730`, the read-only view, and
++    // `bytes_extend` takes one: it reads its source and writes only `b` --
++    // cycle 0.3.2a, TM-258.)
+     drop bytes_extend(b, string_bytes(src));
+     pass NIL;
+ };
+diff --git a/src/core/limits.npk b/src/core/limits.npk
+index b1913c984c1833c2e14b37c70bed9c2773ab5938..4eb68533c9f1402708d5fefe77cbca47cbe1c1c1 100644
+--- a/src/core/limits.npk
++++ b/src/core/limits.npk
+@@ -55,7 +55,9 @@ mod:limits;
+ 
+ // `FORMAT_MODEL.md` F-16 (TM-030) -- parsing is bounded and non-recursive:
+ // every parser is a straight-line scan over a `uint8[]` with a stated maximum
+-// input length. No time text is longer than this.
++// input length. No time text is longer than this. (A `fixed uint8[]` since
++// compiler `7e91730`, the read-only view a string's bytes are: F-16's note,
++// cycle 0.3.2a, TM-258.)
+ pub fixed int64:NTIME_PARSE_MAX = 128i64;
+ 
+ // `HOST.md` H-15 -- `readlink` is syscall 89 and its buffer is this many bytes.
+diff --git a/src/host/host.npk b/src/host/host.npk
+index 447fda1b784d9ac0e4c52c49e0a672956474f729..7cb451d7edd712ffaf270290d113251a86dfa732 100644
+--- a/src/host/host.npk
++++ b/src/host/host.npk
+@@ -218,7 +218,7 @@ func:zone_from_tz = SystemZone() never fails {
+     cstring[]:env = environ();
+     for (int64:k in 0i64..(env.len - 1i64)) {
+         string:entry = string_from_bytes(env[k].ptr, env[k].len);
+-        uint8[]:eb = string_bytes(entry);
++        fixed uint8[]:eb = string_bytes(entry);
+         if (eb.len >= 3i64) {
+             if ((eb[0i64] == 84u8) && (eb[1i64] == 90u8) && (eb[2i64] == 61u8)) {   // `TZ=`
+                 int64:lo = 3i64;
+@@ -255,9 +255,9 @@ func:zone_from_localtime = SystemZone() never fails {
+     if (n <= 0i64) { pass raw zone_none(); }
+     if (n >= NTIME_PATH_MAX) { pass raw zone_none(); }                  // truncated
+     string:target = string_from_bytes(b.ptr, n);
+-    uint8[]:tb = string_bytes(target);
++    fixed uint8[]:tb = string_bytes(target);
+     string:mark = "zoneinfo/";
+-    uint8[]:mb = string_bytes(mark);
++    fixed uint8[]:mb = string_bytes(mark);
+     int64:lo = -1i64;
+     for (int64:i in 0i64..(tb.len - mb.len)) {
+         bool:same = true;
+@@ -296,7 +296,7 @@ func:zone_from_timezone = SystemZone() never fails {
+     if (n <= 0i64) { pass raw zone_none(); }
+     if (n >= NTIME_PATH_MAX) { pass raw zone_none(); }                  // longer than a name
+     string:text = string_from_bytes(b.ptr, n);
+-    uint8[]:fb = string_bytes(text);
++    fixed uint8[]:fb = string_bytes(text);
+     int64:e = fb.len;
+     for (int64:i in 0i64..(fb.len - 1i64)) {
+         if (fb[i] == 10u8) { e = i; break; }                            // `\n`
+diff --git a/tests/probe/defect/generic_owning_copy/case4_use_after_free.npk b/tests/probe/defect/generic_owning_copy/case4_use_after_free.npk
+index cd6a458e518a5d395cae21670b347074f0a14c87..508cf0f6d252df7051be8a63d545e605d951c8da 100644
+--- a/tests/probe/defect/generic_owning_copy/case4_use_after_free.npk
++++ b/tests/probe/defect/generic_owning_copy/case4_use_after_free.npk
+@@ -82,7 +82,7 @@ func:main = int32(cstring[]:_~argv) {
+     // The element is STILL in the `Vec` -- `count` was never touched -- and
+     // still holds the pointer the line above just freed.
+     string:still = raw peek::<string>(@v, 0i64);
+-    uint8[]:b = string_bytes(still);
++    fixed uint8[]:b = string_bytes(still);
+     uint8:first = b[0i64];
+ 
+     // The block is released before the verdict so that `exit` cannot be
+diff --git a/tests/probe/defect/view_escape/case3_view_returned.npk b/tests/probe/defect/view_escape/case3_view_returned.npk
+index 7b1aa6c9be79ddc2fb9522162e7e7a074ec010b4..0005ca587f6a6bf2323e1fbf8fec932f7ed92679 100644
+--- a/tests/probe/defect/view_escape/case3_view_returned.npk
++++ b/tests/probe/defect/view_escape/case3_view_returned.npk
+@@ -40,7 +40,7 @@ func:esc = uint8[]() never fails {
+ };
+ 
+ func:main = int32(cstring[]:_~argv) {
+-    uint8[]:v = raw esc();
++    fixed uint8[]:v = raw esc();
+     // The LENGTH survives -- a slice is { ptr, len } and only the pointer is
+     // dead, which is what makes the failure quiet: every bound check passes.
+     if (v.len != 8i64) { exit 20i32; }
+diff --git a/tests/probe/defect/view_escape/case4_view_in_struct.npk b/tests/probe/defect/view_escape/case4_view_in_struct.npk
+index b5bd0a9fad14ae156bec5d256294a10cf87195de..92ba7a34b7478822341c212fc13dd472b15090d4 100644
+--- a/tests/probe/defect/view_escape/case4_view_in_struct.npk
++++ b/tests/probe/defect/view_escape/case4_view_in_struct.npk
+@@ -16,7 +16,7 @@
+ //     case 2:  struct:Keeper = { int64->:p; };   pass Keeper{ p: @x };
+ //              -> NITPICK-BORROW-001, refused
+ //
+-//     case 4:  struct:Holder = { uint8[]:view; }; pass Holder{ view: ... };
++//     case 4:  struct:Holder = { fixed uint8[]:view; }; pass Holder{ view: ... };
+ //              -> accepted, npkc exit 0, runs
+ //
+ // Both fields hold an address into the returning frame. `type_holds_pointer`
+@@ -24,7 +24,7 @@
+ // `TY_SLICE`, so the type table is not where this is lost.
+ mod:case4_view_in_struct;
+ 
+-struct:Holder = { uint8[]:view; };
++struct:Holder = { fixed uint8[]:view; };     // read-only since 7e91730, TM-258
+ 
+ func:esc = Holder() never fails {
+     string:s = string_concat("abcd", "efgh");
+diff --git a/tests/probe/defect/view_escape/case5_read_after_free.npk b/tests/probe/defect/view_escape/case5_read_after_free.npk
+index 0c3b4171bdc4676a63a1954e663ca95567390ed2..55d7a5e23e7322f4783ca303b6137e4f83825f8c 100644
+--- a/tests/probe/defect/view_escape/case5_read_after_free.npk
++++ b/tests/probe/defect/view_escape/case5_read_after_free.npk
+@@ -61,7 +61,7 @@ func:esc = uint8[]() never fails {
+ };
+ 
+ func:main = int32(cstring[]:_~argv) {
+-    uint8[]:v = raw esc();
++    fixed uint8[]:v = raw esc();
+     if (v.len != 8i64) { exit 200i32; }        // 200: the length did not survive
+     exit ((v[0i64] => int64) =>! int32);       // what the dead pointer reads
+ };
+diff --git a/tests/probe/defect/view_escape/case6_view_param_legal.npk b/tests/probe/defect/view_escape/case6_view_param_legal.npk
+index d45baf1f6254fe929eb52e972037b1688b9a9b5b..2f84fb293a624cd70cf25442dd067ebaf4f5fb12 100644
+--- a/tests/probe/defect/view_escape/case6_view_param_legal.npk
++++ b/tests/probe/defect/view_escape/case6_view_param_legal.npk
+@@ -14,7 +14,7 @@
+ mod:case6_view_param_legal;
+ 
+ // A scanner step: takes the view, returns a value and never the view.
+-func:count_digits = int64(uint8[]:src, int64:from) never fails {
++func:count_digits = int64(fixed uint8[]:src, int64:from) never fails {
+     int64:i = from;
+     int64:n = 0i64;
+     while (i < src.len) decreases src.len - i {
+@@ -29,7 +29,7 @@ func:count_digits = int64(uint8[]:src, int64:from) never fails {
+ 
+ func:main = int32(cstring[]:_~argv) {
+     string:s = string_concat("2026", "-09-03");
+-    uint8[]:v = string_bytes(s);            // the owner is ALIVE for the call
++    fixed uint8[]:v = string_bytes(s);      // the owner is ALIVE for the call
+     if (v.len != 10i64)                                 { exit 10i32; }
+     if ((raw count_digits(v, 0i64)) != 4i64)            { exit 11i32; }
+     if ((raw count_digits(v, 5i64)) != 2i64)            { exit 12i32; }
+diff --git a/tests/probe/probe08_readlink.npk b/tests/probe/probe08_readlink.npk
+index 2efb6f0d778e24986db7a46879abf389984c1e26..e0cb9f3f2be3e0ae550a2f70b2753aeee00c61e5 100644
+--- a/tests/probe/probe08_readlink.npk
++++ b/tests/probe/probe08_readlink.npk
+@@ -50,7 +50,7 @@ func:paint = NIL(buffer->:b) never fails {
+ // Does `hay[0 .. hlen)` contain `needle[0 .. nlen)`, and if so where does the
+ // match END? Returns -1 for no match. Written the dull way on purpose: the
+ // point of the probe is the syscall, not the search.
+-func:find_after = int64(buffer->:hay, int64:hlen, uint8[]:needle) never fails {
++func:find_after = int64(buffer->:hay, int64:hlen, fixed uint8[]:needle) never fails {
+     int64:nlen = needle.len;
+     if (nlen <= 0i64)   { pass 0i64; }
+     if (hlen < nlen)    { pass (0i64 - 1i64); }
+diff --git a/tests/probe/probe09_environ_split.npk b/tests/probe/probe09_environ_split.npk
+index 28d7329192301b34e7282e71f5799e59c0ebf8b3..709e03bc2736a95a89fed3bd34109beda3a30104 100644
+--- a/tests/probe/probe09_environ_split.npk
++++ b/tests/probe/probe09_environ_split.npk
+@@ -40,7 +40,7 @@ mod:probe09_environ_split;
+ 
+ // Returns an INDEX, never the view. Every scanner step in `src/fmt/` is this
+ // shape.
+-func:find_byte = int64(uint8[]:src, uint8:want) never fails {
++func:find_byte = int64(fixed uint8[]:src, uint8:want) never fails {
+     int64:i = 0i64;
+     while (i < src.len) decreases src.len - i {
+         if (src[i] == want) { pass i; }
+@@ -50,7 +50,7 @@ func:find_byte = int64(uint8[]:src, uint8:want) never fails {
+ };
+ 
+ // Does `src` begin with `lit`? Both are views, both go down.
+-func:starts_with = bool(uint8[]:src, uint8[]:lit) never fails {
++func:starts_with = bool(fixed uint8[]:src, fixed uint8[]:lit) never fails {
+     if (lit.len > src.len) { pass false; }
+     int64:i = 0i64;
+     while (i < lit.len) decreases lit.len - i {
+@@ -63,7 +63,7 @@ func:starts_with = bool(uint8[]:src, uint8[]:lit) never fails {
+ // Counts bytes in a half-open window. The window is expressed as two integers
+ // rather than as a sub-slice, which is the point: an offset pair travels where
+ // a view does not.
+-func:count_in = int64(uint8[]:src, int64:lo, int64:hi) never fails {
++func:count_in = int64(fixed uint8[]:src, int64:lo, int64:hi) never fails {
+     int64:i = lo;
+     int64:n = 0i64;
+     while (i < hi) decreases hi - i {
+@@ -93,7 +93,7 @@ func:main = int32(cstring[]:_~argv) {
+         // this view aliases the pointee rather than this frame -- see
+         // probe 10. Read in place: a `cstring` is move-only (TM-208).
+         string:entry = string_from_bytes(env[k].ptr, env[k].len);
+-        uint8[]:eb = string_bytes(entry);
++        fixed uint8[]:eb = string_bytes(entry);
+         if (eb.len != env[k].len)                            { exit 12i32; }
+         int64:eq = raw find_byte(eb, 61u8);             // '='
+         if (eq < 0i64)                                  { exit 13i32; }
+@@ -112,7 +112,7 @@ func:main = int32(cstring[]:_~argv) {
+     // This is `host_system_zone`'s first step, written the way the library
+     // will write it.
+     string:want = "TZ=";
+-    uint8[]:wb = string_bytes(want);
++    fixed uint8[]:wb = string_bytes(want);
+ 
+     int64:found = -1i64;
+     int64:vlo = -1i64;
+@@ -120,7 +120,7 @@ func:main = int32(cstring[]:_~argv) {
+     int64:j = 0i64;
+     while (j < env.len) decreases env.len - j {
+         string:entry2 = string_from_bytes(env[j].ptr, env[j].len);
+-        uint8[]:b2 = string_bytes(entry2);
++        fixed uint8[]:b2 = string_bytes(entry2);
+         if (raw starts_with(b2, wb)) {
+             found = j;
+             vlo = wb.len;
+@@ -144,9 +144,9 @@ func:main = int32(cstring[]:_~argv) {
+     // (`NITPICK-BORROW-012`, TM-110), and binding first is the idiom the rest
+     // of this file already uses.
+     string:want_entry = "TZ=Europe/Kyiv";
+-    uint8[]:web = string_bytes(want_entry);
++    fixed uint8[]:web = string_bytes(want_entry);
+     string:pres = string_from_bytes(env[found].ptr, env[found].len);
+-    uint8[]:preb = string_bytes(pres);
++    fixed uint8[]:preb = string_bytes(pres);
+     if (preb.len != web.len)                            { exit 39i32; }
+     int64:w = 0i64;
+     while (w < web.len) decreases web.len - w {
+@@ -160,7 +160,7 @@ func:main = int32(cstring[]:_~argv) {
+     if ((vhi - vlo) != 11i64)                           { exit 31i32; }
+ 
+     string:hs = string_from_bytes(env[found].ptr, env[found].len);
+-    uint8[]:hb = string_bytes(hs);
++    fixed uint8[]:hb = string_bytes(hs);
+     if (hb[vlo] != 69u8)                                { exit 32i32; }   // 'E'
+     if (hb[vlo + 1i64] != 117u8)                        { exit 33i32; }   // 'u'
+     if (hb[vhi - 1i64] != 118u8)                        { exit 34i32; }   // 'v'
+@@ -174,7 +174,7 @@ func:main = int32(cstring[]:_~argv) {
+     if (env2.len != env.len)                            { exit 40i32; }
+     if (env2[found].len != env[found].len)                            { exit 41i32; }
+     string:hs2 = string_from_bytes(env2[found].ptr, env2[found].len);
+-    uint8[]:hb2 = string_bytes(hs2);
++    fixed uint8[]:hb2 = string_bytes(hs2);
+     int64:m = 0i64;
+     while (m < hb2.len) decreases hb2.len - m {
+         if (hb2[m] != hb[m])                            { exit 42i32; }
+diff --git a/tests/probe/probe09b_environ_view_returned.npk b/tests/probe/probe09b_environ_view_returned.npk
+index d9cc1f52dd4d9319b05ea2a77f8d8e578202ad7e..175946df204896441670e7b4cc68dcece2bac8d5 100644
+--- a/tests/probe/probe09b_environ_view_returned.npk
++++ b/tests/probe/probe09b_environ_view_returned.npk
+@@ -54,7 +54,7 @@ func:tz_index = int64(cstring[]:env) never fails {
+     while (j < env.len) decreases env.len - j {
+         if (env[j].len >= 3i64) {
+             string:entry = string_from_bytes(env[j].ptr, env[j].len);
+-            uint8[]:b = string_bytes(entry);
++            fixed uint8[]:b = string_bytes(entry);
+             if (b[0i64] == 84u8) {                      // 'T'
+                 if (b[1i64] == 90u8) {                  // 'Z'
+                     if (b[2i64] == 61u8) { pass j; }    // '='
+@@ -77,7 +77,7 @@ func:tz_entry = string(cstring[]:env) never fails {
+     while (j < env.len) decreases env.len - j {
+         if (env[j].len >= 3i64) {
+             string:entry = string_from_bytes(env[j].ptr, env[j].len);
+-            uint8[]:b = string_bytes(entry);
++            fixed uint8[]:b = string_bytes(entry);
+             if (b[0i64] == 84u8) {                      // 'T'
+                 if (b[1i64] == 90u8) {                  // 'Z'
+                     if (b[2i64] == 61u8) {              // '='
+@@ -105,9 +105,9 @@ func:main = int32(cstring[]:_~argv) {
+     // Bound first, then viewed: a view of a temporary is refused
+     // (`NITPICK-BORROW-012`, TM-110).
+     string:want_entry = "TZ=Europe/Kyiv";
+-    uint8[]:web = string_bytes(want_entry);
++    fixed uint8[]:web = string_bytes(want_entry);
+     string:pres = string_from_bytes(env[tzi].ptr, env[tzi].len);
+-    uint8[]:preb = string_bytes(pres);
++    fixed uint8[]:preb = string_bytes(pres);
+     if (preb.len != web.len)                            { exit 39i32; }
+     int64:w = 0i64;
+     while (w < web.len) decreases web.len - w {
+@@ -118,7 +118,7 @@ func:main = int32(cstring[]:_~argv) {
+     // ---- THE EXPERIMENT ---------------------------------------------------
+     string:hit = raw tz_entry(env);
+     if (string_byte_length(hit) != 14i64)               { exit 10i32; }
+-    uint8[]:hb = string_bytes(hit);
++    fixed uint8[]:hb = string_bytes(hit);
+     // Read it AFTER the frame that made it returned -- the bytes must still be
+     // the kernel's, not the 0xAA free-poison a dead frame would leave.
+     if (hb[0i64] != 84u8)                               { exit 11i32; }   // 'T'
+diff --git a/tests/probe/probe10_view_edges.npk b/tests/probe/probe10_view_edges.npk
+index 53461fe2fe10aad6e8334b201c7c5e22f0f828d2..7e1c5951c43eb22088c424b4209d60f1a948a65c 100644
+--- a/tests/probe/probe10_view_edges.npk
++++ b/tests/probe/probe10_view_edges.npk
+@@ -8,7 +8,10 @@
+ //
+ // MATTERS BECAUSE every parser in `src/fmt/` takes a `uint8[]` and every
+ // formatter produces a `string` through `Bytes`, and D-186 made `string_slice`
+-// an owned copy for exactly the use-after-free this probe maps.
++// an owned copy for exactly the use-after-free this probe maps. (A `fixed
++// uint8[]` since compiler `7e91730`, the read-only view `string_bytes` yields,
++// and every slice below that holds one is spelled so; the edges, and every
++// answer, are as they were -- cycle 0.3.2a, TM-258.)
+ //
+ // HELD UNTIL 2026-09-04, with probe 09, by the author's ruling that O-N9 was
+ // BLOCKING. This probe IS O-N9's own measurement: measuring it against a
+@@ -84,7 +87,7 @@ func:view_of_param = uint8[](string:s) never fails {
+ // in none of `defect/view_escape/`'s six cases. `case4_view_in_struct.npk` is
+ // the refused half of this pair -- the same literal, rooted at a local.
+ struct:Scan = {
+-    uint8[]:src;
++    fixed uint8[]:src;
+     int64:at;
+ };
+ 
+@@ -107,7 +110,7 @@ func:tail_view = string(wild int8->:blk, int64:n, int64:from) never fails {
+ // 5. The view goes DOWN — legal under D-004 and always was.
+ // ---------------------------------------------------------------------------
+ 
+-func:count_upper = int64(uint8[]:src) never fails {
++func:count_upper = int64(fixed uint8[]:src) never fails {
+     int64:i = 0i64;
+     int64:n = 0i64;
+     while (i < src.len) decreases src.len - i {
+@@ -126,7 +129,7 @@ func:count_upper = int64(uint8[]:src) never fails {
+ // The third refinement. `src.len` reads the view; the loop variable is an
+ // `int64` and carries nothing, so the range bound reading a borrow does not
+ // make the iteration one.
+-func:sum_bytes = int64(uint8[]:src) never fails {
++func:sum_bytes = int64(fixed uint8[]:src) never fails {
+     int64:acc = 0i64;
+     for (int64:i in 0i64...src.len) { acc = acc + (src[i] => int64); }
+     pass acc;
+@@ -136,7 +139,7 @@ func:main = int32(cstring[]:_~argv) {
+     // ---- 1. the discriminator ---------------------------------------------
+     string:v = raw make_view(6i64);
+     if (string_byte_length(v) != 6i64)                  { exit 10i32; }
+-    uint8[]:vb = string_bytes(v);
++    fixed uint8[]:vb = string_bytes(v);
+     // The bytes are the ones written, NOT the runtime's 0xAA free-poison --
+     // which is what a dangling view would read (D-183, and case 5's exit 170).
+     if (vb[0i64] != 65u8)                               { exit 11i32; }   // 'A'
+@@ -147,7 +150,7 @@ func:main = int32(cstring[]:_~argv) {
+     // ---- 4. the `#ptr_add` view, over the same live block -----------------
+     string:t = raw tail_view(v.ptr =>! wild int8->, 6i64, 4i64);
+     if (string_byte_length(t) != 2i64)                  { exit 15i32; }
+-    uint8[]:tb = string_bytes(t);
++    fixed uint8[]:tb = string_bytes(t);
+     if (tb[0i64] != 69u8)                               { exit 16i32; }   // 'E'
+     if (tb[1i64] != 70u8)                               { exit 17i32; }   // 'F'
+ 
+@@ -158,7 +161,7 @@ func:main = int32(cstring[]:_~argv) {
+ 
+     // ---- 2. the parameter-rooted view -------------------------------------
+     string:s = string_concat("2026-", "09-04");
+-    uint8[]:pb = raw view_of_param(s);
++    fixed uint8[]:pb = raw view_of_param(s);
+     if (pb.len != 10i64)                                { exit 20i32; }
+     if (pb[0i64] != 50u8)                               { exit 21i32; }   // '2'
+     if (pb[9i64] != 52u8)                               { exit 22i32; }   // '4'
+diff --git a/tests/probe/probe10b_view_of_temporary_refused.npk b/tests/probe/probe10b_view_of_temporary_refused.npk
+index 0e8d7c1d172c20bd34a0e478f15e865298ed3d77..2a8de21c4e53f359b041314549413b061df66d5a 100644
+--- a/tests/probe/probe10b_view_of_temporary_refused.npk
++++ b/tests/probe/probe10b_view_of_temporary_refused.npk
+@@ -34,7 +34,7 @@ func:esc = uint8[]() never fails {
+ };
+ 
+ func:main = int32(cstring[]:_~argv) {
+-    uint8[]:v = raw esc();
++    fixed uint8[]:v = raw esc();
+     if (v.len != 8i64) { exit 20i32; }
+     exit 0i32;
+ };
+diff --git a/tests/probe/probe10c_view_of_move_param_refused.npk b/tests/probe/probe10c_view_of_move_param_refused.npk
+index 6dc51aa564f7b3c095fd2f98f1502cb8644998cf..5fe936d041ec4ee3726340c9b5aca19de598f0ee 100644
+--- a/tests/probe/probe10c_view_of_move_param_refused.npk
++++ b/tests/probe/probe10c_view_of_move_param_refused.npk
+@@ -28,7 +28,7 @@ func:view_of_move_param = uint8[](move string:s) never fails {
+ 
+ func:main = int32(cstring[]:_~argv) {
+     string:owned = string_concat("2026-", "09-04");
+-    uint8[]:v = raw view_of_move_param(move(owned));
++    fixed uint8[]:v = raw view_of_move_param(move(owned));
+     if (v.len != 10i64) { exit 20i32; }
+     exit 0i32;
+ };
+diff --git a/tests/probe/probe22_private_etc.npk b/tests/probe/probe22_private_etc.npk
+index 21d1092391c375555b50212c5320b8e4d74c69b3..0a720f47a66c2a1c19fa0dd7c837cec6915ed9b2 100644
+--- a/tests/probe/probe22_private_etc.npk
++++ b/tests/probe/probe22_private_etc.npk
+@@ -53,7 +53,7 @@ fixed int64:PATH_MAX      = 4096i64;
+ func:put = NIL(string:path, string:text) {
+     cstring:c = relay to_cstring(path);
+     fd:f = relay open(c, ((((O_WRONLY | O_CREAT) | O_TRUNC) => int32) => int64), 420i64);
+-    uint8[]:b = string_bytes(text);
++    fixed uint8[]:b = string_bytes(text);
+     if (b.len > 0i64) {
+         int64:n = relay write(f, b.ptr, b.len);
+         if (n != b.len) { fail EProbe; }
+diff --git a/tests/unit/bytes_put_int.npk b/tests/unit/bytes_put_int.npk
+index 521ad1451c4c95b0be6a96217698c0032eaa05e9..e2cd0579025e6e03804b35378335cb35f49bb1cb 100644
+--- a/tests/unit/bytes_put_int.npk
++++ b/tests/unit/bytes_put_int.npk
+@@ -59,7 +59,7 @@ fixed uint64:U64_MAX = ~0u64;
+ // a re-implementation of the thing being tested.
+ func:expect = int32(Bytes->:b, string:want, int32:code) never fails {
+     uint8[]:got = raw bytes_view(b);
+-    uint8[]:wanted = string_bytes(want);
++    fixed uint8[]:wanted = string_bytes(want);
+     if (got.len != wanted.len) { pass code; }
+     int64:i = 0i64;
+     while (i < got.len) decreases got.len - i {
+diff --git a/tests/unit/system_zone_etc.npk b/tests/unit/system_zone_etc.npk
+index 4bc0afbeab293979eaa5a3f95e816813019709f9..81601bbb9be134620292835bf0ac43c23c3e1839 100644
+--- a/tests/unit/system_zone_etc.npk
++++ b/tests/unit/system_zone_etc.npk
+@@ -138,7 +138,7 @@ fixed int64:MS_REMOUNT    = 32i64;
+ func:put = NIL(string:path, string:text) {
+     cstring:c = relay to_cstring(path);
+     fd:f = relay open(c, ((((O_WRONLY | O_CREAT) | O_TRUNC) => int32) => int64), 420i64);
+-    uint8[]:b = string_bytes(text);
++    fixed uint8[]:b = string_bytes(text);
+     if (b.len > 0i64) {
+         int64:n = relay write(f, b.ptr, b.len);
+         if (n != b.len) { fail ESetup; }

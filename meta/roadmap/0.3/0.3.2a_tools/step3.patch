@@ -1,0 +1,165 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 59b48f523f83f967def63a4142c6616f1bf2ba13..1ccd8565542a6da5a38e4d38d07fee10f6ce8b2c 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -11,14 +11,16 @@
+ # ============================================================================
+ # THE TWO CONDITIONS THIS FILE EXISTS TO WRITE DOWN
+ # ============================================================================
+-# A green run here may be read as "ntime builds against compiler 5fbaf4a" only
++# A green run here may be read as "ntime builds against compiler 7e91730" only
+ # because BOTH of the following are stated AND enforced below. Either one
+ # missing and the claim is weaker than it sounds.
+ #
+-#   (1) LLVM 20.1.2 EXACTLY -- the patch release included. A patch release can
++#   (1) LLVM 20.1.8 EXACTLY -- the patch release included. A patch release can
+ #       change instruction selection, so "LLVM 20" is not a pin. `nitpick.toml`
+ #       [toolchain] names three digits for this reason, and the step below
+-#       FAILS on any other version rather than reporting it.
++#       FAILS on any other version rather than reporting it. (20.1.2 until
++#       cycle 0.3.2a, TM-259: the compiler's D-349 moved its pin, and this
++#       one with it.)
+ #
+ #   (2) THE BUILD LADDER IS INVOKED FROM THE COMPILER TREE ROOT. The compiler
+ #       is built by its own bootstrap ladder and by nothing else; the ladder's
+@@ -52,15 +54,16 @@
+ # re-exported together as 84 public names [[sweep: lib_reexports=84]] (81
+ # until cycle 0.3.2 added the system zone's three),
+ # so this IS evidence about behaviour, of the 143 units the runner reports at
+-# compiler `5fbaf4a` since cycle 0.3.2 (134 at cycles 0.3.0 and 0.3.1, 133 at cycles 0.2.4b and 0.2.4, 131 at cycles 0.2.3 and 0.2.4a, 126 at cycles 0.2.2 and 0.2.3a, 122 at cycle 0.2.1, 114 at cycle 0.2.0, 111 at 0.2.0b, 113 at 0.2.0a and at
++# compiler `7e91730` since cycle 0.3.2a (143 at `5fbaf4a` at cycle 0.3.2, 134 at cycles 0.3.0 and 0.3.1, 133 at cycles 0.2.4b and 0.2.4, 131 at cycles 0.2.3 and 0.2.4a, 126 at cycles 0.2.2 and 0.2.3a, 122 at cycle 0.2.1, 114 at cycle 0.2.0, 111 at 0.2.0b, 113 at 0.2.0a and at
+ # `c970483` at cycle 0.1.5's second half; 62 at cycle 0.0.6, 67 at 0.1.0,
+ # 70 at 0.1.0b, 75 at 0.1.0c, 78 at 0.1.1, 81 at 0.1.2, 86 at 0.1.3, 90 at
+ # 0.1.3b, 91 at 0.1.4 and 0.1.4b, all at `c3bdae2` from 0.1.0b on, 101 at
+ # 0.1.4c, and 112 at 0.1.3c and at the first half of 0.1.5, cycle 0.1's
+ # close). What
+ # it is evidence of: the pinned compiler builds from a clean checkout at exactly
+-# LLVM 20.1.2, every `.npk` under `src/` compiles, every unit under `tests/`
+-# meets its own header at -O0 and again under `opt -O2`, the whole
++# LLVM 20.1.8 (20.1.2 until cycle 0.3.2a), every `.npk` under `src/` compiles,
++# every unit under `tests/` meets its own header at -O0 and again under
++# `opt -O2`, the whole
+ # `tests/probe/defect/` regression corpus meets its markers (TM-141), and
+ # `tests/conformance/import.npk` emits, assembles, links, RUNS and exits 0. The
+ # run is what is judged -- `npkc` exiting 0 is NOT well-formedness (O-N11,
+@@ -204,6 +207,11 @@
+ # machines a unit makes in a namespace of its own, the lowest free descriptor
+ # held across every call, over five `TZ` values, and over two environments a
+ # unit makes by `execve` of itself, forty runs a leg each (TM-256, TM-257).
++# AND SINCE CYCLE 0.3.2a, AT COMPILER `7e91730`: a string's bytes are a
++# READ-ONLY view, `fixed uint8[]`, and every slot of the tree they reach says
++# so -- the compiler refuses a plain one and a write through one (TM-258);
++# and a header names what that compiler reports, one `NITPICK-TYPE-079` for a
++# literal of sealed fields and one report for one mistake (TM-259).
+ #
+ # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
+ # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
+@@ -272,7 +280,7 @@ permissions:
+   contents: read
+ 
+ env:
+-  # ../BOARD.md's pinned toolchain, by FULL sha. `5fbaf4a` is the short form
++  # ../BOARD.md's pinned toolchain, by FULL sha. `7e91730` is the short form
+   # used in the roadmap and in the transcripts.
+   #
+   # THIS PIN WAS `0dfddac` UNTIL CYCLE 0.0.6 AND THE COMMENT ABOVE WAS FALSE
+@@ -303,20 +311,34 @@ env:
+   # unadopted tree is RED at `5fbaf4a`, where fifteen `cstring` copies are
+   # refused (TM-208). All of them are pushed together, so CI runs once, on the
+   # adopted tree (`meta/roadmap/done/0.2/0.2.0a.md` §3).
+-  NITPICK_COMMIT: 5fbaf4a40a2f6b213754cd71b6c69700f8aa2c87
+-  NITPICK_COMMIT_SHORT: 5fbaf4a
+-  # nitpick.toml [toolchain] llvm. Condition (1) above.
+-  LLVM_VERSION: 20.1.2
++  #
++  # AND IT WAS `5fbaf4a` UNTIL CYCLE 0.3.2a, which moves it to `7e91730`, the
++  # compiler's landing 103 -- the libraries' one re-pin, by the author's word of
++  # 2026-10-08, carrying its landings 83 ... 103 -- IN A COMMIT OF ITS OWN, after
++  # the adoption's two and before its prose, and LLVM with it, to 20.1.8 (the
++  # compiler's D-349): the adopted tree is RED at `5fbaf4a`, whose LLVM its
++  # manifest no longer names and whose reports five of its headers no longer
++  # count, and the unadopted tree is RED at `7e91730`, which refuses its
++  # readers of a string's bytes (TM-258, TM-259). All of them are pushed
++  # together, so CI runs once, on the adopted tree
++  # (`meta/roadmap/0.3/0.3.2a.md` §3).
++  NITPICK_COMMIT: 7e91730d19cffd35fcff25c36893cfaa2c01509e
++  NITPICK_COMMIT_SHORT: 7e91730
++  # nitpick.toml [toolchain] llvm. Condition (1) above. 20.1.2 until cycle
++  # 0.3.2a: the upstream release tarball of 20.1.8 is the asset the install step
++  # below names, as it named 20.1.2's.
++  LLVM_VERSION: 20.1.8
+   # The digests of the artefacts the workbench pins, from
+-  # ../.internal/toolchain/5fbaf4a/SHA256SUMS. Reported against CI's own, never
++  # ../.internal/toolchain/7e91730/SHA256SUMS. Reported against CI's own, never
+   # asserted -- see the step that uses them for why.
+-  NPKC_SHA256_WORKBENCH: c84007934e6d25c94de52e9a944a63acacb24fdd3aa9fca9c7d911817b770fee
++  NPKC_SHA256_WORKBENCH: 9067e39ee00bd8454c1f9b882a106b32d163d43240b22e55cf38c51a276e3cc3
+   NPKRT_SHA256_WORKBENCH: c8e5033ad17c70f838d567157738a6cc046af0ca3140ad92259fa71f0e747b4e
+   # THE EMISSION AT THAT COMMIT, as the compiler's own build recorded it -- notice
+-  # 82's `npkc.ll` row, in ../.internal/toolchain/5fbaf4a/PIN.md. ASSERTED by the
++  # 103's `npkc.ll` row, in ../.internal/toolchain/7e91730/PIN.md (notice 82's,
++  # `5630c2b4...` / 30 232 291 B, until cycle 0.3.2a). ASSERTED by the
+   # step below since cycle 0.2.0a (TM-212), and moved with every pin.
+-  NPKC_LL_SHA256: 5630c2b4464f5628f23467b7eb775a7571f0c6b8b7f1bdc6c3974b4af5bf97be
+-  NPKC_LL_BYTES: 30232291
++  NPKC_LL_SHA256: b79f89c554ef83eeadca05d4e22929e70746483aec74e7b2f046f7a3933b66e7
++  NPKC_LL_BYTES: 31527001
+ 
+ jobs:
+   build:
+@@ -439,7 +461,8 @@ jobs:
+           # runner, as it may. So every artefact the ladder leaves is printed,
+           # size beside digest, so the first that differs names the stage, and
+           # `npkc.ll` is held to the pinned commit's row (`NPKC_LL_SHA256` and
+-          # `NPKC_LL_BYTES` above, notice 82's), AFTER everything is printed. A
++          # `NPKC_LL_BYTES` above, notice 103's since cycle 0.3.2a and notice
++          # 82's before), AFTER everything is printed. A
+           # difference is a compiler defect to raise through the workbench,
+           # never a pin to bump. The workbench's binary digests stay printed
+           # beside CI's, for that measurement's record, and are EXPECTED to
+@@ -479,21 +502,6 @@ jobs:
+           fi
+           echo "npkc.ll == the pin's emission, $size B / $have"
+ 
+-      # THE FULL INVOCATION, AND NO FLAGS -- WHICH IS A RULE (TM-125, B-9b), NOT
+-      # AN OMISSION. `--quick` skips the `sweep` stage, and `TESTING.md` V-2
+-      # makes the exhaustive sweeps THE gate for every property that can be
+-      # checked over its whole domain; V-3 calls the civil sweep the strongest
+-      # statement this library makes. A CI run that skipped it would publish a
+-      # green badge for something no run had checked. `--only` is worse: it
+-      # concludes nothing by construction and says so twice.
+-      #
+-      # The argument is deliberately NOT "the sweeps are cheap". They are, and
+-      # that would stop being an argument the moment one got slow -- which is
+-      # exactly when somebody under deadline would reach for the flag.
+-      #
+-      # This step has not changed since cycle 0.0.1 and will not, which is the
+-      # point of invoking the runner rather than a list of commands: the runner
+-      # grew from four hardcoded checks to nine stages underneath it.
+       # A UNIT MAKES ITS OWN `/etc` (cycle 0.3.2, TM-255): `tests/probe/probe22_private_etc.npk`
+       # and, from the system zone, `tests/unit/system_zone_etc.npk` enter a user and a mount
+       # namespace of their own and mount an empty `tmpfs` over `/etc`, by their own syscalls,
+@@ -514,6 +522,23 @@ jobs:
+           echo "after: kernel.apparmor_restrict_unprivileged_userns = $(sysctl -n kernel.apparmor_restrict_unprivileged_userns)"
+           unshare --user --map-root-user --mount sh -c 'mount -t tmpfs tmpfs /etc && echo "a private /etc: mounted"'
+ 
++      # THE FULL INVOCATION, AND NO FLAGS -- WHICH IS A RULE (TM-125, B-9b), NOT
++      # AN OMISSION. `--quick` skips the `sweep` stage, and `TESTING.md` V-2
++      # makes the exhaustive sweeps THE gate for every property that can be
++      # checked over its whole domain; V-3 calls the civil sweep the strongest
++      # statement this library makes. A CI run that skipped it would publish a
++      # green badge for something no run had checked. `--only` is worse: it
++      # concludes nothing by construction and says so twice.
++      #
++      # The argument is deliberately NOT "the sweeps are cheap". They are, and
++      # that would stop being an argument the moment one got slow -- which is
++      # exactly when somebody under deadline would reach for the flag.
++      #
++      # This step has not changed since cycle 0.0.1 and will not, which is the
++      # point of invoking the runner rather than a list of commands: the runner
++      # grew from four hardcoded checks to nine stages underneath it. (This
++      # comment stood above the namespace step from cycle 0.3.2, which put that
++      # step between it and the one it describes, until cycle 0.3.2a.)
+       - name: Run the harness
+         run: |
+           # `set +e` EXPLICITLY, AND IT IS NOT REDUNDANT (TM-146). The runner's

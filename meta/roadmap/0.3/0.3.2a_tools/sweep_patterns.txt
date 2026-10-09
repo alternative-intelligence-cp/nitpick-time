@@ -1,0 +1,18 @@
+# 0.3.2a's omission sweep, block 5 -- one extended regular expression per line, each read by `sweep.py` line by line
+# AND across line breaks, case-insensitive: every statement steps 1 ... 4 make false, and every place a reader would
+# look for what they changed. The old pin by name; the LLVM release; the plain view's name in prose; what
+# `string_bytes` yields; the wide literal's two codes; a literal's or a declaration's several reports; the emission's
+# row and the workbench's digests; the lexer's re-read; the statement form of `#unreachable()`; the counts the steps
+# move and what is next; and this subcycle's own spelling, so every place it stands is read.
+5fbaf4a
+20\.1\.[0-9]
+`uint8\[\]`
+string_bytes. (yields|returns|hands back|gives|is) |hands back a|yields a .?uint8
+PARSE-002|LEX-004
+once per (sealed )?field|per sealed field|three (reports|times)|twice: one report|named twice|reported twice|names the code twice
+notice 82|30 ?232 ?291|5630c2b4|c8400793|9067e39e|b79f89c5
+re-read|again at
+TAINT-001|statement form|O-N34
+\b(143)\b.{0,20}units?|\b(188|190)\b.{0,20}decision|(seven|eight) questions
+(is|are|comes) next
+fixed uint8

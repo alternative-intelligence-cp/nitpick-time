@@ -1,0 +1,10 @@
+# 0.3.2a's sweep with the decision log in it, block 5's second reading (`sweep.py ... decisions`): every text that
+# states a PLAIN `uint8[]` -- after a `(`, after a word that is not `fixed`, or after a comma -- and every statement of
+# what the pin moved: a literal's or a declaration's several reports, the wide literal's second code, the statement
+# form's refusal, and the LLVM release. Each hit in `meta/DECISIONS.md` sits under a heading that carries its marker,
+# or is a dated measurement, or states what is still true; each elsewhere is one of §5b's classes.
+(\(|[^d] |[^x]ed |, )uint8\[\]
+once per (sealed )?field|per sealed field|three reports|named twice|reported twice|×3, one per
+PARSE-002
+TAINT-001
+20\.1\.2

@@ -50,6 +50,7 @@ an emission the two readings read — `0.3.2.md`'s PD-99, its first step.)*
 | 0.3.0 | **The clocks** — `clock_gettime` through `sys`, the three readings — **[`0.3.0.md`](0.3.0.md)**, written at cycle 0.2's close, measured at `5fbaf4a`, and rehearsed from its blocks in its real position on 2026-10-07 and 2026-10-08 (its §8); it opens with the instrument the close handed on | a `Timestamp` from the machine, range-checked |
 | 0.3.1 | **`check_purity` goes live** — the dormant check from 0.0.3, turned on — **[`0.3.1.md`](0.3.1.md)**: its ban list and `check_host_isolation`'s reviewed against the language at the pin and `src/host/`'s body, each seen to fail in a real module, and two readings of the library's emission beside the spelling checks, the calls (O-X9) and the wide values (O-X11) — planned at `5fbaf4a` and rehearsed from its blocks in its real position on 2026-10-08 (its §8) | the library's reproducibility claim, enforced |
 | 0.3.2 | **The system zone** — the four-step discovery, and what it reports — **[`0.3.2.md`](0.3.2.md)**: `host_system_zone` answering the name each step finds and the mechanism that answered, the lookup the caller's at cycle 0.6, its tests in a user and mount namespace each unit makes with an `/etc` of its own; and first every generic function of `src/` read in an emission (O-X12) — planned at `5fbaf4a`, rehearsed from its blocks in its real position, and revised for its verifier's findings and rehearsed again, on 2026-10-08 (its §8) | a program can ask, and is told which mechanism answered |
+| 0.3.2a | **The adoption of compiler `7e91730`** — landing 103, the libraries' one re-pin, by the author's word of 2026-10-08: every slot a string's bytes reach spelled `fixed uint8[]`, the read-only view, with the old compiler seeing no difference; then the pin's own moves — LLVM 20.1.8, the self-check's two-code case, five returns of the view, five headers' counts (the compiler's DEF-164 and DEF-165), and the adoption list below — **[`0.3.2a.md`](0.3.2a.md)**, planned and rehearsed in its real position at both pins on 2026-10-09 (its §8) | the tree green at `7e91730`, and CI pinned there |
 | 0.3.3 | **The double** — the test host module, in `tests/` | every clock-dependent behaviour reproducible |
 | 0.3.4 | **Close** | `done/0.3/`, `0.4.0.md` written |
 
@@ -116,6 +117,15 @@ verifier measured what it claimed. It said "one unit of nineteen machines …;
 three units of `$TZ`; every exit seen red on a mutant of `host`, and the
 mutants no test can see named" — and a machine a unit can make saw mutants
 the plan had named unseeable.)*
+
+### 0.3.2a — the adoption of compiler `7e91730`
+*(Written at 0.3.2a's planning, 2026-10-09 — `0.3.2a.md`, PD-105 and PD-106. It carries this README's list "The adoption, when the pin moves", below.)*
+- [ ] the unchanged tree measured at both pins: `GREEN -- 143` at `5fbaf4a`; at `7e91730` refused at the toolchain check, and with its LLVM row moved red at the self-check and, past it, by landing 103's readers and five headers' counts, each enumerated
+- [ ] every slot a string's bytes reach is `fixed uint8[]`, none written through, and `5fbaf4a` sees no difference — every file's codes and sites as before, `GREEN -- 143` there (PD-105)
+- [ ] the pin moved: LLVM 20.1.8, the self-check's cases 2 and 3 on two codes, five returns of the view, the five headers, and the adoption list's six items each measured — `GREEN -- 143` at `7e91730` (PD-106)
+- [ ] the readings of `npkc`'s output — `check_call_edges`, `check_wide_types`, and `check_purity` beside them — at both pins, what moves said and why
+- [ ] CI pinned to `7e91730` — the commit, the emission's row and LLVM 20.1.8, and the full invocation's comment back above the harness — and its log read per job
+- [ ] the prose, and the sweep read line by line
 
 ### 0.3.3 — the double
 - [ ] the fake host module in `tests/`, **not** in `src/` (H-10)

@@ -1,0 +1,7 @@
+# 0.3.2a's view mutants -- `vmut.py` copies the tree per row whose first column is the block's step, replaces the
+# fourth column's text ONCE with the fifth's, and compiles each root of the sixth at both pins. TAB-separated;
+# `\n` in a text is a newline. Step 1's rows run over the tree step 1 leaves.
+1	writer	src/core/bytes.npk	        room[b.len + i] = src[i];\n	        room[b.len + i] = src[i];\n        src[i] = src[i];\n	src/core/bytes.npk
+1	reassign	src/core/bytes.npk	    drop bytes_reserve(b, src.len);\n	    src = src[0i64...src.len];\n    drop bytes_reserve(b, src.len);\n	src/core/bytes.npk
+1	local-writer	src/host/host.npk	    fixed uint8[]:fb = string_bytes(text);\n	    fixed uint8[]:fb = string_bytes(text);\n    fb[0i64] = 47u8;\n	src/host/host.npk
+1	local-repoint	src/host/host.npk	    fixed uint8[]:mb = string_bytes(mark);\n	    fixed uint8[]:mb = string_bytes(mark);\n    mb = string_bytes(target);\n	src/host/host.npk

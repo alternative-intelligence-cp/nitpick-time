@@ -68,8 +68,9 @@ lld-flags     = ["-static"]
 #
 # AND THE OTHER HALF OF THAT RULE, LEARNED AT 0.0.1: an entry whose `kind`
 # disagrees with the files under its path is worse than an empty one, because
-# it fails for a reason that is not the library's. `tests/probe/` holds 29
-# positive probes [[sweep: probe_exit=29]] (28 until cycle 0.2.4b) and 29 that
+# it fails for a reason that is not the library's. `tests/probe/` holds 30
+# positive probes [[sweep: probe_exit=30]] (29 until cycle 0.3.2, 28 until
+# cycle 0.2.4b) and 29 that
 # MUST NOT COMPILE [[sweep: probe_error=29]] (23 until cycle 0.2.1, 21 until
 # 0.2.0), and the
 # schema selects by
@@ -84,8 +85,9 @@ lld-flags     = ["-static"]
 # and again through `opt -O2`, the same exit required both times (B-3).
 #
 # NOT `recursive`, and the omission is the point: a plain glob is
-# `tests/probe/*.npk`, which is exactly the 58 probe programs
-# [[sweep: probe_dir=58]] (57 until cycle 0.2.4b) and EXCLUDES the two
+# `tests/probe/*.npk`, which is exactly the 59 probe programs
+# [[sweep: probe_dir=59]] (58 until cycle 0.3.2, 57 until cycle 0.2.4b) and
+# EXCLUDES the two
 # subdirectories that must never
 # be run as tests --
 #   tests/probe/support/  four library modules -- three probe 11 imports, and
@@ -134,8 +136,8 @@ path  = "tests/probe"
 #   `parse`   HAS NO ENTRY BY DESIGN, not by omission (TM-123). It is a
 #             WHOLE-TREE stage: `BUILD.md` §3's Directory column for it reads
 #             "every `.npk` in the tree", and that is where its value is — of
-#             the 151 files here [[sweep: npk_total=151]] (150 until cycle
-#             0.3.2, 149 until 0.3.0, 147 until 0.2.4b), 40 are put in front of the compiler
+#             the 152 files here [[sweep: npk_total=152]] (151 and 150 until
+#             cycle 0.3.2's two first steps, 149 until 0.3.0, 147 until 0.2.4b), 40 are put in front of the compiler
 #             by nothing else (41 until cycle 0.3.0, when the library build
 #             began to reach `src/host/host.npk`). An entry would narrow it to one directory and silently
 #             un-cover the rest, so `stage = "parse"` is REFUSED BY NAME.

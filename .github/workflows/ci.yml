@@ -193,7 +193,10 @@
 # emits it beside the umbrella, and both readings read its instances, so a
 # generic function that reaches past the program's own memory -- by a drop, an
 # alias or an `await` -- or that nobody instantiates is red here (TM-254,
-# `meta/OPEN_QUESTIONS.md` O-X12 answered).
+# `meta/OPEN_QUESTIONS.md` O-X12 answered). And a unit can make the machine
+# `src/host/` reads: `probe22` enters a user and a mount namespace of its own
+# and mounts an empty `tmpfs` over `/etc`, once the step below has lifted
+# Ubuntu 24.04's restriction on the namespace (TM-255, `TESTING.md` V-1m).
 #
 # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
 # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
@@ -484,6 +487,26 @@ jobs:
       # This step has not changed since cycle 0.0.1 and will not, which is the
       # point of invoking the runner rather than a list of commands: the runner
       # grew from four hardcoded checks to nine stages underneath it.
+      # A UNIT MAKES ITS OWN `/etc` (cycle 0.3.2, TM-255): `tests/probe/probe22_private_etc.npk`
+      # and, from the system zone, `tests/unit/system_zone_etc.npk` enter a user and a mount
+      # namespace of their own and mount an empty `tmpfs` over `/etc`, by their own syscalls,
+      # so they can make the machine `src/host/` reads. Ubuntu 24.04 lets an unprivileged
+      # process create the namespace and denies it the capabilities inside -- its AppArmor
+      # restriction, on by default; the 24.04 release notes name the sysctl that lifts it
+      # (`meta/research/user-namespaces.md`). This runner is a fresh VM for one job, so the
+      # restriction is lifted here, its value printed before and after, and a namespace with a
+      # mount made once by `unshare` before the harness runs -- a refusal is this step's, and
+      # never a unit's verdict about the library. The release notes' warning stands: the lift
+      # gives up a defence against kernel exploits that use user namespaces, on a machine that
+      # lives for one job.
+      - name: Allow an unprivileged user namespace, for a unit's own /etc
+        run: |
+          set -euo pipefail
+          echo "before: kernel.apparmor_restrict_unprivileged_userns = $(sysctl -n kernel.apparmor_restrict_unprivileged_userns)"
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          echo "after: kernel.apparmor_restrict_unprivileged_userns = $(sysctl -n kernel.apparmor_restrict_unprivileged_userns)"
+          unshare --user --map-root-user --mount sh -c 'mount -t tmpfs tmpfs /etc && echo "a private /etc: mounted"'
+
       - name: Run the harness
         run: |
           # `set +e` EXPLICITLY, AND IT IS NOT REDUNDANT (TM-146). The runner's

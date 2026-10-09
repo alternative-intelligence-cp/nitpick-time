@@ -4,6 +4,32 @@
 `clock_gettime` and `clock_getres` on x86-64 — and `readlink`, which cycle
 0.3.2 needs — so that `src/host/host.npk` can name each number's source?
 
+**And as of 2026-10-08** (cycle 0.3.2's planning): the numbers its tests call
+to make an `/etc` of their own (`TESTING.md` V-1m), and the two flags
+`unshare` takes — read again from the same table, and from the kernel's
+`include/uapi/linux/sched.h`:
+
+```text
+83	common	mkdir			sys_mkdir
+84	common	rmdir			sys_rmdir
+87	common	unlink			sys_unlink
+88	common	symlink			sys_symlink
+89	common	readlink		sys_readlink
+102	common	getuid			sys_getuid
+104	common	getgid			sys_getgid
+165	common	mount			sys_mount
+272	common	unshare			sys_unshare
+```
+
+```text
+#define CLONE_NEWNS	0x00020000	/* New mount namespace group */
+#define CLONE_NEWUSER		0x10000000	/* New user namespace */
+```
+
+— https://raw.githubusercontent.com/torvalds/linux/master/arch/x86/entry/syscalls/syscall_64.tbl
+and https://raw.githubusercontent.com/torvalds/linux/master/include/uapi/linux/sched.h,
+each retrieved 2026-10-08, on `master`. 89 is the day before's, unchanged.
+
 ## Answer
 
 `clock_gettime` is **228**, `clock_getres` is **229** and `readlink` is **89**,

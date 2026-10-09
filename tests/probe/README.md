@@ -158,6 +158,7 @@ by the harness as ordinary `program`-stage entries from cycle 0.0.2.
 | `probe20g_construction_from_numbers.npk` | a consumer builds an `Instant` from a `Timestamp`'s numbers through `instant_of`, and a `Timestamp` back through `timestamp_of`, with no `wild` and no `=>!` — the construction M-3 does not refuse | M-3, TM-216, TM-243 — the positive twin of `probe20b` … `probe20f` |
 | `probe21_timestamp_literal_refused.npk` | *(must not compile)* a denormalised `Timestamp` built by a consumer's struct literal | M-7, TM-219 — `NITPICK-TYPE-079`, twice: one report per sealed field |
 | `probe21b_timestamp_field_write_refused.npk` | *(must not compile)* a consumer's write to a `Timestamp`'s `nanos` | M-7, TM-219 — `NITPICK-TYPE-079` |
+| `probe22_private_etc.npk` *(cycle 0.3.2)* | a program enters a user and a mount namespace of its own, mounts an empty `tmpfs` over `/etc`, and makes a link there that reads back whole and a file whose bytes read back; the kernel refuses a link target of 4 096 bytes and holds one of 4 095 | `TESTING.md` V-1m, `HOST.md` H-15, TM-255 — the shape `tests/unit/system_zone_etc.npk` stands on; 20 … 24 the machine's refusal (V-1d) |
 
 *(Cycle 0.1.3b: the three `probe17` rows are new. **Probes 12 to 16 — cycles
 0.0.4 to 0.1.0c — are not in this table**, and the heading above says "What is

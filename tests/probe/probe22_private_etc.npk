@@ -1,0 +1,158 @@
+// expect-exit: 0
+//
+// PROBE 22 -- a program gives itself a PRIVATE `/etc`, by syscalls in its own
+// text, and the machine's is never touched (cycle 0.3.2, TM-255).
+//
+// ASKS: can a test program enter a user namespace and a mount namespace of
+// its own -- `unshare` (272) with `CLONE_NEWUSER | CLONE_NEWNS`, its uid and
+// gid mapped to root inside -- mount an empty `tmpfs` over `/etc` (`mount`,
+// 165), and then write there what `src/host/` reads: a symbolic link
+// (`symlink`, 88) whose target `readlink` (89) hands back whole, and a file
+// whose bytes read back? And what is the longest link target the kernel
+// holds?
+//
+// MATTERS BECAUSE `host_system_zone` reads `/etc/localtime`'s link target and
+// `/etc/timezone`'s first line (`HOST.md` H-13), so a test of what it answers
+// on a machine with none of the three, or with a link no distribution ships,
+// needs a machine it can set. This file measures that the shape is spellable
+// and works, so `tests/unit/system_zone_etc.npk` can rest on it; and it
+// measures H-15's fourth fact where it bites: a link target of 4 096 bytes --
+// `NTIME_PATH_MAX` -- is REFUSED by the kernel, so a `readlink` into a buffer
+// of that size is never truncated by a link the kernel made.
+//
+// THE PRECONDITION, AND ITS CODES (V-1d): the machine must allow an
+// unprivileged user namespace. Ubuntu 24.04 restricts one through AppArmor
+// unless `kernel.apparmor_restrict_unprivileged_userns` is 0, which CI sets
+// before the harness runs. A refusal exits a code no assertion here uses:
+// 20 `unshare` refused; 21, 22 and 23 the `setgroups`, uid and gid maps not
+// written; 24 the `tmpfs` not mounted. Each says the machine refused the
+// namespace, not that the language did.
+//
+// EXIT CODES, clear of every arm code (TM-152): 30 `/etc` not empty after the
+// mount -- `/etc/localtime` still a link; 31 `/etc/timezone` still there; 32
+// the link not made, or its target not read back exactly; 33 the file not
+// written, or its bytes not read back; 34 a link target of 4 096 bytes
+// accepted; 35 one of 4 095 refused, or not read back whole; 36 the link not
+// removed.
+mod:probe22_private_etc;
+
+error:EProbe;
+
+fixed int64:SYS_UNSHARE   = 272i64;
+fixed int64:SYS_MOUNT     = 165i64;
+fixed int64:SYS_SYMLINK   = 88i64;
+fixed int64:SYS_READLINK  = 89i64;
+fixed int64:SYS_UNLINK    = 87i64;
+fixed int64:SYS_GETUID    = 102i64;
+fixed int64:SYS_GETGID    = 104i64;
+fixed int64:CLONE_NEWUSER = 268435456i64;    // 0x10000000
+fixed int64:CLONE_NEWNS   = 131072i64;       // 0x00020000
+fixed int64:PATH_MAX      = 4096i64;
+
+// Write `text` to `path`, created or truncated: one `write`, all of it.
+func:put = NIL(string:path, string:text) {
+    cstring:c = relay to_cstring(path);
+    fd:f = relay open(c, ((((O_WRONLY | O_CREAT) | O_TRUNC) => int32) => int64), 420i64);
+    uint8[]:b = string_bytes(text);
+    if (b.len > 0i64) {
+        int64:n = relay write(f, b.ptr, b.len);
+        if (n != b.len) { fail EProbe; }
+    }
+    discard(relay close(f));
+    pass NIL;
+};
+
+// The namespace: 0, or the precondition's code.
+func:enter = int32() {
+    int64:me = relay sys(SYS_GETUID);
+    int64:mg = relay sys(SYS_GETGID);
+    Result<int64>:u = sys(SYS_UNSHARE, CLONE_NEWUSER | CLONE_NEWNS);
+    if (u.is_error) { pass 20i32; }
+    Result<NIL>:g = put("/proc/self/setgroups", "deny");
+    if (g.is_error) { pass 21i32; }
+    Result<NIL>:um = put("/proc/self/uid_map",
+                         string_concat(string_concat("0 ", int_to_string(me)), " 1"));
+    if (um.is_error) { pass 22i32; }
+    Result<NIL>:gm = put("/proc/self/gid_map",
+                         string_concat(string_concat("0 ", int_to_string(mg)), " 1"));
+    if (gm.is_error) { pass 23i32; }
+    cstring:fs = relay to_cstring("tmpfs");
+    cstring:at = relay to_cstring("/etc");
+    Result<int64>:m = sys(SYS_MOUNT, fs.ptr, at.ptr, fs.ptr, 0i64, 0i64);
+    if (m.is_error) { pass 24i32; }
+    pass 0i32;
+};
+
+// Does `path`'s link read back exactly `want`?
+func:reads_back = bool(cstring:path, string:want) {
+    buffer:b = buffer_new(PATH_MAX);
+    Result<int64>:r = sys(SYS_READLINK, path.ptr, b.ptr, PATH_MAX);
+    if (r.is_error) { pass false; }
+    string:got = string_from_bytes(b.ptr, r.value);
+    pass string_equals(got, want);
+};
+
+func:main = int32(cstring[]:_~argv) {
+    int32:pre = enter() ?! EProbe;
+    if (pre != 0i32) { exit pre; }
+    cstring:lt = to_cstring("/etc/localtime") ?! EProbe;
+    cstring:tz = to_cstring("/etc/timezone") ?! EProbe;
+
+    // ---- the mount: `/etc` is empty ----------------------------------------
+    buffer:b0 = buffer_new(PATH_MAX);
+    Result<int64>:l0 = sys(SYS_READLINK, lt.ptr, b0.ptr, PATH_MAX);
+    if (!(l0.is_error)) { exit 30i32; }
+    Result<fd>:t0 = open(tz, ((O_RDONLY => int32) => int64), 0i64);
+    if (!(t0.is_error)) { exit 31i32; }
+
+    // ---- a link, and its target read back ----------------------------------
+    string:target = "/usr/share/zoneinfo/Europe/London";
+    cstring:tc = to_cstring(target) ?! EProbe;
+    Result<int64>:s = sys(SYS_SYMLINK, tc.ptr, lt.ptr);
+    if (s.is_error) { exit 32i32; }
+    if (!(reads_back(lt, target) ?! EProbe)) { exit 32i32; }
+
+    // ---- a file, and its bytes read back -----------------------------------
+    Result<NIL>:w = put("/etc/timezone", "Asia/Tokyo\n");
+    if (w.is_error) { exit 33i32; }
+    string:back = read_file(tz) ?! EProbe;
+    if (!(string_equals(back, "Asia/Tokyo\n"))) { exit 33i32; }
+
+    // ---- the longest link target: 4 095 bytes, and not 4 096 ----------------
+    discard(sys(SYS_UNLINK, lt.ptr) ?! EProbe);
+    string:long = "/";
+    for (int64:i in 1i64..(PATH_MAX - 2i64)) { long = string_concat(long, "a"); }
+    if (string_byte_length(long) != (PATH_MAX - 1i64)) { exit 35i32; }
+    string:over = string_concat(long, "a");
+    cstring:oc = to_cstring(over) ?! EProbe;
+    Result<int64>:s4096 = sys(SYS_SYMLINK, oc.ptr, lt.ptr);
+    if (!(s4096.is_error)) { exit 34i32; }
+    cstring:lc = to_cstring(long) ?! EProbe;
+    Result<int64>:s4095 = sys(SYS_SYMLINK, lc.ptr, lt.ptr);
+    if (s4095.is_error) { exit 35i32; }
+    if (!(reads_back(lt, long) ?! EProbe)) { exit 35i32; }
+
+    // ---- and removed --------------------------------------------------------
+    Result<int64>:un = sys(SYS_UNLINK, lt.ptr);
+    if (un.is_error) { exit 36i32; }
+    buffer:b1 = buffer_new(PATH_MAX);
+    Result<int64>:l1 = sys(SYS_READLINK, lt.ptr, b1.ptr, PATH_MAX);
+    if (!(l1.is_error)) { exit 36i32; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (EProbe)            { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

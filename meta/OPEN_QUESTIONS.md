@@ -903,9 +903,9 @@ table, `tests/probe/README.md`'s table and several decisions cite by name, and
 P-5 says a probe is never deleted for the same reason those citations exist.
 
 **Settled at 0.0.2**, which builds the runner. **Nothing waits on it**: no
-probe changes either way, and the entry in the manifest is true about the 29
-<!-- [[sweep: probe_exit=29]] --> today. *(That word was `nineteen` until cycle
-0.0.6, and 28 until cycle 0.2.4b — a settled question's prose is history and
+probe changes either way, and the entry in the manifest is true about the 30
+<!-- [[sweep: probe_exit=30]] --> today. *(That word was `nineteen` until cycle
+0.0.6, 28 until cycle 0.2.4b, and 29 until cycle 0.3.2 — a settled question's prose is history and
 is normally frozen, but this sentence is in the PRESENT tense about the tree as
 it is now, so it is a claim and not a record. TM-142.)*
 

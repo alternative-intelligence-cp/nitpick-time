@@ -636,9 +636,9 @@ def run_parse(rep, root, bld):
     """Every `.npk` in the tree in front of the real parser, each exactly once.
 
     THE DENOMINATOR IS THE WHOLE TREE AND THAT IS WHY THE STAGE IS WORTH ITS
-    COST. Re-measured at cycle 0.3.2's first step: of the 151 `.npk` files
-    here [[sweep: npk_total=151]] the library build roots 7
-    [[sweep: lib_reach=7]], the suite roots 100 [[sweep: suite_roots=100]]
+    COST. Re-measured at cycle 0.3.2's second step: of the 152 `.npk` files
+    here [[sweep: npk_total=152]] the library build roots 7
+    [[sweep: lib_reach=7]], the suite roots 101 [[sweep: suite_roots=101]]
     (127 and 77 from cycle 0.1.3c until `tests/unit/civil_total_edges.npk`
     joined; 128 and 78 from then until cycle 0.2.0b retired the churn pair,
     TM-214; 126 and 76 until cycle 0.2.0 added `span`'s body to the
@@ -647,7 +647,8 @@ def run_parse(rep, root, bld):
     added two units and two sweeps; 142 and 91 until cycle 0.2.3 added five
     units; 147 and 96 until cycle 0.2.4b added a unit and a probe; 150, 7 and
     99 from cycle 0.3.0 until cycle 0.3.2 added the unit that instantiates
-    every generic function, TM-254; 149, 6
+    every generic function, TM-254, and 151 and 100 until its second step
+    added `probe22`, TM-255; 149, 6
     and 98 until cycle 0.3.0 gave `host` a body the library reaches and added
     its unit), and of the 4
     support modules [[sweep: support_total=4]] 3 are reached by `use` from
@@ -816,8 +817,9 @@ def select(root, entry):
     """The files a `[[test]]` entry selects: `<path>/*.npk`, non-recursive.
 
     NOT recursive, and the omission is load-bearing (the manifest says so at
-    length): a plain glob over `tests/probe/` is exactly the 58
-    [[sweep: probe_dir=58]] probe programs (57 until cycle 0.2.4b) and
+    length): a plain glob over `tests/probe/` is exactly the 59
+    [[sweep: probe_dir=59]] probe programs (58 until cycle 0.3.2, 57 until
+    cycle 0.2.4b) and
     excludes `support/` -- four
     library modules with no `main`, three until cycle 0.2.0 -- and `defect/`, whose files are
     reproductions rather than tests of this library and are judged by

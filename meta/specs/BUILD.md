@@ -210,8 +210,8 @@ add — is the document that was wrong.
 **Rule B-4c (TM-119) — inside a `program` entry, the FILE'S OWN HEADER decides
 what kind of test it is. This is a deliberate divergence from `npkg`'s `kind`.**
 A `[[test]]` selects by **directory** and `kind` is per entry, so one entry over
-`tests/probe/` cannot be true about both the 29 files carrying `expect-exit:`
-<!-- [[sweep: probe_exit=29]] --> (28 until cycle 0.2.4b)
+`tests/probe/` cannot be true about both the 30 files carrying `expect-exit:`
+<!-- [[sweep: probe_exit=30]] --> (29 until cycle 0.3.2, 28 until cycle 0.2.4b)
 and the 29 carrying `expect-error:` (O-X7; 8 until cycle 0.1.0c, 13 until 0.1.3b, 15 until 0.1.3c, 21 until 0.2.0, 23 until 0.2.1). The runner therefore dispatches per
 file: `expect-error:` present makes it a **refusal** member — `npkc` must fail
 and the *set* of codes must equal the set named (B-7), each code named once
@@ -324,10 +324,12 @@ list kept the old code until cycle 0.2.0), `BORROW-001`, `BORROW-012`,
 `RESOLVE-001`, `RESOLVE-002` (since cycle 0.2.0, `probe20b`),
 `REACH-002` and `REACH-003`, and every family
 after the first three runs only on something that parsed. Re-measured at pin
-`5fbaf4a`, cycle 0.3.2's first step: **151 files = 106 parse cleanly + 43
+`5fbaf4a`, cycle 0.3.2's second step: **152 files = 107 parse cleanly + 43
 parse and are refused later + 2 do not parse**
-<!-- [[sweep: npk_total=151]] --> (`150 = 105 + 43 + 2` from cycle 0.3.0 until
-cycle 0.3.2 added `tests/unit/generic_instances.npk`, TM-254; `127 = 90 + 35 + 2` from cycle 0.1.3c until
+<!-- [[sweep: npk_total=152]] --> (`151 = 106 + 43 + 2` from cycle 0.3.2's
+first step, which added `tests/unit/generic_instances.npk`, TM-254, until its
+second added `probe22`, TM-255; `150 = 105 + 43 + 2` from cycle 0.3.0 until
+then; `127 = 90 + 35 + 2` from cycle 0.1.3c until
 `tests/unit/civil_total_edges.npk` joined, `128 = 91 + 35 + 2` from then
 until cycle 0.2.0b retired the churn pair, TM-214, `126 = 89 + 35 + 2`
 until cycle 0.2.0 added `Instant`'s unit, its two refusals and the relay

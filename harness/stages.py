@@ -3,8 +3,9 @@
 THE HEADER IS THE AUTHORITY (B-5), AND FROM THIS CYCLE IT ALSO DECIDES WHAT KIND
 OF TEST A FILE IS (O-X7, TM-119). A `[[test]]` entry selects by DIRECTORY and
 never by file, so one `program` entry over `tests/probe/` cannot be true about
-both the 29 files carrying `expect-exit:` [[sweep: probe_exit=29]] (28 until
-cycle 0.2.4b) and the 29 carrying `expect-error:` [[sweep: probe_error=29]] (23
+both the 30 files carrying `expect-exit:` [[sweep: probe_exit=30]] (29 until
+cycle 0.3.2, 28 until 0.2.4b) and the 29 carrying `expect-error:`
+[[sweep: probe_error=29]] (23
 until cycle 0.2.1, 21 until 0.2.0). It dispatches per file instead:
 
     expect-error:  present  ->  a REFUSAL member. `npkc` must fail, and the SET

@@ -188,7 +188,12 @@
 # (until 0.3.1's verification this said "every builtin and prelude function",
 # and until its fix's it called the generic case a hole) -- and
 # `check_host_isolation` reads every name `src/host/` makes public (TM-252,
-# TM-253).
+# TM-253). AND SINCE CYCLE 0.3.2 EVERY GENERIC FUNCTION OF `src/` IS READ IN AN
+# EMISSION TOO: `tests/unit/generic_instances.npk` instantiates each, step 7
+# emits it beside the umbrella, and both readings read its instances, so a
+# generic function that reaches past the program's own memory -- by a drop, an
+# alias or an `await` -- or that nobody instantiates is red here (TM-254,
+# `meta/OPEN_QUESTIONS.md` O-X12 answered).
 #
 # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
 # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,

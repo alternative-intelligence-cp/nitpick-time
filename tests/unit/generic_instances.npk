@@ -1,0 +1,65 @@
+// expect-exit: 0
+//
+// EVERY GENERIC FUNCTION `src/` DECLARES, INSTANTIATED ONCE -- the second
+// emission the library's two readings of `npkc`'s output read (cycle 0.3.2,
+// TM-254; `meta/OPEN_QUESTIONS.md` O-X12).
+//
+// ASKS nothing of its own beyond running clean: each call below is here so
+// that the function it names is IN AN EMISSION. A generic function is emitted
+// only where a caller instantiates it, and the umbrella instantiates none, so
+// until this file `check_call_edges` and `check_wide_types` read no generic
+// function of `src/` at all, and `check_purity` read its spellings alone --
+// a generic one that let a `ByteReader` it took by `move` die, or called
+// `mono_now` through a function-typed local, passed a full run (cycle 0.3.1's
+// third addendum). `run.py`'s step 7 emits this file beside the umbrella, and
+// both checks read every instance of a function of `src/` in it as they read
+// the umbrella's functions.
+//
+// SO A NEW GENERIC FUNCTION OF `src/` IS A RED RUN UNTIL A CALL OF IT IS
+// ADDED HERE, at a type its bounds admit: `check_call_edges` holds every
+// generic `src/` declares to an instance in an emission it reads, as it holds
+// every non-generic one to the umbrella's. What an instance shows is what the
+// generic's own text reaches at that type; what it reaches THROUGH its type
+// argument is that argument's (TM-252's reading). `src/core/vec.npk`'s nine
+// are `T: Copy`, and `int64` is a type the bound admits.
+//
+// EXIT CODES, clear of every arm code (TM-152): 10 `vec_at` read back what
+// `vec_set` did not write; 11 `vec_pop` the same.
+//
+// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing
+// `src/core/vec.npk`: the floor, `IntOverflow`, `OutOfBounds`,
+// `DecreasesViolated` and `LimitViolated` -- `vec_boundaries.npk`'s set.
+mod:generic_instances;
+
+use "../../src/core/vec.npk".*;
+
+func:main = int32(cstring[]:_~argv) {
+    Vec<int64>:v = raw vec_init::<int64>(2i64);
+    drop vec_reserve(@v, 4i64);
+    drop vec_push(@v, 1i64);
+    drop vec_set(@v, 0i64, 2i64);
+    if (raw vec_at(v, 0i64) != 2i64) { exit 10i32; }
+    if (raw vec_pop(@v) != 2i64)     { exit 11i32; }
+    drop vec_push(@v, 3i64);
+    drop vec_truncate(@v, 0i64);
+    drop vec_clear(@v);
+    drop vec_free(@v);
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
+        (LimitViolated)     { exit 109i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

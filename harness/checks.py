@@ -45,6 +45,13 @@ WHAT check_purity IS, AND WHAT NOTHING ELSE CAN BE READ AS.
   source's spellings, which reach a generic function nobody instantiates,
   where no emission does. The symbol scan still answers neither. The
   paragraph above said "the ONLY thing" until then.
+
+  AND SINCE CYCLE 0.3.2 AN EMISSION HOLDS EVERY GENERIC FUNCTION TOO (TM-254,
+  `OPEN_QUESTIONS.md` O-X12): `tests/unit/generic_instances.npk` instantiates
+  each one `src/` declares, `run.py`'s step 7 emits it beside the umbrella,
+  and both readings of the emission read its instances -- so "where no
+  emission does" above is history, and a generic no instance holds is a
+  finding of `check_call_edges`.
 """
 
 import os
@@ -1291,7 +1298,10 @@ def check_raw_index(tree, **_):
 # `check_purity`'s docstring below, with where each is read: a call of one is
 # legal only in an `async func`, which `check_call_edges` refuses in `src/`
 # unless it is generic, and a generic one the arm bill refuses, its `await`
-# or spawn arming `DeadlineExceeded` (TM-252's dated note). Until 0.3.1's
+# or spawn arming `DeadlineExceeded` (TM-252's dated note) -- and since cycle
+# 0.3.2 `check_call_edges` too, which holds every generic function `src/`
+# declares to an instance and none can be written for an `async` one in a
+# synchronous root (TM-254). Until 0.3.1's
 # verification this said "every public function of its prelude", which three
 # `pub async` ones off the list falsify. What it leaves answers from its
 # arguments and what they point at: the allocator, the string floor,
@@ -1401,13 +1411,27 @@ def check_purity(tree, **_):
     red, by the ARM BILL and not by a purity reading: each arms
     `DeadlineExceeded`, which no consumer of `src/` owes, so
     `check_failsafe_arms` and REACH-002 in the units refuse the run. A generic
-    `list_truncate` of a `List<ByteReader>` is red the same way only where the
-    `DecreasesViolated` and `LimitViolated` it arms are new to its module's
-    consumers -- in `cal`, and not in `src/core/bytes.npk`, where the run is
+    `list_truncate` of a `List<ByteReader>` is red the same way only where ANY
+    of the `DecreasesViolated` and `LimitViolated` it arms is new to its
+    module's consumers -- both in `cal`, `DecreasesViolated` alone in
+    `src/core/vec.npk`, and neither in `src/core/bytes.npk`, where the run is
     GREEN. Dormant: `src/`'s generic functions are `src/core/vec.npk`'s nine,
     synchronous, calling the allocator alone. (Until the verification of
     0.3.1's fix this said all three "pass every check", from these checks'
-    runs alone.)
+    runs alone. And until cycle 0.3.2 it said "only where the
+    `DecreasesViolated` and `LimitViolated` it arms are new", which
+    `vec.npk`'s red run falsified, only one of the two new there -- 0.3.1's
+    verification, corrected 2026-10-08.)
+
+    AND SINCE CYCLE 0.3.2 AN EMISSION HOLDS EVERY GENERIC FUNCTION `src/`
+    DECLARES (TM-254, `OPEN_QUESTIONS.md` O-X12): `tests/unit/
+    generic_instances.npk` instantiates each, and `check_call_edges` reads its
+    emission beside the umbrella's -- so each shape above, in a generic
+    function, is that check's finding: with no instance, as a generic no
+    emission holds; with one, the drop and the truncation reach
+    `npk_ofd_close`, the alias is refused where it is instantiated
+    (`NITPICK-EMIT-002`), and the `await` can be written in no synchronous
+    root (`NITPICK-TYPE-043`). The paragraph above is what held until then.
     """
     files = [f for f in src_files(tree) if not f.startswith(HOST_DIR)]
     total = len(src_files(tree))
@@ -1473,7 +1497,9 @@ def check_host_isolation(tree, **_):
     instantiates, no purity check reads it, and a full run is red only where
     the arm bill meets an identity no consumer owed, as an `await`'s
     `DeadlineExceeded`. `check_purity`'s docstring says which. "By a name on
-    its list" was added at 0.3.1's verification.)
+    its list" was added at 0.3.1's verification. Since cycle 0.3.2 the
+    emission holds every generic function `src/` declares, in
+    `tests/unit/generic_instances.npk`'s -- TM-254.)
 
     `src/lib.npk` is exempt because it is the umbrella: it re-exports `host`'s
     public names -- four of H-1's five functions since cycle 0.3.0, and
@@ -1540,6 +1566,19 @@ def check_host_isolation(tree, **_):
 # function `src/` declares but the nine generic ones of `src/core/vec.npk`,
 # which a module holds only where a caller instantiates them.
 EMISSION = "build/ntime.ll"
+# AND EVERY GENERIC FUNCTION `src/` DECLARES, IN AN EMISSION OF ITS OWN (cycle
+# 0.3.2, TM-254; `OPEN_QUESTIONS.md` O-X12). The umbrella instantiates no
+# generic function, so until then neither reading below read one, and a
+# generic function that let a `ByteReader` it took by `move` die, or called
+# `mono_now` through a function-typed local, passed a full run
+# (`meta/roadmap/0.3/0.3.1.md`'s third addendum). `INSTANCES_ROOT` calls every
+# generic function `src/` declares, each at a type its bounds admit; `run.py`'s
+# step 7 emits it to `INSTANCES` beside the umbrella, and both checks read each
+# instance of a function of `src/` there as they read the umbrella's functions.
+# What an instance shows is what the generic's own text reaches at that type;
+# what it reaches through its type argument is that argument's (TM-252).
+INSTANCES_ROOT = "tests/unit/generic_instances.npk"
+INSTANCES = "build/generic_instances.ll"
 _IR_NAME = r'@("[^"]+"|[A-Za-z0-9_.$]+)'
 _IR_DEFINE = re.compile(r"^define [^\n]*?" + _IR_NAME + r"\(.*?^}$", re.S | re.M)
 _IR_DECLARE = re.compile(r"^declare [^\n]*?" + _IR_NAME + r"\(", re.M)
@@ -1706,7 +1745,7 @@ def _declared_functions(tree):
     return out
 
 
-def check_call_edges(tree, emission=None, **_):
+def check_call_edges(tree, emission=None, instances=None, **_):
     """No function of `src/` outside `src/host/` reaches, in `npkc`'s emission,
     a runtime symbol the reviewed allowlist does not hold, a function of
     `src/host/`, a call through a value, or inline assembly (S-7, H-2, TM-250).
@@ -1717,13 +1756,22 @@ def check_call_edges(tree, emission=None, **_):
     reaching, or a re-pin that names functions otherwise, is a finding here
     and not a smaller denominator. A call is direct, and followed; or through
     a value, or inline assembly, and refused, since nobody can read what it
-    calls. WHAT IT CANNOT READ: a generic function nobody instantiates in the
-    umbrella -- `src/core/vec.npk`'s nine -- which an emission holds only
-    where a caller instantiates it, and which `check_purity` reads as spelled;
-    and what an allowed symbol does inside the runtime, which is what its
-    row's review says. And it reads calls: a read of memory through an address
-    made from an integer (`#wild_ptr`, which no file of `src/` writes) calls
-    nothing, and is not this check's question.
+    calls. AND EVERY GENERIC FUNCTION `src/` DECLARES, in a second emission
+    (cycle 0.3.2, TM-254): `INSTANCES_ROOT` instantiates each, `run.py`'s step
+    7 emits it to `INSTANCES`, and each instance of a function of `src/` there
+    is read as the umbrella's functions are -- so a generic function no
+    emission holds an instance of is a finding, as a non-generic one the
+    umbrella does not reach is. (Until cycle 0.3.2 this said "WHAT IT CANNOT
+    READ: a generic function nobody instantiates in the umbrella --
+    `src/core/vec.npk`'s nine -- which an emission holds only where a caller
+    instantiates it, and which `check_purity` reads as spelled", and a generic
+    function that let a `ByteReader` die, or aliased `mono_now`, passed a full
+    run: `OPEN_QUESTIONS.md` O-X12.) WHAT IT CANNOT READ: what an allowed
+    symbol does inside the runtime, which is what its row's review says; and
+    what a generic reaches through a type argument no instance names, which is
+    that argument's (TM-252). And it reads calls: a read of memory through an
+    address made from an integer (`#wild_ptr`, which no file of `src/` writes)
+    calls nothing, and is not this check's question.
 
     AND A POSITIVE CONTROL ON EVERY RUN: where the emission defines a function
     of `src/host/`, one of them reaches a symbol outside the allowlist --
@@ -1732,52 +1780,59 @@ def check_call_edges(tree, emission=None, **_):
     got = read_emission(path)
     if got is None:
         return _no_emission("check_call_edges", path)
-    defines, declares, globs = got
+    ipath = instances or os.path.join(tree, INSTANCES)
+    inst = read_emission(ipath)
     mods, host = _src_modules(tree)
-    fns = sorted(n for n in defines if _ir_module(n) in mods)
-    starts = [n for n in fns if _ir_module(n) not in host]
-    problems, reached = [], set()
-    for n in starts:
-        symbols, src, odd = _reach(n, defines, declares, globs, mods)
-        for sym in sorted(symbols):
-            reached.add(sym)
-            if not _allowed(sym):
+    problems, reached, host_reach = [], set(), set()
+    fns, starts, umbrella = [], [], []
+    for defines, declares, globs in [got] + ([inst] if inst is not None else []):
+        here = sorted(n for n in defines
+                      if _ir_module(n) in mods and n not in fns)
+        if not umbrella:
+            umbrella = here
+        fns += here
+        for n in here:
+            symbols, src, odd = _reach(n, defines, declares, globs, mods)
+            if _ir_module(n) in host:
+                host_reach |= {s for s in symbols if not _allowed(s)}
+                continue
+            starts.append(n)
+            for sym in sorted(symbols):
+                reached.add(sym)
+                if not _allowed(sym):
+                    problems.append(
+                        "`%s` reaches `%s` outside `src/host/`, and the "
+                        "reviewed allowlist does not hold it: %s. Every "
+                        "function of `ntime` outside `src/host/` is a pure "
+                        "function of its arguments (S-7, TM-018). If `%s` "
+                        "touches the kernel, the clock, the environment or a "
+                        "descriptor, the call belongs in `src/host/`; if it "
+                        "only allocates from its inputs, review it and give it "
+                        "a row of `CALL_EDGE_ALLOW`, with its reason, in the "
+                        "same commit." % (n, sym, symbols[sym], sym))
+            for f in sorted(src):
+                if _ir_module(f) in host:
+                    problems.append(
+                        "`%s` calls into `src/host/`: %s. Nothing outside "
+                        "`src/host/` calls a function of `host` (HOST.md H-2, "
+                        "B-17): a function that needs \"now\" takes it as a "
+                        "parameter (S-9)." % (n, src[f]))
+            for where, what in odd:
                 problems.append(
-                    "`%s` reaches `%s` outside `src/host/`, and the reviewed "
-                    "allowlist does not hold it: %s. Every function of `ntime` "
-                    "outside `src/host/` is a pure function of its arguments "
-                    "(S-7, TM-018). If `%s` touches the kernel, the clock, the "
-                    "environment or a descriptor, the call belongs in "
-                    "`src/host/`; if it only allocates from its inputs, review "
-                    "it and give it a row of `CALL_EDGE_ALLOW`, with its "
-                    "reason, in the same commit." % (n, sym, symbols[sym], sym))
-        for f in sorted(src):
-            if _ir_module(f) in host:
-                problems.append(
-                    "`%s` calls into `src/host/`: %s. Nothing outside "
-                    "`src/host/` calls a function of `host` (HOST.md H-2, "
-                    "B-17): a function that needs \"now\" takes it as a "
-                    "parameter (S-9)." % (n, src[f]))
-        for where, what in odd:
-            problems.append(
-                "`%s` holds %s%s, and nobody can read what it calls. A "
-                "function of `ntime` outside `src/host/` takes no callback (a "
-                "layout is data, not a callback: SAFETY.md §1, D-018) and "
-                "writes no assembly, so S-7's claim is about every call it "
-                "makes; call the function by its name."
-                % (n, what, "" if where == n
-                   else " (in `%s`, which it reaches)" % where))
-    host_reach = set()
-    for n in fns:
-        if _ir_module(n) in host:
-            symbols, _src, _odd = _reach(n, defines, declares, globs, mods)
-            host_reach |= {s for s in symbols if not _allowed(s)}
+                    "`%s` holds %s%s, and nobody can read what it calls. A "
+                    "function of `ntime` outside `src/host/` takes no "
+                    "callback (a layout is data, not a callback: SAFETY.md "
+                    "§1, D-018) and writes no assembly, so S-7's claim is "
+                    "about every call it makes; call the function by its "
+                    "name." % (n, what, "" if where == n
+                               else " (in `%s`, which it reaches)" % where))
     if any(_ir_module(n) in host for n in fns) and not host_reach:
         problems.append(
             "check_call_edges read the emission's `src/host/` and found it "
             "reaching nothing outside the allowlist. H-1's clocks read the "
             "kernel, so this reader is not reading the emission's calls, and "
             "its silence above is evidence of nothing.")
+    declares = got[1]
     for sym in sorted(CALL_EDGE_ALLOW):
         if sym not in declares:
             problems.append(
@@ -1791,7 +1846,8 @@ def check_call_edges(tree, emission=None, **_):
                 "emission declares: a row that outlived its family (V-1c)."
                 % pat)
     declared = _declared_functions(tree)
-    emitted = {(_ir_module(n), n[len("npk.%s." % _ir_module(n)):]) for n in fns}
+    emitted = {(_ir_module(n), n[len("npk.%s." % _ir_module(n)):])
+               for n in umbrella}
     plain = [d for d in declared if not d[3]]
     for rel, mod, name, _generic in plain:
         if (mod, name) not in emitted:
@@ -1801,16 +1857,43 @@ def check_call_edges(tree, emission=None, **_):
                 "its functions otherwise. Either way this reading has not read "
                 "it, and a function no reading reaches is one the purity and "
                 "width claims say nothing about." % (rel, name, mod, name))
+    # EVERY GENERIC FUNCTION `src/` DECLARES, HELD TO AN INSTANCE (TM-254). A
+    # generic's instance is `npk.<module>.<name><...>`; one in either emission
+    # will do, and none is a finding -- the instances' emission absent first.
+    generic = [d for d in declared if d[3]]
+    instanced = {(_ir_module(n), _ir_source_name(n)) for n in fns if "<" in n}
+    if generic and inst is None:
+        problems.append(
+            "check_call_edges read no instances' emission at %s, and `src/` "
+            "declares %d generic function(s). `run.py`'s step 7 emits `%s` "
+            "there, beside the umbrella, so that every generic function of "
+            "`src/` is read as the rest are (TM-254); a check that read "
+            "nothing has checked nothing (V-1b)."
+            % (ipath, len(generic), INSTANCES_ROOT))
+    elif generic:
+        for rel, mod, name, _generic in generic:
+            if (mod, name) not in instanced:
+                problems.append(
+                    "%s declares the generic `%s`, and no emission this check "
+                    "reads holds an instance of it, `npk.%s.%s<...>`. `%s` "
+                    "instantiates every generic function `src/` declares, so "
+                    "that its calls are read as every other function's are "
+                    "(OPEN_QUESTIONS.md O-X12, TM-254): call `%s` there, at a "
+                    "type its bounds admit, in the same commit. A function no "
+                    "reading reaches is one the purity and width claims say "
+                    "nothing about." % (rel, name, mod, name, INSTANCES_ROOT,
+                                        name))
     outside = sorted(s for s in reached if not _allowed(s))
-    headline = ("%d function(s) of src/'s modules in the emission, %d outside "
+    headline = ("%d function(s) of src/'s modules in the emissions, %d outside "
                 "src/host/, reaching %d runtime symbol(s), %d outside the "
                 "reviewed allowlist; src/host/ reaches %s; %d of %d non-generic "
-                "function(s) src/ declares in it, %d generic read by spelling "
-                "alone"
+                "function(s) src/ declares in the umbrella's, %d of %d generic "
+                "in the instances' (%s)"
                 % (len(fns), len(starts), len(reached), len(outside),
                    ", ".join(sorted(host_reach)) or "nothing outside it",
                    sum(1 for d in plain if (d[1], d[2]) in emitted), len(plain),
-                   len(declared) - len(plain)))
+                   sum(1 for d in generic if (d[1], d[2]) in instanced),
+                   len(generic), INSTANCES_ROOT))
     return Result("check_call_edges", headline, problems)
 
 
@@ -1837,7 +1920,10 @@ def check_call_edges(tree, emission=None, **_):
 # there. What this one cannot read is `check_call_edges`' limit: a generic
 # function nobody instantiates in the umbrella. And a mark that outlived its
 # reason is the spelling check's to fail; here a marked function the emission
-# defines with no wide type is named in the headline.
+# defines with no wide type is named in the headline. (Since cycle 0.3.2 it
+# reads `INSTANCES` too, the emission that holds an instance of every generic
+# function `src/` declares, so "nobody instantiates" names no function of
+# `src/` -- TM-254.)
 _IR_WIDE = re.compile(r"(?<![A-Za-z0-9_.%@$\"])i([0-9]+)(?![A-Za-z0-9_])")
 
 
@@ -1846,15 +1932,23 @@ def _ir_widths(text):
     return sorted({int(w) for w in _IR_WIDE.findall(text) if int(w) > 64})
 
 
-def check_wide_types(tree, emission=None, **_):
+def check_wide_types(tree, emission=None, instances=None, **_):
     """Every integer type wider than `i64` in `npkc`'s emission of a function
     of `src/` stands in a function `SPAN_MODEL.md` §5 marks, and in no global
-    of `src/`'s modules -- N-20's wide values, spelled or not (TM-251)."""
+    of `src/`'s modules -- N-20's wide values, spelled or not (TM-251). The
+    emissions are the umbrella's and, since cycle 0.3.2, `INSTANCES`, where
+    every generic function `src/` declares has an instance (TM-254)."""
     path = emission or os.path.join(tree, EMISSION)
     got = read_emission(path)
     if got is None:
         return _no_emission("check_wide_types", path)
-    defines, _declares, globs = got
+    inst = read_emission(instances or os.path.join(tree, INSTANCES))
+    defines, globs = dict(got[0]), dict(got[2])
+    if inst is not None:
+        for n, body in inst[0].items():
+            defines.setdefault(n, body)
+        for g, init in inst[2].items():
+            globs.setdefault(g, init)
     sites, problems = int128_sites(tree)
     problems = list(problems)
     mods, _host = _src_modules(tree)
@@ -1885,9 +1979,9 @@ def check_wide_types(tree, emission=None, **_):
     emitted = {_ir_source_name(n) for n in fns}
     quiet = sorted(s for s in sites if s in emitted and s not in holders)
     absent = sorted(s for s in sites if s not in emitted)
-    headline = ("%d of %d function(s) of src/'s modules in the emission hold an "
-                "integer wider than i64%s; %d site(s) §5 marks, %d not in the "
-                "emission%s%s"
+    headline = ("%d of %d function(s) of src/'s modules in the emissions hold "
+                "an integer wider than i64%s; %d site(s) §5 marks, %d not in "
+                "them%s%s"
                 % (len(holders), len(fns),
                    " (" + ", ".join(sorted(holders)) + ")" if holders else "",
                    len(sites), len(absent),

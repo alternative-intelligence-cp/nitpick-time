@@ -7969,6 +7969,15 @@ their own; the other two are the review of the two ban lists the cycle README
 names.
 
 ### TM-250 — O-X9 answered: `check_call_edges` reads every call a function of `src/` outside `src/host/` makes in `npkc`'s emission of the umbrella, and holds what it reaches to a reviewed allowlist — a second reading of S-7, beside `check_purity` and never instead of it
+> **SUPERSEDED IN PART by TM-254 (2026-10-08, cycle 0.3.2)**: its
+> *"`check_purity` stays — it reads a generic function nobody instantiates,
+> which no emission holds"* is no longer true of what this check reads.
+> Every generic function `src/` declares has an instance in
+> `tests/unit/generic_instances.npk`'s emission since then, which this check
+> reads beside the umbrella's and holds each generic to — one root written for
+> the purpose, where the alternative declined below read every test program's.
+> `check_purity` stays, for the reason it always had. The text below is left
+> exactly as written.
 
 **2026-10-08, cycle 0.3.1 (the plan's PD-95). Strikes `meta/OPEN_QUESTIONS.md`
 O-X9; adds `TESTING.md` §2's row and moves V-1a's counts; dates `SAFETY.md`
@@ -8033,6 +8042,9 @@ a syscall** — O-X9's own reason for waiting was a scan with nothing to check,
 and `host` names two.
 
 ### TM-251 — O-X11 answered: `check_wide_types` reads every integer type wider than `i64` in `npkc`'s emission of a function of `src/`, and holds it to §5's sites — a second reading of N-20, beside `check_int128_sites`
+> **And TM-254 (2026-10-08, cycle 0.3.2)**: the same reading covers
+> `tests/unit/generic_instances.npk`'s emission, where every generic function
+> `src/` declares has an instance. The text below is left exactly as written.
 
 **2026-10-08, cycle 0.3.1 (the plan's PD-96). Strikes `meta/OPEN_QUESTIONS.md`
 O-X11; adds `TESTING.md` §2's row; dates `TESTING.md` V-1 and `SPAN_MODEL.md`
@@ -8122,6 +8134,18 @@ lines.
 > `LimitViolated` are new to the module's consumers — in `cal` — and GREEN in
 > `src/core/bytes.npk`, whose consumers owe both. No purity check reads any of
 > them.
+>
+> **And corrected 2026-10-08 at cycle 0.3.2 — a further dated sentence; the
+> notes above stand as written.** Its *"only where its `DecreasesViolated` and
+> `LimitViolated` are new to the module's consumers"* reads *any of*: the
+> third addendum's own table has the truncation red in `src/core/vec.npk`,
+> where only `DecreasesViolated` was new — `NITPICK-REACH-002` in five units,
+> naming it alone — as it is in `cal`, where both were. And what the first
+> note left undecided is decided: by TM-254, every generic function `src/`
+> declares is instantiated in `tests/unit/generic_instances.npk`, whose
+> emission `check_call_edges` reads, so each shape above is that check's
+> finding in a generic function, and a generic no instance holds is one
+> too (`meta/OPEN_QUESTIONS.md` O-X12).
 
 **2026-10-08, cycle 0.3.1 (the plan's PD-97). Supersedes TM-018 in its list of
 names; dates `SAFETY.md` S-10 and S-10b; restates `TESTING.md` §2's row; the
@@ -8211,3 +8235,75 @@ in the check** — a list that goes stale the day 0.3.2 adds two; **the check
 retired, `check_layering` and `check_call_edges` standing for it** — a third
 reading of B-17's boundary costs nothing, and it is the one that reads a file
 the umbrella does not reach, such as `src/fmt/fmt.npk` today.
+
+# Cycle 0.3.2 — every generic function read, a unit's own `/etc`, and the system zone, ratified 2026-10-08
+
+Four decisions, drafted at planning (`meta/roadmap/0.3/0.3.2.md` §2, PD-99 …
+PD-102, in that order), accepted by the orchestrator before the subcycle's
+dispatch, and each measured at compiler `5fbaf4a`. The first answers the
+question cycle 0.3.1's fix raised, `meta/OPEN_QUESTIONS.md` O-X12, in a
+commit of its own; the second is the instrument the system zone's tests stand
+on, in a commit of its own because CI meets it there first; the other two are
+the system zone and its tests.
+
+### TM-254 — O-X12 answered: every generic function `src/` declares is instantiated in `tests/unit/generic_instances.npk`, whose emission `check_call_edges` and `check_wide_types` read beside the umbrella's — and a generic function no instance holds is a finding
+
+**2026-10-08, cycle 0.3.2 (the plan's PD-99). Strikes `meta/OPEN_QUESTIONS.md`
+O-X12; supersedes TM-250 in its clause on what reads a generic function, and
+widens TM-251's reading; dates `TESTING.md` §2's three rows, V-1 and V-14c,
+`SAFETY.md` S-10 and S-10b and `SPAN_MODEL.md` N-20; and gives TM-252's note a
+further dated sentence, which reads its "and" as "any of".**
+
+**What was found** (`0.3.2.md` §1). A generic function is emitted only where a
+caller instantiates it, and the umbrella instantiates none, so the two
+readings of the emission read no generic function of `src/`, and
+`check_purity` reads its spellings alone. Four shapes, each a generic function
+appended to a copy's `src/cal/cal.npk`: one that lets a `ByteReader` it takes
+by `move` die, one that truncates a `List<ByteReader>`, one that calls
+`mono_now` through a function-typed local, and one that awaits
+`text_read_line`. Cycle 0.3.1's fix measured them in full runs — the first and
+third GREEN, the others red only by the arm bill (`0.3.1.md`'s third
+addendum). With a unit that instantiates every generic function `src/`
+declares, emitted beside the umbrella, and the declared-function rule held to
+the generic ones, each is a finding of `check_call_edges`: with no instance,
+as a generic no emission holds; with one, the drop and the truncation reach
+`npk_ofd_close` through the drop glue, the alias is refused where it is
+instantiated (`NITPICK-EMIT-002`), and the `await` can be written in no
+synchronous root (`NITPICK-TYPE-043`). Over the tree the nine functions of
+`src/core/vec.npk`, each instantiated at `int64`, reach the allocator, the
+error route and LLVM's arithmetic — `npk_alloc`, `npk_ralloc`, `npk_dalloc`,
+`npk_trap`, `npk_chain_reset` and three overflow intrinsics, every one in the
+allowlist — and hold no integer wider than `i64`.
+
+**The decision.** *`tests/unit/generic_instances.npk` calls every generic
+function `src/` declares, each at a type its bounds admit — `vec.npk`'s nine
+at `int64` today — and runs as a unit. `run.py`'s step 7 emits it beside the
+umbrella, to `build/generic_instances.ll`, and `check_call_edges` and
+`check_wide_types` read each instance of a function of `src/` in it as they
+read the umbrella's functions. `check_call_edges`' declared-function rule holds
+every generic function `src/` declares to an instance in an emission it reads:
+one with none is a finding, and so is no instances' emission where `src/`
+declares one. What an instance shows is what the generic's own text reaches at
+that type; what it reaches through its type argument is that argument's
+(TM-252's reading). Four plants, each an emission's text. And TM-252's note
+gains a further dated sentence: its "the `DecreasesViolated` and
+`LimitViolated` it arms are new" reads "any of" — in `src/core/vec.npk` only
+`DecreasesViolated` was new, and the run was red — as `check_purity`'s
+docstring does, corrected where it stands.*
+
+*Alternatives declined:* **the three token checks** the 0.3.1 fix recommended,
+each plantable — no `async` in `src/` outside `src/host/`, no function-typed
+local in `src/`, no descriptor-owning prelude type (`ByteReader`,
+`ByteWriter`, `OwnedFd`, `TextReader`, `TextWriter`, `LineBufWriter`) named in
+`src/` outside `src/host/` — the third weighed against this subcycle's own
+code and compatible with it, since the system zone's one descriptor is
+`src/host/`'s; declined because each reads the shape it names, and a list of
+shapes is a list of names as 0.3.1 measured them — a shape nobody listed would
+still be read by spelling alone, where an emission holds every call the code
+makes; **every test program's emission read** — TM-250's declined
+alternative, a hundred roots' emissions for nine functions, and a generic no
+test instantiates still unread; **no generic function outside
+`src/core/vec.npk`** — a rule about where code may live, where the question is
+what reads it; **instances generated by the harness from the signatures** — a
+generator of programs the harness would have to get right for every bound,
+where a unit states each call once.

@@ -324,9 +324,10 @@ list kept the old code until cycle 0.2.0), `BORROW-001`, `BORROW-012`,
 `RESOLVE-001`, `RESOLVE-002` (since cycle 0.2.0, `probe20b`),
 `REACH-002` and `REACH-003`, and every family
 after the first three runs only on something that parsed. Re-measured at pin
-`5fbaf4a`, cycle 0.3.0: **150 files = 105 parse cleanly + 43
+`5fbaf4a`, cycle 0.3.2's first step: **151 files = 106 parse cleanly + 43
 parse and are refused later + 2 do not parse**
-<!-- [[sweep: npk_total=150]] --> (`127 = 90 + 35 + 2` from cycle 0.1.3c until
+<!-- [[sweep: npk_total=151]] --> (`150 = 105 + 43 + 2` from cycle 0.3.0 until
+cycle 0.3.2 added `tests/unit/generic_instances.npk`, TM-254; `127 = 90 + 35 + 2` from cycle 0.1.3c until
 `tests/unit/civil_total_edges.npk` joined, `128 = 91 + 35 + 2` from then
 until cycle 0.2.0b retired the churn pair, TM-214, `126 = 89 + 35 + 2`
 until cycle 0.2.0 added `Instant`'s unit, its two refusals and the relay

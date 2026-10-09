@@ -266,6 +266,9 @@ a function of the umbrella's emission, spelled or not, stands in a function
 the table marks — so the call's result above is a finding there. Two
 readings hold the rule, of the spelling and of the emission; a generic
 function nobody instantiates in the umbrella is read by spelling alone.)*
+*(Cycle 0.3.2, TM-254: none is, since — every generic function `src/`
+declares has an instance in `tests/unit/generic_instances.npk`'s emission,
+which `check_wide_types` reads beside the umbrella's.)*
 
 **Rule N-20b (TM-105) — the range check at each of those sites is mandatory
 library code, because the language provides no checked narrowing.** Measured at

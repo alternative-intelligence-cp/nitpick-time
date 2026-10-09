@@ -636,16 +636,18 @@ def run_parse(rep, root, bld):
     """Every `.npk` in the tree in front of the real parser, each exactly once.
 
     THE DENOMINATOR IS THE WHOLE TREE AND THAT IS WHY THE STAGE IS WORTH ITS
-    COST. Re-measured at cycle 0.3.0: of the 150 `.npk` files
-    here [[sweep: npk_total=150]] the library build roots 7
-    [[sweep: lib_reach=7]], the suite roots 99 [[sweep: suite_roots=99]]
+    COST. Re-measured at cycle 0.3.2's first step: of the 151 `.npk` files
+    here [[sweep: npk_total=151]] the library build roots 7
+    [[sweep: lib_reach=7]], the suite roots 100 [[sweep: suite_roots=100]]
     (127 and 77 from cycle 0.1.3c until `tests/unit/civil_total_edges.npk`
     joined; 128 and 78 from then until cycle 0.2.0b retired the churn pair,
     TM-214; 126 and 76 until cycle 0.2.0 added `span`'s body to the
     library's reach and a unit and two probes to the suite; 130 and 79 until
     cycle 0.2.1 added two units and six probes; 138 and 87 until cycle 0.2.2
     added two units and two sweeps; 142 and 91 until cycle 0.2.3 added five
-    units; 147 and 96 until cycle 0.2.4b added a unit and a probe; 149, 6
+    units; 147 and 96 until cycle 0.2.4b added a unit and a probe; 150, 7 and
+    99 from cycle 0.3.0 until cycle 0.3.2 added the unit that instantiates
+    every generic function, TM-254; 149, 6
     and 98 until cycle 0.3.0 gave `host` a body the library reaches and added
     its unit), and of the 4
     support modules [[sweep: support_total=4]] 3 are reached by `use` from
@@ -768,11 +770,26 @@ def build_library(rep, root, bld):
     rep.say("[7/%d] library -- %s, reaching %d source(s) by `use`"
             % (STEPS, entry, len(reached)))
     ll = os.path.join(bld.out_dir, "ntime.ll")
+    # AND THE INSTANCES' EMISSION BESIDE IT (cycle 0.3.2, TM-254): the unit
+    # that instantiates every generic function `src/` declares, emitted here
+    # so the two readings below read its instances as they read the
+    # umbrella's functions -- the umbrella instantiates no generic function.
+    # A tree without the unit -- the self-check's scratch trees -- emits none,
+    # and `check_call_edges` says so if `src/` declares a generic function.
+    ill = os.path.join(bld.out_dir, os.path.basename(checks_mod.INSTANCES))
     try:
         bld.emit(entry, ll)
         rep.say("  ok    npkc            %9d B of IR" % os.path.getsize(ll))
-        _report_check(rep, checks_mod.check_call_edges(root, emission=ll))
-        _report_check(rep, checks_mod.check_wide_types(root, emission=ll))
+        if os.path.isfile(os.path.join(root, checks_mod.INSTANCES_ROOT)):
+            bld.emit(checks_mod.INSTANCES_ROOT, ill)
+            rep.say("  ok    npkc            %9d B of IR, the instances (%s)"
+                    % (os.path.getsize(ill), checks_mod.INSTANCES_ROOT))
+        elif os.path.exists(ill):
+            os.remove(ill)
+        _report_check(rep, checks_mod.check_call_edges(root, emission=ll,
+                                                       instances=ill))
+        _report_check(rep, checks_mod.check_wide_types(root, emission=ll,
+                                                       instances=ill))
         obj = os.path.join(bld.out_dir, "ntime.o")
         bld.assemble(ll, obj)
         bld.scan(obj)

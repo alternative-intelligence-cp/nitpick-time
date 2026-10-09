@@ -1107,7 +1107,17 @@ pointer here (`meta/roadmap/0.3/0.3.0.md` §7).
 
 ---
 
-### O-X12 — a generic function of `src/` that nobody instantiates is in no emission: what reads it?
+### ~~O-X12 — a generic function of `src/` that nobody instantiates is in no emission: what reads it?~~ — **SETTLED 2026-10-08 (TM-254): an emission — every generic function `src/` declares is instantiated in `tests/unit/generic_instances.npk`, whose emission `check_call_edges` and `check_wide_types` read beside the umbrella's, and a generic no instance holds is a finding**
+
+> The recommendation, taken at cycle 0.3.2. Measured at compiler `5fbaf4a`
+> (`meta/roadmap/0.3/0.3.2.md` §1.3): each of the four shapes below, in a
+> generic function appended to a copy's `src/cal/cal.npk`, is a finding of
+> `check_call_edges` with no instance — the drop and the truncation reach
+> `npk_ofd_close` with one, the alias is refused where it is instantiated,
+> and the `await` can be written in no synchronous root. Over the tree,
+> `src/core/vec.npk`'s nine, instantiated at `int64`, reach the allocator, the
+> error route and LLVM's arithmetic — every symbol in the allowlist. The
+> question below is left as it was asked.
 
 **Raised 2026-10-08 by cycle 0.3.1's fix** (`s2-ntime-0.3.1-0752`, `74844ac`),
 measured again in full runs by that fix's verification (`30bd704`), held in the

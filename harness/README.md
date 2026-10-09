@@ -59,11 +59,16 @@ running unlisted since cycle 0.0.6)*:
   a code named once for two sites and three times for two (TM-210). Case 6
   (a generator differing by one line) is **pending until 0.5** and prints as
   pending rather than passing.
-- **One hundred and twelve planted violations across the tree checks since
-  cycle 0.3.1** (one hundred and six after its first step, ninety-five from
+- **One hundred and sixteen planted violations across the tree checks since
+  cycle 0.3.2** (one hundred and twelve from cycle 0.3.1, one hundred and six
+  after its first step, ninety-five from
   cycle 0.3.0, ninety-two from cycle 0.2.4a, eighty-two from cycle 0.2.3a,
   forty-four from cycle 0.1.5's second half, forty after its first half,
-  twenty-three before it; 0.3.1's second step's six are `check_purity`'s
+  twenty-three before it; 0.3.2's four are `check_call_edges`' three — a
+  generic function no emission holds an instance of, an instance reaching the
+  kernel, and no instances' emission where `src/` declares a generic — and
+  `check_wide_types`' wide instance in the instances' emission (TM-254);
+  0.3.1's second step's six are `check_purity`'s
   five — a thread count, an error's chain and a standard stream, which its six
   names passed, `open` beside a pure `reopen`, and a method of a banned name —
   and `check_host_isolation`'s `HostClock`; its first step's eleven

@@ -376,7 +376,13 @@ it, but a full run is red by the arm bill, since its `await` or `drop` spawn
 arms `DeadlineExceeded`, which no consumer of `src/` owes —
 `check_failsafe_arms`, and `NITPICK-REACH-002` in the units (until the
 verification of 0.3.1's fix this said it "passes every check", measured by
-the checks alone). TM-252's dated note has the rest.)*
+the checks alone). TM-252's dated note has the rest.)* *(Cycle 0.3.2, TM-254 —
+`../OPEN_QUESTIONS.md` O-X12 answered: a generic one is in an emission since.
+`tests/unit/generic_instances.npk` instantiates every generic function `src/`
+declares, `check_call_edges` reads its emission beside the umbrella's and
+holds each generic to an instance there, and none can be written for an
+`async` one in a synchronous root — so a generic function that reaches past
+the program's own memory is a finding, whatever it reaches it by.)*
 
 **Rule S-10b (TM-126) — it is a SOURCE-LEVEL check, it is LIVE, and it has been
 SEEN TO FAIL.** Three separate claims, and each was missing:
@@ -397,6 +403,9 @@ SEEN TO FAIL.** Three separate claims, and each was missing:
   makes — a call through a name no ban list knows is a call like any other
   there — and cannot read a generic function nobody instantiates in it, which
   this check reads as spelled. The symbol scan still answers neither.)*
+  *(Since cycle 0.3.2 it reads every generic function `src/` declares, in the
+  emission of `tests/unit/generic_instances.npk`, which instantiates each —
+  TM-254.)*
 - **Live from cycle 0.0.3**, not from 0.3. It runs over the six non-`host`
   files today and reports `0` findings with the denominator printed, which is
   the same answer `check_no_owning_fields` gives over an empty set and is

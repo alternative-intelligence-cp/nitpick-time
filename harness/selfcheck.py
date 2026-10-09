@@ -939,12 +939,24 @@ def _ir(*parts, omit=()):
     return ("build/ntime.ll", decl + "".join(parts))
 
 
+# AND THE INSTANCES' EMISSION (cycle 0.3.2, TM-254) -- `checks.INSTANCES`,
+# spelled out so the plants run against the checks before it, which name no
+# such constant: the same declarations as `_ir`'s, so a symbol a plant
+# reaches is one the reader knows.
+def _inst(*parts):
+    return ("build/generic_instances.ll", _ir(*parts)[1])
+
+
 def _fn(name, body):
     return ('define { i64, i32 } @"%s"() {\nentry:\n%s'
             "  ret { i64, i32 } zeroinitializer\n}\n" % (name, body))
 
 
 _CALL = "  %%r = call %s\n"
+# A generic function, declared: the source `check_call_edges` holds to an
+# instance since cycle 0.3.2 (TM-254).
+_GEN_SRC = ("src/core/vec.npk",
+            "mod:vec;\nfunc:g<T: Copy> = NIL(T:x) never fails { pass NIL; };\n")
 _HOST_FN = _fn("npk.host.h", _CALL % ("i64 @npk_sys6(i64 228, i64 0, i64 0, "
                                      "i64 0, i64 0, i64 0, i64 0)"))
 _WIDE_FN = _fn("npk.span.wide", "  %w = add i256 7, 0\n")
@@ -1654,6 +1666,40 @@ PLANTED = [
      [_span5((("`wide`", "**yes**"),)), ("src/core/vec.npk", "mod:vec;\n"),
       _ir(_fn("npk.vec.vec_push<int64>", "  %s = add i64 %a, 1\n"))],
      "§5's table marks no `int128` site in `vec_push`"),
+    # ---- CYCLE 0.3.2: EVERY GENERIC FUNCTION, IN AN EMISSION (TM-254,
+    # `OPEN_QUESTIONS.md` O-X12). `src/core/vec.npk` declares one generic
+    # function in each row, and `_inst` writes the second emission.
+    #
+    # A GENERIC NO EMISSION HOLDS AN INSTANCE OF -- the shape that passed a
+    # full run at 0.3.1's fix -- beside the same generic, instantiated.
+    (checks_mod.check_call_edges,
+     [_GEN_SRC, _ir(), _inst(_fn("npk.vec.h<int64>", ""))],
+     [_GEN_SRC, _ir(), _inst(_fn("npk.vec.g<int64>", ""))],
+     "declares the generic `g`, and no emission this check reads holds an "
+     "instance of it"),
+    # AN INSTANCE THAT REACHES THE KERNEL, read as any function is -- beside
+    # the instance allocating.
+    (checks_mod.check_call_edges,
+     [_GEN_SRC, _ir(), _inst(_fn("npk.vec.g<int64>",
+                                 _CALL % "i64 @npk_sys6(i64 39, i64 0, i64 0, "
+                                         "i64 0, i64 0, i64 0, i64 0)"))],
+     [_GEN_SRC, _ir(), _inst(_fn("npk.vec.g<int64>",
+                                 _CALL % "ptr @npk_alloc(i64 8)"))],
+     "`npk.vec.g<int64>` reaches `npk_sys6` outside `src/host/`"),
+    # NO INSTANCES' EMISSION AT ALL, where `src/` declares a generic: a reading
+    # of nothing (V-1b) -- beside the emission written.
+    (checks_mod.check_call_edges,
+     [_GEN_SRC, _ir()],
+     [_GEN_SRC, _ir(), _inst(_fn("npk.vec.g<int64>", ""))],
+     "check_call_edges read no instances' emission"),
+    # A WIDE INSTANCE IN THE INSTANCES' EMISSION -- read there, as in the
+    # umbrella's -- beside the instance in `i64`.
+    (checks_mod.check_wide_types,
+     [_span5((("`wide`", "**yes**"),)), _GEN_SRC, _ir(),
+      _inst(_fn("npk.vec.g<int128>", "  %s = add i128 %a, 1\n"))],
+     [_span5((("`wide`", "**yes**"),)), _GEN_SRC, _ir(),
+      _inst(_fn("npk.vec.g<int64>", "  %s = add i64 %a, 1\n"))],
+     "§5's table marks no `int128` site in `g`"),
     # ---- CYCLE 0.3.1: THE TWO BAN LISTS, REVIEWED (TM-252, TM-253). The
     # first five rows are the new classes and the pattern's left boundary, each a
     # plant cycle 0.0.3's six names passed beside a control a check matching

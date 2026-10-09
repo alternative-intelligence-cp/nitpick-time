@@ -46,7 +46,10 @@ the only thing that answers "did this module touch the kernel" (TM-250,
 integer wider than `i64` in that emission to `SPAN_MODEL.md` §5's sites,
 spelled or not, so a call's wide result is a finding (TM-251, O-X11
 answered). Neither reads a generic function nobody instantiates in the
-umbrella — `src/core/vec.npk`'s nine — which the spelling checks read. The
+umbrella — `src/core/vec.npk`'s nine — which the spelling checks read.
+*(Both read them since cycle 0.3.2, in the emission of
+`tests/unit/generic_instances.npk`, which instantiates every generic function
+`src/` declares — TM-254, `meta/OPEN_QUESTIONS.md` O-X12 answered.)* The
 cycle README's two plants, a `mono_now()` in `src/cal/cal.npk` and a
 `host_now_utc()` in `src/fmt/fmt.npk`, fail by name: a full run over a copy
 holding both is RED, four checks naming them. The self-check plants 112

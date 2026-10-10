@@ -173,6 +173,22 @@ unchanged tree at both pins before it changes anything, as 0.1.0b, 0.1.4c and
    every non-generic function `src/` declares to it, so a re-pin that renames
    them is a red run.
 
+*(Carried by 0.3.2a, the adoption of compiler `7e91730`, 2026-10-09 —
+`0.3.2a.md` §1, TM-258 and TM-259 — each item measured at both pins. **1**
+The statement form compiles at `7e91730`, the compiler's DEF-225, and runs on
+both legs; `?|` is kept and O-N34 struck. **2** Both functions' `int128`
+arithmetic is inline at both legs under each pin's LLVM, and no object names
+a symbol `npkrt.o` does not define. **3** The lexer re-read: a float's scan and
+a refused integer literal's token moved, and no span `lexical.py` finds; part
+E is green at both pins, its third half too. **4 waits**: the compiler's D-341
+is settled and not built at `7e91730`, so `src/`'s nine `#wild_slice` sites
+read as they did — the re-pin that carries its build owes this item. **5** CI
+is pinned to `7e91730`, its emission row notice 103's. **6** The builtin
+table's fifty-seven names and the prelude's sixty-three public functions are
+the same at both pins, the one row that moved `string_bytes`'s result, so
+`check_purity`'s list stands; `check_call_edges` reaches no symbol outside its
+allowlist, and the emission's names are `npk.<module>.<name>` as before.)*
+
 ## Gate
 
 `check_purity` green **and seen to fail**, and every clock test green under

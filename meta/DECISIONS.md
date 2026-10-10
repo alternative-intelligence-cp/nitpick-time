@@ -8324,6 +8324,13 @@ generator of programs the harness would have to get right for every bound,
 where a unit states each call once.
 
 ### TM-255 — a unit that must set what `src/host/` reads makes its own machine: a user and a mount namespace of its own and an empty `tmpfs` over `/etc`, by syscalls in its own text; and CI lifts Ubuntu 24.04's restriction on them
+> **The author's decision too (2026-10-09, cycle 0.3.2a).** PD-100 went to the
+> author with PD-101 as the workbench's question 26, and his answer, at
+> 2026-10-08 16:05, accepted both as recommended — *"i read the
+> recommendations. they look fine."* — this decision's CI step among them, the
+> lift of AppArmor's restriction on a one-job runner with the release notes'
+> warning beside it. TM-256 records the same answer for PD-101; this text did
+> not name it. The text below is left exactly as written.
 
 **2026-10-08, cycle 0.3.2 (the plan's PD-100). Adds `TESTING.md` V-1m and
 `tests/probe/probe22_private_etc.npk`; `tests/probe/README.md` gains its row,

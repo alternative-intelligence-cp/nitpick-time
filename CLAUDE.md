@@ -12,12 +12,38 @@ DONE (2026-10-08): `src/host/` reads the machine's clocks; 0.3.1, the purity
 boundary's instruments, DONE (2026-10-08): `check_purity`'s ban list reviewed, and
 the library's emission read beside the spelling checks; 0.3.2, the system zone,
 DONE (2026-10-08): `host_system_zone` says which zone the machine names, and
-how; and 0.3.3, the double, is next. Cycle 0.2 CLOSED
+how; 0.3.2a, the adoption of compiler `7e91730`, DONE (2026-10-09): a string's
+bytes are a read-only view, every slot they reach says so, and LLVM is
+20.1.8; and 0.3.3, the double, is next. Cycle 0.2 CLOSED
 (2026-10-02), archived at `meta/roadmap/done/0.2/` — instants and timestamps:
 `Instant` and its two clocks, `Timestamp` and its one constructor, the
 conversions to and from the civil scale in UTC with their exhaustive gate on
 every run, and the `Duration` interop — after cycle 0.1, the civil calendar,
 CLOSED 2026-09-26 and archived at `meta/roadmap/done/0.1/`.**
+
+**After cycle 0.3.2a: the adoption of compiler `7e91730`** — the compiler's
+landing 103, carrying its landings 83 … 103 over `5fbaf4a`: the libraries' one
+re-pin, by the author's word of 2026-10-08. **A string's bytes are a READ-ONLY
+view**: `string_bytes` returns `fixed uint8[]`, a plain `uint8[]` converts to it
+and nothing converts it back (`NITPICK-TYPE-007`), and a write through one is
+`NITPICK-TYPE-086` (the compiler's D-348, D-350, D-351). The unchanged tree was
+refused at 32 sites in 16 files, five of them `src/`'s, so every slot a
+string's bytes reach says so — forty-four, `bytes_extend`'s source and
+`host`'s four readers among them, each one the new compiler refuses plain and
+none written through — re-spelled at the OLD pin first, which saw no
+difference in any file (TM-258); and a parser takes `fixed uint8[]` (`SAFETY.md`
+S-22's note). **Then the pin's own moves** (TM-259): LLVM 20.1.8, the
+compiler's since its D-349; five functions return the view, a position
+`5fbaf4a` read as meaning nothing; the self-check's cases 2 and 3 read a refusal
+of two codes, the wide literal being one code since the compiler's DEF-164; five
+headers name one report where DEF-165 and DEF-164 made one; the statement form
+of `#unreachable()` compiles, `span` keeps `?|`, and O-N34 is struck; the
+lexer's re-read moved nothing `lexical.py` finds; and the cycle README's
+adoption list, each item measured, the `#wild_slice` sites waiting for the
+compiler's D-341. The emission moves in text — a type id, the prelude's site
+table, the derived `Debug` bodies' drops — and in nothing `check_call_edges`,
+`check_wide_types` or `check_purity` reads. A full invocation is **143 units
+green** at pin `7e91730`.
 
 **After cycle 0.3.2: the system zone.** `host_system_zone()` — the fifth of
 `HOST.md` H-1's functions, `never fails` — answers `SystemZone { string:name;
@@ -808,6 +834,13 @@ Full statement in `meta/specs/SAFETY.md` §1. The ones that bite hardest here:
   their range check *(cycle 0.2.4b, TM-242)*.
 - `Ord` derives in **declaration order**, so a struct's field order is
   semantic (`Timestamp` is seconds-then-nanos for exactly this reason).
+- **A string's bytes are a READ-ONLY view** — since compiler `7e91730` (its
+  D-348, D-350, D-351): `string_bytes` returns `fixed uint8[]`, a plain
+  `uint8[]` slot refuses it (`NITPICK-TYPE-007`), a write through one is
+  `NITPICK-TYPE-086`, and a `fixed` parameter is reassigned by nobody
+  (`NITPICK-ASSIGN-002`). Bind it `fixed uint8[]:bs = string_bytes(v);`, take
+  it as `fixed uint8[]:src`, and keep `uint8[]` where a function writes
+  (TM-258).
 - **A `cstring` owns what `to_cstring` makes, and is move-only** — since
   compiler `5fbaf4a` (its D-328): a copy of one is `NITPICK-TYPE-046`. Read an
   `environ()` element in place, `env[k].ptr`, and move `to_cstring`'s answer
@@ -960,7 +993,8 @@ The compiler binary is the **pinned toolchain** the board names
 (`../BOARD.md`, W-18): `$NPKC` and `$NPKRT` are supplied to every session by the
 orchestrator, or set by hand from `../.internal/toolchain/<commit>/`. Never build the
 compiler from here and never read its `build/` directly — the guard refuses
-the first, and the second is rebuilt under you. LLVM 20.1.2 exactly, pinned —
+the first, and the second is rebuilt under you. LLVM 20.1.8 exactly, pinned
+(20.1.2 until cycle 0.3.2a: the compiler's D-349, TM-259) —
 and the harness asks `llc`, `opt` and `ld.lld` rather than `llvm-config`, which
 ships in a `-dev` package the build never invokes and which can report a
 different installation from the one on `PATH`.

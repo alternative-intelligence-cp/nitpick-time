@@ -45,7 +45,8 @@ answer on every machine.
 > [`meta/roadmap/`](meta/roadmap/), written the way the compiler's are — specs
 > first, then a cycle map, then execution-grade subcycles, then code — against
 > a compiler that is still moving, pinned by commit (`CLAUDE.md` names the pin:
-> `5fbaf4a` since cycle 0.2.0a, the adoption that opened cycle 0.2).
+> `7e91730` since cycle 0.3.2a, the libraries' one re-pin; `5fbaf4a` from cycle
+> 0.2.0a, the adoption that opened cycle 0.2).
 >
 > *(Until cycle 0.1.5 this block read "Status: planning. No code yet" — false
 > since cycle 0.0.4 — and "the compiler itself is at cycle 1.5"; between the
@@ -199,8 +200,9 @@ is a folder, a subcycle is a file inside it, and a finished cycle moves to
 
 ## Requirements
 
-Linux on x86-64, the Nitpick compiler, and LLVM 20.1.2 — the same toolchain the
-compiler pins. Nothing else, at build time or at run time.
+Linux on x86-64, the Nitpick compiler, and LLVM 20.1.8 — the same toolchain the
+compiler pins (20.1.2 until cycle 0.3.2a). Nothing else, at build time or at run
+time.
 
 ## Licence
 

@@ -525,6 +525,19 @@ repro + suite at **108**. `143 = 35 + 108`. A full invocation about 230 s; the
 namespace unit's eighty runs cost about 11 s of it, each run a namespace,
 thirty machines, the 4 095-byte link and file built byte by byte.
 
+**At cycle 0.3.2a, compiler `7e91730`, 143 units**: no test added. The
+self-check's cases 2 and 3 read a refusal of two type codes, the wide literal
+being one code at the new pin (TM-259); every other figure as at 0.3.2 — 116
+tree-check violations, the 108 functions of `src/`'s modules in the emissions
+reaching the same 17 runtime symbols, parse `114 + 43 + 2`, the defect corpus
+at 36, every heap figure — but the library's IR, **374 606 B** where it was
+366 527 B, and the instances' 79 007 B where they were 78 317 B: a type id one
+higher, the prelude's six frac sites, and the derived `Debug` bodies' template
+drops. The unchanged tree had stopped at the toolchain check, and with its
+LLVM row moved at the self-check and then at 35 units, landing 103's readers
+and five headers' counts (`meta/roadmap/0.3/0.3.2a.md` §1). A full invocation
+about 230 s at either pin.
+
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the
 run makes about 200 of them. One that does *not* compile costs ~0.03 s.

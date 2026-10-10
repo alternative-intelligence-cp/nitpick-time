@@ -54,7 +54,7 @@ func:tz_index = int64(cstring[]:env) never fails {
     while (j < env.len) decreases env.len - j {
         if (env[j].len >= 3i64) {
             string:entry = string_from_bytes(env[j].ptr, env[j].len);
-            uint8[]:b = string_bytes(entry);
+            fixed uint8[]:b = string_bytes(entry);
             if (b[0i64] == 84u8) {                      // 'T'
                 if (b[1i64] == 90u8) {                  // 'Z'
                     if (b[2i64] == 61u8) { pass j; }    // '='
@@ -77,7 +77,7 @@ func:tz_entry = string(cstring[]:env) never fails {
     while (j < env.len) decreases env.len - j {
         if (env[j].len >= 3i64) {
             string:entry = string_from_bytes(env[j].ptr, env[j].len);
-            uint8[]:b = string_bytes(entry);
+            fixed uint8[]:b = string_bytes(entry);
             if (b[0i64] == 84u8) {                      // 'T'
                 if (b[1i64] == 90u8) {                  // 'Z'
                     if (b[2i64] == 61u8) {              // '='
@@ -105,9 +105,9 @@ func:main = int32(cstring[]:_~argv) {
     // Bound first, then viewed: a view of a temporary is refused
     // (`NITPICK-BORROW-012`, TM-110).
     string:want_entry = "TZ=Europe/Kyiv";
-    uint8[]:web = string_bytes(want_entry);
+    fixed uint8[]:web = string_bytes(want_entry);
     string:pres = string_from_bytes(env[tzi].ptr, env[tzi].len);
-    uint8[]:preb = string_bytes(pres);
+    fixed uint8[]:preb = string_bytes(pres);
     if (preb.len != web.len)                            { exit 39i32; }
     int64:w = 0i64;
     while (w < web.len) decreases web.len - w {
@@ -118,7 +118,7 @@ func:main = int32(cstring[]:_~argv) {
     // ---- THE EXPERIMENT ---------------------------------------------------
     string:hit = raw tz_entry(env);
     if (string_byte_length(hit) != 14i64)               { exit 10i32; }
-    uint8[]:hb = string_bytes(hit);
+    fixed uint8[]:hb = string_bytes(hit);
     // Read it AFTER the frame that made it returned -- the bytes must still be
     // the kernel's, not the 0xAA free-poison a dead frame would leave.
     if (hb[0i64] != 84u8)                               { exit 11i32; }   // 'T'

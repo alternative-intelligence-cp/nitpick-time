@@ -16,7 +16,7 @@
 //     case 2:  struct:Keeper = { int64->:p; };   pass Keeper{ p: @x };
 //              -> NITPICK-BORROW-001, refused
 //
-//     case 4:  struct:Holder = { uint8[]:view; }; pass Holder{ view: ... };
+//     case 4:  struct:Holder = { fixed uint8[]:view; }; pass Holder{ view: ... };
 //              -> accepted, npkc exit 0, runs
 //
 // Both fields hold an address into the returning frame. `type_holds_pointer`
@@ -24,7 +24,7 @@
 // `TY_SLICE`, so the type table is not where this is lost.
 mod:case4_view_in_struct;
 
-struct:Holder = { uint8[]:view; };
+struct:Holder = { fixed uint8[]:view; };     // read-only since 7e91730, TM-258
 
 func:esc = Holder() never fails {
     string:s = string_concat("abcd", "efgh");

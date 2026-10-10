@@ -8,7 +8,10 @@
 //
 // MATTERS BECAUSE every parser in `src/fmt/` takes a `uint8[]` and every
 // formatter produces a `string` through `Bytes`, and D-186 made `string_slice`
-// an owned copy for exactly the use-after-free this probe maps.
+// an owned copy for exactly the use-after-free this probe maps. (A `fixed
+// uint8[]` since compiler `7e91730`, the read-only view `string_bytes` yields,
+// and every slice below that holds one is spelled so; the edges, and every
+// answer, are as they were -- cycle 0.3.2a, TM-258.)
 //
 // HELD UNTIL 2026-09-04, with probe 09, by the author's ruling that O-N9 was
 // BLOCKING. This probe IS O-N9's own measurement: measuring it against a
@@ -84,7 +87,7 @@ func:view_of_param = uint8[](string:s) never fails {
 // in none of `defect/view_escape/`'s six cases. `case4_view_in_struct.npk` is
 // the refused half of this pair -- the same literal, rooted at a local.
 struct:Scan = {
-    uint8[]:src;
+    fixed uint8[]:src;
     int64:at;
 };
 
@@ -107,7 +110,7 @@ func:tail_view = string(wild int8->:blk, int64:n, int64:from) never fails {
 // 5. The view goes DOWN — legal under D-004 and always was.
 // ---------------------------------------------------------------------------
 
-func:count_upper = int64(uint8[]:src) never fails {
+func:count_upper = int64(fixed uint8[]:src) never fails {
     int64:i = 0i64;
     int64:n = 0i64;
     while (i < src.len) decreases src.len - i {
@@ -126,7 +129,7 @@ func:count_upper = int64(uint8[]:src) never fails {
 // The third refinement. `src.len` reads the view; the loop variable is an
 // `int64` and carries nothing, so the range bound reading a borrow does not
 // make the iteration one.
-func:sum_bytes = int64(uint8[]:src) never fails {
+func:sum_bytes = int64(fixed uint8[]:src) never fails {
     int64:acc = 0i64;
     for (int64:i in 0i64...src.len) { acc = acc + (src[i] => int64); }
     pass acc;
@@ -136,7 +139,7 @@ func:main = int32(cstring[]:_~argv) {
     // ---- 1. the discriminator ---------------------------------------------
     string:v = raw make_view(6i64);
     if (string_byte_length(v) != 6i64)                  { exit 10i32; }
-    uint8[]:vb = string_bytes(v);
+    fixed uint8[]:vb = string_bytes(v);
     // The bytes are the ones written, NOT the runtime's 0xAA free-poison --
     // which is what a dangling view would read (D-183, and case 5's exit 170).
     if (vb[0i64] != 65u8)                               { exit 11i32; }   // 'A'
@@ -147,7 +150,7 @@ func:main = int32(cstring[]:_~argv) {
     // ---- 4. the `#ptr_add` view, over the same live block -----------------
     string:t = raw tail_view(v.ptr =>! wild int8->, 6i64, 4i64);
     if (string_byte_length(t) != 2i64)                  { exit 15i32; }
-    uint8[]:tb = string_bytes(t);
+    fixed uint8[]:tb = string_bytes(t);
     if (tb[0i64] != 69u8)                               { exit 16i32; }   // 'E'
     if (tb[1i64] != 70u8)                               { exit 17i32; }   // 'F'
 
@@ -158,7 +161,7 @@ func:main = int32(cstring[]:_~argv) {
 
     // ---- 2. the parameter-rooted view -------------------------------------
     string:s = string_concat("2026-", "09-04");
-    uint8[]:pb = raw view_of_param(s);
+    fixed uint8[]:pb = raw view_of_param(s);
     if (pb.len != 10i64)                                { exit 20i32; }
     if (pb[0i64] != 50u8)                               { exit 21i32; }   // '2'
     if (pb[9i64] != 52u8)                               { exit 22i32; }   // '4'

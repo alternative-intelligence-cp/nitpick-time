@@ -1263,6 +1263,16 @@ offset — which is what `FORMAT_MODEL.md` already specifies, so the rule costs
 this library nothing. `check_no_view_returns` on cycle 0.0.3's harness list is
 what makes it enforced rather than remembered.
 
+*(2026-10-09, cycle 0.3.2a, TM-258 — the adoption of compiler `7e91730`.)* **A
+parser takes `fixed uint8[]`.** Since that compiler a string's bytes are a
+READ-ONLY view: `string_bytes` yields `fixed uint8[]`, a plain `uint8[]`
+converts to it, nothing converts it back (`NITPICK-TYPE-007`), and a write
+through it is `NITPICK-TYPE-086` (the compiler's D-348, D-350, D-351). So a
+parser's slice is `fixed uint8[]`, which a writable buffer's view converts to
+as well, and a function that writes through its slice keeps `uint8[]`. A
+`fixed uint8[]` result is a view like any other, and `check_no_view_returns`
+reads it as one, measured.
+
 *(Amended at cycle 0.1.5's second half, TM-204 — the cycle audit's C3.)* **Both
 sentences were false of this library from cycle 0.0.4.** `pub func:bytes_view
 = uint8[] (Bytes->:b)` returns a view of a `Bytes`' body and the umbrella
@@ -1358,6 +1368,10 @@ owner *and* gives the temporary a place, so:
 string:joined = string_concat(a, b);   // bind it: the view has an owner,
 uint8[]:v = string_bytes(joined);      // and the temporary is no longer one
 ```
+
+*(Since compiler `7e91730` the second line is `fixed uint8[]:v` — a string's
+bytes are the read-only view, and a plain slot refuses them: S-22's note,
+cycle 0.3.2a, TM-258.)*
 
 **So: keep the rule, and do not mistake it for the constraint.** A later cycle
 that finds `src/fmt/` wanting to return a view of one of its own parameters is

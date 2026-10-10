@@ -28,7 +28,7 @@ func:view_of_move_param = uint8[](move string:s) never fails {
 
 func:main = int32(cstring[]:_~argv) {
     string:owned = string_concat("2026-", "09-04");
-    uint8[]:v = raw view_of_move_param(move(owned));
+    fixed uint8[]:v = raw view_of_move_param(move(owned));
     if (v.len != 10i64) { exit 20i32; }
     exit 0i32;
 };

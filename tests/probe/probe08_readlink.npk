@@ -50,7 +50,7 @@ func:paint = NIL(buffer->:b) never fails {
 // Does `hay[0 .. hlen)` contain `needle[0 .. nlen)`, and if so where does the
 // match END? Returns -1 for no match. Written the dull way on purpose: the
 // point of the probe is the syscall, not the search.
-func:find_after = int64(buffer->:hay, int64:hlen, uint8[]:needle) never fails {
+func:find_after = int64(buffer->:hay, int64:hlen, fixed uint8[]:needle) never fails {
     int64:nlen = needle.len;
     if (nlen <= 0i64)   { pass 0i64; }
     if (hlen < nlen)    { pass (0i64 - 1i64); }

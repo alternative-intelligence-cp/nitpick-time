@@ -8530,3 +8530,71 @@ second spelling, in the runner, of what `execve` takes in one call;
 the lowest free descriptor is what a leak moves; **no `// stress:`** — V-11
 counts `host`'s five functions, and forty runs a leg cost the namespace unit
 about 11 s of a full run.
+
+# Cycle 0.3.2a — the adoption of compiler `7e91730`, ratified 2026-10-09
+
+Two decisions, drafted at planning (`meta/roadmap/0.3/0.3.2a.md` §2, PD-105 and
+PD-106, in that order), accepted by the orchestrator at the plan's
+verification, and each measured at both compilers, the one this repository
+leaves, `5fbaf4a`, and the one it adopts, `7e91730` — the libraries' one re-pin,
+by the author's word of 2026-10-08. The first is the re-spelling the new
+compiler requires, made at the OLD pin first, so that the old compiler testifies
+it changed no answer; the second moves the pin.
+
+### TM-258 — the read-only view: every slot a string's bytes reach is `fixed uint8[]` — forty-four in sixteen files, each one the new compiler refuses plain — and a parser takes one
+
+**2026-10-09, cycle 0.3.2a (the plan's PD-105) — the adoption of compiler
+`7e91730`, its landing 103 (the compiler's D-348 step (ii), D-350, D-351).
+Re-spells `src/core/bytes.npk`'s `bytes_extend` and `src/host/host.npk`'s four
+readers, and thirty-four slots in fourteen test files; dates `SAFETY.md` S-22
+and its example, `FORMAT_MODEL.md` F-16, cycle 0.4's README, and the comments
+in `bytes.npk`, `limits.npk` and `probe10` that state a plain slice; and words
+`check_no_view_returns`' message as S-22's note does. Five return types are
+the batch's second decision's, written once the pin has moved.**
+
+**What was found** (`0.3.2a.md` §1). At `7e91730` `string_bytes` returns
+`fixed uint8[]`, the read-only view: a plain `uint8[]` converts to it, nothing
+converts it back (`NITPICK-TYPE-007`), and a write through one is
+`NITPICK-TYPE-086`. The unchanged tree is refused there at 32 distinct sites in
+16 files, 85 when a site is counted once per root that reaches it, over 31
+roots — the compiler side's list, which counts per root and was taken before
+cycle 0.3.2's code, said 35 over 21 — and five of them are `src/`'s:
+`bytes_extend_str`'s argument, and the four locals cycle 0.3.2 gave the system
+zone's steps. Every one is a reader. Each re-spelling exposes the next — a local
+made `fixed` hands its view to a helper's plain parameter — and letting the
+compiler name each next slot until none was left finds 44: 39 parameters,
+locals and fields, spellable at both pins, and five return types, which
+`5fbaf4a` reads as meaning nothing (the compiler's DEF-247) and which the
+batch's second decision writes. Each of the 44, undone alone, is
+`NITPICK-TYPE-007` at `7e91730`, and none is written through: a write through
+one and a `fixed` parameter reassigned, which `5fbaf4a` compiles in silence
+(DEF-230, DEF-248), are `NITPICK-TYPE-086` and `NITPICK-ASSIGN-002` at
+`7e91730`, and the tree holds neither. With the 39 re-spelled every file gives
+`5fbaf4a` the codes and sites it gave before, and the full run is green there.
+
+**The decision.** *Every slot a string's bytes reach is `fixed uint8[]` — the
+locals that bind `string_bytes`'s view, the parameters it flows into
+(`bytes_extend`'s source among them, a public function a writable buffer's view
+still converts to), and the two test structs' fields that hold it; a function
+that writes through its slice keeps `uint8[]`. A parser takes `fixed uint8[]`:
+S-22 and F-16 say so in dated notes, and so does `check_no_view_returns`'
+message, which quoted S-22's sentence, and cycle 0.4's README, whose parsers
+meet it. Twelve slots stay plain, each written
+through or reached by no string's bytes: `bytes.npk`'s `into` and two `room`s
+and `civil_total_edges.npk`'s `bw`, written; `bytes_view`'s result, the six
+test locals that bind it, and `bytes_reserve`'s `from`, each a view of a
+`Bytes`' body.*
+
+*Alternatives declined:* **every slot no write passes through, as
+`nitpick-regex`'s RX-230 has it** — eight more: `bytes_view`'s result read-only,
+its six readers and `from`. `bytes_view` is public, and a read-only result is
+an API change of its own — a consumer's write through its answer reaches the
+sink's `hidden` body, at both pins, measured — which the compiler's D-341,
+`buffer`'s checked indexing, settled and not built at `7e91730` and naming
+`bytes.npk` its consumer, will reopen; and nothing the new compiler requires
+moves it. **A copy at each call** — an allocation for bytes nothing writes.
+**The grouped `(fixed uint8[]):v`** — a re-pointable binding nothing here
+re-points, and a spelling `5fbaf4a` cannot parse. **`string` parameters** — a
+writable buffer's view would need a copy into a `string` first. **The five
+returns at this step** — `5fbaf4a` would read each as meaning nothing, the
+silent shape a re-pin does not write where the old compiler reads it.

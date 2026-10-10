@@ -61,7 +61,7 @@ func:esc = uint8[]() never fails {
 };
 
 func:main = int32(cstring[]:_~argv) {
-    uint8[]:v = raw esc();
+    fixed uint8[]:v = raw esc();
     if (v.len != 8i64) { exit 200i32; }        // 200: the length did not survive
     exit ((v[0i64] => int64) =>! int32);       // what the dead pointer reads
 };

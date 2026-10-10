@@ -40,7 +40,7 @@ mod:probe09_environ_split;
 
 // Returns an INDEX, never the view. Every scanner step in `src/fmt/` is this
 // shape.
-func:find_byte = int64(uint8[]:src, uint8:want) never fails {
+func:find_byte = int64(fixed uint8[]:src, uint8:want) never fails {
     int64:i = 0i64;
     while (i < src.len) decreases src.len - i {
         if (src[i] == want) { pass i; }
@@ -50,7 +50,7 @@ func:find_byte = int64(uint8[]:src, uint8:want) never fails {
 };
 
 // Does `src` begin with `lit`? Both are views, both go down.
-func:starts_with = bool(uint8[]:src, uint8[]:lit) never fails {
+func:starts_with = bool(fixed uint8[]:src, fixed uint8[]:lit) never fails {
     if (lit.len > src.len) { pass false; }
     int64:i = 0i64;
     while (i < lit.len) decreases lit.len - i {
@@ -63,7 +63,7 @@ func:starts_with = bool(uint8[]:src, uint8[]:lit) never fails {
 // Counts bytes in a half-open window. The window is expressed as two integers
 // rather than as a sub-slice, which is the point: an offset pair travels where
 // a view does not.
-func:count_in = int64(uint8[]:src, int64:lo, int64:hi) never fails {
+func:count_in = int64(fixed uint8[]:src, int64:lo, int64:hi) never fails {
     int64:i = lo;
     int64:n = 0i64;
     while (i < hi) decreases hi - i {
@@ -93,7 +93,7 @@ func:main = int32(cstring[]:_~argv) {
         // this view aliases the pointee rather than this frame -- see
         // probe 10. Read in place: a `cstring` is move-only (TM-208).
         string:entry = string_from_bytes(env[k].ptr, env[k].len);
-        uint8[]:eb = string_bytes(entry);
+        fixed uint8[]:eb = string_bytes(entry);
         if (eb.len != env[k].len)                            { exit 12i32; }
         int64:eq = raw find_byte(eb, 61u8);             // '='
         if (eq < 0i64)                                  { exit 13i32; }
@@ -112,7 +112,7 @@ func:main = int32(cstring[]:_~argv) {
     // This is `host_system_zone`'s first step, written the way the library
     // will write it.
     string:want = "TZ=";
-    uint8[]:wb = string_bytes(want);
+    fixed uint8[]:wb = string_bytes(want);
 
     int64:found = -1i64;
     int64:vlo = -1i64;
@@ -120,7 +120,7 @@ func:main = int32(cstring[]:_~argv) {
     int64:j = 0i64;
     while (j < env.len) decreases env.len - j {
         string:entry2 = string_from_bytes(env[j].ptr, env[j].len);
-        uint8[]:b2 = string_bytes(entry2);
+        fixed uint8[]:b2 = string_bytes(entry2);
         if (raw starts_with(b2, wb)) {
             found = j;
             vlo = wb.len;
@@ -144,9 +144,9 @@ func:main = int32(cstring[]:_~argv) {
     // (`NITPICK-BORROW-012`, TM-110), and binding first is the idiom the rest
     // of this file already uses.
     string:want_entry = "TZ=Europe/Kyiv";
-    uint8[]:web = string_bytes(want_entry);
+    fixed uint8[]:web = string_bytes(want_entry);
     string:pres = string_from_bytes(env[found].ptr, env[found].len);
-    uint8[]:preb = string_bytes(pres);
+    fixed uint8[]:preb = string_bytes(pres);
     if (preb.len != web.len)                            { exit 39i32; }
     int64:w = 0i64;
     while (w < web.len) decreases web.len - w {
@@ -160,7 +160,7 @@ func:main = int32(cstring[]:_~argv) {
     if ((vhi - vlo) != 11i64)                           { exit 31i32; }
 
     string:hs = string_from_bytes(env[found].ptr, env[found].len);
-    uint8[]:hb = string_bytes(hs);
+    fixed uint8[]:hb = string_bytes(hs);
     if (hb[vlo] != 69u8)                                { exit 32i32; }   // 'E'
     if (hb[vlo + 1i64] != 117u8)                        { exit 33i32; }   // 'u'
     if (hb[vhi - 1i64] != 118u8)                        { exit 34i32; }   // 'v'
@@ -174,7 +174,7 @@ func:main = int32(cstring[]:_~argv) {
     if (env2.len != env.len)                            { exit 40i32; }
     if (env2[found].len != env[found].len)                            { exit 41i32; }
     string:hs2 = string_from_bytes(env2[found].ptr, env2[found].len);
-    uint8[]:hb2 = string_bytes(hs2);
+    fixed uint8[]:hb2 = string_bytes(hs2);
     int64:m = 0i64;
     while (m < hb2.len) decreases hb2.len - m {
         if (hb2[m] != hb[m])                            { exit 42i32; }

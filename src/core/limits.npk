@@ -55,7 +55,9 @@ mod:limits;
 
 // `FORMAT_MODEL.md` F-16 (TM-030) -- parsing is bounded and non-recursive:
 // every parser is a straight-line scan over a `uint8[]` with a stated maximum
-// input length. No time text is longer than this.
+// input length. No time text is longer than this. (A `fixed uint8[]` since
+// compiler `7e91730`, the read-only view a string's bytes are: F-16's note,
+// cycle 0.3.2a, TM-258.)
 pub fixed int64:NTIME_PARSE_MAX = 128i64;
 
 // `HOST.md` H-15 -- `readlink` is syscall 89 and its buffer is this many bytes.

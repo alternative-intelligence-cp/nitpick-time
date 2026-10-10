@@ -156,7 +156,7 @@ pub func:bytes_push = NIL(Bytes->:b, uint8:x) never fails {
 //
 // ONE RESERVE FOR THE WHOLE RUN, not one per byte: appending an n-byte slice
 // must not be n doublings.
-pub func:bytes_extend = NIL(Bytes->:b, uint8[]:src) never fails {
+pub func:bytes_extend = NIL(Bytes->:b, fixed uint8[]:src) never fails {
     drop bytes_reserve(b, src.len);
     uint8[]:room = #wild_slice<uint8>(b.body.ptr, b.body.cap);
     int64:i = 0i64;
@@ -177,6 +177,9 @@ pub func:bytes_extend_str = NIL(Bytes->:b, string:src) never fails {
     // is the byte-slice case and not a second copy of it. A `string` is
     // `{ptr, len, cap}` over `char8`, and going through the view keeps the
     // bounds guard on both sides rather than indexing `src.ptr` raw.
+    // (A `fixed uint8[]` since compiler `7e91730`, the read-only view, and
+    // `bytes_extend` takes one: it reads its source and writes only `b` --
+    // cycle 0.3.2a, TM-258.)
     drop bytes_extend(b, string_bytes(src));
     pass NIL;
 };

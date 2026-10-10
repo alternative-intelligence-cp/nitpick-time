@@ -34,7 +34,7 @@ func:esc = uint8[]() never fails {
 };
 
 func:main = int32(cstring[]:_~argv) {
-    uint8[]:v = raw esc();
+    fixed uint8[]:v = raw esc();
     if (v.len != 8i64) { exit 20i32; }
     exit 0i32;
 };

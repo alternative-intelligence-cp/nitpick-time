@@ -218,7 +218,7 @@ func:zone_from_tz = SystemZone() never fails {
     cstring[]:env = environ();
     for (int64:k in 0i64..(env.len - 1i64)) {
         string:entry = string_from_bytes(env[k].ptr, env[k].len);
-        uint8[]:eb = string_bytes(entry);
+        fixed uint8[]:eb = string_bytes(entry);
         if (eb.len >= 3i64) {
             if ((eb[0i64] == 84u8) && (eb[1i64] == 90u8) && (eb[2i64] == 61u8)) {   // `TZ=`
                 int64:lo = 3i64;
@@ -255,9 +255,9 @@ func:zone_from_localtime = SystemZone() never fails {
     if (n <= 0i64) { pass raw zone_none(); }
     if (n >= NTIME_PATH_MAX) { pass raw zone_none(); }                  // truncated
     string:target = string_from_bytes(b.ptr, n);
-    uint8[]:tb = string_bytes(target);
+    fixed uint8[]:tb = string_bytes(target);
     string:mark = "zoneinfo/";
-    uint8[]:mb = string_bytes(mark);
+    fixed uint8[]:mb = string_bytes(mark);
     int64:lo = -1i64;
     for (int64:i in 0i64..(tb.len - mb.len)) {
         bool:same = true;
@@ -296,7 +296,7 @@ func:zone_from_timezone = SystemZone() never fails {
     if (n <= 0i64) { pass raw zone_none(); }
     if (n >= NTIME_PATH_MAX) { pass raw zone_none(); }                  // longer than a name
     string:text = string_from_bytes(b.ptr, n);
-    uint8[]:fb = string_bytes(text);
+    fixed uint8[]:fb = string_bytes(text);
     int64:e = fb.len;
     for (int64:i in 0i64..(fb.len - 1i64)) {
         if (fb[i] == 10u8) { e = i; break; }                            // `\n`

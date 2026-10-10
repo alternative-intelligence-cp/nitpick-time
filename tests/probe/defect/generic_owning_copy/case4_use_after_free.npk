@@ -82,7 +82,7 @@ func:main = int32(cstring[]:_~argv) {
     // The element is STILL in the `Vec` -- `count` was never touched -- and
     // still holds the pointer the line above just freed.
     string:still = raw peek::<string>(@v, 0i64);
-    uint8[]:b = string_bytes(still);
+    fixed uint8[]:b = string_bytes(still);
     uint8:first = b[0i64];
 
     // The block is released before the verdict so that `exit` cannot be

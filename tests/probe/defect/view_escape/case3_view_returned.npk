@@ -40,7 +40,7 @@ func:esc = uint8[]() never fails {
 };
 
 func:main = int32(cstring[]:_~argv) {
-    uint8[]:v = raw esc();
+    fixed uint8[]:v = raw esc();
     // The LENGTH survives -- a slice is { ptr, len } and only the pointer is
     // dead, which is what makes the failure quiet: every bound check passes.
     if (v.len != 8i64) { exit 20i32; }

@@ -186,7 +186,10 @@ pub enum:ParseExpect = { Digit; Separator; TimeDesignator; OffsetSign;
 straight-line scan over a `uint8[]` with a stated maximum input length
 (`NTIME_PARSE_MAX`, 128 bytes — no time text is longer). There is no recursion,
 so there is no depth to blow, which is the playbook's adversarial-input rule
-satisfied by construction rather than by a limit.
+satisfied by construction rather than by a limit. *(A `fixed uint8[]` since
+compiler `7e91730` — the read-only view a string's bytes are, which a
+writable buffer's view converts to as well: `SAFETY.md` S-22's note, cycle
+0.3.2a, TM-258.)*
 
 **Rule F-17 — parsers consume UTF-8 bytes and never decode.** Every character
 in every format this library parses is ASCII. A non-ASCII byte is a parse

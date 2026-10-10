@@ -53,7 +53,7 @@ fixed int64:PATH_MAX      = 4096i64;
 func:put = NIL(string:path, string:text) {
     cstring:c = relay to_cstring(path);
     fd:f = relay open(c, ((((O_WRONLY | O_CREAT) | O_TRUNC) => int32) => int64), 420i64);
-    uint8[]:b = string_bytes(text);
+    fixed uint8[]:b = string_bytes(text);
     if (b.len > 0i64) {
         int64:n = relay write(f, b.ptr, b.len);
         if (n != b.len) { fail EProbe; }

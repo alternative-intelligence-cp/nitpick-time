@@ -93,7 +93,9 @@ documented exceptions and a test that counts them.
   the reserved spelling.
 - **S-22's "a view is a parameter, never a return value" is a BELT, not the
   language's constraint** (TM-109, corrected and superseded by **TM-110**).
-  This is the cycle that meets it: every parser here takes a `uint8[]`.
+  This is the cycle that meets it: every parser here takes a `uint8[]` — a
+  `fixed uint8[]`, the read-only view a string's bytes are, since compiler
+  `7e91730`: `SAFETY.md` S-22's note, cycle 0.3.2a, TM-258.
 
   **DEF-3 HAS LANDED and the rule was MEASURED on 2026-09-04** at pin
   `94874ce`, so plan against this table and not against the prediction that

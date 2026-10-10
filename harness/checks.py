@@ -2639,9 +2639,11 @@ def check_no_view_returns(tree, exempt=None, **_):
             continue
         problems.append(
             "%s:%d `%s` returns `%s` -- %s. No function in `src/` returns a "
-            "view (SAFETY.md S-22): a parser takes a `uint8[]` and returns a "
-            "value and an offset. A view out of its owner's frame is what "
-            "O-N9 measured reading freed memory at exit 0. If this one must, "
+            "view (SAFETY.md S-22): a parser takes a `fixed uint8[]` -- the "
+            "read-only view a string's bytes are since compiler `7e91730`, "
+            "TM-258 -- and returns a value and an offset. A view out of its "
+            "owner's frame is what O-N9 measured reading freed memory at "
+            "exit 0. If this one must, "
             "it is a decision that loosens S-22 and names the function there."
             % (rel, lineno, name, result, why))
     sp = _s22_text(tree)

@@ -322,8 +322,17 @@ env:
   # readers of a string's bytes (TM-258, TM-259). All of them are pushed
   # together, so CI runs once, on the adopted tree
   # (`meta/roadmap/0.3/0.3.2a.md` §3).
-  NITPICK_COMMIT: 7e91730d19cffd35fcff25c36893cfaa2c01509e
-  NITPICK_COMMIT_SHORT: 7e91730
+  #
+  # EVERY HEX VALUE IN THIS BLOCK IS QUOTED. GitHub's YAML reads a bare scalar
+  # of digits, one `e` and digits as a NUMBER: unquoted, `7e91730` is the
+  # float 7 x 10^91730, and the first run at this pin, 38022131137, held
+  # NITPICK_COMMIT_SHORT=Infinity and printed "built from compiler Infinity".
+  # No assertion reads that row, so the run was green; PyYAML, which read
+  # this file at the plan's rehearsal, takes the same text as a string. A
+  # quoted value is its text, whatever its characters, so the commit and the
+  # three digests are quoted too (cycle 0.3.2a's record).
+  NITPICK_COMMIT: "7e91730d19cffd35fcff25c36893cfaa2c01509e"
+  NITPICK_COMMIT_SHORT: "7e91730"
   # nitpick.toml [toolchain] llvm. Condition (1) above. 20.1.2 until cycle
   # 0.3.2a: the upstream release tarball of 20.1.8 is the asset the install step
   # below names, as it named 20.1.2's.
@@ -331,13 +340,13 @@ env:
   # The digests of the artefacts the workbench pins, from
   # ../.internal/toolchain/7e91730/SHA256SUMS. Reported against CI's own, never
   # asserted -- see the step that uses them for why.
-  NPKC_SHA256_WORKBENCH: 9067e39ee00bd8454c1f9b882a106b32d163d43240b22e55cf38c51a276e3cc3
-  NPKRT_SHA256_WORKBENCH: c8e5033ad17c70f838d567157738a6cc046af0ca3140ad92259fa71f0e747b4e
+  NPKC_SHA256_WORKBENCH: "9067e39ee00bd8454c1f9b882a106b32d163d43240b22e55cf38c51a276e3cc3"
+  NPKRT_SHA256_WORKBENCH: "c8e5033ad17c70f838d567157738a6cc046af0ca3140ad92259fa71f0e747b4e"
   # THE EMISSION AT THAT COMMIT, as the compiler's own build recorded it -- notice
   # 103's `npkc.ll` row, in ../.internal/toolchain/7e91730/PIN.md (notice 82's,
   # `5630c2b4...` / 30 232 291 B, until cycle 0.3.2a). ASSERTED by the
   # step below since cycle 0.2.0a (TM-212), and moved with every pin.
-  NPKC_LL_SHA256: b79f89c554ef83eeadca05d4e22929e70746483aec74e7b2f046f7a3933b66e7
+  NPKC_LL_SHA256: "b79f89c554ef83eeadca05d4e22929e70746483aec74e7b2f046f7a3933b66e7"
   NPKC_LL_BYTES: 31527001
 
 jobs:

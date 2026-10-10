@@ -1,11 +1,12 @@
 // expect-error: NITPICK-TYPE-079
-// expect-error: NITPICK-TYPE-079
-// expect-error: NITPICK-TYPE-079
 // ONE `expect-error` LINE PER REPORTED SITE since cycle 0.2.0a (the
 // compiler's D-332, its landing 82; `BUILD.md` B-7c, TM-210): the literal writes
 // three sealed fields, and each is its own report at the literal's position.
 // The compiler's DEF-165, registered OPEN, asks whether that is one mistake or
 // three facts; if it lands as one, this count drops and the run says so.
+// *(It landed as one, at compiler `7e91730`'s landing 100 (the compiler's
+// D-337): ONE report at the literal, naming the three fields -- cycle 0.3.2a,
+// 2026-10-09, TM-259 -- and the header names it once.)*
 //
 // PROBE 15 — CAN A CONSUMER BUILD AN UNREAL `CivilDate` BY STRUCT LITERAL,
 // BYPASSING THE VALIDATING CONSTRUCTOR? NO, SINCE COMPILER `c3bdae2`. From

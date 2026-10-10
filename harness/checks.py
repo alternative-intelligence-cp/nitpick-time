@@ -637,7 +637,9 @@ def limits_names(tree):
     return names, held, small, unread
 
 # A NUMERIC LITERAL AS THE COMPILER'S LEXER READS ONE -- cycle 0.2.3a, TM-231.
-# Read at `5fbaf4a` with `git show`: `src/frontend/lexer.npk`'s `lexer_next`,
+# Read at `5fbaf4a` with `git show` -- and again at `7e91730`, cycle 0.3.2a
+# (TM-259), where `num_scan` reads the same and `lexer_next`'s integer path
+# keeps a refused literal a token: `src/frontend/lexer.npk`'s `lexer_next`,
 # `src/frontend/numeric.npk`'s `num_scan`, `src/frontend/num_width.npk`'s
 # `num_width_of`, and `LEXICAL_REFERENCE.md` §6.2. A token that begins with a
 # decimal digit -- which no identifier does, the compiler's D-147 -- runs on
@@ -1291,7 +1293,9 @@ def check_raw_index(tree, **_):
 # are ordinary English and this check reads code, not prose -- see
 # `strip_comments` above for the other half of that argument, which this tree
 # needed on its first run. The list is every bare-name builtin of the pinned
-# compiler -- fifty-seven at `5fbaf4a`, its `src/frontend/builtins.npk`,
+# compiler -- fifty-seven at `5fbaf4a`, its `src/frontend/builtins.npk`, and the
+# same fifty-seven at `7e91730` (cycle 0.3.2a, TM-259: the one row that moved
+# is `string_bytes`'s result, the read-only view) --
 # generated from `BUILTIN_REFERENCE.md`'s marked rows -- and every SYNCHRONOUS
 # public function of its prelude, that reaches past the program's own memory.
 # The asynchronous prelude names that do and are not on it are named in
@@ -1563,7 +1567,9 @@ def check_host_isolation(tree, **_):
 # `npk.cal.weekday`, `npk.vec.vec_push<int64>` for a generic's instance,
 # `npk.cal.CivilDate:Ord.cmp` for a derived impl -- and a module's name is its
 # file's basename (B-14). The prelude's are `npk.prelude.*`, the drop glue's
-# `npk.drop.<n>` and `npk.vacant.<n>`. Measured at compiler `5fbaf4a`
+# `npk.drop.<n>` and `npk.vacant.<n>` -- `<n>` a type's id, which moved by one
+# at `7e91730` for every type interned after the prelude's `Writer`, and
+# which nothing here reads (cycle 0.3.2a, TM-259). Measured at compiler `5fbaf4a`
 # (`meta/roadmap/0.3/0.3.1.md` §1): the umbrella's emission defines every
 # function `src/` declares but the nine generic ones of `src/core/vec.npk`,
 # which a module holds only where a caller instantiates them.

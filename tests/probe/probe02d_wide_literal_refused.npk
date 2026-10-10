@@ -1,6 +1,5 @@
 // expect-error: NITPICK-LEX-004
-// expect-error: NITPICK-PARSE-002
-// expect-error-at: 63:18
+// expect-error-at: 66:18
 //
 // PROBE 02d — `int64`'s MINIMUM CANNOT BE SPELLED AS A LITERAL, in any width.
 //
@@ -30,6 +29,10 @@
 // no expression where one was required. D-237's rule -- the set of codes
 // reported must EQUAL the set expected -- makes that worth stating: a harness
 // entry for this file expects BOTH.
+// *(ONE code since compiler `7e91730` -- cycle 0.3.2a, 2026-10-09, TM-259: the
+// compiler's DEF-164 (its landing 101) keeps a refused integer literal a
+// literal token, so the parser meets an expression and reports nothing: one
+// mistake, one report. The header names `NITPICK-LEX-004` alone.)*
 //
 // AND UNTIL 0.0.2 THE HEADER NAMED ONLY ONE OF THEM. The prose above said
 // "expects BOTH" and the machine-readable header carried a single

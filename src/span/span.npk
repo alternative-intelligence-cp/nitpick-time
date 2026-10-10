@@ -114,7 +114,9 @@
 // workbench registry's O-N34, restated in `meta/OPEN_QUESTIONS.md`, the cycle
 // audit's S2: the compiler's own decisions say an arm that ends in the builtin
 // leaves. At this pin it stands, so `?|` is the spelling, and the adoption that
-// moves the pin re-measures it (TM-245).)
+// moves the pin re-measures it (TM-245).) (Re-measured at compiler `7e91730`,
+// cycle 0.3.2a: the statement form compiles there and runs on both legs -- the
+// compiler's DEF-225 -- and `?|` stays, the spelling both pins accept, TM-259.)
 //
 // `civil_to_utc` IS FALLIBLE, AS §9 SAYS, AND THAT IS WHAT MAKES IT TOTAL. It
 // adds the day number `date_to_days` gives to the second of the day and builds

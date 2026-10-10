@@ -341,7 +341,11 @@ conversions' two units and two sweeps, `142 = 97 + 43 + 2` until cycle
 0.2.4b added a unit and a probe, and `149 = 104 + 43 + 2` until cycle 0.3.0
 added the clocks' unit), and the two
 are `probe02d_wide_literal_refused.npk` (LEX-004, PARSE-002) and
-`probe14_error_payload_refused.npk` (PARSE-001, TM-147). It read
+`probe14_error_payload_refused.npk` (PARSE-001, TM-147). *(Since compiler
+`7e91730`, cycle 0.3.2a, TM-259: `probe02d` is `LEX-004` alone — the
+compiler's DEF-164 keeps a refused literal a token, so no `PARSE-002` follows
+it — and no file here is refused at `PARSE-002`; the three counts are the
+same at both pins.)* It read
 `50 = 36 + 13 + 1` for three subcycles after the tree stopped being that size,
 which is TM-142; and at `aaffb87`, cycle 0.1.0, it read `66 + 15 + 2`, with 16
 files that must not compile and `EMIT-002` in place of `TYPE-046`. The

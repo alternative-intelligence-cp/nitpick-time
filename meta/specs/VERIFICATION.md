@@ -261,7 +261,9 @@ way that reads as fine:
   (D-148); a type's outermost values are constructed arithmetically, not
   spelled"* — and then `NITPICK-PARSE-002`, because the refused token leaves
   no expression. The **maximum** is fine, so a bound pair written by symmetry
-  from a working upper bound is exactly what stops compiling.
+  from a working upper bound is exactly what stops compiling. *(`LEX-004`
+  alone since compiler `7e91730`: its DEF-164 keeps the refused literal a
+  token, so the parser says nothing more — cycle 0.3.2a, TM-259.)*
   `tests/probe/probe02d_wide_literal_refused.npk` pins it.
 - **`uint64`'s maximum is spelled `~0u64`** (the compiler's D-311, TM-149). The
   `0u64 - 1u64` that D-148 gave as the example is refused `NITPICK-TYPE-076` at

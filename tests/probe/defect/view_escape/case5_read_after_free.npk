@@ -55,7 +55,7 @@
 // harness check rather than a thing to remember.
 mod:case5_read_after_free;
 
-func:esc = uint8[]() never fails {
+func:esc = fixed uint8[]() never fails {   // read-only since 7e91730, TM-259
     string:s = string_concat("abcd", "efgh");
     pass string_bytes(s);
 };

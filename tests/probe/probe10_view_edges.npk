@@ -75,7 +75,7 @@ func:drop_view = NIL(string:v) never fails {
 // one frame exactly as `@param` may. This is the rule DEF-3 states in
 // `escape.npk`'s D-249 comment, and it is what makes the compiler's own
 // `Lexer{ text: string_from_bytes(text.ptr, text.len), ... }` legal.
-func:view_of_param = uint8[](string:s) never fails {
+func:view_of_param = fixed uint8[](string:s) never fails {   // read-only since 7e91730, TM-259
     pass string_bytes(s);
 };
 

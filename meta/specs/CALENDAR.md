@@ -219,9 +219,9 @@ imports `cal`:
 
 | What a consumer writes | Verdict | Pinned by |
 |---|---|---|
-| `CivilDate{ year: 32000i32, month: 99u8, day: 99u8 }` | **`NITPICK-TYPE-079`**, once per field named — three | `probe15` |
+| `CivilDate{ year: 32000i32, month: 99u8, day: 99u8 }` | **`NITPICK-TYPE-079`**, once per field named — three *(once since compiler `7e91730`, naming the three: its DEF-165, TM-259)* | `probe15` |
 | `a.month = 13u8;` on a `CivilDate` from `civil_date` | **`NITPICK-TYPE-079`** | `probe16d` |
-| `CivilTime{ hour: 24u8, … }` | **`NITPICK-TYPE-079`**, four | the cycle's record |
+| `CivilTime{ hour: 24u8, … }` | **`NITPICK-TYPE-079`**, four *(one since `7e91730`, DEF-165)* | the cycle's record |
 | `dt.date.month = 13u8;` through an unsealed `CivilDateTime` | **`NITPICK-TYPE-079`** — a write reaching a sealed field through a path is a write | the cycle's record |
 | `CivilDate:v;` and then `v.month` | **`NITPICK-ASSIGN-001`** — no default value to read (D-010) | the cycle's record |
 | a field READ — `d.month`, `t.hour`, every field of both types | compiles and runs | `probe16e`; `tests/unit/civil_construct.npk` reads every field |

@@ -6036,6 +6036,11 @@ is this harness's one door to `npkc`, and holding it there costs one read per
 emission and covers the library and the repro builds too.
 
 ### TM-210 — a refusal names each code once per site it is reported at: the runner counts, as the compiler's runners do since its D-332
+> **Read with TM-259 (2026-10-09, cycle 0.3.2a).** Both landings it waited for
+> are in compiler `7e91730`: DEF-165 reports `probe15`'s literal once, naming its
+> three fields, and DEF-164 reports `probe14`'s declaration once, at its `(` — so
+> each header names one site, and `probe14`'s red run came as this decision said
+> it would. The rule stands. The text below is left exactly as written.
 
 **2026-09-27, cycle 0.2.0a (the plan's PD-59) — the adoption of compiler
 `5fbaf4a`, its landing 82 (D-332) and advance notice F24. Amends
@@ -6451,6 +6456,9 @@ declarations of one name is already `check_error_budget`'s failure (TM-203);
 behind a green run.
 
 ### TM-218 — `Instant`'s refusals are two probes dispatched by their own headers: `probe20_instant_literal_refused.npk`, `NITPICK-TYPE-079` named twice, and `probe20b_instant_conversion_refused.npk`, `NITPICK-RESOLVE-002`
+> **Read with TM-259 (2026-10-09, cycle 0.3.2a).** `NITPICK-TYPE-079` is named
+> ONCE since compiler `7e91730`, whose DEF-165 reports the literal once, naming
+> both fields. The text below is left exactly as written.
 
 **2026-10-01, cycle 0.2.0 (the plan's PD-56). Adds the two probes and their
 rows in `tests/probe/README.md`; cycle 0.2.1's checklist gains the third.**
@@ -6585,6 +6593,9 @@ alone — no specification names one, a nanosecond count spans ±292 years and i
 0.2.3's `Duration` interop, and each would be a public name (TM-013).
 
 ### TM-221 — `Timestamp`'s refusals are six probes, one refusal each: `probe20c` and `probe20d`, M-3 at a parameter in both directions (`NITPICK-TYPE-007`); `probe20e` and `probe20f`, M-3 through the unchecked cast in both directions (`NITPICK-TYPE-032`); and `probe21` and `probe21b`, the seal (`NITPICK-TYPE-079`)
+> **Read with TM-259 (2026-10-09, cycle 0.3.2a).** `probe21`'s literal is one
+> report since compiler `7e91730`, its DEF-165, and its header names the code
+> once. The text below is left exactly as written.
 > **TM-243 (2026-10-02, cycle 0.2.4b) reads one clause of it:** *"M-3's 'in
 > either direction, ever' holds against everything a consumer can write but the
 > `wild` opt-out"* — a consumer builds an `Instant` from a `Timestamp`'s numbers
@@ -7737,6 +7748,10 @@ decision arms it, and cycle 0.8's verified build is where contracts become
 checks; the measurement is the plan's, and repeatable.
 
 ### TM-245 — the refusal of `if (r.is_error) { #unreachable(); }` is the compiler's defect, O-N34, not the language's rule; `span` keeps `?| #unreachable()` at this pin, and the adoption that moves it re-measures
+> **Re-measured by TM-259 (2026-10-09, cycle 0.3.2a).** At compiler `7e91730`,
+> whose DEF-225 is our O-N34, the statement form compiles and runs on both legs;
+> `span` keeps `?| #unreachable()`, and O-N34 is struck. The text below is left
+> exactly as written.
 
 **2026-10-02, cycle 0.2.4b (the plan's PD-90) — the cycle audit's S2. Restates
 O-N34 in `meta/OPEN_QUESTIONS.md`; reads one clause of TM-222; dates
@@ -8598,3 +8613,79 @@ re-points, and a spelling `5fbaf4a` cannot parse. **`string` parameters** — a
 writable buffer's view would need a copy into a `string` first. **The five
 returns at this step** — `5fbaf4a` would read each as meaning nothing, the
 silent shape a re-pin does not write where the old compiler reads it.
+
+### TM-259 — the adoption of compiler `7e91730`: LLVM 20.1.8; five returns of the read-only view; the self-check's cases 2 and 3 on a refusal of two codes; one report where the compiler's DEF-165 and DEF-164 made one; the lexer re-read; the statement form of `#unreachable()` compiles and `?|` stays; and the rest of the adoption list, each measured
+
+**2026-10-09, cycle 0.3.2a (the plan's PD-106) — the adoption of compiler
+`7e91730`, carrying its landings 83 … 103 over `5fbaf4a`: the libraries' one
+re-pin, by the author's word of 2026-10-08. Moves `nitpick.toml`'s `llvm`;
+amends `harness/selfcheck.py` (cases 2 and 3) and five headers; re-spells five
+return types; strikes `meta/OPEN_QUESTIONS.md` O-N34; dates `lexical.py`,
+`toolchain.py`, `stages.py`, three readings in `checks.py`, `BUILD.md`'s parse
+counts, `CALENDAR.md`'s seal table, `VERIFICATION.md`'s literal, `span.npk`'s
+and `cal.npk`'s notes and two rows of `tests/probe/README.md`; and marks TM-210,
+TM-218, TM-221 and TM-245.**
+
+**What was found** (`0.3.2a.md` §1). With TM-258's re-spelling the tree compiles
+at `7e91730` as it did at `5fbaf4a`, every file's codes and sites the same, but
+for what the pin itself moves. **LLVM**: `nitpick.toml` pins 20.1.2, the
+compiler's pin is 20.1.8 (its D-349), and the runner refuses any other release
+than its manifest's — at its self-check first, whose scratch trees copy the
+manifest's row, so every case of the unchanged tree stops at its own toolchain
+check, and one row moves both. **With the row moved, the self-check** fails
+two cases: the wide literal its cases 2 and 3 read
+reports `NITPICK-LEX-004` alone at `7e91730`, the compiler's DEF-164 keeping a
+refused literal a token, so no `NITPICK-PARSE-002` follows — and a case about two
+codes needs two. A checked narrowing of a non-constant, `NITPICK-TYPE-009`, beside
+a mismatch, `NITPICK-TYPE-007`, is two codes at both pins. **Five functions
+return a string's bytes** — `probe10`'s `view_of_param`, and the four refused
+views of `view_escape/case3` and `case5`, `probe10b` and `probe10c` — and their
+result is `fixed uint8[]`, a position `5fbaf4a` reads as meaning nothing (the
+compiler's DEF-247): plain, each is `NITPICK-TYPE-007` at its `pass`, standing in
+front of the four refusals' `NITPICK-BORROW-001` and `-012`, which return once it
+is spelled. **Five headers' counts**: DEF-165 reports a struct literal writing
+several sealed fields once (`probe15`, `probe20`, `probe21`), and DEF-164 reports
+`probe14`'s payload once, at its `(`, and `probe02d`'s literal without its
+`PARSE-002`. **The cycle README's adoption list**, each item measured at both
+pins: the statement form of `#unreachable()` compiles at `7e91730` — its
+DEF-225, our O-N34 — and is `NITPICK-TAINT-001` at `5fbaf4a`; `timestamp_since`'s
+and `instant_since`'s `int128` arithmetic is inline at both legs under each pin's
+LLVM, no object naming a symbol `npkrt.o` does not define; the compiler's lexer,
+re-read (TM-202), moved a float's scan and a refused integer literal's token
+and no span `lexical.py` finds, and part E is green at both; the builtin table
+and the prelude name the same fifty-seven builtins and sixty-three public
+functions at both pins, so `check_purity`'s list stands, and `check_call_edges`
+reaches no symbol outside its allowlist; the emission's names are
+`npk.<module>.<name>` as before; and `src/`'s `#wild_slice` sites wait, the
+compiler's D-341 being settled and not built at `7e91730`. **The emission**
+moves in text and in nothing a check reads: a type id by one for every type
+interned after the prelude's `Writer` (landing 103), the site table by the
+prelude's six frac sites (landing 97), and the derived `Debug` bodies by their
+template's drops (landing 95); `check_call_edges`, `check_wide_types` and
+`check_purity` read the same at both pins, function by function.
+
+**The decision.** *Adopt `7e91730`. `nitpick.toml`'s `llvm` is 20.1.8, and the
+self-check's trees follow it. Self-check cases 2 and 3 read `TWO_CODES`, a
+refusal of `NITPICK-TYPE-009` and `NITPICK-TYPE-007`; the wide literal stays the
+verdict mechanism's `npkc` specimen, which one code serves. The five functions
+return `fixed uint8[]`, written once the pin has moved. The five headers name
+what the compiler reports, each with a dated note: `probe15`, `probe20` and
+`probe21` one `NITPICK-TYPE-079`, `probe14` one `NITPICK-PARSE-001` at its `(`,
+and `probe02d` `NITPICK-LEX-004` alone, its `expect-error-at` following the
+note's lines. `span` keeps `r ?| #unreachable()` — the spelling both compilers
+accept — and O-N34 is struck. The lexer's re-read is recorded in
+`lexical.py`'s header, and every reading this list makes is recorded where its
+statement stands.*
+
+*Alternatives declined:* **20.1.2 kept, through the libraries' private copy** —
+no package source serves it, the compiler's D-349 moved for that reason, and CI
+would pin a release nobody can install; **cases 2 and 3 kept on the wide literal**
+— red at `7e91730` for a reason neither case is about; **one code in case 3's
+fixture** — the case is a header that omits one of two reported codes, and one
+code leaves nothing to omit; **`span`'s two sites respelled as the statement form**
+— nothing gained, and a spelling the old compiler refuses, in the subcycle whose
+first step is judged there; **the five returns at TM-258's step** — `5fbaf4a`
+would read each as meaning nothing (DEF-247), the silent shape a re-pin does not
+write where the old compiler reads it; **the headers' old counts kept, the
+runner excusing them** — a header names what the compiler reports, or B-7c is
+not a rule.

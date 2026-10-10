@@ -119,6 +119,21 @@ func:main = int32(cstring[]:_~argv) {
 };
 """ + FAILSAFE_EW
 
+# TWO CODES FROM ONE PHASE, measured at `5fbaf4a` and at `7e91730` alike: a
+# checked narrowing of a non-constant the compiler refuses, `NITPICK-TYPE-009`,
+# and a mismatch, `NITPICK-TYPE-007`, each at its own line. Cases 2 and 3 since
+# cycle 0.3.2a (TM-259), where the wide literal's pair stood until the compiler's
+# DEF-164 made it one code.
+TWO_CODES = """mod:%(mod)s;
+
+func:main = int32(cstring[]:_~argv) {
+    int64:wide = 300i64;
+    int8:a = wide => int8;
+    bool:b = 1i32;
+    exit 0i32;
+};
+""" + FAILSAFE
+
 TRIVIAL = """mod:%(mod)s;
 
 func:main = int32(cstring[]:_~argv) {
@@ -130,6 +145,10 @@ func:main = int32(cstring[]:_~argv) {
 # `NITPICK-LEX-004` (the lexer refuses the token) and `NITPICK-PARSE-002` (the
 # parser is then left with no expression where one was required). Cases 2 and 3
 # are the two ways a header can disagree with that pair.
+# *(ONE code since compiler `7e91730`, cycle 0.3.2a, TM-259: the compiler's
+# DEF-164 keeps a refused integer literal a literal token, so no PARSE-002
+# follows it, and cases 2 and 3 read `TWO_CODES` below. This fixture stays
+# the verdict mechanism's `npkc` specimen, which one code serves.)*
 WIDE_LITERAL = """mod:%(mod)s;
 
 func:main = int32(cstring[]:_~argv) {
@@ -380,20 +399,20 @@ def case_2_missing_code(root, man, base):
     where = make_tree(
         os.path.join(base, "case2"), man,
         [("tests/rejection/good_codes.npk",
-          "// expect-error: NITPICK-LEX-004\n"
-          "// expect-error: NITPICK-PARSE-002\n"
-          + WIDE_LITERAL % {"mod": "good_codes"}),
-         ("tests/rejection/bad_codes.npk",
-          "// expect-error: NITPICK-LEX-004\n"
-          "// expect-error: NITPICK-PARSE-002\n"
           "// expect-error: NITPICK-TYPE-009\n"
-          + WIDE_LITERAL % {"mod": "bad_codes"})],
+          "// expect-error: NITPICK-TYPE-007\n"
+          + TWO_CODES % {"mod": "good_codes"}),
+         ("tests/rejection/bad_codes.npk",
+          "// expect-error: NITPICK-TYPE-009\n"
+          "// expect-error: NITPICK-TYPE-007\n"
+          "// expect-error: NITPICK-TYPE-032\n"
+          + TWO_CODES % {"mod": "bad_codes"})],
         [("rejection", "check", "tests/rejection")])
     st, out, v = invoke(where)
     c.red(st, out)
     c.fails(v, "tests/rejection/bad_codes.npk")
     c.passes(v, "tests/rejection/good_codes.npk")
-    c.says(out, "expected and not reported: NITPICK-TYPE-009")
+    c.says(out, "expected and not reported: NITPICK-TYPE-032")
     return c
 
 
@@ -402,20 +421,22 @@ def case_3_unexpected_code(root, man, base):
     where = make_tree(
         os.path.join(base, "case3"), man,
         [("tests/rejection/good_codes.npk",
-          "// expect-error: NITPICK-LEX-004\n"
-          "// expect-error: NITPICK-PARSE-002\n"
-          + WIDE_LITERAL % {"mod": "good_codes"}),
-         # THE HISTORICAL SPECIMEN: `probe02d`'s header as it stood until cycle
-         # 0.0.2 -- one `expect-error:` above a body that reports two codes.
+          "// expect-error: NITPICK-TYPE-009\n"
+          "// expect-error: NITPICK-TYPE-007\n"
+          + TWO_CODES % {"mod": "good_codes"}),
+         # THE HISTORICAL SPECIMEN'S SHAPE: `probe02d`'s header as it stood until
+         # cycle 0.0.2 -- one `expect-error:` above a body that reports two codes.
+         # Its own pair is one code since `7e91730` (DEF-164), so the shape is
+         # `TWO_CODES`'s since cycle 0.3.2a (TM-259).
          ("tests/rejection/bad_codes.npk",
-          "// expect-error: NITPICK-LEX-004\n"
-          + WIDE_LITERAL % {"mod": "bad_codes"})],
+          "// expect-error: NITPICK-TYPE-009\n"
+          + TWO_CODES % {"mod": "bad_codes"})],
         [("rejection", "check", "tests/rejection")])
     st, out, v = invoke(where)
     c.red(st, out)
     c.fails(v, "tests/rejection/bad_codes.npk")
     c.passes(v, "tests/rejection/good_codes.npk")
-    c.says(out, "reported and not expected: NITPICK-PARSE-002")
+    c.says(out, "reported and not expected: NITPICK-TYPE-007")
     c.says(out, "B-7: the set reported must EQUAL the set expected")
     return c
 

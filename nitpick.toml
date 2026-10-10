@@ -35,9 +35,11 @@ opt-level = 0
 # THE TOOLCHAIN IS A BUILD INPUT (D-204), pinned to the exact patch release the
 # compiler pins, because a patch release may change instruction selection. These
 # lists are READ by every `llc`/`opt`/`ld.lld` invocation the harness makes; a
-# stated flag nothing consumes is the next stale document.
+# stated flag nothing consumes is the next stale document. 20.1.8 SINCE CYCLE
+# 0.3.2a (TM-259), the compiler's pin since its D-349 and compiler `7e91730`;
+# 20.1.2 until then. The self-check's scratch trees copy this row.
 [toolchain]
-llvm          = "20.1.2"
+llvm          = "20.1.8"
 # THE TARGET EVERY MODULE STATES (the compiler's E-8, D-322 (5), its landing 71;
 # carried since cycle 0.2.0a, TM-209). Every emission opens with a `target
 # datalayout` and a `target triple` line, and these two rows are what the runner

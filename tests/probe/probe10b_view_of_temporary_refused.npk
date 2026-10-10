@@ -27,7 +27,7 @@
 // one habit answers both.
 mod:probe10b_view_of_temporary_refused;
 
-func:esc = uint8[]() never fails {
+func:esc = fixed uint8[]() never fails {   // read-only since 7e91730, TM-259
     // `string_concat` allocates and the result is bound to nothing. It dies at
     // this statement's end (D-246), and the view would outlive it by a frame.
     pass string_bytes(string_concat("abcd", "efgh"));

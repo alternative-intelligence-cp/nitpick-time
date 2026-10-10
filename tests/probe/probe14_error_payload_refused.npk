@@ -1,12 +1,12 @@
 // expect-error: NITPICK-PARSE-001
-// expect-error: NITPICK-PARSE-001
 // expect-error-at: 56:21
-// expect-error-at: 56:32
 // ONE `expect-error` LINE PER REPORTED SITE since cycle 0.2.0a (the
 // compiler's D-332, its landing 82; `BUILD.md` B-7c, TM-210): the one payload
 // declaration is reported at its `(` and again at its `)` -- the compiler's
 // DEF-164, registered OPEN: one mistake, reported twice. When it lands the
 // count drops to one, and this run is red until the header follows.
+// *(It landed, at compiler `7e91730`'s landing 101: one report, at the `(` --
+// cycle 0.3.2a, 2026-10-09, TM-259 -- and the header names one site.)*
 //
 // PROBE 14 — CAN AN `error:` IDENTITY CARRY A PAYLOAD? No. And this file is
 // what keeps that answer checked rather than remembered.

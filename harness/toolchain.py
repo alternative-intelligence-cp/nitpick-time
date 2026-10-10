@@ -21,7 +21,10 @@ Ubuntu-vendored build:
     ld.lld --version   "Ubuntu LLD 20.1.2 (compatible with GNU linkers)"
 
 -- three different shapes, one of them not containing "LLVM" at all, so the
-match is on the dotted number and not on the surrounding words.
+match is on the dotted number and not on the surrounding words. (20.1.8
+since cycle 0.3.2a, the compiler's pin since its D-349 and the machine's own
+since 2026-10-08: "Ubuntu LLVM version 20.1.8" twice and "Ubuntu LLD
+20.1.8 (compatible with GNU linkers)", the same three shapes -- TM-259.)
 
 AND THE NUMBER IS NOT ALWAYS ON LINE ONE (TM-140). This module read
 `out.splitlines()[0]` until cycle 0.0.6, which is narrower than the argument

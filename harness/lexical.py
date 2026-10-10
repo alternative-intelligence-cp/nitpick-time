@@ -48,6 +48,16 @@ WIDTH -- the compiler's DEF-145: one above U+00FF, or written `\\u{...}`, is
 `char32` -- and not in what a literal spans, and `escapes.npk`,
 `p_parse_import` and `LEXICAL_REFERENCE.md` not at all, so nothing below
 moved.
+AND AGAIN AT `7e91730` (cycle 0.3.2a, TM-259), where `lexer.npk` reads a
+FLOAT literal by its production -- `num_float_scan`, the body and one
+suffix or nothing (the compiler's DEF-166), a sign only where a digit
+follows it (DEF-164) -- and keeps a refused integer literal a literal token
+(DEF-164); `numeric.npk` gained the float's scan, and `parse_decl.npk` and
+`LEXICAL_REFERENCE.md` §6.2 the float's production; `escapes.npk` did not
+move, and `p_parse_import` and `num_scan` read the same at both pins. No
+span this module finds moved, so nothing below moved -- and the float case
+the list below names, `e+r"` after one, now reads as this module reads it:
+`1.5e+r"a"` is `NITPICK-LEX-009` at its tail and then a raw string.
 
   * THE TEXT IS BYTES. `read()` maps each byte to one character (latin-1), so
     every offset is the compiler's byte offset, `\\n` (byte 10) is the only

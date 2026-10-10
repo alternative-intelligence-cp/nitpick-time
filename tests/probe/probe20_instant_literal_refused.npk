@@ -1,5 +1,4 @@
 // expect-error: NITPICK-TYPE-079
-// expect-error: NITPICK-TYPE-079
 //
 // PROBE 20 — A CONSUMER CANNOT WRITE AN `Instant` AS A LITERAL (cycle 0.2.0,
 // TM-215, TM-218; "BUILD ... FROM A NUMBER" until cycle 0.2.4b, TM-243).
@@ -24,6 +23,8 @@
 // to a field of an `Instant` from `instant_of` -- `a.ns = 5i64` -- is the same
 // code, measured at planning. `probe20b` is the conversion by name, and since
 // cycle 0.2.1 `probe20c` ... `probe20f` are the refusal at the type (TM-221).
+// *(DEF-165 landed at compiler `7e91730`'s landing 100: ONE report at the
+// literal, naming both fields -- cycle 0.3.2a, 2026-10-09, TM-259.)*
 mod:probe20_instant_literal_refused;
 
 use "../../src/span/span.npk".*;

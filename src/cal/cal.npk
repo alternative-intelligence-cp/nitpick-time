@@ -187,7 +187,9 @@ pub enum:ValueFault = {
 // EVERY FIELD IS `sealed`, SINCE CYCLE 0.1.0c (C-8c, TM-157; the compiler's
 // D-313): read anywhere, WRITTEN ONLY IN THIS MODULE. Measured at `c3bdae2`, a
 // consumer's `CivilDate{ year: 32000i32, month: 99u8, day: 99u8 }` is
-// `NITPICK-TYPE-079` once per field it names, `a.month = 13u8` is `TYPE-079`,
+// `NITPICK-TYPE-079` once per field it names (once for the literal, naming
+// all three, since compiler `7e91730`: its DEF-165, TM-259), `a.month = 13u8`
+// is `TYPE-079`,
 // and a declared-uninitialised `CivilDate` cannot be read (`NITPICK-ASSIGN-001`,
 // D-010). So outside `cal` the only way to hold a `CivilDate` is to have been
 // handed one by `civil_date` -- or to reinterpret `wild` storage with `=>!`,

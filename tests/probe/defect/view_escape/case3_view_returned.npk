@@ -34,7 +34,7 @@
 // written, it is enforced for `@`-borrows, and it is not enforced here.
 mod:case3_view_returned;
 
-func:esc = uint8[]() never fails {
+func:esc = fixed uint8[]() never fails {   // read-only since 7e91730, TM-259
     string:s = string_concat("abcd", "efgh");
     pass string_bytes(s);              // `s` dies at this frame's exit
 };

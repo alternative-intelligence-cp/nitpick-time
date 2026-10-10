@@ -149,14 +149,14 @@ by the harness as ordinary `program`-stage entries from cycle 0.0.2.
 | `probe18_zero_length_owner.npk` | does a `string[0]` field cost nothing, move, drop, and leave an `int64[0]` twin copyable? | S-18g — the language fact under `Vec`'s marker |
 | `probe18b_zero_length_owner_copy_refused.npk` | *(must not compile)* a struct whose one owning field is `string[0]`, copied | S-18g — `NITPICK-TYPE-046` |
 | `probe19_pod_owner_refused.npk` | *(must not compile)* `Copy` claimed for `string` — until cycle 0.2.0a, `Pod` implemented as its trait declared it, `TYPE-047` (TM-211) | S-18h — `NITPICK-TYPE-087` |
-| `probe20_instant_literal_refused.npk` | *(must not compile)* an `Instant` built by a consumer's struct literal | `TIME_MODEL.md` M-2, TM-215 — `NITPICK-TYPE-079`, twice: one report per sealed field |
+| `probe20_instant_literal_refused.npk` | *(must not compile)* an `Instant` built by a consumer's struct literal | `TIME_MODEL.md` M-2, TM-215 — `NITPICK-TYPE-079`, twice: one report per sealed field *(once since compiler `7e91730`, naming both: its DEF-165, TM-259)* |
 | `probe20b_instant_conversion_refused.npk` | *(must not compile)* `instant_to_timestamp` called | M-3, TM-010 — `NITPICK-RESOLVE-002` |
 | `probe20c_instant_as_timestamp_refused.npk` | *(must not compile)* an `Instant` handed to `Timestamp`'s `cmp` | M-3, TM-221 — `NITPICK-TYPE-007` |
 | `probe20d_timestamp_as_instant_refused.npk` | *(must not compile)* a `Timestamp` handed to `instant_since` | M-3, TM-221 — `NITPICK-TYPE-007` |
 | `probe20e_instant_cast_to_timestamp_refused.npk` | *(must not compile)* `a =>! Timestamp` — the unchecked cast | M-3, TM-221 — `NITPICK-TYPE-032` |
 | `probe20f_timestamp_cast_to_instant_refused.npk` | *(must not compile)* `t =>! Instant` — the unchecked cast | M-3, TM-221 — `NITPICK-TYPE-032` |
 | `probe20g_construction_from_numbers.npk` | a consumer builds an `Instant` from a `Timestamp`'s numbers through `instant_of`, and a `Timestamp` back through `timestamp_of`, with no `wild` and no `=>!` — the construction M-3 does not refuse | M-3, TM-216, TM-243 — the positive twin of `probe20b` … `probe20f` |
-| `probe21_timestamp_literal_refused.npk` | *(must not compile)* a denormalised `Timestamp` built by a consumer's struct literal | M-7, TM-219 — `NITPICK-TYPE-079`, twice: one report per sealed field |
+| `probe21_timestamp_literal_refused.npk` | *(must not compile)* a denormalised `Timestamp` built by a consumer's struct literal | M-7, TM-219 — `NITPICK-TYPE-079`, twice: one report per sealed field *(once since compiler `7e91730`, naming both: its DEF-165, TM-259)* |
 | `probe21b_timestamp_field_write_refused.npk` | *(must not compile)* a consumer's write to a `Timestamp`'s `nanos` | M-7, TM-219 — `NITPICK-TYPE-079` |
 | `probe22_private_etc.npk` *(cycle 0.3.2)* | a program enters a user and a mount namespace of its own, mounts an empty `tmpfs` over `/etc`, and makes a link there that reads back whole and a file whose bytes read back; the kernel refuses a link target of 4 096 bytes and holds one of 4 095 | `TESTING.md` V-1m, `HOST.md` H-15, TM-255 — the shape `tests/unit/system_zone_etc.npk` stands on; 20 … 24 the machine's refusal (V-1d) |
 

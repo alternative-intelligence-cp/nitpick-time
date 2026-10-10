@@ -611,7 +611,10 @@ def parse_verdict(bld, rel, e):
     payload -- TM-147). This sentence said "exactly one" until the second
     arrived, which is the ordinary way a hand-written count in prose beside a
     tagged number goes stale: the TAG moves under `check_denominators` and the
-    SENTENCE does not.
+    SENTENCE does not. (Since compiler `7e91730`, cycle 0.3.2a: `probe02d` is
+    LEX-004 alone -- the compiler's DEF-164 keeps a refused literal a token,
+    so no PARSE-002 follows it -- and no file here is refused at PARSE-002;
+    the two and every count above are the same at both pins, TM-259.)
     """
     want_refusal = bool(e) and any(
         code.startswith(PARSE_FAMILIES) for code in e.errors)

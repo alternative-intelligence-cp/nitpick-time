@@ -1,5 +1,4 @@
 // expect-error: NITPICK-TYPE-079
-// expect-error: NITPICK-TYPE-079
 //
 // PROBE 21 — A CONSUMER CANNOT SPELL A DENORMALISED `Timestamp` (cycle 0.2.1,
 // TM-219, TM-221; `TIME_MODEL.md` M-7).
@@ -20,6 +19,8 @@
 // says so. THE REFUSAL IS THE ASSERTION (B-7). `probe21b` is the write; with
 // `timestamp_of`'s refusals they are `VERIFICATION.md` P-4's stand-in at
 // cycle 0.2.1, beside `tests/unit/timestamp_construct.npk` (TM-220).
+// *(DEF-165 landed at compiler `7e91730`'s landing 100: ONE report at the
+// literal, naming both fields -- cycle 0.3.2a, 2026-10-09, TM-259.)*
 mod:probe21_timestamp_literal_refused;
 
 use "../../src/span/span.npk".*;

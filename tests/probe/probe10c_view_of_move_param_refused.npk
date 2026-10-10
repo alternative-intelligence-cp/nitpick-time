@@ -22,7 +22,7 @@ mod:probe10c_view_of_move_param_refused;
 
 // The contrast is probe 10's `view_of_param`, which is this function with the
 // `move` removed, and which compiles.
-func:view_of_move_param = uint8[](move string:s) never fails {
+func:view_of_move_param = fixed uint8[](move string:s) never fails {   // read-only since 7e91730, TM-259
     pass string_bytes(s);
 };
 

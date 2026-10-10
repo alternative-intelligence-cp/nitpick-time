@@ -1512,7 +1512,13 @@ recorded `bytes_take` and not the language decision it produced
 
 ---
 
-### O-N34 — `#unreachable()` ending an `if (r.is_error)` arm is not counted as leaving it, so a read of `r.value` below is `NITPICK-TAINT-001`: a refusal of a correct program
+### ~~O-N34 — `#unreachable()` ending an `if (r.is_error)` arm is not counted as leaving it, so a read of `r.value` below is `NITPICK-TAINT-001`: a refusal of a correct program~~ — **FIXED at pin `7e91730` by the compiler's DEF-225 (its landing 93), verified here 2026-10-09 (TM-259)**
+
+> **Fixed at the adoption of `7e91730` (cycle 0.3.2a, TM-259).** The
+> statement form compiles there and runs to its exit on both legs, where
+> `5fbaf4a` refuses it `NITPICK-TAINT-001` — measured, each pin under its own
+> LLVM. `span` keeps `r ?| #unreachable()` at both sites, the spelling both
+> compilers accept. The entry below is left as written.
 
 **Raised** from this repository's cycle 0.2.2 planning, 2026-10-01, at pin
 `5fbaf4a` (`roadmap/done/0.2/0.2.2.md` §1.2): `timestamp_to_utc` wanted the statement

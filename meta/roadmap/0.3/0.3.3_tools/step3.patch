@@ -1,0 +1,247 @@
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 8da7d89d2e969a34e408171bebc9651f32a95396..d40d6042a121160cc0344e82d4249d6756e60985 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -30,8 +30,10 @@ and nothing converts it back (`NITPICK-TYPE-007`), and a write through one is
+ refused at 32 sites in 16 files, five of them `src/`'s, so every slot a
+ string's bytes reach says so — forty-four, `bytes_extend`'s source and
+ `host`'s four readers among them, each one the new compiler refuses plain and
+-none written through — re-spelled at the OLD pin first, which saw no
+-difference in any file (TM-258); and a parser takes `fixed uint8[]` (`SAFETY.md`
++none written through — thirty-nine of them re-spelled at the OLD pin first,
++which saw no difference in any file (TM-258), and the five results once it
++had moved *(it said all forty-four until cycle 0.3.3 — 0.3.2a's verifier)*;
++and a parser takes `fixed uint8[]` (`SAFETY.md`
+ S-22's note). **Then the pin's own moves** (TM-259): LLVM 20.1.8, the
+ compiler's since its D-349; five functions return the view, a position
+ `5fbaf4a` read as meaning nothing; the self-check's cases 2 and 3 read a refusal
+@@ -1009,11 +1011,14 @@ src/       the library, Nitpick only, layered per meta/specs/BUILD.md §6
+   zone/      the GENERATED tz tables and the offset lookup
+   fmt/       formatting and parsing, and the typed layout
+   host/      THE ONLY IMPURE MODULE — five functions, nothing else
+-tests/     probe, conformance, unit, golden, rejection, fixtures
++tests/     probe, conformance, unit, golden, rejection, fixtures, and since
++           cycle 0.3.3 double -- the test host (HOST.md H-9 ... H-11)
+ harness/   the Python build and test runner, until npkg can
+ tools/     generators — the civil cross-oracle's corpus since cycle 0.1.4, the
+            tzdb tables at 0.5; everything they emit is committed
+-examples/  runnable demonstrations, built and run by the harness
++examples/  runnable demonstrations: cycle 1.0.3's -- nothing yet, and no
++           harness stage (it said "built and run by the harness" until cycle
++           0.3.3, the documents audit's TA-7)
+ docs/      user-facing documentation, written at cycle 1.0
+ meta/      specs, decisions, open questions, the roadmap, research
+ .internal/ gitignored scratch — never commit anything from here
+diff --git a/README.md b/README.md
+index 552c14197ca324058d4389dad064a3e51b8f43f5..03ec72e907db7c89ab69994313f3028775cae68b 100644
+--- a/README.md
++++ b/README.md
+@@ -150,8 +150,11 @@ and not the bill.)*
+ 
+ ## What it will provide
+ 
+-The **calendar** row exists since cycle 0.1; every other row is a later cycle
+-of [`meta/roadmap/ROADMAP.md`](meta/roadmap/ROADMAP.md).
++The **calendar** row exists since cycle 0.1, **instants** and the `Duration`
++half of **spans** since cycle 0.2, and **host** since cycle 0.3; `Period`,
++**zones**, **formatting** and **parsing** are later cycles of
++[`meta/roadmap/ROADMAP.md`](meta/roadmap/ROADMAP.md). *(It said "every other
++row is a later cycle" until cycle 0.3.3 — the documents audit's TA-2.)*
+ 
+ | Layer | Contents |
+ |---|---|
+@@ -161,7 +164,7 @@ of [`meta/roadmap/ROADMAP.md`](meta/roadmap/ROADMAP.md).
+ | **zones** | the compiled-in IANA database, offset lookup, DST transitions, and explicit answers for ambiguous and nonexistent local times |
+ | **formatting** | RFC 3339, ISO 8601 (date, time, week date, ordinal date), RFC 5322, HTTP-date — as named functions, plus a **typed** layout for custom formats. There is no format-specifier language |
+ | **parsing** | the same formats in reverse, with a stated leniency policy and a round trip that is a fixed point |
+-| **host** | the one impure module: `clock_gettime` for the three clocks, and the system-zone discovery a program has to ask for |
++| **host** | the one impure module: the realtime and boot clocks through `clock_gettime` and the monotonic one through the floor's `mono_now()` (`meta/specs/HOST.md` H-5), each clock's resolution through `clock_getres`, and the system-zone discovery a program has to ask for — and, in `tests/`, its double *(this row said "`clock_gettime` for the three clocks" until cycle 0.3.3 — the documents audit's TA-2)* |
+ 
+ ---
+ 
+@@ -175,8 +178,8 @@ src/          # THE LIBRARY — Nitpick source only
+   zone/       #   the GENERATED time-zone tables and the offset lookup
+   fmt/        #   formatting and parsing, and the typed layout
+   host/       #   the only module that asks the machine anything
+-tests/        # probe, conformance, unit, golden, rejection, fixtures
+-examples/     # runnable demonstrations, built and run by the harness
++tests/        # probe, conformance, unit, golden, rejection, fixtures, double
++examples/     # runnable demonstrations: cycle 1.0.3's -- nothing yet, and no harness stage
+ harness/      # the Python build and test runner, until `npkg` can build a library
+ tools/        # generators — the civil cross-oracle's corpus since cycle 0.1.4, the tzdb
+               # tables from cycle 0.5; everything they emit is committed
+diff --git a/examples/README.md b/examples/README.md
+index c70dca2966822839f25f120c6dcec28c579192d5..df8459a68b81428a066af5e044010879a62f5b0c 100644
+--- a/examples/README.md
++++ b/examples/README.md
+@@ -1,6 +1,13 @@
+ # `examples/`
+ 
+-Runnable demonstrations, **built and run by the harness**, so a broken example
+-is a red run. The dogfood consumers from cycle 0.7 live here too — a
+-`date`-equivalent CLI and a small scheduler, which between them exercise
+-formatting breadth and DST edges.
++Runnable demonstrations — cycle 1.0.3's, one per format and one of the
++DST-edge resolution modes ([`../meta/roadmap/1.0/README.md`](../meta/roadmap/1.0/README.md)) —
++each built **and run** by the harness once it has a stage for this directory,
++so a broken example is a red run. Nothing is here yet, and the harness has no
++such stage. The dogfood consumers — a `date`-equivalent CLI and a small
++scheduler — are cycle 0.7's and live in `nitpick-posix`, not here (TM-103).
++
++*(Until cycle 0.3.3 this read "built and run by the harness" as a fact, which
++no stage made one — the documents audit's TA-7 — and "the dogfood consumers
++from cycle 0.7 live here too", which TM-103 settled the other way on
++2026-09-03 — the early ecosystem audit's E2-6, this repository's part.)*
+diff --git a/harness/README.md b/harness/README.md
+index 7becde836b0b753a542338fff7b8b4939d052bc8..7d3461202138578c99ff01031f769f0ea27b175b 100644
+--- a/harness/README.md
++++ b/harness/README.md
+@@ -538,8 +538,10 @@ at 36, every heap figure — but the library's IR, **374 606 B** where it was
+ 366 527 B, and the instances' 79 007 B where they were 78 317 B: a type id one
+ higher, the prelude's six frac sites, and the derived `Debug` bodies' template
+ drops. The unchanged tree had stopped at the toolchain check, and with its
+-LLVM row moved at the self-check and then at 35 units, landing 103's readers
+-and five headers' counts (`meta/roadmap/0.3/0.3.2a.md` §1). A full invocation
++LLVM row moved at the self-check and then, past it, at 33 of its 143 units —
++35 failures, with the library's build and `check_failsafe_arms` — landing
++103's readers and five headers' counts (`meta/roadmap/0.3/0.3.2a.md` §1).
++*(It said "at 35 units" until cycle 0.3.3 — 0.3.2a's verifier.)* A full invocation
+ about 230 s at either pin.
+ 
+ The floor under all of it is still TM-117's: every root re-emits the prelude,
+diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
+index 40a2a42449380abfb6a83c7a711609bcbff42999..da5ad3ec374da091390e9639aa5b835835c15284 100644
+--- a/meta/DECISIONS.md
++++ b/meta/DECISIONS.md
+@@ -6596,6 +6596,7 @@ alone — no specification names one, a nanosecond count spans ±292 years and i
+ > **Read with TM-259 (2026-10-09, cycle 0.3.2a).** `probe21`'s literal is one
+ > report since compiler `7e91730`, its DEF-165, and its header names the code
+ > once. The text below is left exactly as written.
++>
+ > **TM-243 (2026-10-02, cycle 0.2.4b) reads one clause of it:** *"M-3's 'in
+ > either direction, ever' holds against everything a consumer can write but the
+ > `wild` opt-out"* — a consumer builds an `Instant` from a `Timestamp`'s numbers
+diff --git a/meta/roadmap/0.7/README.md b/meta/roadmap/0.7/README.md
+index 3cb3dda28dbb34c1573d2121d6bf596da8105513..b65c6756bea0e6920345fec6053336898279f781 100644
+--- a/meta/roadmap/0.7/README.md
++++ b/meta/roadmap/0.7/README.md
+@@ -19,7 +19,9 @@ settled.
+ **Open questions to settle:** Q-4 — the dogfood consumers. Recommendation on
+ file: a `date`-equivalent CLI **and** a small scheduler, because the CLI
+ exercises formatting breadth and the scheduler exercises DST edges, which is
+-where a date library is actually wrong.
++where a date library is actually wrong. *(Settled 2026-09-03 as recommended,
++TM-103 and TM-104 — the programs in `nitpick-posix`, as the note at this
++file's head says; dated at cycle 0.3.3, beside E2-6.)*
+ 
+ ## Subcycles
+ 
+diff --git a/meta/roadmap/1.0/README.md b/meta/roadmap/1.0/README.md
+index 65c4d1e2e6127bf16baae53a0105b68ff302477d..3f47f2ec61eaa4db3ef4c6fd68f5459b4d10ec85 100644
+--- a/meta/roadmap/1.0/README.md
++++ b/meta/roadmap/1.0/README.md
+@@ -54,6 +54,10 @@ this cycle **publishes** it rather than deciding it.
+       system tzdb at 1.0
+ 
+ ### 1.0.3 — examples
++*(Dated at cycle 0.3.3, the early ecosystem audit's E2-6: the two consumers
++are `nitpick-posix`'s programs, TM-103, and not this repository's examples;
++"the two consumers" below, and this subcycle's row, are its planner's to
++restate.)*
+ - [ ] one per format, minimal
+ - [ ] the two consumers from 0.7.4, tidied
+ - [ ] an example of the DST-edge resolution modes, because it is the API most
+diff --git a/meta/specs/SPAN_MODEL.md b/meta/specs/SPAN_MODEL.md
+index 408b3c94c4f4ac0bbf1e733ed7bf2d65ad4c9df7..839fd4844e5bd7c02f461bf8e76f37e022b2f61e 100644
+--- a/meta/specs/SPAN_MODEL.md
++++ b/meta/specs/SPAN_MODEL.md
+@@ -192,7 +192,7 @@ wrong**, so every site is enumerated and each carries a `prove` obligation
+ | `duration_weeks(n)` | `n × 7 × 86 400 × 10⁹` overflows `int64` past ±15 250 weeks | as `duration_days`' | no |
+ | `instant_since(later, earlier)` | `later.ns − earlier.ns` overflows `int64` for two readings `instant_of` builds | computed in `int128` (M-20), checked against `Duration`'s range and narrowed once; past it, `ETimeValue`/`Overflow` | **yes** |
+ | `instant_add(t, d)` | `t.ns + d.ns` overflows `int64` 292 years from the clock's origin | D-210 traps; `never fails`, and the trap is the range check — a deadline's arithmetic (`TIME_MODEL.md` M-4, §9) | no |
+-| `timestamp_add(t, d)` | `secs + d.ns / 10⁹` leaves the supported range | checked, `ETimeValue`/`Overflow` | no |
++| `timestamp_add(t, d)` | `secs + d.ns / 10⁹` leaves the supported range | checked, `ETimeValue`/`YearRange` | no |
+ | `timestamp_since(a, b)` | difference exceeds `Duration`'s ±292 y | computed in `int128` (M-20), checked against `Duration`'s range and narrowed once; past it, `ETimeValue`/`Overflow` (M-18) | **yes** |
+ | `timestamp_to_utc` | `secs × 10⁹` for the nanosecond field | never computed — the seconds and nanos are kept apart, which is why `Timestamp` is a pair and not an `int64` of nanoseconds | no |
+ | `civil_to_utc(c)` | `days × 86 400 + sod` | none — a day number from any `int32` year is at most 7.84 × 10¹¹ in magnitude (C-12), times 86 400 6.8 × 10¹⁶, and the second of the day at most 933 555 from three `uint8`s; `timestamp_of` checks the sum | no |
+@@ -213,7 +213,9 @@ is `timestamp_to_utc` since cycle 0.2.2, TM-222.)* *(Cycle 0.2.3, TM-234:
+ `timestamp_add`'s check is `timestamp_of`'s, relayed, so the detail its
+ refusal would carry, when O-X8 delivers one, is `YearRange` — the range's own
+ name for a `secs` outside it; `Overflow` is `timestamp_since`'s, where
+-`Duration` cannot hold the answer.)*
++`Duration` cannot hold the answer.)* *(Cycle 0.3.3, the documents audit's
++TA-6: `timestamp_add`'s row read "checked, `ETimeValue`/`Overflow`" after
++that note; its cell names `YearRange` since.)*
+ 
+ *(Cycle 0.2.4b, TM-241 and TM-242 — the cycle audit's C1, C6 and C7.
+ `timestamp_add` checks its OPERAND first, `t.secs` against the range, so the
+diff --git a/meta/specs/TIME_MODEL.md b/meta/specs/TIME_MODEL.md
+index 9ad016cfca48946cc8d0efb074dd03b340d034d1..8df7e586bea99165005e5610a47c1dae6adb5970 100644
+--- a/meta/specs/TIME_MODEL.md
++++ b/meta/specs/TIME_MODEL.md
+@@ -200,11 +200,17 @@ Detailed in [`CALENDAR.md`](CALENDAR.md); named here because the model needs
+ them:
+ 
+ ```nitpick
+-pub struct:CivilDate     = { int32:year; uint8:month; uint8:day; };
+-pub struct:CivilTime     = { uint8:hour; uint8:minute; uint8:second; uint32:nanos; };
++pub struct:CivilDate     = { sealed int32:year; sealed uint8:month; sealed uint8:day; };
++pub struct:CivilTime     = { sealed uint8:hour; sealed uint8:minute; sealed uint8:second; sealed uint32:nanos; };
+ pub struct:CivilDateTime = { CivilDate:date; CivilTime:time; };
+ ```
+ 
++*(Amended at cycle 0.3.3 — the documents audit's TA-5 — to what cycle 0.1.0c
++made the two validated types, TM-157 and `CALENDAR.md` C-8c, whose block this
++one names: every field `sealed`. Until then it read `{ int32:year;
++uint8:month; uint8:day; }` and `{ uint8:hour; uint8:minute; uint8:second;
++uint32:nanos; }` — the same fields, in the same order.)*
++
+ **Rule M-9 — a `CivilDateTime` is not a point in time.** `2026-03-29T02:30:00`
+ does not exist in `Europe/London` and happens twice in `Europe/London` in
+ October. It becomes an instant only through a zone, and only with an answer
+diff --git a/tests/conformance/README.md b/tests/conformance/README.md
+index 48c385f64377824a5ebcede15466734de9899df9..c26754a91ed52395da928c61cea82a6434ed88bd 100644
+--- a/tests/conformance/README.md
++++ b/tests/conformance/README.md
+@@ -20,17 +20,21 @@ until the compiler's DEF-5 landed, emitting IR that nothing could link
+ |---|---|
+ | `import.npk` | that the public surface is **importable** — not that it works |
+ 
+-`import.npk` imports an umbrella that re-exports nothing, which is the point:
+-it goes on compiling as names are added to `src/lib.npk`, and the day it does
+-not, the surface changed incompatibly — a MAJOR version by TM-013, and better
+-as a red run than as a discovery.
++`import.npk` imports the umbrella, which is the point: it goes on compiling as
++names are added to `src/lib.npk`, and the day it does not, the surface changed
++incompatibly — a MAJOR version by TM-013, and better as a red run than as a
++discovery. *(It said the umbrella "re-exports nothing" until cycle 0.3.3 — the
++documents audit's TA-3: true when it was written, at cycle 0.0.1; the umbrella
++re-exports 84 names <!-- [[sweep: lib_reexports=84]] --> since cycle 0.3.2,
++and the file's `failsafe` names their 13 arms <!-- [[sweep: arms_lib=13]] -->.)*
+ 
+ **Measured at 0.0.1, pin `0dfddac`:** its emitted `.ll` is **845 282 bytes and
+ byte-identical to `../probe/probe11d_floor_only.npk`'s** — the program that
+ imports nothing at all. Both declare only `main` and `failsafe`, which are
+ root-level and unqualified, so there is nothing for a module name to
+-distinguish. Two things follow. First, **importing `ntime` today costs a
+-consumer exactly nothing**: no arms beyond `SAFETY.md` S-4b's floor of four
++distinguish. Two things follow. First, **importing `ntime` cost a consumer
++exactly nothing at 0.0.1** *("today" until cycle 0.3.3, TA-3)*: no arms beyond
++`SAFETY.md` S-4b's floor of four
+ (removing any one is `NITPICK-REACH-002`, checked), and no bytes. *(The floor is
+ six at compiler `c3bdae2` — `StackExhausted` and `MachineFault` joined it — and
+ `import.npk`'s own header carries its bill at every pin since.)* Second, the
+diff --git a/tests/conformance/import.npk b/tests/conformance/import.npk
+index f763e5e5783096e72bbe6a33d9db33cf80858503..d88064d0756ef93834a843082550150dbe2671d3 100644
+--- a/tests/conformance/import.npk
++++ b/tests/conformance/import.npk
+@@ -115,6 +115,9 @@ func:main = int32(cstring[]:_~argv) {
+ // again. What still grows, one per module that declares and RAISES an
+ // identity, is the identity half -- `ETimeParse` at 0.4 and `ETimeZone` at 0.3
+ // are the two remaining, and this file is where each will first show.
++// (`ETimeZone` is cycle 0.6's since cycle 0.3.2, TM-256: `host` raises
++// nothing, and the lookup that refuses a name, `zone_by_name`, is 0.6's --
++// dated at cycle 0.3.3, the documents audit's TA-3.)
+ //
+ // MEASURED, NOT PREDICTED. `check_failsafe_arms` reads `NITPICK-REACH-003`'s
+ // own list on every run and diffs it against the set computed from source in

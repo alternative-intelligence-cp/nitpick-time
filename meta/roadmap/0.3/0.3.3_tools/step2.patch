@@ -1,0 +1,1379 @@
+diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
+index 5b079c3c6607643c29b3ae2fa0e3a03eaf32c91d..85422218b53b134ddda1ff2791631af0845f5218 100644
+--- a/CONTRIBUTING.md
++++ b/CONTRIBUTING.md
+@@ -119,7 +119,9 @@ had asserted — which is why they are here rather than in a specification only.
+ - **Unexpected diagnostics fail a test as surely as missing ones.**
+ - **Where a property can be checked over its whole domain, it is** — the civil
+   round trip covers every day in the supported range, not a sample.
+-- **Anything that reads a clock runs forty times**, not once.
++- **Every test of a `src/host/` function runs forty times**, not once
++  (`meta/specs/TESTING.md` V-11; *"anything that reads a clock"* until cycle
++  0.3.3, TM-262 — the documents audit's TA-4).
+ - **A red under stress is a stop sign, never a retry.**
+ 
+ ## Compiler defects
+diff --git a/harness/run.py b/harness/run.py
+index cb5e0f9a6269d7c2932953403157f86e599071a9..4dbe8da47b7dcbc05767eaaa97beb29c6f6ade0b 100644
+--- a/harness/run.py
++++ b/harness/run.py
+@@ -182,6 +182,15 @@ EXPECT_EXEMPT = {
+     "tests/probe/defect/fixed_import_scope/rows.npk": ("none",
+         "O-N23's declaring module: the struct, table, scalar and function the "
+         "directory's seven cases import; never run and never refused"),
++    # THE TEST HOST -- cycle 0.3.3 (TM-261). The double: the seam a
++    # clock-dependent function takes, the machine's `host` behind it and
++    # `FakeHost` beside it, imported by its three tests. No `main`, no
++    # `failsafe`, so no exit code and no diagnostic to expect, exactly as the
++    # support modules and the corpus above; its `none` is re-derived on every
++    # run (TM-137), so the day it grows a `main`, the harness says so.
++    "tests/double/host_double.npk": ("none",
++        "the test host: a module its three tests import, never run and never "
++        "refused (HOST.md H-9 ... H-11, TM-261)"),
+ }
+ 
+ # The directories a `.npk` may not live in and be missed: none. This walk is
+@@ -636,10 +645,12 @@ def run_parse(rep, root, bld):
+     """Every `.npk` in the tree in front of the real parser, each exactly once.
+ 
+     THE DENOMINATOR IS THE WHOLE TREE AND THAT IS WHY THE STAGE IS WORTH ITS
+-    COST. Re-measured at cycle 0.3.2: of the 159 `.npk` files
+-    here [[sweep: npk_total=159]] the library build roots 7
+-    [[sweep: lib_reach=7]], the suite roots 108 [[sweep: suite_roots=108]]
+-    (127 and 77 from cycle 0.1.3c until `tests/unit/civil_total_edges.npk`
++    COST. Re-measured at cycle 0.3.3: of the 163 `.npk` files
++    here [[sweep: npk_total=163]] the library build roots 7
++    [[sweep: lib_reach=7]], the suite roots 111 [[sweep: suite_roots=111]]
++    (159 and 108 from cycle 0.3.2's third step until cycle 0.3.3 added the
++    double's three tests, two units and the `golden` stage's first member,
++    TM-262; 127 and 77 from cycle 0.1.3c until `tests/unit/civil_total_edges.npk`
+     joined; 128 and 78 from then until cycle 0.2.0b retired the churn pair,
+     TM-214; 126 and 76 until cycle 0.2.0 added `span`'s body to the
+     library's reach and a unit and two probes to the suite; 130 and 79 until
+@@ -654,8 +665,9 @@ def run_parse(rep, root, bld):
+     its unit), and of the 4
+     support modules [[sweep: support_total=4]] 3 are reached by `use` from
+     a suite root -- and since cycle 0.1.4 so is the civil cross-oracle's
+-    corpus, which only its member imports -- so 40 are put in front of the
+-    compiler by NOTHING ELSE. Three of those are the remaining `src/`
++    corpus, which only its member imports, and since cycle 0.3.3 the double,
++    `tests/double/host_double.npk`, which its three tests import (TM-261) --
++    so 40 are put in front of the compiler by NOTHING ELSE. Three of those are the remaining `src/`
+     placeholders, the layer note `src/core/core.npk` among them (four until
+     cycle 0.3.0 gave `host/` a body, five until cycle 0.2.0 gave `span/`
+     one); 36 are the reproductions under
+@@ -666,7 +678,7 @@ def run_parse(rep, root, bld):
+     a support module no suite root imports, which only its part C compiles
+     (TM-217).
+ 
+-        150 = 7 (library) + 99 (suite roots) + 3 + 1 (reached by `use`) + 40
++        163 = 7 (library) + 111 (suite roots) + 3 + 1 + 1 (reached by `use`) + 40
+ 
+     (It read `116 = 5 + 66 + 3 + 1 + 41` from cycle 0.1.4c until cycle 0.1.3c
+     added eleven suite roots -- seven probes and four unit tests -- and none
+@@ -676,8 +688,12 @@ def run_parse(rep, root, bld):
+     `130 = 6 + 79 + 3 + 1 + 41` until cycle 0.2.1;
+     `138 = 6 + 87 + 3 + 1 + 41` until cycle 0.2.2;
+     `142 = 6 + 91 + 3 + 1 + 41` until cycle 0.2.3;
+-    `147 = 6 + 96 + 3 + 1 + 41` until cycle 0.2.4b; and
+-    `149 = 6 + 98 + 3 + 1 + 41` until cycle 0.3.0.)
++    `147 = 6 + 96 + 3 + 1 + 41` until cycle 0.2.4b;
++    `149 = 6 + 98 + 3 + 1 + 41` until cycle 0.3.0; and
++    `150 = 7 + 99 + 3 + 1 + 40` from cycle 0.3.0 -- which this equation went
++    on reading through cycle 0.3.2's three steps, while the tagged sentence
++    moved to 159, 108 and 40, found at cycle 0.3.3's planning -- until the
++    double.)
+ 
+     EVERY NUMBER IN THAT SENTENCE IS TAGGED AND CHECKED (TM-142). It read
+     `50 = 1 + 27 + 3 + 19` until cycle 0.0.6, three subcycles after the tree
+diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
+index 9f25c37d3694a5c04764475af7329b9db0cb08cb..40a2a42449380abfb6a83c7a711609bcbff42999 100644
+--- a/meta/DECISIONS.md
++++ b/meta/DECISIONS.md
+@@ -7940,6 +7940,10 @@ reading** — the author's answer is A, and Q-7 records why: no name closes the
+ reverse direction.
+ 
+ ### TM-249 — `tests/unit/host_clocks.npk`, `// stress: 40`: each reading asserted where a test can see it — its clock, its range, and its ADVANCE, H-3's "two calls are two syscalls" made observable — and the four mutants no test can see named where a reader looks
++> **Read with TM-261 (@@DATE033@@, cycle 0.3.3).** The double does not replace
++> `host`: it stands beside it, a value a clock-dependent function is handed in
++> `host`'s place, so what this decision says of it holds the more — it cannot
++> test `host`'s own refusals. The text below is left exactly as written.
+ 
+ **2026-10-08, cycle 0.3.0 (the plan's PD-94). Dates `HOST.md` H-3.**
+ 
+@@ -8383,6 +8387,11 @@ workbench and in CI alike, and a step of CI's own lifts what the runner
+ restricts.
+ 
+ ### TM-256 — the system zone: `host_system_zone = SystemZone() never fails` answers the zone's NAME and the mechanism that gave it — `SystemZone = { string:name; ZoneSource:source; bool:found; }`, `ZoneSource = { TzEnvironment; EtcLocaltime; EtcTimezone; NotFound; }` — by H-13's four steps, each made exact, and the lookup is the caller's
++> **Read with TM-261 (@@DATE033@@, cycle 0.3.3).** The double reproduces H-1's five
++> signatures as the five methods of its seam, `HostReadings`, each with H-1's
++> result and `never fails` where H-1 says it, the receiver the one parameter
++> added: a function of no parameters cannot read a double the language lets
++> live nowhere but in its caller. The text below is left exactly as written.
+ 
+ **2026-10-08, cycle 0.3.2 (the plan's PD-101) — the author's decision: his answer
+ to the workbench's question 26, 2026-10-08 — "i read the recommendations. they
+@@ -8737,3 +8746,140 @@ rule is `host`'s, and B-17 draws that arrow for `host`, which takes none
+ (TM-256), as the double takes none; **the double's imports held by review** —
+ two plans handed the check on, and three plants show what review would have to
+ see.
++
++### TM-261 — the double is a value, and the substitution a type: `tests/double/host_double.npk` declares `HostReadings`, H-1's five readings as a trait, the machine's `host` behind it and `FakeHost` beside it; H-9's setters take the double they set, and a clock-dependent function is generic over the seam
++
++**@@DATE033@@, cycle 0.3.3 (the plan's PD-111). Amends `HOST.md` H-9 and H-10
++by dated notes; marks TM-249 and TM-256, the two decisions that named the
++double; answers cycle 0.3.2's question whether the double needs a setter for
++the zone (`0.3.2.md` §7): it does, `fake_set_zone`.**
++
++**What was found** (`0.3.3.md` §1), at compiler `7e91730`. (1) H-9's three
++setters — `fake_set_utc = NIL(Timestamp:t) never fails` and its two siblings
++— set a reading a later call reads back, and nothing a module declares keeps
++one between two calls: a plain module-level binding is `NITPICK-TYPE-055`
++(the compiler's D-211: *"module state is `fixed` … keep mutable process state
++in `main`'s scope where it flows through the calls that need it"*), a write
++into a part of a `fixed` one `NITPICK-TYPE-086` (D-287), an initialiser that
++calls `NITPICK-TYPE-035` (D-165), and a `fixed atomic<int64>` takes no
++initialiser at all — `NITPICK-ASSIGN-001` with none, `NITPICK-TYPE-007` with a
++literal. The compiler's own double that needs state, its schedule explorer's
++shim, is hand-written IR for that reason (D-298: *"the language will not gain
++mutable module state for a test harness's sake"*). (2) H-10's *"the harness
++links whichever `host` object it was told to"*: there is no `host` object.
++`npkc` compiles the whole graph a root reaches (TM-117), and takes one root
++and no flag that maps a path or a root to another file — its usage line at the
++pin, and an unknown flag exits 2 — so a `use` line names one file, always.
++(3) What does compile and run, both legs: a trait whose five methods are H-1's
++readings, implemented by a struct whose methods call `host`'s and by a struct
++that holds readings; a function bounded by the trait, instantiated with both
++in one program; setters taking the struct by pointer. A root importing it owes
++`host`'s eleven identities and no more.
++
++**The decision.** *The double is a value, and the substitution a type.
++`tests/double/host_double.npk`, `mod:host_double`, declares the seam,
++`pub trait:HostReadings` — H-1's five readings, each named without its
++`host_` prefix: `now_utc = Timestamp(Self:self)`, `now_instant =
++Instant(Self:self) never fails`, `now_boot = Instant(Self:self)`, `clock_res =
++Duration(Self:self, HostClock:which)` and `system_zone = SystemZone(Self:self)
++never fails`, H-1's results and `never fails` where H-1 says it, the receiver
++the one parameter added, and `host`'s own `HostClock`, `SystemZone` and
++`ZoneSource`; `MachineHost` and `machine_host()`, the machine's host behind
++it, each method one call of `host`'s; and `FakeHost` and `fake_host()`, the
++double — its fields `hidden`, so a test reads it through the seam, as it reads
++the machine: the realtime clock as the kernel hands it, seconds and
++nanoseconds, the monotonic and boot readings, and the zone's name and source;
++its start the epoch, both instants at 0 ns and no zone. H-9's three setters
++take the double they set — `fake_set_utc = NIL(FakeHost->:h, Timestamp:t)
++never fails`; `fake_set_instant = NIL(FakeHost->:h, Instant:i) never fails`,
++which sets the clock `i` names and no other; `fake_advance = NIL(FakeHost->:h,
++Duration:d) never fails`, which moves every clock by `d`, the instants by
++`instant_add` and the realtime pair by `d`'s seconds and remainder and one
++borrow or carry — and `fake_set_zone = NIL(FakeHost->:h, string:name,
++ZoneSource:source) never fails` sets the fifth reading, a copy of the name.
++`FakeHost`'s readings are built as `host` builds its own: the realtime through
++`timestamp_of`, so a reading past the range is `ETimeValue`, H-8's refusal,
++where its caller reads it; the zone found unless its source is `NotFound`,
++whose name is then empty — H-12's invariant, kept by the reading — its name a
++copy moved into the answer; and every clock's resolution 1 ns, the machine's
++for all three (H-4's note). A clock-dependent function takes
++`<H: HostReadings>`, and is instantiated with `MachineHost` in a program and
++`FakeHost` in a test: a build-time substitution, statically dispatched, and no
++runtime flag. Nothing in `src/` changes; H-1's five functions and H-11 stand
++as written. What the double cannot do is test `host` (TM-249): it stands
++beside `host`, not in it.*
++
++*Alternatives declined:* **H-9's setters as drafted** — nowhere to keep a
++reading (finding 1); **the readings kept in the kernel** — a memory file at a
++descriptor number the double reserves, or the environment — D-211's mutable
++process state through another door, and syscalls in a double whose point is
++to need none; **a second module named `host`, the five signatures exactly** —
++its setters have nowhere to write either, and no flag or root swaps it in
++(finding 2); **a harness marker that rewrites a test's `use` path** —
++machinery in the runner and a small language, TM-255's declined alternative
++for the same reasons, and the module it swaps in still has nowhere to keep a
++reading; **the seam in `src/host/`** — public names, each a major version to
++take away (`src/lib.npk`), beside H-1's *"nothing else"*, for a consumer no
++cycle before 1.0 has; **`dyn HostReadings`** — dynamic dispatch where static
++suffices, and the compiler's own advice against it on a path where
++verification matters (its `TRAITS_REFERENCE.md` §5.2); **hand-written IR, as
++the compiler's explorer is** — the compiler's form for what Nitpick cannot
++express, and here Nitpick can, by passing the state; **a setter for the
++resolution** — no reading a consumer computes with, and every clock's here is
++1 ns; **`fake_advance` refusing a negative span** — a machine's monotonic
++clock never moves back, and a test that asks for one has written so, as
++`fake_set_instant` lets it write a reading back in time.
++
++### TM-262 — the double's tests: the double alone, the substitution under `// stress: 40`, and a fixed transcript as the `golden` stage's first member; every single-site mutant of the double run; and V-11 reads "every test of a `src/host/` function"
++
++**@@DATE033@@, cycle 0.3.3 (the plan's PD-112). Amends `TESTING.md` V-11 —
++the documents audit's TA-4 — and `CONTRIBUTING.md`'s line that restates it;
++gives `nitpick.toml` a `golden` entry; dates `tests/README.md`'s `golden/` row
++and the manifest's note on the stage.**
++
++**What was found** (`0.3.3.md` §1). The `golden` stage is implemented and
++exercised by the self-check alone, case 4: `tests/golden/` is empty and has
++no entry. V-11 says *"`// stress: 40` on everything that reads a clock"*, its
++second sentence scopes it to `src/host/`'s five functions, and
++`tests/probe/probe03_timespec_sys.npk` reads two clocks through `sys`, once
++(the documents audit's TA-4).
++
++**The decision.** *Three test files. `tests/unit/double_readings.npk`, the
++double alone, through the seam: its start; each setter, what it moves and what
++it does not; `fake_advance`'s borrow and carry; the realtime at the range's
++last nanosecond and one past it, refused, while both instants answer, and
++before its first; the zone, the empty name of a set `TZ`, and `NotFound`'s
++empty name; every reading the same twice; two doubles apart.
++`tests/unit/double_substitution.npk`, `// stress: 40`: one generic function
++reads all five readings, instantiated with `FakeHost` — exactly what was set,
++values no machine gives — and with `MachineHost` — the machine's: the
++realtime second inside `probe03`'s window, each instant on its clock, each
++resolution in (0, 1 s], a zone found only with a source — and the double read
++again after the machine, unchanged. `tests/golden/double_transcript.npk`, the
++`golden` stage's first member, and its `double_transcript.txt`: a consumer's
++line — the civil time in UTC, the time since it started by each instant's
++clock, the zone — after each step of a fixed sequence on a fresh double: the
++start, asked twice; 1.5 s passing; `TZ` set; the wall clock stepped back an
++hour while the monotonic clock runs on; a suspend of a minute the boot clock
++counts and the monotonic does not; 0.25 s more; the realtime at the range's
++last nanosecond, and one past it, refused; and the sequence on a second double
++writes the same bytes. Every line of the golden is re-derived with Python's
++`datetime`, never copied from the run. `nitpick.toml` gains a `golden` entry
++over `tests/golden/`. Every single-site mutant of the double is generated and
++run against the three; each is refused by the compiler, red, or named with why.
++V-11 reads "`// stress: 40` on every test of a `src/host/` function" — so
++`probe03`, which asks `sys` the `timespec`'s shape, and the double's two tests
++that read no clock carry none, and the substitution, which reads the machine
++through the seam, carries it.*
++
++*Alternatives declined:* **the transcript held by a literal inside the
++program** — the expected text's home would be the program that prints it,
++where the `golden` stage holds the bytes to a committed file and both legs to
++each other; **`// stress: 40` on the transcript** — the harness holds the
++first run's bytes of a leg to the golden and the other thirty-nine by their
++exit alone, so the forty would add a claim it does not check; **a heap bound
++on the double** — its one owner, the zone's name, is replaced by assignment,
++measured flat over a hundred thousand settings, and test infrastructure is not
++what `heap:` was built to hold; **V-11 left to read "everything that reads a
++clock", and `probe03` given `// stress: 40`** — the probe asks the
++`timespec`'s shape, which forty runs ask forty times.
+diff --git a/meta/research/CURRENCY.md b/meta/research/CURRENCY.md
+index ceea0639295d480a5caf45d1921428a11681b27e..35ca7e0e0a4d63e83e1212b94c77e3f1d4810724 100644
+--- a/meta/research/CURRENCY.md
++++ b/meta/research/CURRENCY.md
+@@ -11,7 +11,7 @@ tree at the pinned commit.
+ |---|---|---|---|---|
+ | Howard Hinnant, *chrono-Compatible Low-Level Date Algorithms* — `days_from_civil`, `civil_from_days`; the digest is [`hinnant-date-algorithms.md`](hinnant-date-algorithms.md) | the page as it dates itself, 2021-09-01 | 2026-09-25 | howardhinnant.github.io/date_algorithms.html | TM-016 |
+ | tzdata | 2026c | 2026-09-05 — the release installed on the workbench, measured by the 0.0.5 spike ([`tzdb-size.md`](tzdb-size.md)). **Whether it is still IANA's latest is not checked here**: cycle 0.1 reads no zone data, and TM-100 pins *"the latest release at cycle 0.5"*, which re-checks it | iana.org/time-zones | TM-100 |
+-| Python `datetime` — the independent source of `meta/roadmap/done/0.1/0.1.1.md` §4a's vectors for years ≥ 1, `meta/roadmap/done/0.1/0.1.2.md` §2's recomputation of the sweeps' domains, `meta/roadmap/done/0.1/0.1.3.md` §3's first method for the 41 derived-field vectors (`weekday()`, `timetuple().tm_yday`, `isocalendar()`), **cycle 0.1.4's cross-oracle corpus**, `tests/fixtures/civil/civil_oracle.npk`, generated by `tools/gen_civil_oracle.py` from `MINYEAR`, `MAXYEAR`, `fromordinal()`, `toordinal()`, `isoweekday()`, `isocalendar()` and `timetuple().tm_yday`; and cycle 0.2.2's sixteen conversion vectors, `tests/unit/utc_vectors.npk`, from the difference of two `datetime`s in days and seconds for years ≥ 1, and below year 1 by whole 400-year cycles of 146 097 days (`meta/roadmap/done/0.2/0.2.2.md` §1); the digest is [`python-datetime.md`](python-datetime.md) | 3.12.3, the workbench's interpreter — `/usr/bin/python3` and its virtual environment both; the corpus's `sha256` in `meta/roadmap/done/0.1/0.1.4.md` §5 is this interpreter's. The documentation was read at 3.14.7 | 2026-09-25 — re-checked for cycle 0.1.4, the statements the corpus reads quoted in the digest | docs.python.org/3/library/datetime.html | C-18 |
++| Python `datetime` — the independent source of `meta/roadmap/done/0.1/0.1.1.md` §4a's vectors for years ≥ 1, `meta/roadmap/done/0.1/0.1.2.md` §2's recomputation of the sweeps' domains, `meta/roadmap/done/0.1/0.1.3.md` §3's first method for the 41 derived-field vectors (`weekday()`, `timetuple().tm_yday`, `isocalendar()`), **cycle 0.1.4's cross-oracle corpus**, `tests/fixtures/civil/civil_oracle.npk`, generated by `tools/gen_civil_oracle.py` from `MINYEAR`, `MAXYEAR`, `fromordinal()`, `toordinal()`, `isoweekday()`, `isocalendar()` and `timetuple().tm_yday`; and cycle 0.2.2's sixteen conversion vectors, `tests/unit/utc_vectors.npk`, from the difference of two `datetime`s in days and seconds for years ≥ 1, and below year 1 by whole 400-year cycles of 146 097 days (`meta/roadmap/done/0.2/0.2.2.md` §1); and cycle 0.3.3's transcript, `tests/golden/double_transcript.txt`, every line re-derived from `datetime(1970, 1, 1)` and a `timedelta` of seconds by `meta/roadmap/0.3/0.3.3_tools/oracle.py` (`meta/roadmap/0.3/0.3.3.md` §1), under the same 3.12.3; the digest is [`python-datetime.md`](python-datetime.md) | 3.12.3, the workbench's interpreter — `/usr/bin/python3` and its virtual environment both; the corpus's `sha256` in `meta/roadmap/done/0.1/0.1.4.md` §5 is this interpreter's. The documentation was read at 3.14.7 | 2026-09-25 — re-checked for cycle 0.1.4, the statements the corpus reads quoted in the digest | docs.python.org/3/library/datetime.html | C-18 |
+ | The Linux kernel's x86-64 syscall table — `clock_gettime` 228 and `clock_getres` 229, the two numbers `src/host/host.npk` declares; cycle 0.3.2 adds its own, `readlink` 89 among them. The digest is [`linux-syscall-table.md`](linux-syscall-table.md) | the ABI, which never renumbers a syscall on an architecture, read on the table's `master` | 2026-10-07 — 228, 229 and 89 quoted from the table; first fetched 2026-10-02 by cycle 0.2's close for `meta/roadmap/0.3/0.3.0.md` §1.3, and 228 is the compiler's runtime's too, `npk_mono_now` at `5fbaf4a`. **And 2026-10-08**, for cycle 0.3.2's tests: 83, 84, 87, 88, 89, 102, 104, 165 and 272, and `CLONE_NEWNS` and `CLONE_NEWUSER` from `include/uapi/linux/sched.h`. **And 2026-10-08, for its third step's units**: 37 `alarm`, 59 `execve` — in the `64` ABI, the x32 row 520 — and 133 `mknod`, with `MS_RDONLY` 1 and `MS_REMOUNT` 32 from `include/uapi/linux/mount.h` and `S_IFIFO` 0010000 from `include/uapi/linux/stat.h`, read by a research request; and `CLOCK_REALTIME` 0, `CLOCK_MONOTONIC` 1 and `CLOCK_BOOTTIME` 7 from `include/uapi/linux/time.h` — `src/host/host.npk`'s since cycle 0.3.0 — and `PATH_MAX` 4096 from `include/uapi/linux/limits.h`, `probe22`'s, read by a second | github.com/torvalds/linux, `arch/x86/entry/syscalls/syscall_64.tbl`, `include/uapi/linux/sched.h`, `mount.h`, `stat.h`, `time.h` and `limits.h` | TM-248, TM-255, TM-256, TM-257 |
+ | POSIX's `TZ` — a leading `:` makes what follows implementation-defined, and a set, empty `TZ` is unspecified; what `HOST.md` H-13's first step strips. The digest is [`tz-environment.md`](tz-environment.md) | The Open Group Base Specifications Issue 8, IEEE Std 1003.1-2024, §8.3 | 2026-10-08 | pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap08.html | TM-256 |
+ | The GNU C library's `tzset` — strips one leading `:`, reads an empty `TZ` as UTC and an unset one as `/etc/localtime`; the reason an empty `TZ` answers H-13's first step. The digest is [`tz-environment.md`](tz-environment.md) | `master`, `time/tzset.c`'s `tzset_internal`, read through the GitHub mirror | 2026-10-08 | github.com/bminor/glibc, mirroring sourceware.org/git/glibc.git | TM-256 |
+diff --git a/meta/roadmap/0.3/README.md b/meta/roadmap/0.3/README.md
+index a3bfff4bd4c68e3d1d883a2eb7a2726b2dbb0385..8a1524a77204f1c4c3347a6b06f3985ec077d3c3 100644
+--- a/meta/roadmap/0.3/README.md
++++ b/meta/roadmap/0.3/README.md
+@@ -207,6 +207,11 @@ allowlist, and the emission's names are `npk.<module>.<name>` as before.)*
+ `check_purity` green **and seen to fail**, and every clock test green under
+ `// stress: 40`.
+ 
++*(Cycle 0.3.3, TM-262: a clock test is a test of a `src/host/` function, as
++`TESTING.md` V-11 reads since; the double's two tests that read no clock are
++not, and `tests/unit/double_substitution.npk`, which reads the machine through
++the seam, is.)*
++
+ ## Watch for
+ 
+ - **This module is the only place `ntime` can be non-deterministic**, so it is
+diff --git a/meta/roadmap/0.8/README.md b/meta/roadmap/0.8/README.md
+index 951def04e93df9c297dc9073b89ae659d6b12297..9d54767a96c504b58cdb9b27dedfd164a9d1b8dc 100644
+--- a/meta/roadmap/0.8/README.md
++++ b/meta/roadmap/0.8/README.md
+@@ -15,7 +15,7 @@ buffer, decided here against the benchmark rather than in advance.
+ | # | Topic | Ends with |
+ |---|---|---|
+ | 0.8.0 | **The fuzz sweep** — every parser, to exhaustion | a hundred million inputs clean |
+-| 0.8.1 | **The stress sweep** — `// stress: 40` on everything that reads a clock | forty runs, the same answer |
++| 0.8.1 | **The stress sweep** — `// stress: 40` on everything that reads a clock *(on every test of a `src/host/` function, as `TESTING.md` V-11 reads since cycle 0.3.3, TM-262)* | forty runs, the same answer |
+ | 0.8.2 | **Benchmarks** — the six, with committed baselines and the regression gate | numbers, and O-X4 decided |
+ | 0.8.3 | **The verification reconciliation** — the obligation list against the code | an obligation list that is true |
+ | 0.8.4 | **The audit** — every specification rule against its implementation | a findings list, and the specs corrected |
+diff --git a/meta/roadmap/ROADMAP.md b/meta/roadmap/ROADMAP.md
+index dc790ce2c5bdca941534b631b9efab198e3d3793..44207d432ba4f6ca53a28c72d1eee4836bf339b6 100644
+--- a/meta/roadmap/ROADMAP.md
++++ b/meta/roadmap/ROADMAP.md
+@@ -263,7 +263,8 @@ the DST cases from N-13 are goldens.
+ 
+ ### 0.8 — Hardening
+ The parser fuzzer to exhaustion, `// stress: 40` on everything that reads a
+-clock, `specs/VERIFICATION.md`'s obligation list reconciled against what the
++clock *(every test of a `src/host/` function, as `TESTING.md` V-11 reads since
++cycle 0.3.3, TM-262)*, `specs/VERIFICATION.md`'s obligation list reconciled against what the
+ code actually generates, and a full audit of every specification rule against
+ its implementation.
+ 
+diff --git a/meta/specs/BUILD.md b/meta/specs/BUILD.md
+index 24b6f14af9b81c2e0a8af4f9c0a52f8a2ebb79d4..6e1282b445dc00304817c1bfe1eed70a5af81861 100644
+--- a/meta/specs/BUILD.md
++++ b/meta/specs/BUILD.md
+@@ -324,9 +324,11 @@ list kept the old code until cycle 0.2.0), `BORROW-001`, `BORROW-012`,
+ `RESOLVE-001`, `RESOLVE-002` (since cycle 0.2.0, `probe20b`),
+ `REACH-002` and `REACH-003`, and every family
+ after the first three runs only on something that parsed. Re-measured at pin
+-`5fbaf4a`, cycle 0.3.2: **159 files = 114 parse cleanly + 43
++`7e91730`, cycle 0.3.3: **163 files = 118 parse cleanly + 43
+ parse and are refused later + 2 do not parse**
+-<!-- [[sweep: npk_total=159]] --> (`152 = 107 + 43 + 2` from its second step
++<!-- [[sweep: npk_total=163]] --> (`159 = 114 + 43 + 2` from cycle 0.3.2's
++third step until cycle 0.3.3 added the double and its three tests, TM-261,
++TM-262; `152 = 107 + 43 + 2` from its second step
+ until its third added the system zone's seven units, TM-257; `151 = 106 + 43 + 2` from cycle 0.3.2's
+ first step, which added `tests/unit/generic_instances.npk`, TM-254, until its
+ second added `probe22`, TM-255; `150 = 105 + 43 + 2` from cycle 0.3.0 until
+diff --git a/meta/specs/HOST.md b/meta/specs/HOST.md
+index 149bb2365d8d9d471f5e3dde7e0e9e925dd33f42..0684ccc0370fcb9c86e5313a2a7e8539e4461c56 100644
+--- a/meta/specs/HOST.md
++++ b/meta/specs/HOST.md
+@@ -164,12 +164,31 @@ pub func:fake_set_instant = NIL(Instant:i) never fails;
+ pub func:fake_advance     = NIL(Duration:d) never fails;
+ ```
+ 
++*(Amended at cycle 0.3.3, TM-261. The three setters, as drafted, take no
++handle, and nothing a module declares keeps a reading between two calls:
++`NITPICK-TYPE-055` refuses a plain module binding (the compiler's D-211),
++`NITPICK-TYPE-086` a write into a part of a `fixed` one, and
++`NITPICK-TYPE-035` an initialiser that calls. So the double is a value and
++each setter takes the one it sets — `fake_set_utc = NIL(FakeHost->:h,
++Timestamp:t) never fails` and its two siblings, and `fake_set_zone` beside
++them for the fifth reading — and the substitution is a type: a
++clock-dependent function takes `<H: HostReadings>`, H-1's five readings as a
++trait, and is instantiated with the machine's host in a program and with the
++double in a test. Still a build-time substitution, and not a runtime flag:
++`tests/double/host_double.npk`.)*
++
+ **Rule H-10 — the double lives in `tests/`, not in `src/`.** A test harness
+ that links a different `host` module is the honest shape; a `#[cfg(test)]`
+ switch inside the shipped library is a second code path in the artifact, and
+ the ecosystem's closed-world link makes the substitution trivial anyway — the
+ harness links whichever `host` object it was told to.
+ 
++*(Cycle 0.3.3, TM-261: there is no `host` object to link. `npkc` compiles the
++whole graph a root reaches (TM-117), and at the pin takes one root and no flag
++that maps a path to another, so a `use` line names one file, always. The
++double lives in `tests/double/`, beside `host` and not in its place: a test
++imports both, and hands the double to a function generic over the seam.)*
++
+ **Rule H-11 — every other module is tested with no double at all**, because
+ every other module is pure. That is the payoff, and it is the reason to keep
+ this module as small as H-1 makes it.
+diff --git a/meta/specs/TESTING.md b/meta/specs/TESTING.md
+index 5e90f3c86a20fff7a3e7b92d5a3d0582f14df5d9..4f1c21ea78119d07bcf59310215cf64e1d4107b3 100644
+--- a/meta/specs/TESTING.md
++++ b/meta/specs/TESTING.md
+@@ -17,7 +17,7 @@ than sampled. Where that is possible it is the gate, and §3 says where.
+ 
+ | Stage | Answers |
+ |---|---|
+-| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **40 files of 159 that no other stage roots** <!-- [[sweep: npk_total=159]] --> *(40 of 152 until cycle 0.3.2's third step added seven units, of 151 until its second added a probe, and of 150 until its first added a unit; 41 of 149 until cycle 0.3.0, when the library build began to reach `src/host/host.npk`)* |
++| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **40 files of 163 that no other stage roots** <!-- [[sweep: npk_total=163]] --> *(40 of 159 until cycle 0.3.3 added the double and its three tests, each rooted or reached by the suite; 40 of 152 until cycle 0.3.2's third step added seven units, of 151 until its second added a probe, and of 150 until its first added a unit; 41 of 149 until cycle 0.3.0, when the library build began to reach `src/host/host.npk`)* |
+ | `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
+ | `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
+ | `check` | every documented refusal actually refuses, with exactly its code |
+@@ -550,11 +550,19 @@ crash-only fuzzer misses.
+ 
+ ## 7. Stress
+ 
+-**Rule V-11 — `// stress: 40` on everything that reads a clock.** `src/host/`'s
+-five functions are the only place `ntime` can behave differently on two runs,
+-so they are the only place that needs it — but they need it, because "the clock
+-went backwards between two calls" is exactly the shape of defect that hides
+-behind a single green run.
++**Rule V-11 — `// stress: 40` on every test of a `src/host/` function.**
++`src/host/`'s five functions are the only place `ntime` can behave differently
++on two runs, so they are the only place that needs it — but they need it,
++because "the clock went backwards between two calls" is exactly the shape of
++defect that hides behind a single green run.
++
++*(Amended at cycle 0.3.3, TM-262 — the documents audit's TA-4. The rule read
++"on everything that reads a clock", which its second sentence scoped and
++`tests/probe/probe03_timespec_sys.npk` does not meet: it reads two clocks
++through `sys`, once, and asks the `timespec`'s shape, not `host`. A test of the
++double reads no clock and carries none — forty runs of it are forty copies of
++one answer — and `tests/unit/double_substitution.npk`, which reads the machine
++through the seam, carries it.)*
+ 
+ ---
+ 
+diff --git a/nitpick.toml b/nitpick.toml
+index d1a695f63c19ce789d2eae123a7921a04e0a8fb6..8a83bc46b760353936b3d37532e68e00f88eea4d 100644
+--- a/nitpick.toml
++++ b/nitpick.toml
+@@ -138,7 +138,8 @@ path  = "tests/probe"
+ #   `parse`   HAS NO ENTRY BY DESIGN, not by omission (TM-123). It is a
+ #             WHOLE-TREE stage: `BUILD.md` §3's Directory column for it reads
+ #             "every `.npk` in the tree", and that is where its value is — of
+-#             the 159 files here [[sweep: npk_total=159]] (152, 151 and 150
++#             the 163 files here [[sweep: npk_total=163]] (159 until cycle
++#             0.3.3's double and its three tests, 152, 151 and 150
+ #             until cycle 0.3.2's three steps, 149 until 0.3.0, 147 until 0.2.4b), 40 are put in front of the compiler
+ #             by nothing else (41 until cycle 0.3.0, when the library build
+ #             began to reach `src/host/host.npk`). An entry would narrow it to one directory and silently
+@@ -166,7 +167,9 @@ path  = "tests/probe"
+ #             so this directory is still empty.)
+ #   `golden`  IMPLEMENTED, and `tests/golden/` is empty: nothing formats
+ #             anything yet. Exercised by `selfcheck.py` case 4. Its entry
+-#             arrives with `fmt` at cycle 0.4.
++#             arrives with `fmt` at cycle 0.4. (It has an entry since cycle
++#             0.3.3, below the conformance entry: the double's transcript is
++#             its first member, TM-262, and cycle 0.4's formats join it.)
+ #   `sweep`   HAS AN ENTRY SINCE CYCLE 0.1.2, below the unit tests. Until
+ #             then this line read "IMPLEMENTED, and `tests/unit/sweep/` is
+ #             empty", and `--quick` had nothing to skip.
+@@ -254,3 +257,16 @@ name  = "conformance"
+ stage = "compile"
+ kind  = "positive"
+ path  = "tests/conformance"
++
++# THE GOLDEN MEMBERS -- stage `golden`, since cycle 0.3.3 (TM-262). As
++# `program`, both legs, and what a member prints is held to the committed
++# `<name>.txt` its `expect-golden:` names, beside it, byte for byte -- and the
++# two legs must print the same bytes as each other (`BUILD.md` §3). Its first
++# member is the double's transcript: a clock-dependent behaviour driven
++# through a fixed sequence on `tests/double/`'s `FakeHost`, the cycle 0.3
++# README's demonstration that it is reproducible; cycle 0.4's formats join
++# it, a golden per format.
++[[test]]
++name  = "golden"
++stage = "golden"
++path  = "tests/golden"
+diff --git a/tests/README.md b/tests/README.md
+index f0c9d8706bc72c3be3f9d17df0d16d23dbdc9182..2172b004050d1eaa4b76070539697db44bf84338 100644
+--- a/tests/README.md
++++ b/tests/README.md
+@@ -6,8 +6,9 @@
+ | `conformance/` | `compile`, `kind = "positive"` | the public API compiles in a program that only imports it — and that program links, RUNS and exits with the expected code (`../meta/specs/BUILD.md` B-4b, TM-114) |
+ | `unit/` | `program` | behaviour, judged by exit code |
+ | `unit/sweep/` | `sweep` | the exhaustive sweeps: the calendar's, since cycle 0.2.2 the `Timestamp` ↔ civil round trip, and from cycle 0.6 the zones' |
+-| `golden/` | `golden` | formatted output, byte for byte |
++| `golden/` | `golden` | output, byte for byte: since cycle 0.3.3 the double's transcript, a fixed sequence's (TM-262), and from cycle 0.4 the formats |
+ | `rejection/` | `check` | programs the compiler must refuse, with exactly the expected codes |
++| `double/` | *(none — imported)* | the test host, since cycle 0.3.3: `HostReadings`, `HOST.md` H-1's five readings as the seam a clock-dependent function takes, the machine's `host` behind it and `FakeHost` beside it (`../meta/specs/HOST.md` H-9 … H-11, TM-261) — imported by its three tests, and named in `harness/run.py`'s `EXPECT_EXEMPT` at `none` |
+ | `fixtures/` | *(none — imported)* | the committed corpora: since cycle 0.1.4 the civil cross-oracle's, `civil/civil_oracle.npk`, generated by `tools/gen_civil_oracle.py` and imported by `unit/sweep/every_oracle_date.npk`; from later cycles the zone cross-oracle's, the format vectors, and everything the fuzzer found |
+ 
+ Expectations live in the test file. Governed by `../meta/specs/TESTING.md`.
+diff --git a/tests/double/README.md b/tests/double/README.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..35e7cee0251eb50f4dc0b78fdbfb05dc9d3e3945
+--- /dev/null
++++ b/tests/double/README.md
+@@ -0,0 +1,35 @@
++# `tests/double/`
++
++The test host — [`../../meta/specs/HOST.md`](../../meta/specs/HOST.md) H-9 …
++H-11, as TM-261 reads them. `src/host/` is the one module of `ntime` a test
++needs a double for, and the double lives here, never in `src/` (H-10).
++
++One module, `host_double.npk`, imported by the tests that use it and run by
++none: it has no `main`, so `../../harness/run.py`'s `EXPECT_EXEMPT` names it at
++the verdict `none`, re-derived on every run (TM-137).
++
++| Name | What it is |
++|---|---|
++| `HostReadings` | **the seam**: H-1's five readings as a trait — `now_utc`, `now_instant`, `now_boot`, `clock_res`, `system_zone` — each with H-1's result and `never fails` where H-1 says it, the receiver the one parameter added |
++| `MachineHost`, `machine_host()` | the machine's `host` behind the seam: each method one call of `src/host/`'s |
++| `FakeHost`, `fake_host()` | **the double**: readings a test sets, and nothing else — its fields `hidden`, its start the epoch, both instants at 0 ns and no zone |
++| `fake_set_utc`, `fake_set_instant`, `fake_advance` | H-9's three setters, each taking the double it sets |
++| `fake_set_zone` | the fifth reading's setter, beside H-9's three |
++
++**The double is a value, and the substitution a type** (TM-261). A
++clock-dependent function takes `<H: HostReadings>` and is instantiated with
++`MachineHost` in a program and `FakeHost` in a test — at build time, statically.
++The language keeps no state in a module (the compiler's D-211), and `npkc`
++links no `host` object in `host`'s place (TM-117), so neither H-9's setters
++without a handle nor a second `host` module could be built.
++
++**What it cannot do**: test `host` (TM-249). It stands beside `host`, not in it.
++
++**What may import what**: this directory imports what `host` may (`BUILD.md`
++B-17's row), and `host` itself, and `check_layering` holds it to that (TM-260).
++
++Its tests (TM-262): [`../unit/double_readings.npk`](../unit/double_readings.npk),
++the double alone; [`../unit/double_substitution.npk`](../unit/double_substitution.npk),
++one generic function and both hosts, under `// stress: 40`; and
++[`../golden/double_transcript.npk`](../golden/double_transcript.npk), a fixed
++sequence and its fixed transcript, `double_transcript.txt`.
+diff --git a/tests/double/host_double.npk b/tests/double/host_double.npk
+new file mode 100644
+index 0000000000000000000000000000000000000000..eff7d9d4df8fccdd7a332ef8b215af91467b763d
+--- /dev/null
++++ b/tests/double/host_double.npk
+@@ -0,0 +1,197 @@
++// THE TEST HOST -- cycle 0.3.3 (`meta/roadmap/0.3/0.3.3.md`; TM-260 ...
++// TM-262). Governed by `meta/specs/HOST.md` H-9 ... H-11, as TM-261 reads
++// them.
++//
++// ============================ WHAT THIS FILE IS ============================
++// `src/host/` is the only module of `ntime` a test needs a double for (H-9):
++// every other module is a pure function of its arguments, and is tested with
++// no double at all (H-11). This is that double, and it lives in `tests/`,
++// never in `src/` (H-10): nothing the library ships branches on it.
++//
++// THE DOUBLE IS A VALUE, AND THE SUBSTITUTION A TYPE (TM-261). A double whose
++// setters take no handle -- H-9's three as cycle 0.0 drafted them,
++// `fake_set_utc = NIL(Timestamp:t)` and its siblings -- has nowhere to keep a
++// reading between two calls: a plain module binding is `NITPICK-TYPE-055`
++// (the compiler's D-211, "keep mutable process state in `main`'s scope where
++// it flows through the calls that need it"), a write into a part of a `fixed`
++// one `NITPICK-TYPE-086`, and an initialiser that calls `NITPICK-TYPE-035`.
++// And there is no `host` object to link in `host`'s place: `npkc` compiles
++// the whole graph a root reaches (TM-117) and maps no path to another. So:
++//
++//   `HostReadings`  THE SEAM: `HOST.md` H-1's five readings as methods, each
++//                   named without its `host_` prefix, with H-1's result and
++//                   `never fails` where H-1 says it -- the receiver the one
++//                   parameter added. A clock-dependent function takes
++//                   `<H: HostReadings>`, and is instantiated with the
++//                   machine's host in a program and with the double in a
++//                   test: a substitution made at build time, statically.
++//   `MachineHost`   THE MACHINE'S HOST, behind the seam: each method is one
++//                   call of `src/host/`'s, and it holds nothing (H-3).
++//   `FakeHost`      THE DOUBLE: readings the test sets, through H-9's three
++//                   setters and the zone's -- each taking the double it sets
++//                   -- and nothing else.
++//
++// WHAT IT CANNOT DO: test `host` (TM-249). It stands beside `host`, not in
++// it, so `host`'s syscalls and its own refusals are `host`'s units' to see.
++//
++// WHAT IT MAY IMPORT: what `host` may (`BUILD.md` B-17's row), and `host`
++// itself, whose types the readings return and whose functions the machine's
++// side calls; `check_layering` holds it to that (TM-260).
++//
++// WHAT IT COSTS: a root that imports it owes `host`'s eleven identities and
++// no more, measured -- `cal.ETimeValue`, the floor of six and the four
++// arithmetic arms (`SAFETY.md` S-4).
++// ===========================================================================
++mod:host_double;
++
++use "../../src/host/host.npk".*;
++use "../../src/span/span.npk".Instant;
++use "../../src/span/span.npk".InstantClock;
++use "../../src/span/span.npk".Timestamp;
++use "../../src/span/span.npk".instant_of;
++use "../../src/span/span.npk".instant_add;
++use "../../src/span/span.npk".timestamp_of;
++use "../../src/core/limits.npk".NTIME_NANOS_PER_SEC;
++
++// THE SEAM (TM-261): `HOST.md` H-1's five readings, in H-1's order.
++pub trait:HostReadings = {
++    func:now_utc     = Timestamp(Self:self);
++    func:now_instant = Instant(Self:self) never fails;
++    func:now_boot    = Instant(Self:self);
++    func:clock_res   = Duration(Self:self, HostClock:which);
++    func:system_zone = SystemZone(Self:self) never fails;
++};
++
++// THE MACHINE'S HOST. `host` keeps no state (H-3), and neither does this: its
++// one field is there because a struct literal needs one.
++pub struct:MachineHost = { bool:machine; };
++
++pub func:machine_host = MachineHost() never fails {
++    pass MachineHost{ machine: true };
++};
++
++impl:MachineHost:HostReadings = {
++    func:now_utc = Timestamp(MachineHost:self) {
++        pass (relay host_now_utc());
++    };
++    func:now_instant = Instant(MachineHost:self) never fails {
++        pass raw host_now_instant();
++    };
++    func:now_boot = Instant(MachineHost:self) {
++        pass (relay host_now_boot());
++    };
++    func:clock_res = Duration(MachineHost:self, HostClock:which) {
++        pass (relay host_clock_res(which));
++    };
++    func:system_zone = SystemZone(MachineHost:self) never fails {
++        pass raw host_system_zone();
++    };
++};
++
++// THE DOUBLE. Its fields are `hidden`, so a test reads it as it reads the
++// machine -- through the seam -- and writes it through the setters alone.
++// The realtime clock is held as the kernel hands it, a `timespec`'s two
++// fields, and read through `timestamp_of` as `host_now_utc` reads the
++// kernel's: a reading outside the range is `ETimeValue`, H-8's refusal, so a
++// test can show its caller meeting it.
++pub struct:FakeHost = {
++    hidden int64:utc_secs;
++    hidden int64:utc_nanos;
++    hidden Instant:mono;
++    hidden Instant:boot;
++    hidden string:zone_name;
++    hidden ZoneSource:zone_source;
++};
++
++// THE FIXED START: the epoch, both instants at 0 ns, and no zone -- the
++// reading of a machine nobody has set, every reading a value no real machine
++// gives, so a test that forgot a setter reads something it can see.
++pub func:fake_host = FakeHost() never fails {
++    pass FakeHost{ utc_secs: 0i64, utc_nanos: 0i64,
++                   mono: raw instant_of(0i64, InstantClock.Monotonic),
++                   boot: raw instant_of(0i64, InstantClock.Boottime),
++                   zone_name: "", zone_source: ZoneSource.NotFound };
++};
++
++// H-9's first setter: the realtime clock reads `t` until something moves it.
++// The instants are untouched -- a wall clock set by hand, or stepped, moves
++// no monotonic reading.
++pub func:fake_set_utc = NIL(FakeHost->:h, Timestamp:t) never fails {
++    h.utc_secs = t.secs;
++    h.utc_nanos = t.nanos => int64;
++    pass NIL;
++};
++
++// H-9's second: the clock `i` names reads `i` -- the monotonic one or the
++// boot one -- and the other is untouched, so a suspend, which the boot clock
++// counts and the monotonic does not, is one call.
++pub func:fake_set_instant = NIL(FakeHost->:h, Instant:i) never fails {
++    pick (i.clock) {
++        (InstantClock.Monotonic) { h.mono = i; },
++        (InstantClock.Boottime)  { h.boot = i; }
++    }
++    pass NIL;
++};
++
++// H-9's third: `d` passes on every clock. The instants by `instant_add`,
++// which keeps each one's clock and traps past an `int64` of nanoseconds
++// (`SAFETY.md` S-12); the realtime pair by `d`'s seconds and the remainder,
++// and one borrow or one carry, as `timestamp_add` moves a `Timestamp` -- but
++// never refused here: a reading past the range is held, and refused where it
++// is read. A negative `d` moves every clock back, which a machine's monotonic
++// clock never does; the double does what its test writes.
++pub func:fake_advance = NIL(FakeHost->:h, Duration:d) never fails {
++    h.mono = raw instant_add(h.mono, d);
++    h.boot = raw instant_add(h.boot, d);
++    int64:secs = h.utc_secs + (d.ns / NTIME_NANOS_PER_SEC);
++    int64:nanos = h.utc_nanos + (d.ns % NTIME_NANOS_PER_SEC);
++    if (nanos < 0i64) {                              // `%` kept `d`'s sign: borrow
++        secs = secs - 1i64;
++        nanos = nanos + NTIME_NANOS_PER_SEC;
++    }
++    if (nanos >= NTIME_NANOS_PER_SEC) {              // past a second: carry
++        secs = secs + 1i64;
++        nanos = nanos - NTIME_NANOS_PER_SEC;
++    }
++    h.utc_secs = secs;
++    h.utc_nanos = nanos;
++    pass NIL;
++};
++
++// THE ZONE'S SETTER -- beside H-9's three, because H-1's fifth reading is the
++// zone the machine names (cycle 0.3.2's question, answered by TM-261). The
++// name is copied, so the double owns what it answers; the reading answers a
++// copy of it in turn.
++pub func:fake_set_zone = NIL(FakeHost->:h, string:name, ZoneSource:source) never fails {
++    h.zone_name = string_slice(name, 0i64, string_byte_length(name)) ?| #unreachable();
++    h.zone_source = source;
++    pass NIL;
++};
++
++// THE DOUBLE'S READINGS, each built as `host` builds its own: the realtime
++// through `timestamp_of`; the zone found unless its source is `NotFound`,
++// whose name is empty -- H-12's invariant, kept by the reading whatever the
++// setter was handed -- its name a copy, moved into the answer as
++// `host_system_zone`'s is; and every clock's resolution 1 ns, what the
++// machine answers for all three (H-4's note).
++impl:FakeHost:HostReadings = {
++    func:now_utc = Timestamp(FakeHost:self) {
++        pass (relay timestamp_of(self.utc_secs, self.utc_nanos));
++    };
++    func:now_instant = Instant(FakeHost:self) never fails {
++        pass self.mono;
++    };
++    func:now_boot = Instant(FakeHost:self) {
++        pass self.boot;
++    };
++    func:clock_res = Duration(FakeHost:self, HostClock:which) {
++        pass raw duration_ns(1i64);
++    };
++    func:system_zone = SystemZone(FakeHost:self) never fails {
++        if (self.zone_source == ZoneSource.NotFound) {
++            pass SystemZone{ name: "", source: ZoneSource.NotFound, found: false };
++        }
++        string:name = string_slice(self.zone_name, 0i64, string_byte_length(self.zone_name)) ?| #unreachable();
++        pass SystemZone{ name: move(name), source: self.zone_source, found: true };
++    };
++};
+diff --git a/tests/golden/double_transcript.npk b/tests/golden/double_transcript.npk
+new file mode 100644
+index 0000000000000000000000000000000000000000..84fb4c96a4c4012421bd80018e59c50cb689b3ad
+--- /dev/null
++++ b/tests/golden/double_transcript.npk
+@@ -0,0 +1,232 @@
++// expect-exit: 0
++// expect-golden: double_transcript
++//
++// A CLOCK-DEPENDENT BEHAVIOUR, REPRODUCED (cycle 0.3.3; the cycle README's
++// last 0.3.3 box; `HOST.md` H-9 ... H-11, TM-261 and TM-262). `stamp` is what
++// a consumer writes: a line saying what time it is, in UTC, how long since it
++// started by each of the two clocks an `Instant` reads, and which zone the
++// machine names -- generic over the seam, `HostReadings`, so the same text
++// runs against the machine in a program and against the double here.
++//
++// A FIXED SEQUENCE, AND ITS FIXED TRANSCRIPT. `transcript` drives a fresh
++// double through one sequence, a line after each step: the start; the same
++// reading again; 1.5 s passing; `TZ` set; the wall clock stepped back an hour
++// while the monotonic clock runs on; a suspend of a minute, which the boot
++// clock counts and the monotonic does not; 0.25 s more; the realtime clock at
++// the range's last nanosecond; and one nanosecond past it, where the wall
++// clock is refused (H-8, read by its caller) and both instants still answer.
++//
++//   * THE SAME FAKE READING TWICE GIVES THE SAME ANSWER: `stamp` asked twice
++//     of one double, nothing set between, answers one line (exit 10) -- and
++//     the transcript's second line is its first, asked again, which the
++//     golden shows.
++//   * A FIXED SEQUENCE GIVES A FIXED TRANSCRIPT: the sequence driven on a
++//     second double writes the same bytes (exit 11); and the `golden` stage
++//     holds what this program prints to `double_transcript.txt` beside it,
++//     byte for byte, on both legs -- on every full run, on every machine.
++//
++// No clock is read, so no `stress` (`TESTING.md` V-11): the transcript's
++// sameness across runs is the golden's comparison on every run.
++//
++// EXIT CODES, clear of every arm code (TM-152): 10 a reading asked twice
++// answered two lines, 11 the second double's transcript differs from the
++// first's, 12 the sequence refused -- a span `stamp` takes refused, its two
++// instants on two clocks, or the boot clock refused (the wall clock it
++// answers in words); 20 ... 22 the transcript's `write` (a refusal, a short
++// write). 12 and a golden that differs are seen red on mutants of the double;
++// 10 and 11 are belts, as `double_readings`' 60 and 61 are -- a reading
++// cannot write its double, and two doubles share nothing -- and 20 ... 22 are
++// the kernel's `write` (`0.3.3.md` §1.9).
++//
++// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing the
++// double: `host`'s eleven (`SAFETY.md` S-4), and no more.
++mod:double_transcript;
++
++use "../double/host_double.npk".*;
++use "../../src/host/host.npk".*;
++use "../../src/cal/cal.npk".CivilDateTime;
++use "../../src/span/span.npk".Instant;
++use "../../src/span/span.npk".InstantClock;
++use "../../src/span/span.npk".Timestamp;
++use "../../src/span/span.npk".instant_add;
++use "../../src/span/span.npk".instant_since;
++use "../../src/span/span.npk".timestamp_of;
++use "../../src/span/span.npk".timestamp_to_utc;
++use "../../src/core/limits.npk".NTIME_SECS_MAX;
++
++// `v`, which is at least 0 and under 10^`width`, in exactly `width` digits.
++func:digits = string(int64:v, int64:width) never fails {
++    string:t = "";
++    int64:rest = v;
++    for (int64:k in 1i64..width) {
++        string:d = int_to_string(rest % 10i64);
++        t = string_concat(d, t);
++        rest = rest / 10i64;
++    }
++    pass t;
++};
++
++func:join = string(string:a, string:b) never fails {
++    pass string_concat(a, b);
++};
++
++// The civil reading, `YYYY-MM-DD hh:mm:ss.nnnnnnnnn UTC` -- the four-digit
++// years this sequence reaches, 2025 and 9999.
++func:civil_text = string(CivilDateTime:c) never fails {
++    string:t = raw digits(c.date.year => int64, 4i64);
++    t = raw join(t, "-");
++    t = raw join(t, raw digits(c.date.month => int64, 2i64));
++    t = raw join(t, "-");
++    t = raw join(t, raw digits(c.date.day => int64, 2i64));
++    t = raw join(t, " ");
++    t = raw join(t, raw digits(c.time.hour => int64, 2i64));
++    t = raw join(t, ":");
++    t = raw join(t, raw digits(c.time.minute => int64, 2i64));
++    t = raw join(t, ":");
++    t = raw join(t, raw digits(c.time.second => int64, 2i64));
++    t = raw join(t, ".");
++    t = raw join(t, raw digits(c.time.nanos => int64, 9i64));
++    pass raw join(t, " UTC");
++};
++
++// A span, `+S.nnnnnnnnn s` -- the sign, the seconds, the nanoseconds.
++func:span_text = string(Duration:d) never fails {
++    int64:ns = d.ns;
++    string:t = "+";
++    if (ns < 0i64) {
++        t = "-";
++        ns = 0i64 - ns;
++    }
++    t = raw join(t, int_to_string(ns / 1000000000i64));
++    t = raw join(t, ".");
++    t = raw join(t, raw digits(ns % 1000000000i64, 9i64));
++    pass raw join(t, " s");
++};
++
++func:source_text = string(ZoneSource:s) never fails {
++    pick (s) {
++        (ZoneSource.TzEnvironment) { pass "TzEnvironment"; },
++        (ZoneSource.EtcLocaltime)  { pass "EtcLocaltime"; },
++        (ZoneSource.EtcTimezone)   { pass "EtcTimezone"; },
++        (ZoneSource.NotFound)      { pass "NotFound"; }
++    }
++    pass "";
++};
++
++// Where the consumer started, by each clock an `Instant` reads.
++struct:Start = { Instant:mono; Instant:boot; };
++
++func:start_of<H: HostReadings> = Start(H:h) {
++    Instant:b = relay h.now_boot();
++    pass Start{ mono: raw h.now_instant(), boot: b };
++};
++
++// THE CLOCK-DEPENDENT BEHAVIOUR: a consumer's line.
++func:stamp<H: HostReadings> = string(H:h, Start:s) {
++    string:wall = "the wall clock refused: outside the calendar's range";
++    Result<Timestamp>:u = h.now_utc();
++    if (!(u.is_error)) { wall = raw civil_text(raw timestamp_to_utc(u.value)); }
++    Duration:dm = relay instant_since(raw h.now_instant(), s.mono);
++    Instant:b = relay h.now_boot();
++    Duration:db = relay instant_since(b, s.boot);
++    SystemZone:z = raw h.system_zone();
++    string:zone = "no zone";
++    if (z.found) {
++        zone = raw join("zone ", z.name);
++        zone = raw join(zone, " (");
++        zone = raw join(zone, raw source_text(z.source));
++        zone = raw join(zone, ")");
++    }
++    string:t = raw join(wall, " | monotonic ");
++    t = raw join(t, raw span_text(dm));
++    t = raw join(t, " | boot ");
++    t = raw join(t, raw span_text(db));
++    t = raw join(t, " | ");
++    pass raw join(t, zone);
++};
++
++func:line = string(string:label, string:text) never fails {
++    string:t = raw join(label, ": ");
++    t = raw join(t, text);
++    pass raw join(t, "\n");
++};
++
++// THE FIXED SEQUENCE, on a fresh double: a line after each step.
++func:transcript = string() {
++    FakeHost:h = raw fake_host();
++    drop fake_set_utc(@h, timestamp_of(1760270400i64, 0i64) ?| #unreachable());  // 2025-10-12 12:00 UTC
++    Start:s = relay start_of(h);
++    string:t = raw line("start", relay stamp(h, s));
++    t = raw join(t, raw line("again", relay stamp(h, s)));
++    drop fake_advance(@h, raw duration_ns(1500000000i64));
++    t = raw join(t, raw line("1.5 s on", relay stamp(h, s)));
++    drop fake_set_zone(@h, "Europe/Kyiv", ZoneSource.TzEnvironment);
++    t = raw join(t, raw line("TZ set", relay stamp(h, s)));
++    drop fake_set_utc(@h, timestamp_of(1760266801i64, 500000000i64) ?| #unreachable());
++    t = raw join(t, raw line("the wall clock stepped back an hour", relay stamp(h, s)));
++    Instant:b = relay h.now_boot();
++    drop fake_set_instant(@h, raw instant_add(b, raw duration_ns(60000000000i64)));
++    t = raw join(t, raw line("a suspend of a minute", relay stamp(h, s)));
++    drop fake_advance(@h, raw duration_ns(250000000i64));
++    t = raw join(t, raw line("0.25 s on", relay stamp(h, s)));
++    drop fake_set_utc(@h, timestamp_of(NTIME_SECS_MAX, 999999999i64) ?| #unreachable());
++    t = raw join(t, raw line("the range's last nanosecond", relay stamp(h, s)));
++    drop fake_advance(@h, raw duration_ns(1i64));
++    t = raw join(t, raw line("one nanosecond past it", relay stamp(h, s)));
++    pass t;
++};
++
++// The transcript on stdout, once: the prelude's `to_cstring` and `sys` for
++// `write`, the shape the sweeps print their count with.
++func:say = int32(string:text) never fails {
++    Result<cstring>:c = to_cstring(text);
++    if (c.is_error) { pass 20i32; }
++    cstring:s = move(c.value);         // a `cstring` is move-only (TM-208)
++    Result<int64>:w = sys(1i64, 1i64, s.ptr, s.len);
++    if (w.is_error) { pass 21i32; }
++    if (w.value != s.len) { pass 22i32; }
++    pass 0i32;
++};
++
++// THE SAME FAKE READING TWICE: a double at the sequence's start, `stamp`
++// asked twice with nothing set between.
++func:same_twice = bool() {
++    FakeHost:h = raw fake_host();
++    drop fake_set_utc(@h, timestamp_of(1760270400i64, 0i64) ?| #unreachable());
++    Start:s = relay start_of(h);
++    string:a = relay stamp(h, s);
++    string:b = relay stamp(h, s);
++    pass string_equals(a, b);
++};
++
++func:main = int32(cstring[]:_~argv) {
++    Result<bool>:same = same_twice();
++    if (same.is_error) { exit 12i32; }
++    if (!(same.value)) { exit 10i32; }
++    Result<string>:one = transcript();
++    if (one.is_error) { exit 12i32; }
++    Result<string>:two = transcript();
++    if (two.is_error) { exit 12i32; }
++    if (!(string_equals(one.value, two.value))) { exit 11i32; }
++    int32:said = raw say(one.value);
++    if (said != 0i32) { exit said; }
++    exit 0i32;
++};
++
++func:failsafe = int32(Error:e) {
++    pick (e) {
++        (cal.ETimeValue)    { exit 80i32; },
++        (HeapBadRequest)    { exit 91i32; },
++        (HeapOom)           { exit 92i32; },
++        (IntOverflow)       { exit 93i32; },
++        (OutOfBounds)       { exit 94i32; },
++        (Unreachable)       { exit 95i32; },
++        (WildLeak)          { exit 96i32; },
++        (DivByZero)         { exit 97i32; },
++        (DivOverflow)       { exit 98i32; },
++        (StackExhausted)    { exit 106i32; },
++        (MachineFault)      { exit 107i32; },
++        (*)                 { exit 99i32; }
++    }
++    exit 9i32;
++};
+diff --git a/tests/golden/double_transcript.txt b/tests/golden/double_transcript.txt
+new file mode 100644
+index 0000000000000000000000000000000000000000..b42dcc08911c4f64134b092579887459fda0c292
+--- /dev/null
++++ b/tests/golden/double_transcript.txt
+@@ -0,0 +1,9 @@
++start: 2025-10-12 12:00:00.000000000 UTC | monotonic +0.000000000 s | boot +0.000000000 s | no zone
++again: 2025-10-12 12:00:00.000000000 UTC | monotonic +0.000000000 s | boot +0.000000000 s | no zone
++1.5 s on: 2025-10-12 12:00:01.500000000 UTC | monotonic +1.500000000 s | boot +1.500000000 s | no zone
++TZ set: 2025-10-12 12:00:01.500000000 UTC | monotonic +1.500000000 s | boot +1.500000000 s | zone Europe/Kyiv (TzEnvironment)
++the wall clock stepped back an hour: 2025-10-12 11:00:01.500000000 UTC | monotonic +1.500000000 s | boot +1.500000000 s | zone Europe/Kyiv (TzEnvironment)
++a suspend of a minute: 2025-10-12 11:00:01.500000000 UTC | monotonic +1.500000000 s | boot +61.500000000 s | zone Europe/Kyiv (TzEnvironment)
++0.25 s on: 2025-10-12 11:00:01.750000000 UTC | monotonic +1.750000000 s | boot +61.750000000 s | zone Europe/Kyiv (TzEnvironment)
++the range's last nanosecond: 9999-12-31 23:59:59.999999999 UTC | monotonic +1.750000000 s | boot +61.750000000 s | zone Europe/Kyiv (TzEnvironment)
++one nanosecond past it: the wall clock refused: outside the calendar's range | monotonic +1.750000001 s | boot +61.750000001 s | zone Europe/Kyiv (TzEnvironment)
+diff --git a/tests/unit/double_readings.npk b/tests/unit/double_readings.npk
+new file mode 100644
+index 0000000000000000000000000000000000000000..37f3e51e5616dd49167786dfa3517222165908cb
+--- /dev/null
++++ b/tests/unit/double_readings.npk
+@@ -0,0 +1,231 @@
++// expect-exit: 0
++//
++// THE DOUBLE ALONE (cycle 0.3.3; `HOST.md` H-9 ... H-11, TM-261 and TM-262):
++// `tests/double/host_double.npk`'s `FakeHost`, read through the seam,
++// `HostReadings`, as a clock-dependent function reads it -- its fixed start,
++// each setter and what it moves and does not, `fake_advance`'s borrow and
++// carry, the realtime clock refused past the range while the instants answer,
++// the zone and H-12's invariant, and every reading the same twice. No clock
++// is read, so no `stress` (`TESTING.md` V-11): forty runs of a program that
++// reads none are forty copies of one answer.
++//
++// EXIT CODES, clear of every arm code (TM-152):
++//   10 the start's realtime refused, 11 not the epoch, 12 the start's
++//      monotonic reading not 0 ns on its clock, 13 the boot reading refused or
++//      not 0 ns on its clock, 14 a resolution refused or not 1 ns, 15 the
++//      start's zone not `{ "", NotFound, false }`;
++//   20 `fake_set_utc`: the realtime not what it set, 21 an instant moved by it;
++//   22 `fake_set_instant`, monotonic: the reading not what it set, 23 the boot
++//      reading or the realtime moved; 24 the same for boot, 25 the monotonic
++//      reading or the realtime moved;
++//   30 `fake_advance`: the realtime not moved by exactly `d`, 31 the monotonic
++//      reading not, 32 the boot reading not; 33 the carry, 34 the borrow, 35 a
++//      carry onto a second exactly, 36 a second, 37 two seconds less a
++//      nanosecond, each not to the nanosecond;
++//   40 the realtime at the range's last nanosecond refused, 41 one past it
++//      answered, 42 an instant not moved beside it, 43 the realtime not back
++//      one nanosecond later; 44 the range's first second, one before it
++//      answered;
++//   50 a zone set not answered as set, 51 the empty name of a set `TZ` not
++//      found, 52 `NotFound`'s name not empty or found;
++//   60 a reading not the same twice, asked with nothing set between, 61 two
++//      doubles not apart.
++//
++// EVERY EXIT IS SEEN RED ON A MUTANT OF THE DOUBLE BUT FOUR BELTS (`0.3.3.md`
++// §1.9): 40 and 44 read `timestamp_of`'s two ends through the double, and a
++// mutant that moved them would be `span`'s, whose `timestamp_construct` holds
++// every boundary; 60 and 61 because a reading takes its double by loan,
++// `Self:self`, and cannot write it, and two doubles share nothing -- the
++// language keeps no state in a module (the compiler's D-211). Each is kept for
++// a double a later cycle might give a reading that writes.
++//
++// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing the
++// double: `host`'s eleven (`SAFETY.md` S-4), and no more.
++mod:double_readings;
++
++use "../double/host_double.npk".*;
++use "../../src/host/host.npk".*;
++use "../../src/span/span.npk".Instant;
++use "../../src/span/span.npk".InstantClock;
++use "../../src/span/span.npk".Timestamp;
++use "../../src/span/span.npk".instant_of;
++use "../../src/span/span.npk".timestamp_of;
++use "../../src/core/limits.npk".NTIME_SECS_MIN;
++use "../../src/core/limits.npk".NTIME_SECS_MAX;
++
++func:ts = Timestamp(int64:secs, int64:nanos) never fails {
++    pass timestamp_of(secs, nanos) ?| #unreachable();
++};
++
++// Each reading through the seam, as a clock-dependent function reads it.
++func:utc_is<H: HostReadings> = bool(H:h, int64:secs, int64:nanos) never fails {
++    Result<Timestamp>:u = h.now_utc();
++    if (u.is_error) { pass false; }
++    if (u.value.secs != secs) { pass false; }
++    pass (u.value.nanos => int64) == nanos;
++};
++
++func:utc_refused<H: HostReadings> = bool(H:h) never fails {
++    Result<Timestamp>:u = h.now_utc();
++    pass u.is_error;
++};
++
++func:mono_is<H: HostReadings> = bool(H:h, int64:ns) never fails {
++    Instant:m = raw h.now_instant();
++    if (m.clock != InstantClock.Monotonic) { pass false; }
++    pass m.ns == ns;
++};
++
++func:boot_is<H: HostReadings> = bool(H:h, int64:ns) never fails {
++    Result<Instant>:b = h.now_boot();
++    if (b.is_error) { pass false; }
++    if (b.value.clock != InstantClock.Boottime) { pass false; }
++    pass b.value.ns == ns;
++};
++
++func:res_is<H: HostReadings> = bool(H:h, HostClock:which, int64:ns) never fails {
++    Result<Duration>:r = h.clock_res(which);
++    if (r.is_error) { pass false; }
++    pass r.value.ns == ns;
++};
++
++func:zone_is<H: HostReadings> = bool(H:h, string:name, ZoneSource:source, bool:found) never fails {
++    SystemZone:z = raw h.system_zone();
++    if (!(string_equals(z.name, name))) { pass false; }
++    if (z.source != source) { pass false; }
++    pass z.found == found;
++};
++
++// Every reading asked twice, nothing set between: the two answers are one.
++func:twice<H: HostReadings> = bool(H:h) never fails {
++    Result<Timestamp>:u1 = h.now_utc();
++    Result<Timestamp>:u2 = h.now_utc();
++    if (u1.is_error != u2.is_error) { pass false; }
++    if (!(u1.is_error)) {
++        if (!(u2.is_error)) {
++            if (u1.value.secs != u2.value.secs) { pass false; }
++            if (u1.value.nanos != u2.value.nanos) { pass false; }
++        }
++    }
++    Instant:m1 = raw h.now_instant();
++    Instant:m2 = raw h.now_instant();
++    if (m1.ns != m2.ns) { pass false; }
++    if (m1.clock != m2.clock) { pass false; }
++    Result<Instant>:b1 = h.now_boot();
++    Result<Instant>:b2 = h.now_boot();
++    if (b1.is_error) { pass false; }
++    if (b2.is_error) { pass false; }
++    if (b1.value.ns != b2.value.ns) { pass false; }
++    if (b1.value.clock != b2.value.clock) { pass false; }
++    Result<Duration>:r1 = h.clock_res(HostClock.Boottime);
++    Result<Duration>:r2 = h.clock_res(HostClock.Boottime);
++    if (r1.is_error) { pass false; }
++    if (r2.is_error) { pass false; }
++    if (r1.value.ns != r2.value.ns) { pass false; }
++    SystemZone:z1 = raw h.system_zone();
++    SystemZone:z2 = raw h.system_zone();
++    if (!(string_equals(z1.name, z2.name))) { pass false; }
++    if (z1.source != z2.source) { pass false; }
++    pass z1.found == z2.found;
++};
++
++func:main = int32(cstring[]:_~argv) {
++    // ---- the fixed start ----------------------------------------------------
++    FakeHost:h = raw fake_host();
++    if (raw utc_refused(h))                          { exit 10i32; }
++    if (!(raw utc_is(h, 0i64, 0i64)))                { exit 11i32; }
++    if (!(raw mono_is(h, 0i64)))                     { exit 12i32; }
++    if (!(raw boot_is(h, 0i64)))                     { exit 13i32; }
++    if (!(raw res_is(h, HostClock.Realtime, 1i64)))  { exit 14i32; }
++    if (!(raw res_is(h, HostClock.Monotonic, 1i64))) { exit 14i32; }
++    if (!(raw res_is(h, HostClock.Boottime, 1i64)))  { exit 14i32; }
++    if (!(raw zone_is(h, "", ZoneSource.NotFound, false))) { exit 15i32; }
++
++    // ---- fake_set_utc -------------------------------------------------------
++    drop fake_set_utc(@h, raw ts(1000000000i64, 250000000i64));
++    if (!(raw utc_is(h, 1000000000i64, 250000000i64))) { exit 20i32; }
++    if (!(raw mono_is(h, 0i64)))                       { exit 21i32; }
++    if (!(raw boot_is(h, 0i64)))                       { exit 21i32; }
++
++    // ---- fake_set_instant, each clock ---------------------------------------
++    drop fake_set_instant(@h, raw instant_of(5000000000i64, InstantClock.Monotonic));
++    if (!(raw mono_is(h, 5000000000i64)))              { exit 22i32; }
++    if (!(raw boot_is(h, 0i64)))                       { exit 23i32; }
++    if (!(raw utc_is(h, 1000000000i64, 250000000i64))) { exit 23i32; }
++    drop fake_set_instant(@h, raw instant_of(9000000000i64, InstantClock.Boottime));
++    if (!(raw boot_is(h, 9000000000i64)))              { exit 24i32; }
++    if (!(raw mono_is(h, 5000000000i64)))              { exit 25i32; }
++    if (!(raw utc_is(h, 1000000000i64, 250000000i64))) { exit 25i32; }
++
++    // ---- fake_advance -------------------------------------------------------
++    drop fake_advance(@h, raw duration_ns(1500000000i64));
++    if (!(raw utc_is(h, 1000000001i64, 750000000i64))) { exit 30i32; }
++    if (!(raw mono_is(h, 6500000000i64)))              { exit 31i32; }
++    if (!(raw boot_is(h, 10500000000i64)))             { exit 32i32; }
++    drop fake_advance(@h, raw duration_ns(500000000i64));          // .75 + .5: carry
++    if (!(raw utc_is(h, 1000000002i64, 250000000i64))) { exit 33i32; }
++    drop fake_advance(@h, raw duration_ns(-500000000i64));         // .25 - .5: borrow
++    if (!(raw utc_is(h, 1000000001i64, 750000000i64))) { exit 34i32; }
++    if (!(raw mono_is(h, 6500000000i64)))              { exit 34i32; }
++    drop fake_set_utc(@h, raw ts(1000000000i64, 500000000i64));
++    drop fake_advance(@h, raw duration_ns(500000000i64));          // .5 + .5: a second exactly
++    if (!(raw utc_is(h, 1000000001i64, 0i64)))         { exit 35i32; }
++    drop fake_advance(@h, raw duration_ns(1000000000i64));         // one second
++    if (!(raw utc_is(h, 1000000002i64, 0i64)))         { exit 36i32; }
++    drop fake_advance(@h, raw duration_ns(1999999999i64));         // two, less a nanosecond
++    if (!(raw utc_is(h, 1000000003i64, 999999999i64))) { exit 37i32; }
++
++    // ---- the range's two ends, read by the caller ---------------------------
++    drop fake_set_instant(@h, raw instant_of(5000000000i64, InstantClock.Monotonic));
++    drop fake_set_instant(@h, raw instant_of(9000000000i64, InstantClock.Boottime));
++    drop fake_set_utc(@h, raw ts(NTIME_SECS_MAX, 999999999i64));
++    if (!(raw utc_is(h, NTIME_SECS_MAX, 999999999i64))) { exit 40i32; }
++    drop fake_advance(@h, raw duration_ns(1i64));
++    if (!(raw utc_refused(h)))                          { exit 41i32; }
++    if (!(raw mono_is(h, 5000000001i64)))               { exit 42i32; }
++    if (!(raw boot_is(h, 9000000001i64)))               { exit 42i32; }
++    drop fake_advance(@h, raw duration_ns(-1i64));
++    if (!(raw utc_is(h, NTIME_SECS_MAX, 999999999i64))) { exit 43i32; }
++    drop fake_set_utc(@h, raw ts(NTIME_SECS_MIN, 0i64));
++    drop fake_advance(@h, raw duration_ns(-1i64));
++    if (!(raw utc_refused(h)))                          { exit 44i32; }
++
++    // ---- the zone -----------------------------------------------------------
++    drop fake_set_zone(@h, "Europe/Kyiv", ZoneSource.TzEnvironment);
++    if (!(raw zone_is(h, "Europe/Kyiv", ZoneSource.TzEnvironment, true))) { exit 50i32; }
++    drop fake_set_zone(@h, "", ZoneSource.TzEnvironment);
++    if (!(raw zone_is(h, "", ZoneSource.TzEnvironment, true)))            { exit 51i32; }
++    drop fake_set_zone(@h, "Europe/Kyiv", ZoneSource.NotFound);
++    if (!(raw zone_is(h, "", ZoneSource.NotFound, false)))                { exit 52i32; }
++    drop fake_set_zone(@h, "Etc/UTC", ZoneSource.EtcTimezone);
++
++    // ---- the same reading twice, and two doubles apart ----------------------
++    if (!(raw twice(h)))                               { exit 60i32; }
++    drop fake_set_utc(@h, raw ts(1000000000i64, 0i64));
++    if (!(raw twice(h)))                               { exit 60i32; }
++    FakeHost:g = raw fake_host();
++    drop fake_advance(@g, raw duration_ns(7i64));
++    if (!(raw mono_is(g, 7i64)))                       { exit 61i32; }
++    if (!(raw mono_is(h, 4999999999i64)))              { exit 61i32; }
++    if (!(raw zone_is(g, "", ZoneSource.NotFound, false))) { exit 61i32; }
++    if (!(raw zone_is(h, "Etc/UTC", ZoneSource.EtcTimezone, true))) { exit 61i32; }
++    exit 0i32;
++};
++
++func:failsafe = int32(Error:e) {
++    pick (e) {
++        (cal.ETimeValue)    { exit 80i32; },
++        (HeapBadRequest)    { exit 91i32; },
++        (HeapOom)           { exit 92i32; },
++        (IntOverflow)       { exit 93i32; },
++        (OutOfBounds)       { exit 94i32; },
++        (Unreachable)       { exit 95i32; },
++        (WildLeak)          { exit 96i32; },
++        (DivByZero)         { exit 97i32; },
++        (DivOverflow)       { exit 98i32; },
++        (StackExhausted)    { exit 106i32; },
++        (MachineFault)      { exit 107i32; },
++        (*)                 { exit 99i32; }
++    }
++    exit 9i32;
++};
+diff --git a/tests/unit/double_substitution.npk b/tests/unit/double_substitution.npk
+new file mode 100644
+index 0000000000000000000000000000000000000000..f166973b479b4e8a1bf6c5ca472b70a6193e5e71
+--- /dev/null
++++ b/tests/unit/double_substitution.npk
+@@ -0,0 +1,178 @@
++// expect-exit: 0
++// stress: 40
++//
++// THE SUBSTITUTION (cycle 0.3.3; `HOST.md` H-9 and H-10, TM-261 and TM-262):
++// ONE generic function, `read_all`, reads H-1's five readings through the
++// seam, `HostReadings`, and is instantiated twice in this program -- with
++// the double, `FakeHost`, and with the machine's `host` behind the seam,
++// `MachineHost`. The cycle README's "the harness links whichever host object
++// it is told to, and a test proves the substitution works", as TM-261 reads
++// it: there is no host object to link (TM-117), and the substitution is the
++// type a clock-dependent function is handed, chosen in its caller's text.
++//
++// THE DOUBLE'S LEG IS EXACT, AND NO MACHINE GIVES IT: the realtime second
++// 1 000 000 000 (2001-09-09), before `probe03`'s window, and the two instants
++// at 42 ns and 7 s, which no clock that has run since its boot reads -- so a
++// `read_all` that read the machine for the double, or a double that read the
++// machine, is red here. THE MACHINE'S LEG IS THE MACHINE'S: the realtime
++// second inside `probe03`'s window, each instant on its clock, each
++// resolution in (0, 1 s], and a zone found only with a source -- what
++// `host_clocks` and the system zone's units hold exactly, held here only as
++// far as shows the machine answered. And the double, read again after the
++// machine, answers what it answered first.
++//
++// `// stress: 40`: it reads the machine's clocks through `src/host/`
++// (`TESTING.md` V-11), so it runs forty times a leg as every test of a
++// `src/host/` function does.
++//
++// EXIT CODES, clear of every arm code (TM-152):
++//   10 the double's realtime not as set, 11 its monotonic reading, 12 its
++//      boot reading, 13 a resolution, 14 its zone;
++//   20 the machine's realtime refused or outside `probe03`'s window, 21 its
++//      monotonic reading not on its clock, 22 its boot reading refused or not
++//      on its clock, 23 a resolution refused or outside (0, 1 s], 24 a zone
++//      found with no source, or `NotFound` with a name;
++//   30 the double read again after the machine, and answering otherwise.
++//
++// EVERY EXIT IS SEEN RED ON A MUTANT OF THE DOUBLE BUT ONE BELT (`0.3.3.md`
++// §1.9): 30, because a reading takes its double by loan and cannot write it,
++// so the machine's leg cannot move it -- kept for a double whose reading
++// writes. 20 ... 24 are seen on the named mutants of the machine's side.
++//
++// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing the
++// double: `host`'s eleven (`SAFETY.md` S-4), and no more.
++mod:double_substitution;
++
++use "../double/host_double.npk".*;
++use "../../src/host/host.npk".*;
++use "../../src/span/span.npk".Instant;
++use "../../src/span/span.npk".InstantClock;
++use "../../src/span/span.npk".Timestamp;
++use "../../src/span/span.npk".instant_of;
++use "../../src/span/span.npk".timestamp_of;
++
++// What a clock-dependent function sees: H-1's five readings, each kept as it
++// came back -- a refusal as a refusal.
++struct:Readings = {
++    bool:utc_refused; int64:utc_secs; int64:utc_nanos;
++    Instant:mono;
++    bool:boot_refused; Instant:boot;
++    bool:res_refused; int64:res_realtime; int64:res_monotonic; int64:res_boottime;
++    string:zone_name; ZoneSource:zone_source; bool:zone_found;
++};
++
++func:res_of<H: HostReadings> = int64(H:h, HostClock:which) never fails {
++    Result<Duration>:r = h.clock_res(which);
++    if (r.is_error) { pass -1i64; }
++    pass r.value.ns;
++};
++
++// THE ONE FUNCTION, instantiated with each host.
++func:read_all<H: HostReadings> = Readings(H:h) never fails {
++    bool:ur = true;
++    int64:us = 0i64;
++    int64:un = 0i64;
++    Result<Timestamp>:u = h.now_utc();
++    if (!(u.is_error)) {
++        ur = false;
++        us = u.value.secs;
++        un = u.value.nanos => int64;
++    }
++    Instant:m = raw h.now_instant();
++    bool:br = true;
++    Instant:b = raw instant_of(0i64, InstantClock.Boottime);
++    Result<Instant>:bb = h.now_boot();
++    if (!(bb.is_error)) {
++        br = false;
++        b = bb.value;
++    }
++    int64:rr = raw res_of(h, HostClock.Realtime);
++    int64:rm = raw res_of(h, HostClock.Monotonic);
++    int64:rb = raw res_of(h, HostClock.Boottime);
++    SystemZone:z = raw h.system_zone();
++    ZoneSource:zs = z.source;
++    bool:zf = z.found;
++    pass Readings{ utc_refused: ur, utc_secs: us, utc_nanos: un, mono: m,
++                   boot_refused: br, boot: b,
++                   res_refused: (rr < 0i64) || ((rm < 0i64) || (rb < 0i64)),
++                   res_realtime: rr, res_monotonic: rm, res_boottime: rb,
++                   zone_name: move(z.name), zone_source: zs, zone_found: zf };
++};
++
++func:in_res = bool(int64:ns) never fails {
++    if (ns <= 0i64) { pass false; }
++    pass ns <= 1000000000i64;
++};
++
++func:main = int32(cstring[]:_~argv) {
++    // ---- the double ---------------------------------------------------------
++    FakeHost:f = raw fake_host();
++    drop fake_set_utc(@f, timestamp_of(1000000000i64, 125000000i64) ?| #unreachable());
++    drop fake_set_instant(@f, raw instant_of(42i64, InstantClock.Monotonic));
++    drop fake_set_instant(@f, raw instant_of(7000000000i64, InstantClock.Boottime));
++    drop fake_set_zone(@f, "Etc/UTC", ZoneSource.EtcTimezone);
++    Readings:a = raw read_all(f);
++    if (a.utc_refused)                                   { exit 10i32; }
++    if (a.utc_secs != 1000000000i64)                     { exit 10i32; }
++    if (a.utc_nanos != 125000000i64)                     { exit 10i32; }
++    if (a.mono.clock != InstantClock.Monotonic)          { exit 11i32; }
++    if (a.mono.ns != 42i64)                              { exit 11i32; }
++    if (a.boot_refused)                                  { exit 12i32; }
++    if (a.boot.clock != InstantClock.Boottime)           { exit 12i32; }
++    if (a.boot.ns != 7000000000i64)                      { exit 12i32; }
++    if (a.res_refused)                                   { exit 13i32; }
++    if (a.res_realtime != 1i64)                          { exit 13i32; }
++    if (a.res_monotonic != 1i64)                         { exit 13i32; }
++    if (a.res_boottime != 1i64)                          { exit 13i32; }
++    if (!(string_equals(a.zone_name, "Etc/UTC")))        { exit 14i32; }
++    if (a.zone_source != ZoneSource.EtcTimezone)         { exit 14i32; }
++    if (!(a.zone_found))                                 { exit 14i32; }
++
++    // ---- the machine --------------------------------------------------------
++    MachineHost:m = raw machine_host();
++    Readings:b = raw read_all(m);
++    if (b.utc_refused)                                   { exit 20i32; }
++    if (b.utc_secs < 1600000000i64)                      { exit 20i32; }
++    if (b.utc_secs > 4102444800i64)                      { exit 20i32; }
++    if (b.mono.clock != InstantClock.Monotonic)          { exit 21i32; }
++    if (b.boot_refused)                                  { exit 22i32; }
++    if (b.boot.clock != InstantClock.Boottime)           { exit 22i32; }
++    if (b.res_refused)                                   { exit 23i32; }
++    if (!(raw in_res(b.res_realtime)))                   { exit 23i32; }
++    if (!(raw in_res(b.res_monotonic)))                  { exit 23i32; }
++    if (!(raw in_res(b.res_boottime)))                   { exit 23i32; }
++    if (b.zone_found != (b.zone_source != ZoneSource.NotFound)) { exit 24i32; }
++    if (!(b.zone_found)) {
++        if (!(string_equals(b.zone_name, "")))           { exit 24i32; }
++    }
++
++    // ---- the double again, after the machine --------------------------------
++    Readings:c = raw read_all(f);
++    if (c.utc_refused != a.utc_refused)                  { exit 30i32; }
++    if (c.utc_secs != a.utc_secs)                        { exit 30i32; }
++    if (c.utc_nanos != a.utc_nanos)                      { exit 30i32; }
++    if (c.mono.ns != a.mono.ns)                          { exit 30i32; }
++    if (c.boot.ns != a.boot.ns)                          { exit 30i32; }
++    if (c.res_realtime != a.res_realtime)                { exit 30i32; }
++    if (!(string_equals(c.zone_name, a.zone_name)))      { exit 30i32; }
++    if (c.zone_source != a.zone_source)                  { exit 30i32; }
++    exit 0i32;
++};
++
++func:failsafe = int32(Error:e) {
++    pick (e) {
++        (cal.ETimeValue)    { exit 80i32; },
++        (HeapBadRequest)    { exit 91i32; },
++        (HeapOom)           { exit 92i32; },
++        (IntOverflow)       { exit 93i32; },
++        (OutOfBounds)       { exit 94i32; },
++        (Unreachable)       { exit 95i32; },
++        (WildLeak)          { exit 96i32; },
++        (DivByZero)         { exit 97i32; },
++        (DivOverflow)       { exit 98i32; },
++        (StackExhausted)    { exit 106i32; },
++        (MachineFault)      { exit 107i32; },
++        (*)                 { exit 99i32; }
++    }
++    exit 9i32;
++};

@@ -1,0 +1,22 @@
+# 0.3.3's omission sweep, block 5 -- one extended regular expression per line, each read by `sweep.py` line by line
+# AND across line breaks, case-insensitive: every statement steps 1 ... 4 make false, the corrected claims' own words
+# (the workbench's lesson held for regex 0.2.2's work verifier: a sweep built from what the steps make false cannot
+# see a twin of what an audit finding corrects), and every place a reader would look for what the steps changed.
+# The double's names and H-9's and H-10's claims; what is next; the counts the steps move, in figures and in words,
+# and the parse stage's partition; the golden stage's emptiness and its row; the audit findings' and the two slips'
+# own words, the consumers' with E2-6's; what `check_layering` reads; and the language fact the double rests on.
+# `control.py` holds these to every hunk's parent side, the PLAYBOOK's positive control.
+the double|test double|fake_set|fake_advance|FakeHost|HostReadings|MachineHost|host_double
+links whichever|host object
+0\.3\.3|(is|are|comes) next
+\b(143|146)\b.{0,20}units?|\b(190|193)\b.{0,20}decisions|(seven|eight) questions
+\b(116|119)\b.{0,30}(plant|violation)|hundred and (sixteen|nineteen)|\b(159|163)\b.{0,20}(files|\.npk)|files of (159|163)|\b(108|111)\b.{0,10}suite
+by nothing else|no other stage roots|\(suite roots\)|\d+ = \d+ \+ \d+ \+ 3 \+ 1
+golden.{0,60}(empty|arrives)|nothing formats|formatted output
+reads a clock|stress: 40
+re-exports nothing|exactly nothing|built and run by the harness|dogfood|two consumers|consumers from
+ETimeZone.{0,4}(at |\()0\.3
+first (subcycle|two subcycles|three subcycles)|every other row|for the three clocks
+ETimeValue/Overflow|int32:year; uint8:month|at 35 units|at the OLD pin first
+check_layering
+module state|D-211|TYPE-055

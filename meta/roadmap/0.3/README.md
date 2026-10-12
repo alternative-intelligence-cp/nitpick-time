@@ -51,7 +51,7 @@ an emission the two readings read — `0.3.2.md`'s PD-99, its first step.)*
 | 0.3.1 | **`check_purity` goes live** — the dormant check from 0.0.3, turned on — **[`0.3.1.md`](0.3.1.md)**: its ban list and `check_host_isolation`'s reviewed against the language at the pin and `src/host/`'s body, each seen to fail in a real module, and two readings of the library's emission beside the spelling checks, the calls (O-X9) and the wide values (O-X11) — planned at `5fbaf4a` and rehearsed from its blocks in its real position on 2026-10-08 (its §8) | the library's reproducibility claim, enforced |
 | 0.3.2 | **The system zone** — the four-step discovery, and what it reports — **[`0.3.2.md`](0.3.2.md)**: `host_system_zone` answering the name each step finds and the mechanism that answered, the lookup the caller's at cycle 0.6, its tests in a user and mount namespace each unit makes with an `/etc` of its own; and first every generic function of `src/` read in an emission (O-X12) — planned at `5fbaf4a`, rehearsed from its blocks in its real position, and revised for its verifier's findings and rehearsed again, on 2026-10-08 (its §8) | a program can ask, and is told which mechanism answered |
 | 0.3.2a | **The adoption of compiler `7e91730`** — landing 103, the libraries' one re-pin, by the author's word of 2026-10-08: every slot a string's bytes reach spelled `fixed uint8[]`, the read-only view, with the old compiler seeing no difference; then the pin's own moves — LLVM 20.1.8, the self-check's two-code case, five returns of the view, five headers' counts (the compiler's DEF-164 and DEF-165), and the adoption list below — **[`0.3.2a.md`](0.3.2a.md)**, planned and rehearsed in its real position at both pins on 2026-10-09 (its §8) | the tree green at `7e91730`, and CI pinned there |
-| 0.3.3 | **The double** — the test host module, in `tests/` | every clock-dependent behaviour reproducible |
+| 0.3.3 | **The double** — the test host module, in `tests/` — **[`0.3.3.md`](0.3.3.md)**: the double a value and the substitution a type — `HostReadings`, H-1's five readings as a trait, the machine's `host` behind it and `FakeHost` beside it, H-9's setters each taking the double it sets — because the language keeps no state in a module and links no `host` object in `host`'s place; first `check_layering` reading the double's imports as `host`'s; the double's tests, a fixed sequence's transcript the `golden` stage's first member, and every single-site mutant of the double run; and the documents owed — planned at `7e91730` and rehearsed from its blocks in its real position on 2026-10-12 (its §8) | every clock-dependent behaviour reproducible |
 | 0.3.4 | **Close** | `done/0.3/`, `0.4.0.md` written |
 
 ## Checklist
@@ -128,10 +128,23 @@ the plan had named unseeable.)*
 - [x] the prose, and the sweep read line by line — `63b6afb`; block 5's 361 and 164 saved lines, 418 distinct, each in its class of `0.3.2a.md`'s §3b table and none an omission
 
 ### 0.3.3 — the double
+*(Restated at 0.3.3's planning, 2026-10-12, to `0.3.3.md`'s drafted
+decisions, PD-110 … PD-112: nothing a module declares keeps a reading between
+two calls, and `npkc` links no `host` object in `host`'s place, so the double
+is a value and the substitution a type (PD-111). The four keep their words;
+the second and third carry what PD-111 makes of them.)*
 - [ ] the fake host module in `tests/`, **not** in `src/` (H-10)
-- [ ] `fake_set_utc`, `fake_set_instant`, `fake_advance`
-- [ ] the harness links whichever host object it is told to, and a test proves the substitution works
+- [ ] `fake_set_utc`, `fake_set_instant`, `fake_advance` — *as PD-111 amends H-9: each takes the double it sets, and `fake_set_zone` joins them for H-1's fifth reading*
+- [ ] the harness links whichever host object it is told to, and a test proves the substitution works — *as PD-111 reads H-10: there is no host object to link (TM-117), and one generic function is instantiated with the machine's host and with the double in one test's text, both legs, every run*
 - [ ] a demonstration that a clock-dependent behaviour is reproducible: the same fake reading twice gives the same answer, and a fixed sequence gives a fixed transcript
+
+*(Three more, from 0.3.3's planning on 2026-10-12 — `0.3.3.md`: the
+instrument the double stands under, first, in a commit of its own; the
+double's tests and every mutant of it; and the documents owed to this
+subcycle. The four above keep their words.)*
+- [ ] **first**, `check_layering` reads the double's imports as it reads `host`'s — what B-17 lets `host` import, `host` itself, or another file of the double — three plants, each unseen by the check before it (PD-110)
+- [ ] the double's tests: the double alone; one generic function and both hosts, under `// stress: 40`; a fixed sequence's transcript as the `golden` stage's first member, every line re-derived by Python's `datetime`; every single-site mutant of the double run, each red, refused or named with why; and `TESTING.md` V-11 restated — the documents audit's TA-4 (PD-112)
+- [ ] the documents owed: the audit's TA-1 … TA-3 and TA-5 … TA-7, the early ecosystem audit's E2-10 and this repository's part of E2-6, cycle 0.3.2a's two prose slips and TM-221's two markers
 
 ## The adoption, when the pin moves
 

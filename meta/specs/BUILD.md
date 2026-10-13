@@ -608,6 +608,10 @@ module, one per `use` of `span`.)* *(Cycle 0.3.2, TM-256: `host` → `zone` stay
 drawn and is not taken. `host_system_zone` answers the zone's NAME, and the
 lookup is the caller's, `zone_by_name` at cycle 0.6, so a program that reads a
 clock owes no zone arm; "for the name lookup" names what `host` does not do.)*
+*(Cycle 0.3.3, TM-260: the test host, `tests/double/`, stands in for `host`,
+and its imports are read as `host`'s are — the four arrows above, `host`
+itself, or another file of the double, and nothing else. `check_layering`
+reads that directory beside `src/`, and no other of `tests/`.)*
 
 A `use` cycle is legal in the language (D-086) and is still a decomposition
 mistake; `ntime`'s layers are acyclic and the harness says so.

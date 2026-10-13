@@ -203,6 +203,33 @@ class Result:
 LAYER = {"core": 0, "cal": 1, "span": 2, "zone": 3, "fmt": 4}
 HOST_MAY_IMPORT = {"span", "zone", "cal", "core"}
 
+# THE DOUBLE'S IMPORTS (cycle 0.3.3, TM-260). `tests/double/` holds the test
+# host -- the seam a clock-dependent function takes, the machine's `host`
+# behind it and the double beside it, `HOST.md` H-9 and H-10 as cycle 0.3.3
+# reads them -- and it stands in for `host`, so its imports are read as
+# `host`'s are: B-17's `host` row, and `host` itself, whose types the seam's
+# readings return and whose functions the machine's side calls. Or another
+# file of the double. Nothing else: not `fmt`, not the umbrella, which
+# re-exports every layer, and no file of `tests/` outside the directory -- a
+# unit or a fixture is no part of the double. Cycles 0.3.0's and 0.3.2's
+# hand-on, "`check_layering` reads its imports as it reads `host`'s".
+DOUBLE_DIR = "tests/double"
+DOUBLE_MAY_IMPORT = HOST_MAY_IMPORT | {"host"}
+
+
+def double_files(tree):
+    """Every `.npk` under `<tree>/tests/double/`, repo-relative, sorted -- the
+    test host's (TM-260), which `check_layering` reads beside `src/`."""
+    root = os.path.join(tree, *DOUBLE_DIR.split("/"))
+    out = []
+    for dirpath, dirs, names in os.walk(root):
+        dirs[:] = sorted(dirs)
+        for n in sorted(names):
+            if n.endswith(".npk"):
+                out.append(os.path.relpath(os.path.join(dirpath, n), tree)
+                           .replace(os.sep, "/"))
+    return sorted(out)
+
 
 def check_layering(tree, **_):
     """`BUILD.md` §6's diagram against `src/` -- its EDGES and its NODES.
@@ -224,6 +251,14 @@ def check_layering(tree, **_):
     so the rule is the one the sentence was really about: EVERY LAYER B-17
     NAMES HAS AT LEAST ONE MODULE. A deleted placeholder is then a named
     failure and not a smaller denominator.
+
+    AND THE DOUBLE'S IMPORTS, SINCE CYCLE 0.3.3 (TM-260). Every `.npk` under
+    `tests/double/` is read by the same walk, and each `use` is held to
+    `DOUBLE_MAY_IMPORT` -- what `host` may import, and `host` -- or to another
+    file of the double. It is the one directory of `tests/` this check reads,
+    because the double is the one module there that stands in for one of
+    `src/`'s; a unit imports what it tests, the umbrella among them, and has no
+    layer. The directory may be empty, and the headline counts what it read.
     """
     files = src_files(tree)
     problems, edges = [], 0
@@ -292,6 +327,27 @@ def check_layering(tree, **_):
                 "every sweep that counts files, which is why this is an "
                 "assertion and not a denominator." % layer)
 
+    # THE DOUBLE (TM-260): its imports read as `host`'s, by the same walk.
+    doubles, double_edges = double_files(tree), 0
+    for rel in doubles:
+        for imp in build_mod.imports_of(os.path.join(tree, rel)):
+            double_edges += 1
+            target = os.path.normpath(
+                os.path.join(os.path.dirname(rel), imp)).replace(os.sep, "/")
+            if target.startswith(DOUBLE_DIR + "/"):
+                continue                      # another file of the double
+            there = module_of(target) if target.startswith("src/") else None
+            if there not in DOUBLE_MAY_IMPORT:
+                problems.append(
+                    "%s imports `%s`%s. The double stands in for `host`, so it "
+                    "imports what `host` may -- %s -- and `host` itself, and "
+                    "nothing else (B-17, TM-260): not `fmt`, not the umbrella, "
+                    "and no file of `tests/` outside `%s/`."
+                    % (rel, imp,
+                       " (layer `%s`)" % there if there else
+                       ", which is neither `src/` nor the double",
+                       ", ".join(sorted(HOST_MAY_IMPORT)), DOUBLE_DIR))
+
     # The umbrella's reach, reported rather than asserted. It is 7 since cycle
     # 0.3.0 -- `src/lib.npk`, the three `src/core/` modules, `src/cal/cal.npk`,
     # `src/span/span.npk` and `src/host/host.npk`; 6 from cycle 0.2.0 until
@@ -303,9 +359,11 @@ def check_layering(tree, **_):
     # until cycle 0.1.5, cycle 0.0.4's numbers.)
     reached = build_mod.reachable_sources(os.path.join(tree, "src", "lib.npk"))
     headline = ("%d `use` edge(s) over %d file(s) in src/; %d of %d layer(s) "
-                "present; the umbrella reaches %d file(s)"
+                "present; the umbrella reaches %d file(s); the double: %d "
+                "edge(s) over %d file(s) in %s/"
                 % (edges, len(files), len(present & (set(LAYER) | {"host"})),
-                   len(set(LAYER) | {"host"}), len(reached)))
+                   len(set(LAYER) | {"host"}), len(reached), double_edges,
+                   len(doubles), DOUBLE_DIR))
     if not files:
         problems.append("check_layering opened 0 files under src/. A check "
                         "with an empty denominator reports green while "

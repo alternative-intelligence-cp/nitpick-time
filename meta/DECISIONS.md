@@ -8696,3 +8696,44 @@ would read each as meaning nothing (DEF-247), the silent shape a re-pin does not
 write where the old compiler reads it; **the headers' old counts kept, the
 runner excusing them** — a header names what the compiler reports, or B-7c is
 not a rule.
+
+# Cycle 0.3.3 — the double, ratified 2026-10-13
+
+Three decisions, drafted at planning (`meta/roadmap/0.3/0.3.3.md` §2, PD-110 …
+PD-112, in that order), accepted by the orchestrator at the plan's
+verification, and each measured at compiler `7e91730`. The first is the
+instrument the double stands under, in a commit of its own: the rule two of
+this cycle's plans handed on for it. The second is the double, which the
+language makes a value; the third, its tests.
+
+### TM-260 — `check_layering` reads the double's imports as it reads `host`'s: every `.npk` under `tests/double/` imports what B-17 lets `host` import, `host` itself, or another file of the double, and nothing else
+
+**2026-10-13, cycle 0.3.3 (the plan's PD-110). Dates `BUILD.md` B-17 and
+`TESTING.md` §2's `check_layering` row.**
+
+**What was found** (`0.3.3.md` §1). Cycles 0.3.0 and 0.3.2 each handed the
+double on with the same rule — "`check_layering` reads its imports as it
+reads `host`'s" (`0.3.0.md` §7, `0.3.2.md` §7) — and the check reads `src/`
+alone: three files under `tests/double/`, importing `fmt`, the umbrella and a
+unit, each pass it as it stands.
+
+**The decision.** *`check_layering` reads every `.npk` under `tests/double/`
+by the walk it reads `src/` with, and holds each `use` to what B-17's row lets
+`host` import — `span`, `zone`, `cal` and `core` — to `host` itself, whose
+types the double's readings return and whose functions its machine side
+calls, or to another file of the double; anything else is a finding, the
+umbrella and every file of `tests/` outside the directory among them. Its
+headline counts the double's edges and files beside `src/`'s. It is the one
+directory of `tests/` the check reads. Three plants, each unseen by the check
+before it: the double importing `fmt`, beside a control importing `zone`,
+which B-17 draws for `host`; the umbrella, beside `host`; and a unit, beside
+another file of the double.*
+
+*Alternatives declined:* **a check of its own** — a twenty-third row in
+`TESTING.md` §2 for one directory, where the rule is B-17's and the walk this
+check's; **every file of `tests/` read** — a unit imports what it tests, the
+umbrella among them, and has no layer; **`zone` refused to the double** — its
+rule is `host`'s, and B-17 draws that arrow for `host`, which takes none
+(TM-256), as the double takes none; **the double's imports held by review** —
+two plans handed the check on, and three plants show what review would have to
+see.

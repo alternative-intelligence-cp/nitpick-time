@@ -18,10 +18,12 @@ ONE SITE, ONE CHANGE. The operators, each applied at every site it matches:
   neg   `if (C)` -> `if (!(C))`
   sdl   a statement deleted: a line's whole statement, or one inside a
         one-line block, `{ h.mono = i; }` among them
-  enum  `ZoneSource.X` and `InstantClock.X` -> each other variant
+  enum  `ZoneSource.X`, `InstantClock.X` and `HostClock.X` -> each other variant
   str   a string literal -> `""` and its last byte dropped (non-empty), `"x"` (empty)
-  field a field of the double read or written -> the other of its type:
-        `utc_secs` <-> `utc_nanos`, `mono` <-> `boot`
+  field a field of the double read or written -> each other of its kind:
+        `utc_secs` <-> `utc_nanos`, `mono` <-> `boot`, each clock's
+        resolution -> the other two, `utc_refusal` <-> `boot_refusal`, and
+        each resolution's refusal -> the other two
   const `NTIME_NANOS_PER_SEC` -> `(NTIME_NANOS_PER_SEC - 1i64)` and `(NTIME_NANOS_PER_SEC + 1i64)`
   arg   `host_clock_res(which)` -> each `HostClock` variant in place of `which`
 
@@ -36,8 +38,14 @@ START = "pub struct:MachineHost"
 ROR = ["==", "!=", "<", "<=", ">", ">="]
 TYPES = {"i64": (-(2 ** 63), 2 ** 63 - 1), "i32": (-(2 ** 31), 2 ** 31 - 1)}
 ENUMS = {"ZoneSource": ["TzEnvironment", "EtcLocaltime", "EtcTimezone", "NotFound"],
-         "InstantClock": ["Monotonic", "Boottime"]}
-FIELDS = {"utc_secs": "utc_nanos", "utc_nanos": "utc_secs", "mono": "boot", "boot": "mono"}
+         "InstantClock": ["Monotonic", "Boottime"],
+         "HostClock": ["Realtime", "Monotonic", "Boottime"]}
+_KINDS = [["utc_secs", "utc_nanos"], ["mono", "boot"],
+          ["res_realtime", "res_monotonic", "res_boottime"], ["utc_refusal", "boot_refusal"],
+          ["res_realtime_refusal", "res_monotonic_refusal", "res_boottime_refusal"]]
+FIELDS = {f: [g for g in kind if g != f] for kind in _KINDS for f in kind}
+# Longest first, so `res_realtime_refusal` is never read as `res_realtime`.
+_FIELD_RX = re.compile(r"\b(?:self|h)\.(%s)\b" % "|".join(sorted(FIELDS, key=len, reverse=True)))
 
 
 def code_end(line):
@@ -137,7 +145,7 @@ def line_mutants(code, whole_statement):
         for part in re.finditer(r"[^;]+;", inner):
             a = base + part.start() + (len(part.group()) - len(part.group().lstrip()))
             add("sdl", a, base + part.end(), "")
-    for m in re.finditer(r"\b(ZoneSource|InstantClock)\.(\w+)", code):
+    for m in re.finditer(r"\b(ZoneSource|InstantClock|HostClock)\.(\w+)", code):
         for v in ENUMS[m.group(1)]:
             if v != m.group(2):
                 add("enum", m.start(2), m.end(2), v)
@@ -148,8 +156,9 @@ def line_mutants(code, whole_statement):
             add("str", a, b, '"%s"' % body[:-1])
         else:
             add("str", a, b, '"x"')
-    for m in re.finditer(r"\b(?:self|h)\.(utc_secs|utc_nanos|mono|boot)\b", code):
-        add("field", m.start(1), m.end(1), FIELDS[m.group(1)])
+    for m in _FIELD_RX.finditer(code):
+        for alt in FIELDS[m.group(1)]:
+            add("field", m.start(1), m.end(1), alt)
     for m in re.finditer(r"\bNTIME_NANOS_PER_SEC\b", code):
         if code.lstrip().startswith("use "):
             continue

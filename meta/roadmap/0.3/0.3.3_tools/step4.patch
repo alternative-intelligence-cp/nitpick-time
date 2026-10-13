@@ -15,10 +15,10 @@ index 3661abe04db03204a777295d4f81896c12b93c6e..8428ffec9b6197662033258184374c9a
  # 70 at 0.1.0b, 75 at 0.1.0c, 78 at 0.1.1, 81 at 0.1.2, 86 at 0.1.3, 90 at
  # 0.1.3b, 91 at 0.1.4 and 0.1.4b, all at `c3bdae2` from 0.1.0b on, 101 at
 diff --git a/CLAUDE.md b/CLAUDE.md
-index d40d6042a121160cc0344e82d4249d6756e60985..7265228eb2954eeb429db6f3adcfcf02ccac6f6b 100644
+index d40d6042a121160cc0344e82d4249d6756e60985..90765bf7a16a0263201ae1e87c9828d738a8a25f 100644
 --- a/CLAUDE.md
 +++ b/CLAUDE.md
-@@ -14,13 +14,50 @@ the library's emission read beside the spelling checks; 0.3.2, the system zone,
+@@ -14,13 +14,60 @@ the library's emission read beside the spelling checks; 0.3.2, the system zone,
  DONE (2026-10-08): `host_system_zone` says which zone the machine names, and
  how; 0.3.2a, the adoption of compiler `7e91730`, DONE (2026-10-09): a string's
  bytes are a read-only view, every slot they reach says so, and LLVM is
@@ -36,11 +36,14 @@ index d40d6042a121160cc0344e82d4249d6756e60985..7265228eb2954eeb429db6f3adcfcf02
 +needs a double for (`HOST.md` H-9), and it has one, in `tests/`, never in
 +`src/` (H-10). **The double is a value, and the substitution a type**
 +(TM-261): H-9's setters as cycle 0.0 drafted them take no handle, and nothing
-+a module declares keeps a reading between two calls — a plain module binding
-+is `NITPICK-TYPE-055`, the compiler's D-211, a write into a `fixed` one
-+`NITPICK-TYPE-086`, an initialiser that calls `NITPICK-TYPE-035` — and there
-+is no `host` object to link in `host`'s place, `npkc` compiling the whole
-+graph a root reaches (TM-117) and mapping no path to another. So
++a module declares keeps a reading between two calls — of the forms measured
++(`meta/roadmap/0.3/0.3.3.md` §1.2), a plain module binding with an
++initialiser is `NITPICK-TYPE-055`, the compiler's D-211, a write into a
++`fixed` one `NITPICK-TYPE-086`, an initialiser that calls `NITPICK-TYPE-035`,
++and one with no initialiser is a read-only zero whose plain write the legs
++disagree on, a compiler-defect candidate raised and relied on nowhere — and
++there is no `host` object to link in `host`'s place, `npkc` compiling the
++whole graph a root reaches (TM-117) and mapping no path to another. So
 +`tests/double/host_double.npk` declares the seam, `HostReadings` — H-1's five
 +readings as a trait, each named without its `host_` prefix, with H-1's result
 +and `never fails` where H-1 says it — the machine's host behind it,
@@ -48,7 +51,13 @@ index d40d6042a121160cc0344e82d4249d6756e60985..7265228eb2954eeb429db6f3adcfcf02
 +`FakeHost`: its fields `hidden`, the realtime held as the kernel hands it and
 +read through `timestamp_of`, so a reading past the range is H-8's refusal
 +where its caller reads it; H-9's three setters, each taking the double it sets,
-+and `fake_set_zone` beside them. A clock-dependent function takes
++and `fake_set_zone` beside them — and every other answer `host` gives a caller
++is a setter's too: the realtime as the kernel hands it, refused by `NanoRange`
++as by `YearRange`; each clock's resolution; and each fallible reading refused
++with the identity a test hands it, an errno forwarded verbatim or
++`ETimeValue`. And `SteppedHost`, whose readings change per call: each answers
++what its `FakeHost` answers and then runs a step on it — `FakeTick`, an
++advance per reading, or a step a test writes. A clock-dependent function takes
 +`<H: HostReadings>` and is instantiated with either: at build time, statically,
 +and nothing in `src/` changes. **Its tests** (TM-262): the double alone,
 +`tests/unit/double_readings.npk`; one generic function and both hosts,
@@ -58,8 +67,9 @@ index d40d6042a121160cc0344e82d4249d6756e60985..7265228eb2954eeb429db6f3adcfcf02
 +clock stepped back an hour while the monotonic clock runs on, a suspend the
 +boot clock counts, the realtime refused past the range — every line of its
 +golden re-derived with Python's `datetime`. Every single-site mutant of the
-+double was run — 132: 25 refused by the compiler, 100 red, 7 exit 0 and each
-+named with why — and every exit is seen red but the belts. And first, in a
++double was run — 283: 88 refused by the compiler, 188 red, 7 exit 0 and each
++named with why — and eighteen named mutants beside them, and every exit is
++seen red but the belts. And first, in a
 +commit of its own, **`check_layering` reads the double's imports as it reads
 +`host`'s** (TM-260): what B-17 lets `host` import, `host` itself, or another
 +file of the double. `TESTING.md` V-11 reads "every test of a `src/host/`
@@ -145,7 +155,7 @@ index 03ec72e907db7c89ab69994313f3028775cae68b..b5e1bd31dc47a229fa46df03a9543703
  ---
  
 diff --git a/harness/README.md b/harness/README.md
-index 7d3461202138578c99ff01031f769f0ea27b175b..efb0717939e8be9b3b5b2b89dfa58f7714c5e302 100644
+index 7d3461202138578c99ff01031f769f0ea27b175b..31b0d54771ffddd1e15cf9839fe7480a13789f68 100644
 --- a/harness/README.md
 +++ b/harness/README.md
 @@ -544,6 +544,21 @@ LLVM row moved at the self-check and then, past it, at 33 of its 143 units —
@@ -164,7 +174,7 @@ index 7d3461202138578c99ff01031f769f0ea27b175b..efb0717939e8be9b3b5b2b89dfa58f77
 +the defect corpus unchanged at 36; the library unchanged, its IR 374 606 B; and
 +library + repro + suite at **111** (**59 probe**, **42 unit**, **8 sweep**,
 +**1 golden**, and the conformance member). `146 = 35 + 111`. A full invocation
-+about 230 s; the three tests cost under three seconds of it, both legs, the
++about 230 s; the three tests cost about three seconds of it, both legs, the
 +substitution's eighty runs included.
 +
  The floor under all of it is still TM-117's: every root re-emits the prelude,

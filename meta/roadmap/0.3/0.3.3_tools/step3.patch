@@ -110,7 +110,7 @@ index 7becde836b0b753a542338fff7b8b4939d052bc8..7d3461202138578c99ff01031f769f0e
  
  The floor under all of it is still TM-117's: every root re-emits the prelude,
 diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
-index 40a2a42449380abfb6a83c7a711609bcbff42999..da5ad3ec374da091390e9639aa5b835835c15284 100644
+index bef545169916f6622b20545d08a217a377a398e1..bda1352296fdd3519e7f51a0a336a928af6e0ea3 100644
 --- a/meta/DECISIONS.md
 +++ b/meta/DECISIONS.md
 @@ -6596,6 +6596,7 @@ alone — no specification names one, a nanosecond count spans ±292 years and i

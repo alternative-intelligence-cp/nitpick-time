@@ -4,6 +4,8 @@
 #
 #     . "$REPO/meta/roadmap/0.3/0.3.3_tools/env.sh"; . "$T/facts.sh"
 #
+# §1.2's note is asked form by form, every sentence of it -- the two shapes whose legs disagree built at both legs.
+#
 # `head` is the working tree as it stands; `new` is it with steps 1 ... 4 applied, each by GNU `patch` into the
 # copy alone (`git apply` run inside this checkout would resolve the paths against the checkout), dated as
 # `apply.py` dates them. Programs live in `$F/p`, outside every copy, but for the ones that import the double, which
@@ -80,6 +82,92 @@ for p in state_plain state_fixed_part state_call_init state_atomic_bare state_at
 done
 grep -m1 -oE 'module state is `fixed` \(D-211\): .{0,200}keep mutable process state in `main`.s scope' \
   <(cd "$F/p" && "$NPKC" state_plain.npk -o /dev/null 2>&1) | sed 's/^/  TYPE-055 says: /'
+
+# ---- §1.2's note: every other form, and the two shapes whose legs disagree ---------------------------------------
+# Each a program of its own, as above. A form that compiles is built at both legs by `legs`, and what the note says
+# of it read off the run and the emission: the exits, `main`'s body after `opt -O2`, and the addresses `nm` gives.
+echo "§1.2's note -- every other form, each asked of the pin as a program of its own:"
+form() {    # form <name> <declarations> [<body of main>]: the program, then its codes
+  printf '%s\n\n' "$2" | probe "$1" "${3:-    exit 0i32;}"
+  codes "$F/p" "$1"
+}
+leg2() {    # leg2 <name>: `<exit> / <exit>` of the program at both legs
+  legs "$F/p/$1.npk" | sed 's/^[^:]*: //'
+}
+echo "  initialised -- stack: $(form n_stack 'stack int64:c = 0i64;'); wild: $(form n_wild 'wild int64:c = 0i64;'); wildx: $(form n_wildx 'wildx int64:c = 0i64;'); pub: $(form n_pub 'pub int64:c = 0i64;'); const: $(form n_const 'const int64:c = 0i64;')"
+echo "  a fixed one written whole: $(form n_whole 'fixed int64:C = 0i64;
+
+func:set = NIL(int64:v) never fails {
+    C = v;
+    pass NIL;
+};' '    drop set(5i64);
+    exit 0i32;')"
+echo "  a field of a fixed struct written: $(form n_field 'struct:P = { int64:x; };
+fixed P:Q = P{ x: 0i64 };
+
+func:set = NIL(int64:v) never fails {
+    Q.x = v;
+    pass NIL;
+};' '    drop set(5i64);
+    exit 0i32;')"
+echo "  its address -- @: $(form n_addr 'fixed int64:C = 0i64;' '    int64->:p = @C;
+    exit 0i32;'); \$\$m: $(form n_borrow 'fixed int64:C = 0i64;' '    int64:x = $$m C;
+    exit 0i32;')"
+echo "  an atomic in a fixed struct: $(form n_ast 'struct:W = { atomic<int64>:a; };
+fixed W:X = W{ a: 0i64 };'); .store: $(form n_ast_store 'struct:W = { atomic<int64>:a; };
+fixed W:X = W{ a: 0i64 };' '    X.a.store(5i64);
+    exit 0i32;'); .load: $(form n_ast_load 'struct:W = { atomic<int64>:a; };
+fixed W:X = W{ a: 0i64 };' '    int64:v = X.a.load();
+    exit 0i32;')"
+echo "  an atomic in a fixed array: $(form n_aar 'fixed atomic<int64>[1]:Y = [0i64];'); .store: $(form n_aar_store 'fixed atomic<int64>[1]:Y = [0i64];' '    Y[0i64].store(5i64);
+    exit 0i32;'); .load: $(form n_aar_load 'fixed atomic<int64>[1]:Y = [0i64];' '    int64:v = Y[0i64].load();
+    exit 0i32;')"
+echo "  a fixed pointer -- = NULL: $(form n_pnull 'fixed int64->:P = NULL;'); wild, = NULL: $(form n_pwnull 'fixed wild int64->:P = NULL;'); = 4096i64: $(form n_pint 'fixed int64->:P = 4096i64;'); = NIL: $(form n_pnil 'fixed int64->:P = NIL;'); = #wild_ptr<int64>(4096i64): $(form n_pwp 'fixed int64->:P = #wild_ptr<int64>(4096i64);'); re-pointed: $(form n_prep 'fixed int64->:P = NULL;' '    P = NULL;
+    exit 0i32;')"
+echo "  a channel -- its send in a synchronous function: $(form n_send 'Channel<int64, 1, 4>:ch;
+
+func:put = NIL(int64:v) {
+    pass (relay (await ch.send(move(v), raw duration_ns(1000i64))));
+};'); = channel(): $(form n_chan 'fixed Channel<int64, 1, 4>:ch = channel();')"
+bare=0; zero=0
+for b in 'int64:counter;' 'struct:P = { int64:x; };
+P:counter;' 'stack int64:counter;' 'wild int64:counter;' 'wildx int64:counter;' 'pub int64:counter;' \
+         'atomic<int64>:counter;' 'Channel<int64, 1, 4>:counter;'; do
+  printf '%s\n\n' "$b" | probe n_bare '    exit 0i32;'
+  if ( cd "$F/p" && "$NPKC" n_bare.npk -o n_bare.ll ) > /dev/null 2>&1; then
+    bare=$((bare + 1))
+    grep -qE '^@"npk\.n_bare\.counter" = constant .* zeroinitializer$' "$F/p/n_bare.ll" && zero=$((zero + 1))
+  fi
+done
+echo "  bare, no initialiser -- int64, a struct, stack, wild, wildx, pub, atomic<int64>, Channel<int64, 1, 4>: $bare of 8 compile, $zero emitted \`constant ... zeroinitializer\`"
+printf 'int64:counter;\n\nfunc:set = NIL(int64:v) never fails {\n    counter = v;\n    pass NIL;\n};\n\n' \
+  | probe n_wint '    drop set(5i64);
+    if (counter != 5i64) { exit 11i32; }
+    exit 0i32;'
+printf 'struct:P = { int64:x; };\nP:q;\n\n' | probe n_wstruct '    q.x = 5i64;
+    if (q.x != 5i64) { exit 11i32; }
+    exit 0i32;'
+printf 'atomic<int64>:a;\n\n' | probe n_watomic '    a.store(5i64);
+    if (a.load() != 5i64) { exit 11i32; }
+    exit 0i32;'
+echo "  the bare int64 written by a function and read back: $(leg2 n_wint); a bare struct's field: $(leg2 n_wstruct); a bare atomic's .store: $(leg2 n_watomic)"
+printf 'fixed int64->:P = NULL;\n\n' | probe n_null '    <-P = 5i64;
+    exit 0i32;'
+printf '' | probe n_lnull '    int64->:p = NULL;
+    <-p = 5i64;
+    exit 0i32;'
+{ printf 'mod:n_null_helper;\n\nfixed int64->:P = NULL;\n\nfunc:main = int32(cstring[]:_~argv) {\n    <-P = 5i64;\n    exit 0i32;\n};\n\n'
+  printf 'func:helper = int32(int32:x) never fails {\n    pass x;\n};\n\n%s\n' "$FLOOR"; } > "$F/p/n_null_helper.npk"
+at1() {     # at1 <name> <symbol>: whether `main` and <symbol> share an address in the -O2 binary
+  nm "$A/legs/$1.x2" | awk -v s="$2" '$3 == "main" {m = $1} $3 == s {o = $1} END {print (m != "" && m == o) ? "one address" : "apart"}'
+}
+body() {    # body <name>: `main`'s body after `opt -O2`, its instructions on one line
+  awk '/^define .*@main\(/ {on = 1; next} on && /^}/ {exit} on && !/^[a-z0-9_]+:$/ {gsub(/^ +/, ""); printf "%s%s", (n++ ? "; " : ""), $0}' "$A/legs/$1.2.ll"
+}
+echo "  a store through the fixed NULL pointer: $(leg2 n_null); at -O2 main is \`$(body n_null)\`, main and npk_failsafe at $(at1 n_null npk_failsafe)"
+echo "  the same, a never-fails helper declared between main and failsafe: $(leg2 n_null_helper); main and the helper at $(at1 n_null_helper npk.n_null_helper.helper)"
+echo "  a store through a local NULL pointer: $(leg2 n_lnull); at -O2 main is \`$(body n_lnull)\`, main and npk_failsafe at $(at1 n_lnull npk_failsafe)"
+echo "  the bare int64's write at -O2: main is \`$(body n_wint)\`"
 
 # ---- §1.3 what a `use` line can name ----------------------------------------------------------------------------
 echo "§1.3 npkc at the pin:"

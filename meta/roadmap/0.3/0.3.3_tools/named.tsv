@@ -2,11 +2,11 @@
 # aimed at, the text, its replacement, TAB-separated, "\n" a newline. Each reaches an exit no single-site mutant
 # reaches first -- a shape a careless double has -- and `mutants.py table` swaps each ONCE in a copy (a text matched
 # other than once is a STOP) and prints what each of the three tests exits on both legs.
-set_utc_moves_mono	readings 21	    h.utc_nanos = t.nanos => int64;\n    pass NIL;	    h.utc_nanos = t.nanos => int64;\n    h.mono = raw instant_add(h.mono, raw duration_ns(1i64));\n    pass NIL;
+set_utc_moves_mono	readings 21	    h.utc_nanos = t.nanos => int64;\n    h.utc_refusal = NIL;	    h.utc_nanos = t.nanos => int64;\n    h.mono = raw instant_add(h.mono, raw duration_ns(1i64));\n    h.utc_refusal = NIL;
 set_instant_mono_sets_boot	readings 23	(InstantClock.Monotonic) { h.mono = i; },	(InstantClock.Monotonic) { h.mono = i; h.boot = i; },
-set_instant_boot_sets_mono	readings 25	(InstantClock.Boottime)  { h.boot = i; }	(InstantClock.Boottime)  { h.boot = i; h.mono = i; }
-advance_holds_last_reading	readings 41	    h.utc_secs = secs;\n    h.utc_nanos = nanos;	    if (secs > 253402300799i64) { pass NIL; }\n    h.utc_secs = secs;\n    h.utc_nanos = nanos;
-advance_instants_held_past_range	readings 42	    h.utc_secs = secs;\n    h.utc_nanos = nanos;	    if (secs > 253402300799i64) {\n        h.mono = raw instant_add(h.mono, raw duration_ns(0i64 - d.ns));\n        h.boot = raw instant_add(h.boot, raw duration_ns(0i64 - d.ns));\n    }\n    h.utc_secs = secs;\n    h.utc_nanos = nanos;
+set_instant_boot_sets_mono	readings 25	(InstantClock.Boottime)  { h.boot = i; h.boot_refusal = NIL; }	(InstantClock.Boottime)  { h.boot = i; h.boot_refusal = NIL; h.mono = i; }
+advance_holds_last_reading	readings 41	    h.utc_secs = secs;\n    h.utc_nanos = nanos;\n    pass NIL;	    if (secs > 253402300799i64) { pass NIL; }\n    h.utc_secs = secs;\n    h.utc_nanos = nanos;\n    pass NIL;
+advance_instants_held_past_range	readings 42	    h.utc_secs = secs;\n    h.utc_nanos = nanos;\n    pass NIL;	    if (secs > 253402300799i64) {\n        h.mono = raw instant_add(h.mono, raw duration_ns(0i64 - d.ns));\n        h.boot = raw instant_add(h.boot, raw duration_ns(0i64 - d.ns));\n    }\n    h.utc_secs = secs;\n    h.utc_nanos = nanos;\n    pass NIL;
 empty_name_not_found	readings 51	pass SystemZone{ name: move(name), source: self.zone_source, found: true };	pass SystemZone{ name: move(name), source: self.zone_source, found: !(string_is_empty(self.zone_name)) };
 not_found_keeps_name	readings 52	        if (self.zone_source == ZoneSource.NotFound) {\n            pass SystemZone{ name: "", source: ZoneSource.NotFound, found: false };\n        }\n        string:name = string_slice(self.zone_name, 0i64, string_byte_length(self.zone_name)) ?| #unreachable();\n        pass SystemZone{ name: move(name), source: self.zone_source, found: true };	        string:name = string_slice(self.zone_name, 0i64, string_byte_length(self.zone_name)) ?| #unreachable();\n        pass SystemZone{ name: move(name), source: self.zone_source, found: self.zone_source != ZoneSource.NotFound };
 machine_utc_fixed	substitution 20	pass (relay host_now_utc());	pass (relay timestamp_of(1000000000i64, 0i64));
@@ -14,3 +14,9 @@ machine_instant_boot	substitution 21	pass raw host_now_instant();	pass raw insta
 machine_boot_monotonic	substitution 22	pass (relay host_now_boot());	pass raw instant_of(1i64, InstantClock.Monotonic);
 machine_res_zero	substitution 23	pass (relay host_clock_res(which));	pass raw duration_ns(0i64);
 machine_zone_found_unnamed	substitution 24	pass raw host_system_zone();	pass SystemZone{ name: "x", source: ZoneSource.NotFound, found: true };
+raw_setter_normalises	readings 46	    h.utc_nanos = nanos;\n    h.utc_refusal = NIL;	    h.utc_nanos = nanos % NTIME_NANOS_PER_SEC;\n    h.utc_refusal = NIL;
+raw_setter_holds_range	readings 47	    h.utc_secs = secs;\n    h.utc_nanos = nanos;\n    h.utc_refusal = NIL;	    h.utc_secs = secs;\n    if (secs > 253402300799i64) { h.utc_secs = 253402300799i64; }\n    h.utc_nanos = nanos;\n    h.utc_refusal = NIL;
+advance_lifts_refusal	readings 72	    h.utc_nanos = nanos;\n    pass NIL;	    h.utc_nanos = nanos;\n    h.utc_refusal = NIL;\n    pass NIL;
+set_monotonic_lifts_boot_refusal	readings 72	(InstantClock.Monotonic) { h.mono = i; },	(InstantClock.Monotonic) { h.mono = i; h.boot_refusal = NIL; },
+stepped_refusal_not_verbatim	readings 65	if (u.is_error) { fail u.err; }	if (u.is_error) { fail Unreachable; }
+stepped_refusal_skips_step	readings 66	        drop self.step.between(self.fake);\n        if (b.is_error) { fail b.err; }	        if (b.is_error) { fail b.err; }\n        drop self.step.between(self.fake);

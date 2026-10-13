@@ -30,8 +30,10 @@ and nothing converts it back (`NITPICK-TYPE-007`), and a write through one is
 refused at 32 sites in 16 files, five of them `src/`'s, so every slot a
 string's bytes reach says so — forty-four, `bytes_extend`'s source and
 `host`'s four readers among them, each one the new compiler refuses plain and
-none written through — re-spelled at the OLD pin first, which saw no
-difference in any file (TM-258); and a parser takes `fixed uint8[]` (`SAFETY.md`
+none written through — thirty-nine of them re-spelled at the OLD pin first,
+which saw no difference in any file (TM-258), and the five results once it
+had moved *(it said all forty-four until cycle 0.3.3 — 0.3.2a's verifier)*;
+and a parser takes `fixed uint8[]` (`SAFETY.md`
 S-22's note). **Then the pin's own moves** (TM-259): LLVM 20.1.8, the
 compiler's since its D-349; five functions return the view, a position
 `5fbaf4a` read as meaning nothing; the self-check's cases 2 and 3 read a refusal
@@ -1009,11 +1011,14 @@ src/       the library, Nitpick only, layered per meta/specs/BUILD.md §6
   zone/      the GENERATED tz tables and the offset lookup
   fmt/       formatting and parsing, and the typed layout
   host/      THE ONLY IMPURE MODULE — five functions, nothing else
-tests/     probe, conformance, unit, golden, rejection, fixtures
+tests/     probe, conformance, unit, golden, rejection, fixtures, and since
+           cycle 0.3.3 double -- the test host (HOST.md H-9 ... H-11)
 harness/   the Python build and test runner, until npkg can
 tools/     generators — the civil cross-oracle's corpus since cycle 0.1.4, the
            tzdb tables at 0.5; everything they emit is committed
-examples/  runnable demonstrations, built and run by the harness
+examples/  runnable demonstrations: cycle 1.0.3's -- nothing yet, and no
+           harness stage (it said "built and run by the harness" until cycle
+           0.3.3, the documents audit's TA-7)
 docs/      user-facing documentation, written at cycle 1.0
 meta/      specs, decisions, open questions, the roadmap, research
 .internal/ gitignored scratch — never commit anything from here

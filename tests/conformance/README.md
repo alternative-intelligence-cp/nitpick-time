@@ -20,17 +20,21 @@ until the compiler's DEF-5 landed, emitting IR that nothing could link
 |---|---|
 | `import.npk` | that the public surface is **importable** — not that it works |
 
-`import.npk` imports an umbrella that re-exports nothing, which is the point:
-it goes on compiling as names are added to `src/lib.npk`, and the day it does
-not, the surface changed incompatibly — a MAJOR version by TM-013, and better
-as a red run than as a discovery.
+`import.npk` imports the umbrella, which is the point: it goes on compiling as
+names are added to `src/lib.npk`, and the day it does not, the surface changed
+incompatibly — a MAJOR version by TM-013, and better as a red run than as a
+discovery. *(It said the umbrella "re-exports nothing" until cycle 0.3.3 — the
+documents audit's TA-3: true when it was written, at cycle 0.0.1; the umbrella
+re-exports 84 names <!-- [[sweep: lib_reexports=84]] --> since cycle 0.3.2,
+and the file's `failsafe` names their 13 arms <!-- [[sweep: arms_lib=13]] -->.)*
 
 **Measured at 0.0.1, pin `0dfddac`:** its emitted `.ll` is **845 282 bytes and
 byte-identical to `../probe/probe11d_floor_only.npk`'s** — the program that
 imports nothing at all. Both declare only `main` and `failsafe`, which are
 root-level and unqualified, so there is nothing for a module name to
-distinguish. Two things follow. First, **importing `ntime` today costs a
-consumer exactly nothing**: no arms beyond `SAFETY.md` S-4b's floor of four
+distinguish. Two things follow. First, **importing `ntime` cost a consumer
+exactly nothing at 0.0.1** *("today" until cycle 0.3.3, TA-3)*: no arms beyond
+`SAFETY.md` S-4b's floor of four
 (removing any one is `NITPICK-REACH-002`, checked), and no bytes. *(The floor is
 six at compiler `c3bdae2` — `StackExhausted` and `MachineFault` joined it — and
 `import.npk`'s own header carries its bill at every pin since.)* Second, the

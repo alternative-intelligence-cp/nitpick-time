@@ -54,6 +54,10 @@ this cycle **publishes** it rather than deciding it.
       system tzdb at 1.0
 
 ### 1.0.3 — examples
+*(Dated at cycle 0.3.3, the early ecosystem audit's E2-6: the two consumers
+are `nitpick-posix`'s programs, TM-103, and not this repository's examples;
+"the two consumers" below, and this subcycle's row, are its planner's to
+restate.)*
 - [ ] one per format, minimal
 - [ ] the two consumers from 0.7.4, tidied
 - [ ] an example of the DST-edge resolution modes, because it is the API most

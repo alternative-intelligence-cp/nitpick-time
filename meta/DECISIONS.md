@@ -6596,6 +6596,7 @@ alone — no specification names one, a nanosecond count spans ±292 years and i
 > **Read with TM-259 (2026-10-09, cycle 0.3.2a).** `probe21`'s literal is one
 > report since compiler `7e91730`, its DEF-165, and its header names the code
 > once. The text below is left exactly as written.
+>
 > **TM-243 (2026-10-02, cycle 0.2.4b) reads one clause of it:** *"M-3's 'in
 > either direction, ever' holds against everything a consumer can write but the
 > `wild` opt-out"* — a consumer builds an `Instant` from a `Timestamp`'s numbers

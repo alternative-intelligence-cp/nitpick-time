@@ -192,7 +192,7 @@ wrong**, so every site is enumerated and each carries a `prove` obligation
 | `duration_weeks(n)` | `n × 7 × 86 400 × 10⁹` overflows `int64` past ±15 250 weeks | as `duration_days`' | no |
 | `instant_since(later, earlier)` | `later.ns − earlier.ns` overflows `int64` for two readings `instant_of` builds | computed in `int128` (M-20), checked against `Duration`'s range and narrowed once; past it, `ETimeValue`/`Overflow` | **yes** |
 | `instant_add(t, d)` | `t.ns + d.ns` overflows `int64` 292 years from the clock's origin | D-210 traps; `never fails`, and the trap is the range check — a deadline's arithmetic (`TIME_MODEL.md` M-4, §9) | no |
-| `timestamp_add(t, d)` | `secs + d.ns / 10⁹` leaves the supported range | checked, `ETimeValue`/`Overflow` | no |
+| `timestamp_add(t, d)` | `secs + d.ns / 10⁹` leaves the supported range | checked, `ETimeValue`/`YearRange` | no |
 | `timestamp_since(a, b)` | difference exceeds `Duration`'s ±292 y | computed in `int128` (M-20), checked against `Duration`'s range and narrowed once; past it, `ETimeValue`/`Overflow` (M-18) | **yes** |
 | `timestamp_to_utc` | `secs × 10⁹` for the nanosecond field | never computed — the seconds and nanos are kept apart, which is why `Timestamp` is a pair and not an `int64` of nanoseconds | no |
 | `civil_to_utc(c)` | `days × 86 400 + sod` | none — a day number from any `int32` year is at most 7.84 × 10¹¹ in magnitude (C-12), times 86 400 6.8 × 10¹⁶, and the second of the day at most 933 555 from three `uint8`s; `timestamp_of` checks the sum | no |
@@ -213,7 +213,9 @@ is `timestamp_to_utc` since cycle 0.2.2, TM-222.)* *(Cycle 0.2.3, TM-234:
 `timestamp_add`'s check is `timestamp_of`'s, relayed, so the detail its
 refusal would carry, when O-X8 delivers one, is `YearRange` — the range's own
 name for a `secs` outside it; `Overflow` is `timestamp_since`'s, where
-`Duration` cannot hold the answer.)*
+`Duration` cannot hold the answer.)* *(Cycle 0.3.3, the documents audit's
+TA-6: `timestamp_add`'s row read "checked, `ETimeValue`/`Overflow`" after
+that note; its cell names `YearRange` since.)*
 
 *(Cycle 0.2.4b, TM-241 and TM-242 — the cycle audit's C1, C6 and C7.
 `timestamp_add` checks its OPERAND first, `t.secs` against the range, so the

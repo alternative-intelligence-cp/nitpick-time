@@ -19,7 +19,9 @@ settled.
 **Open questions to settle:** Q-4 — the dogfood consumers. Recommendation on
 file: a `date`-equivalent CLI **and** a small scheduler, because the CLI
 exercises formatting breadth and the scheduler exercises DST edges, which is
-where a date library is actually wrong.
+where a date library is actually wrong. *(Settled 2026-09-03 as recommended,
+TM-103 and TM-104 — the programs in `nitpick-posix`, as the note at this
+file's head says; dated at cycle 0.3.3, beside E2-6.)*
 
 ## Subcycles
 

@@ -200,10 +200,16 @@ Detailed in [`CALENDAR.md`](CALENDAR.md); named here because the model needs
 them:
 
 ```nitpick
-pub struct:CivilDate     = { int32:year; uint8:month; uint8:day; };
-pub struct:CivilTime     = { uint8:hour; uint8:minute; uint8:second; uint32:nanos; };
+pub struct:CivilDate     = { sealed int32:year; sealed uint8:month; sealed uint8:day; };
+pub struct:CivilTime     = { sealed uint8:hour; sealed uint8:minute; sealed uint8:second; sealed uint32:nanos; };
 pub struct:CivilDateTime = { CivilDate:date; CivilTime:time; };
 ```
+
+*(Amended at cycle 0.3.3 — the documents audit's TA-5 — to what cycle 0.1.0c
+made the two validated types, TM-157 and `CALENDAR.md` C-8c, whose block this
+one names: every field `sealed`. Until then it read `{ int32:year;
+uint8:month; uint8:day; }` and `{ uint8:hour; uint8:minute; uint8:second;
+uint32:nanos; }` — the same fields, in the same order.)*
 
 **Rule M-9 — a `CivilDateTime` is not a point in time.** `2026-03-29T02:30:00`
 does not exist in `Europe/London` and happens twice in `Europe/London` in

@@ -115,6 +115,9 @@ func:main = int32(cstring[]:_~argv) {
 // again. What still grows, one per module that declares and RAISES an
 // identity, is the identity half -- `ETimeParse` at 0.4 and `ETimeZone` at 0.3
 // are the two remaining, and this file is where each will first show.
+// (`ETimeZone` is cycle 0.6's since cycle 0.3.2, TM-256: `host` raises
+// nothing, and the lookup that refuses a name, `zone_by_name`, is 0.6's --
+// dated at cycle 0.3.3, the documents audit's TA-3.)
 //
 // MEASURED, NOT PREDICTED. `check_failsafe_arms` reads `NITPICK-REACH-003`'s
 // own list on every run and diffs it against the set computed from source in

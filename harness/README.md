@@ -538,8 +538,10 @@ at 36, every heap figure — but the library's IR, **374 606 B** where it was
 366 527 B, and the instances' 79 007 B where they were 78 317 B: a type id one
 higher, the prelude's six frac sites, and the derived `Debug` bodies' template
 drops. The unchanged tree had stopped at the toolchain check, and with its
-LLVM row moved at the self-check and then at 35 units, landing 103's readers
-and five headers' counts (`meta/roadmap/0.3/0.3.2a.md` §1). A full invocation
+LLVM row moved at the self-check and then, past it, at 33 of its 143 units —
+35 failures, with the library's build and `check_failsafe_arms` — landing
+103's readers and five headers' counts (`meta/roadmap/0.3/0.3.2a.md` §1).
+*(It said "at 35 units" until cycle 0.3.3 — 0.3.2a's verifier.)* A full invocation
 about 230 s at either pin.
 
 The floor under all of it is still TM-117's: every root re-emits the prelude,

@@ -150,8 +150,11 @@ and not the bill.)*
 
 ## What it will provide
 
-The **calendar** row exists since cycle 0.1; every other row is a later cycle
-of [`meta/roadmap/ROADMAP.md`](meta/roadmap/ROADMAP.md).
+The **calendar** row exists since cycle 0.1, **instants** and the `Duration`
+half of **spans** since cycle 0.2, and **host** since cycle 0.3; `Period`,
+**zones**, **formatting** and **parsing** are later cycles of
+[`meta/roadmap/ROADMAP.md`](meta/roadmap/ROADMAP.md). *(It said "every other
+row is a later cycle" until cycle 0.3.3 — the documents audit's TA-2.)*
 
 | Layer | Contents |
 |---|---|
@@ -161,7 +164,7 @@ of [`meta/roadmap/ROADMAP.md`](meta/roadmap/ROADMAP.md).
 | **zones** | the compiled-in IANA database, offset lookup, DST transitions, and explicit answers for ambiguous and nonexistent local times |
 | **formatting** | RFC 3339, ISO 8601 (date, time, week date, ordinal date), RFC 5322, HTTP-date — as named functions, plus a **typed** layout for custom formats. There is no format-specifier language |
 | **parsing** | the same formats in reverse, with a stated leniency policy and a round trip that is a fixed point |
-| **host** | the one impure module: `clock_gettime` for the three clocks, and the system-zone discovery a program has to ask for |
+| **host** | the one impure module: the realtime and boot clocks through `clock_gettime` and the monotonic one through the floor's `mono_now()` (`meta/specs/HOST.md` H-5), each clock's resolution through `clock_getres`, and the system-zone discovery a program has to ask for — and, in `tests/`, its double *(this row said "`clock_gettime` for the three clocks" until cycle 0.3.3 — the documents audit's TA-2)* |
 
 ---
 
@@ -175,8 +178,8 @@ src/          # THE LIBRARY — Nitpick source only
   zone/       #   the GENERATED time-zone tables and the offset lookup
   fmt/        #   formatting and parsing, and the typed layout
   host/       #   the only module that asks the machine anything
-tests/        # probe, conformance, unit, golden, rejection, fixtures
-examples/     # runnable demonstrations, built and run by the harness
+tests/        # probe, conformance, unit, golden, rejection, fixtures, double
+examples/     # runnable demonstrations: cycle 1.0.3's -- nothing yet, and no harness stage
 harness/      # the Python build and test runner, until `npkg` can build a library
 tools/        # generators — the civil cross-oracle's corpus since cycle 0.1.4, the tzdb
               # tables from cycle 0.5; everything they emit is committed

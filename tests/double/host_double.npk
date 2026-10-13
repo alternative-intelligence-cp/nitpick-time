@@ -1,0 +1,362 @@
+// THE TEST HOST -- cycle 0.3.3 (`meta/roadmap/0.3/0.3.3.md`; TM-260 ...
+// TM-262). Governed by `meta/specs/HOST.md` H-9 ... H-11, as TM-261 reads
+// them.
+//
+// ============================ WHAT THIS FILE IS ============================
+// `src/host/` is the only module of `ntime` a test needs a double for (H-9):
+// every other module is a pure function of its arguments, and is tested with
+// no double at all (H-11). This is that double, and it lives in `tests/`,
+// never in `src/` (H-10): nothing the library ships branches on it.
+//
+// THE DOUBLE IS A VALUE, AND THE SUBSTITUTION A TYPE (TM-261). A double whose
+// setters take no handle -- H-9's three as cycle 0.0 drafted them,
+// `fake_set_utc = NIL(Timestamp:t)` and its siblings -- has nowhere to keep a
+// reading between two calls, because no module storage is writable at the
+// pin. The forms measured are `0.3.3.md` §1.2's: a plain module binding with
+// an initialiser is `NITPICK-TYPE-055` (the compiler's D-211, "keep mutable
+// process state in `main`'s scope where it flows through the calls that need
+// it"), a write into a part of a `fixed` one `NITPICK-TYPE-086`, and an
+// initialiser that calls `NITPICK-TYPE-035`; and one with no initialiser
+// compiles as a read-only zero, whose plain write ends the program at -O0
+// and is dropped at -O2 -- the legs disagreeing, a compiler-defect candidate
+// raised to the compiler's seat, and nothing here relies on it.
+// And there is no `host` object to link in `host`'s place: `npkc` compiles
+// the whole graph a root reaches (TM-117) and maps no path to another. So:
+//
+//   `HostReadings`  THE SEAM: `HOST.md` H-1's five readings as methods, each
+//                   named without its `host_` prefix, with H-1's result and
+//                   `never fails` where H-1 says it -- the receiver the one
+//                   parameter added. A clock-dependent function takes
+//                   `<H: HostReadings>`, and is instantiated with the
+//                   machine's host in a program and with the double in a
+//                   test: a substitution made at build time, statically.
+//   `MachineHost`   THE MACHINE'S HOST, behind the seam: each method is one
+//                   call of `src/host/`'s, and it holds nothing (H-3).
+//   `FakeHost`      THE DOUBLE: readings the test sets, through H-9's three
+//                   setters and the zone's -- each taking the double it sets
+//                   -- and every other answer H-1's signatures allow: a
+//                   realtime reading as the kernel hands it, a resolution
+//                   for each clock, and a refusal of each fallible reading
+//                   with the identity the test hands it.
+//   `SteppedHost`   A DOUBLE WHOSE READINGS CHANGE PER CALL: it reads the
+//                   `FakeHost` it points to, and after each reading runs a
+//                   step the test chooses -- `FakeTick`, an advance per
+//                   reading, or a `FakeStep` of the test's own.
+//
+// WHAT IT CANNOT DO: test `host` (TM-249). It stands beside `host`, not in
+// it, so `host`'s syscalls and its own refusals are `host`'s units' to see;
+// what reaches a caller from them -- a refusal, its identity, and every value
+// -- the double answers when it is told to.
+//
+// WHAT IT MAY IMPORT: what `host` may (`BUILD.md` B-17's row), and `host`
+// itself, whose types the readings return and whose functions the machine's
+// side calls; `check_layering` holds it to that (TM-260).
+//
+// WHAT IT COSTS: a root that imports it owes `host`'s eleven identities and
+// no more, measured -- `cal.ETimeValue`, the floor of six and the four
+// arithmetic arms (`SAFETY.md` S-4). A refusal it is handed is forwarded as
+// `host` forwards the kernel's errno, a dynamic operand, which arms nothing.
+// ===========================================================================
+mod:host_double;
+
+use "../../src/host/host.npk".*;
+use "../../src/span/span.npk".Instant;
+use "../../src/span/span.npk".InstantClock;
+use "../../src/span/span.npk".Timestamp;
+use "../../src/span/span.npk".instant_of;
+use "../../src/span/span.npk".instant_add;
+use "../../src/span/span.npk".timestamp_of;
+use "../../src/core/limits.npk".NTIME_NANOS_PER_SEC;
+
+// THE SEAM (TM-261): `HOST.md` H-1's five readings, in H-1's order.
+pub trait:HostReadings = {
+    func:now_utc     = Timestamp(Self:self);
+    func:now_instant = Instant(Self:self) never fails;
+    func:now_boot    = Instant(Self:self);
+    func:clock_res   = Duration(Self:self, HostClock:which);
+    func:system_zone = SystemZone(Self:self) never fails;
+};
+
+// THE MACHINE'S HOST. `host` keeps no state (H-3), and neither does this: its
+// one field is there because a struct literal needs one.
+pub struct:MachineHost = { bool:machine; };
+
+pub func:machine_host = MachineHost() never fails {
+    pass MachineHost{ machine: true };
+};
+
+impl:MachineHost:HostReadings = {
+    func:now_utc = Timestamp(MachineHost:self) {
+        pass (relay host_now_utc());
+    };
+    func:now_instant = Instant(MachineHost:self) never fails {
+        pass raw host_now_instant();
+    };
+    func:now_boot = Instant(MachineHost:self) {
+        pass (relay host_now_boot());
+    };
+    func:clock_res = Duration(MachineHost:self, HostClock:which) {
+        pass (relay host_clock_res(which));
+    };
+    func:system_zone = SystemZone(MachineHost:self) never fails {
+        pass raw host_system_zone();
+    };
+};
+
+// THE DOUBLE. Its fields are `hidden`, so a test reads it as it reads the
+// machine -- through the seam -- and writes it through the setters alone.
+// The realtime clock is held as the kernel hands it, a `timespec`'s two
+// fields, and read through `timestamp_of` as `host_now_utc` reads the
+// kernel's: a reading outside the range is `ETimeValue`, H-8's refusal, so a
+// test can show its caller meeting it. Each clock's resolution is held in
+// nanoseconds, and each fallible reading's refusal, when it has one, is the
+// identity a test handed it.
+pub struct:FakeHost = {
+    hidden int64:utc_secs;
+    hidden int64:utc_nanos;
+    hidden Instant:mono;
+    hidden Instant:boot;
+    hidden string:zone_name;
+    hidden ZoneSource:zone_source;
+    hidden int64:res_realtime;
+    hidden int64:res_monotonic;
+    hidden int64:res_boottime;
+    hidden Error?:utc_refusal;
+    hidden Error?:boot_refusal;
+    hidden Error?:res_realtime_refusal;
+    hidden Error?:res_monotonic_refusal;
+    hidden Error?:res_boottime_refusal;
+};
+
+// THE FIXED START: the epoch, both instants at 0 ns, no zone, every clock's
+// resolution 1 ns -- the machine's for all three (H-4's note) -- and nothing
+// refused: the reading of a machine nobody has set, every clock reading a
+// value no real machine gives, so a test that forgot a setter reads
+// something it can see.
+pub func:fake_host = FakeHost() never fails {
+    pass FakeHost{ utc_secs: 0i64, utc_nanos: 0i64,
+                   mono: raw instant_of(0i64, InstantClock.Monotonic),
+                   boot: raw instant_of(0i64, InstantClock.Boottime),
+                   zone_name: "", zone_source: ZoneSource.NotFound,
+                   res_realtime: 1i64, res_monotonic: 1i64, res_boottime: 1i64,
+                   utc_refusal: NIL, boot_refusal: NIL, res_realtime_refusal: NIL,
+                   res_monotonic_refusal: NIL, res_boottime_refusal: NIL };
+};
+
+// H-9's first setter: the realtime clock reads `t` until something moves it,
+// and a refusal of it is lifted. The instants are untouched -- a wall clock
+// set by hand, or stepped, moves no monotonic reading.
+pub func:fake_set_utc = NIL(FakeHost->:h, Timestamp:t) never fails {
+    h.utc_secs = t.secs;
+    h.utc_nanos = t.nanos => int64;
+    h.utc_refusal = NIL;
+    pass NIL;
+};
+
+// The realtime clock as the kernel would hand it -- a `timespec`'s two fields,
+// unchecked -- and a refusal of it lifted. It is read through `timestamp_of`,
+// as `host_now_utc` reads the kernel's, so a second outside the range
+// (`YearRange`) or a nanosecond field outside one second (`NanoRange`) is
+// refused where it is read: H-8's two refusals, each reached as `host`
+// reaches it.
+pub func:fake_set_utc_raw = NIL(FakeHost->:h, int64:secs, int64:nanos) never fails {
+    h.utc_secs = secs;
+    h.utc_nanos = nanos;
+    h.utc_refusal = NIL;
+    pass NIL;
+};
+
+// H-9's second: the clock `i` names reads `i` -- the monotonic one or the
+// boot one -- and the other is untouched, so a suspend, which the boot clock
+// counts and the monotonic does not, is one call. Setting the boot clock
+// lifts a refusal of it; the monotonic one, `never fails` (H-1), has none.
+pub func:fake_set_instant = NIL(FakeHost->:h, Instant:i) never fails {
+    pick (i.clock) {
+        (InstantClock.Monotonic) { h.mono = i; },
+        (InstantClock.Boottime)  { h.boot = i; h.boot_refusal = NIL; }
+    }
+    pass NIL;
+};
+
+// H-9's third: `d` passes on every clock. The instants by `instant_add`,
+// which keeps each one's clock and traps past an `int64` of nanoseconds
+// (`SAFETY.md` S-12); the realtime pair by `d`'s seconds and the remainder,
+// and one borrow or one carry, as `timestamp_add` moves a `Timestamp` -- but
+// never refused here: a reading past the range is held, and refused where it
+// is read. A negative `d` moves every clock back, which a machine's monotonic
+// clock never does; the double does what its test writes. A refusal stays:
+// time passing sets no reading.
+pub func:fake_advance = NIL(FakeHost->:h, Duration:d) never fails {
+    h.mono = raw instant_add(h.mono, d);
+    h.boot = raw instant_add(h.boot, d);
+    int64:secs = h.utc_secs + (d.ns / NTIME_NANOS_PER_SEC);
+    int64:nanos = h.utc_nanos + (d.ns % NTIME_NANOS_PER_SEC);
+    if (nanos < 0i64) {                              // `%` kept `d`'s sign: borrow
+        secs = secs - 1i64;
+        nanos = nanos + NTIME_NANOS_PER_SEC;
+    }
+    if (nanos >= NTIME_NANOS_PER_SEC) {              // past a second: carry
+        secs = secs + 1i64;
+        nanos = nanos - NTIME_NANOS_PER_SEC;
+    }
+    h.utc_secs = secs;
+    h.utc_nanos = nanos;
+    pass NIL;
+};
+
+// THE ZONE'S SETTER -- beside H-9's three, because H-1's fifth reading is the
+// zone the machine names (cycle 0.3.2's question, answered by TM-261). The
+// name is copied, so the double owns what it answers; the reading answers a
+// copy of it in turn.
+pub func:fake_set_zone = NIL(FakeHost->:h, string:name, ZoneSource:source) never fails {
+    h.zone_name = string_slice(name, 0i64, string_byte_length(name)) ?| #unreachable();
+    h.zone_source = source;
+    pass NIL;
+};
+
+// THE RESOLUTION'S SETTER: the clock `which` names answers `d` for its
+// resolution -- a coarse clock's, or any other -- and a refusal of it is
+// lifted; the other two clocks are untouched.
+pub func:fake_set_res = NIL(FakeHost->:h, HostClock:which, Duration:d) never fails {
+    pick (which) {
+        (HostClock.Realtime)  { h.res_realtime = d.ns; h.res_realtime_refusal = NIL; },
+        (HostClock.Monotonic) { h.res_monotonic = d.ns; h.res_monotonic_refusal = NIL; },
+        (HostClock.Boottime)  { h.res_boottime = d.ns; h.res_boottime_refusal = NIL; }
+    }
+    pass NIL;
+};
+
+// THE REFUSALS. Each fallible reading H-1 declares -- the realtime, the boot
+// clock, and each clock's resolution -- answers `e` from now on, forwarded
+// verbatim as `host` forwards the kernel's errno (`SAFETY.md` S-5) and relays
+// `ETimeValue` (H-8, and `timespec_ns`'s refusals of a boot reading or a
+// resolution): a test hands it a prelude errno -- `Interrupted`,
+// `WouldBlock`, `NotFound` -- or `cal.ETimeValue`, and the caller meets that
+// identity. A refusal holds until that reading is set again; time passing
+// sets nothing. The monotonic reading is `never fails` (H-1), and has none.
+pub func:fake_refuse_utc = NIL(FakeHost->:h, Error:e) never fails {
+    h.utc_refusal = e;
+    pass NIL;
+};
+
+pub func:fake_refuse_boot = NIL(FakeHost->:h, Error:e) never fails {
+    h.boot_refusal = e;
+    pass NIL;
+};
+
+pub func:fake_refuse_res = NIL(FakeHost->:h, HostClock:which, Error:e) never fails {
+    pick (which) {
+        (HostClock.Realtime)  { h.res_realtime_refusal = e; },
+        (HostClock.Monotonic) { h.res_monotonic_refusal = e; },
+        (HostClock.Boottime)  { h.res_boottime_refusal = e; }
+    }
+    pass NIL;
+};
+
+// THE DOUBLE'S READINGS, each built as `host` builds its own: a refusal the
+// test handed it first, as `host`'s forwarded errno comes before its
+// reading; the realtime through `timestamp_of`; the zone found unless its
+// source is `NotFound`, whose name is empty -- H-12's invariant, kept by the
+// reading whatever the setter was handed -- its name a copy, moved into the
+// answer as `host_system_zone`'s is; and each clock's resolution its own.
+// (`?? Unreachable` is never taken: each stands behind its `!= NIL`.)
+impl:FakeHost:HostReadings = {
+    func:now_utc = Timestamp(FakeHost:self) {
+        if (self.utc_refusal != NIL) { fail (self.utc_refusal ?? Unreachable); }
+        pass (relay timestamp_of(self.utc_secs, self.utc_nanos));
+    };
+    func:now_instant = Instant(FakeHost:self) never fails {
+        pass self.mono;
+    };
+    func:now_boot = Instant(FakeHost:self) {
+        if (self.boot_refusal != NIL) { fail (self.boot_refusal ?? Unreachable); }
+        pass self.boot;
+    };
+    func:clock_res = Duration(FakeHost:self, HostClock:which) {
+        pick (which) {
+            (HostClock.Realtime) {
+                if (self.res_realtime_refusal != NIL) { fail (self.res_realtime_refusal ?? Unreachable); }
+                pass raw duration_ns(self.res_realtime);
+            },
+            (HostClock.Monotonic) {
+                if (self.res_monotonic_refusal != NIL) { fail (self.res_monotonic_refusal ?? Unreachable); }
+                pass raw duration_ns(self.res_monotonic);
+            },
+            (HostClock.Boottime) {
+                if (self.res_boottime_refusal != NIL) { fail (self.res_boottime_refusal ?? Unreachable); }
+                pass raw duration_ns(self.res_boottime);
+            }
+        }
+    };
+    func:system_zone = SystemZone(FakeHost:self) never fails {
+        if (self.zone_source == ZoneSource.NotFound) {
+            pass SystemZone{ name: "", source: ZoneSource.NotFound, found: false };
+        }
+        string:name = string_slice(self.zone_name, 0i64, string_byte_length(self.zone_name)) ?| #unreachable();
+        pass SystemZone{ name: move(name), source: self.zone_source, found: true };
+    };
+};
+
+// A READING THAT CHANGES PER CALL. A `FakeHost`'s readings take it by loan
+// and cannot write it, so two readings with nothing set between them answer
+// the same; a clock-dependent function that reads twice in one call -- a
+// span it times, a deadline it waits for -- needs the clock to move between
+// them. `SteppedHost` holds a pointer to a `FakeHost` the test owns and a
+// step: each of its readings answers what that double answers, then runs the
+// step on it, so between any two readings the double moves however the step
+// moves it -- any setter, any refusal. A `FakeStep` is the test's to write;
+// `FakeTick` is the common one, an advance per reading.
+pub trait:FakeStep = {
+    func:between = NIL(Self:self, FakeHost->:h) never fails;
+};
+
+pub struct:SteppedHost<S: FakeStep> = {
+    hidden FakeHost->:fake;
+    hidden S:step;
+};
+
+pub func:stepped_host<S: FakeStep> = SteppedHost<S>(FakeHost->:h, move S:step) never fails {
+    pass SteppedHost{ fake: h, step: move(step) };
+};
+
+impl:<S: FakeStep>:SteppedHost<S>:HostReadings = {
+    func:now_utc = Timestamp(SteppedHost<S>:self) {
+        Result<Timestamp>:u = self.fake.now_utc();
+        drop self.step.between(self.fake);
+        if (u.is_error) { fail u.err; }
+        pass u.value;
+    };
+    func:now_instant = Instant(SteppedHost<S>:self) never fails {
+        Instant:i = raw self.fake.now_instant();
+        drop self.step.between(self.fake);
+        pass i;
+    };
+    func:now_boot = Instant(SteppedHost<S>:self) {
+        Result<Instant>:b = self.fake.now_boot();
+        drop self.step.between(self.fake);
+        if (b.is_error) { fail b.err; }
+        pass b.value;
+    };
+    func:clock_res = Duration(SteppedHost<S>:self, HostClock:which) {
+        Result<Duration>:r = self.fake.clock_res(which);
+        drop self.step.between(self.fake);
+        if (r.is_error) { fail r.err; }
+        pass r.value;
+    };
+    func:system_zone = SystemZone(SteppedHost<S>:self) never fails {
+        SystemZone:z = raw self.fake.system_zone();
+        drop self.step.between(self.fake);
+        pass z;
+    };
+};
+
+// AN ADVANCE PER READING: `d` passes on every clock after each reading, as
+// `fake_advance` moves them.
+pub struct:FakeTick = { Duration:d; };
+
+impl:FakeTick:FakeStep = {
+    func:between = NIL(FakeTick:self, FakeHost->:h) never fails {
+        drop fake_advance(h, self.d);
+        pass NIL;
+    };
+};

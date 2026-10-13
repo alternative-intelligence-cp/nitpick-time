@@ -182,6 +182,15 @@ EXPECT_EXEMPT = {
     "tests/probe/defect/fixed_import_scope/rows.npk": ("none",
         "O-N23's declaring module: the struct, table, scalar and function the "
         "directory's seven cases import; never run and never refused"),
+    # THE TEST HOST -- cycle 0.3.3 (TM-261). The double: the seam a
+    # clock-dependent function takes, the machine's `host` behind it and
+    # `FakeHost` beside it, imported by its three tests. No `main`, no
+    # `failsafe`, so no exit code and no diagnostic to expect, exactly as the
+    # support modules and the corpus above; its `none` is re-derived on every
+    # run (TM-137), so the day it grows a `main`, the harness says so.
+    "tests/double/host_double.npk": ("none",
+        "the test host: a module its three tests import, never run and never "
+        "refused (HOST.md H-9 ... H-11, TM-261)"),
 }
 
 # The directories a `.npk` may not live in and be missed: none. This walk is
@@ -636,10 +645,12 @@ def run_parse(rep, root, bld):
     """Every `.npk` in the tree in front of the real parser, each exactly once.
 
     THE DENOMINATOR IS THE WHOLE TREE AND THAT IS WHY THE STAGE IS WORTH ITS
-    COST. Re-measured at cycle 0.3.2: of the 159 `.npk` files
-    here [[sweep: npk_total=159]] the library build roots 7
-    [[sweep: lib_reach=7]], the suite roots 108 [[sweep: suite_roots=108]]
-    (127 and 77 from cycle 0.1.3c until `tests/unit/civil_total_edges.npk`
+    COST. Re-measured at cycle 0.3.3: of the 163 `.npk` files
+    here [[sweep: npk_total=163]] the library build roots 7
+    [[sweep: lib_reach=7]], the suite roots 111 [[sweep: suite_roots=111]]
+    (159 and 108 from cycle 0.3.2's third step until cycle 0.3.3 added the
+    double's three tests, two units and the `golden` stage's first member,
+    TM-262; 127 and 77 from cycle 0.1.3c until `tests/unit/civil_total_edges.npk`
     joined; 128 and 78 from then until cycle 0.2.0b retired the churn pair,
     TM-214; 126 and 76 until cycle 0.2.0 added `span`'s body to the
     library's reach and a unit and two probes to the suite; 130 and 79 until
@@ -654,8 +665,9 @@ def run_parse(rep, root, bld):
     its unit), and of the 4
     support modules [[sweep: support_total=4]] 3 are reached by `use` from
     a suite root -- and since cycle 0.1.4 so is the civil cross-oracle's
-    corpus, which only its member imports -- so 40 are put in front of the
-    compiler by NOTHING ELSE. Three of those are the remaining `src/`
+    corpus, which only its member imports, and since cycle 0.3.3 the double,
+    `tests/double/host_double.npk`, which its three tests import (TM-261) --
+    so 40 are put in front of the compiler by NOTHING ELSE. Three of those are the remaining `src/`
     placeholders, the layer note `src/core/core.npk` among them (four until
     cycle 0.3.0 gave `host/` a body, five until cycle 0.2.0 gave `span/`
     one); 36 are the reproductions under
@@ -666,7 +678,7 @@ def run_parse(rep, root, bld):
     a support module no suite root imports, which only its part C compiles
     (TM-217).
 
-        150 = 7 (library) + 99 (suite roots) + 3 + 1 (reached by `use`) + 40
+        163 = 7 (library) + 111 (suite roots) + 3 + 1 + 1 (reached by `use`) + 40
 
     (It read `116 = 5 + 66 + 3 + 1 + 41` from cycle 0.1.4c until cycle 0.1.3c
     added eleven suite roots -- seven probes and four unit tests -- and none
@@ -676,8 +688,12 @@ def run_parse(rep, root, bld):
     `130 = 6 + 79 + 3 + 1 + 41` until cycle 0.2.1;
     `138 = 6 + 87 + 3 + 1 + 41` until cycle 0.2.2;
     `142 = 6 + 91 + 3 + 1 + 41` until cycle 0.2.3;
-    `147 = 6 + 96 + 3 + 1 + 41` until cycle 0.2.4b; and
-    `149 = 6 + 98 + 3 + 1 + 41` until cycle 0.3.0.)
+    `147 = 6 + 96 + 3 + 1 + 41` until cycle 0.2.4b;
+    `149 = 6 + 98 + 3 + 1 + 41` until cycle 0.3.0; and
+    `150 = 7 + 99 + 3 + 1 + 40` from cycle 0.3.0 -- which this equation went
+    on reading through cycle 0.3.2's three steps, while the tagged sentence
+    moved to 159, 108 and 40, found at cycle 0.3.3's planning -- until the
+    double.)
 
     EVERY NUMBER IN THAT SENTENCE IS TAGGED AND CHECKED (TM-142). It read
     `50 = 1 + 27 + 3 + 19` until cycle 0.0.6, three subcycles after the tree

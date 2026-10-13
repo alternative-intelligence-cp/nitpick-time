@@ -209,6 +209,11 @@ allowlist, and the emission's names are `npk.<module>.<name>` as before.)*
 `check_purity` green **and seen to fail**, and every clock test green under
 `// stress: 40`.
 
+*(Cycle 0.3.3, TM-262: a clock test is a test of a `src/host/` function, as
+`TESTING.md` V-11 reads since; the double's two tests that read no clock are
+not, and `tests/unit/double_substitution.npk`, which reads the machine through
+the seam, is.)*
+
 ## Watch for
 
 - **This module is the only place `ntime` can be non-deterministic**, so it is

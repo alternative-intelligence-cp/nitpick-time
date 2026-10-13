@@ -15,7 +15,7 @@ buffer, decided here against the benchmark rather than in advance.
 | # | Topic | Ends with |
 |---|---|---|
 | 0.8.0 | **The fuzz sweep** — every parser, to exhaustion | a hundred million inputs clean |
-| 0.8.1 | **The stress sweep** — `// stress: 40` on everything that reads a clock | forty runs, the same answer |
+| 0.8.1 | **The stress sweep** — `// stress: 40` on everything that reads a clock *(on every test of a `src/host/` function, as `TESTING.md` V-11 reads since cycle 0.3.3, TM-262)* | forty runs, the same answer |
 | 0.8.2 | **Benchmarks** — the six, with committed baselines and the regression gate | numbers, and O-X4 decided |
 | 0.8.3 | **The verification reconciliation** — the obligation list against the code | an obligation list that is true |
 | 0.8.4 | **The audit** — every specification rule against its implementation | a findings list, and the specs corrected |

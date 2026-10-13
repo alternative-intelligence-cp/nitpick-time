@@ -1,0 +1,9 @@
+start: 2025-10-12 12:00:00.000000000 UTC | monotonic +0.000000000 s | boot +0.000000000 s | no zone
+again: 2025-10-12 12:00:00.000000000 UTC | monotonic +0.000000000 s | boot +0.000000000 s | no zone
+1.5 s on: 2025-10-12 12:00:01.500000000 UTC | monotonic +1.500000000 s | boot +1.500000000 s | no zone
+TZ set: 2025-10-12 12:00:01.500000000 UTC | monotonic +1.500000000 s | boot +1.500000000 s | zone Europe/Kyiv (TzEnvironment)
+the wall clock stepped back an hour: 2025-10-12 11:00:01.500000000 UTC | monotonic +1.500000000 s | boot +1.500000000 s | zone Europe/Kyiv (TzEnvironment)
+a suspend of a minute: 2025-10-12 11:00:01.500000000 UTC | monotonic +1.500000000 s | boot +61.500000000 s | zone Europe/Kyiv (TzEnvironment)
+0.25 s on: 2025-10-12 11:00:01.750000000 UTC | monotonic +1.750000000 s | boot +61.750000000 s | zone Europe/Kyiv (TzEnvironment)
+the range's last nanosecond: 9999-12-31 23:59:59.999999999 UTC | monotonic +1.750000000 s | boot +61.750000000 s | zone Europe/Kyiv (TzEnvironment)
+one nanosecond past it: the wall clock refused: outside the calendar's range | monotonic +1.750000001 s | boot +61.750000001 s | zone Europe/Kyiv (TzEnvironment)

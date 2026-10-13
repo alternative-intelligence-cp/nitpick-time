@@ -7940,6 +7940,10 @@ reading** — the author's answer is A, and Q-7 records why: no name closes the
 reverse direction.
 
 ### TM-249 — `tests/unit/host_clocks.npk`, `// stress: 40`: each reading asserted where a test can see it — its clock, its range, and its ADVANCE, H-3's "two calls are two syscalls" made observable — and the four mutants no test can see named where a reader looks
+> **Read with TM-261 (2026-10-13, cycle 0.3.3).** The double does not replace
+> `host`: it stands beside it, a value a clock-dependent function is handed in
+> `host`'s place, so what this decision says of it holds the more — it cannot
+> test `host`'s own refusals. The text below is left exactly as written.
 
 **2026-10-08, cycle 0.3.0 (the plan's PD-94). Dates `HOST.md` H-3.**
 
@@ -8383,6 +8387,11 @@ workbench and in CI alike, and a step of CI's own lifts what the runner
 restricts.
 
 ### TM-256 — the system zone: `host_system_zone = SystemZone() never fails` answers the zone's NAME and the mechanism that gave it — `SystemZone = { string:name; ZoneSource:source; bool:found; }`, `ZoneSource = { TzEnvironment; EtcLocaltime; EtcTimezone; NotFound; }` — by H-13's four steps, each made exact, and the lookup is the caller's
+> **Read with TM-261 (2026-10-13, cycle 0.3.3).** The double reproduces H-1's five
+> signatures as the five methods of its seam, `HostReadings`, each with H-1's
+> result and `never fails` where H-1 says it, the receiver the one parameter
+> added: a function of no parameters cannot read a double the language lets
+> live nowhere but in its caller. The text below is left exactly as written.
 
 **2026-10-08, cycle 0.3.2 (the plan's PD-101) — the author's decision: his answer
 to the workbench's question 26, 2026-10-08 — "i read the recommendations. they
@@ -8737,3 +8746,204 @@ rule is `host`'s, and B-17 draws that arrow for `host`, which takes none
 (TM-256), as the double takes none; **the double's imports held by review** —
 two plans handed the check on, and three plants show what review would have to
 see.
+
+### TM-261 — the double is a value, and the substitution a type: `tests/double/host_double.npk` declares `HostReadings`, H-1's five readings as a trait, the machine's `host` behind it and `FakeHost` beside it; H-9's setters take the double they set, and a clock-dependent function is generic over the seam
+
+**2026-10-13, cycle 0.3.3 (the plan's PD-111). Amends `HOST.md` H-9 and H-10
+by dated notes; marks TM-249 and TM-256, the two decisions that named the
+double; answers cycle 0.3.2's question whether the double needs a setter for
+the zone (`0.3.2.md` §7): it does, `fake_set_zone`.**
+
+**What was found** (`0.3.3.md` §1), at compiler `7e91730`. (1) H-9's three
+setters — `fake_set_utc = NIL(Timestamp:t) never fails` and its two siblings
+— set a reading a later call reads back, and nothing a module declares keeps
+one between two calls: no form measured (`0.3.3.md` §1.2 names each) makes
+module storage writable. Among them, a plain module-level binding with an
+initialiser is `NITPICK-TYPE-055` (the compiler's D-211: *"module state is
+`fixed` … keep mutable process state in `main`'s scope where it flows through
+the calls that need it"*), a write into a part of a `fixed` one
+`NITPICK-TYPE-086` (D-287), an initialiser that calls `NITPICK-TYPE-035`
+(D-165), and a `fixed atomic<int64>` takes no initialiser at all —
+`NITPICK-ASSIGN-001` with none, `NITPICK-TYPE-007` with a literal. A binding
+with NO initialiser is not refused: it is emitted as a read-only constant
+zero, and a plain write to it ends the program at -O0 and is dropped at -O2,
+the legs disagreeing — a compiler-defect candidate raised to the compiler's
+seat at this planning, on which nothing here relies. The compiler's own double
+that needs state, its schedule explorer's shim, is hand-written IR for that
+reason (D-298: *"the language will not gain mutable module state for a test
+harness's sake"*). (2) H-10's *"the harness
+links whichever `host` object it was told to"*: there is no `host` object.
+`npkc` compiles the whole graph a root reaches (TM-117), and takes one root
+and no flag that maps a path or a root to another file — its usage line at the
+pin, and an unknown flag exits 2 — so a `use` line names one file, always.
+(3) What does compile and run, both legs: a trait whose five methods are H-1's
+readings, implemented by a struct whose methods call `host`'s and by a struct
+that holds readings; a function bounded by the trait, instantiated with both
+in one program; setters taking the struct by pointer. A root importing it owes
+`host`'s eleven identities and no more. (4) The double as first drafted gave
+a caller of the seam fewer answers than `host` gives one — no kernel errno,
+which `host_now_utc`, `host_now_boot` and `host_clock_res` forward (S-5); no
+refusal of a boot reading or a resolution, which `timespec_ns` makes; no
+nanosecond field outside one second, which `timestamp_of` refuses
+(`NanoRange`); no resolution but 1 ns; and no reading that moves between two
+readings of one call — against the cycle README's *"every clock-dependent
+behaviour reproducible"*, the plan's second verification found. What compiles
+and runs, both legs: an `Error?` field a reading fails with, a dynamic
+operand that arms nothing; and a struct holding a pointer to the double, whose
+readings, taking that struct by loan, write the double through it.
+
+**The decision.** *The double is a value, and the substitution a type.
+`tests/double/host_double.npk`, `mod:host_double`, declares the seam,
+`pub trait:HostReadings` — H-1's five readings, each named without its
+`host_` prefix: `now_utc = Timestamp(Self:self)`, `now_instant =
+Instant(Self:self) never fails`, `now_boot = Instant(Self:self)`, `clock_res =
+Duration(Self:self, HostClock:which)` and `system_zone = SystemZone(Self:self)
+never fails`, H-1's results and `never fails` where H-1 says it, the receiver
+the one parameter added, and `host`'s own `HostClock`, `SystemZone` and
+`ZoneSource`; `MachineHost` and `machine_host()`, the machine's host behind
+it, each method one call of `host`'s; and `FakeHost` and `fake_host()`, the
+double — its fields `hidden`, so a test reads it through the seam, as it reads
+the machine: the realtime clock as the kernel hands it, seconds and
+nanoseconds, the monotonic and boot readings, and the zone's name and source;
+its start the epoch, both instants at 0 ns and no zone. H-9's three setters
+take the double they set — `fake_set_utc = NIL(FakeHost->:h, Timestamp:t)
+never fails`; `fake_set_instant = NIL(FakeHost->:h, Instant:i) never fails`,
+which sets the clock `i` names and no other; `fake_advance = NIL(FakeHost->:h,
+Duration:d) never fails`, which moves every clock by `d`, the instants by
+`instant_add` and the realtime pair by `d`'s seconds and remainder and one
+borrow or carry — and `fake_set_zone = NIL(FakeHost->:h, string:name,
+ZoneSource:source) never fails` sets the fifth reading, a copy of the name.
+**Every other answer `host` gives a caller is a setter's too**:
+`fake_set_utc_raw = NIL(FakeHost->:h, int64:secs, int64:nanos) never fails`,
+the realtime as the kernel would hand it, unchecked, so a second outside the
+range or a nanosecond field outside one second is refused where it is read,
+`YearRange` or `NanoRange`, as `host_now_utc` refuses the kernel's;
+`fake_set_res = NIL(FakeHost->:h, HostClock:which, Duration:d) never fails`,
+each clock's resolution, 1 ns at the start, the machine's for all three (H-4's
+note); and `fake_refuse_utc` and `fake_refuse_boot`, `NIL(FakeHost->:h,
+Error:e) never fails`, and `fake_refuse_res = NIL(FakeHost->:h,
+HostClock:which, Error:e) never fails`, each fallible reading refused with
+`e` from then on, forwarded verbatim as `host` forwards the kernel's errno
+(S-5) and relays `ETimeValue` — a prelude errno a test names, or
+`ETimeValue` for `timespec_ns`'s refusals — until that reading is set again;
+time passing sets nothing, and the monotonic reading, `never fails`, has no
+refusal. **And a reading that changes per call**: `SteppedHost<S: FakeStep>`,
+made by `stepped_host = SteppedHost<S>(FakeHost->:h, move S:step) never
+fails`, holds a pointer to a `FakeHost` the test owns and answers each of the
+five readings as that double answers it, then runs `S`'s `between = NIL(Self:self,
+FakeHost->:h) never fails` on it — `FakeTick`, an advance per reading, or a
+step the test writes — so between any two readings of one call the double
+moves however a test sets it, a suspend, a refusal or a step back among them.
+`FakeHost`'s readings are built as `host` builds its own: a refusal it was
+handed first, as `host`'s forwarded errno comes before its reading; the
+realtime through `timestamp_of`, so a reading past the range is `ETimeValue`,
+H-8's refusal, where its caller reads it; the zone found unless its source is
+`NotFound`, whose name is then empty — H-12's invariant, kept by the reading —
+its name a copy moved into the answer; and each clock's resolution its own.
+So every answer H-1's five signatures let a caller meet is one a test sets
+(`0.3.3.md` §1.4b). A clock-dependent function takes
+`<H: HostReadings>`, and is instantiated with `MachineHost` in a program and
+`FakeHost` in a test: a build-time substitution, statically dispatched, and no
+runtime flag. Nothing in `src/` changes; H-1's five functions and H-11 stand
+as written. What the double cannot do is test `host` (TM-249): it stands
+beside `host`, not in it.*
+
+*Alternatives declined:* **H-9's setters as drafted** — nowhere to keep a
+reading (finding 1); **the readings kept in the kernel** — a memory file at a
+descriptor number the double reserves, or the environment — D-211's mutable
+process state through another door, and syscalls in a double whose point is
+to need none; **a second module named `host`, the five signatures exactly** —
+its setters have nowhere to write either, and no flag or root swaps it in
+(finding 2); **a harness marker that rewrites a test's `use` path** —
+machinery in the runner and a small language, TM-255's declined alternative
+for the same reasons, and the module it swaps in still has nowhere to keep a
+reading; **the seam in `src/host/`** — public names, each a major version to
+take away (`src/lib.npk`), beside H-1's *"nothing else"*, for a consumer no
+cycle before 1.0 has; **`dyn HostReadings`** — dynamic dispatch where static
+suffices, and the compiler's own advice against it on a path where
+verification matters (its `TRAITS_REFERENCE.md` §5.2); **hand-written IR, as
+the compiler's explorer is** — the compiler's form for what Nitpick cannot
+express, and here Nitpick can, by passing the state; **`fake_advance`
+refusing a negative span** — a machine's monotonic clock never moves back, and
+a test that asks for one has written so, as `fake_set_instant` lets it write a
+reading back in time; **the reach left as first drafted, its gap named** — the
+acceptance, *"every clock-dependent behaviour reproducible"*, is the author's,
+and every answer the double could not give is one a caller of `host` can
+meet; **`timespec_ns`'s checks copied into the double**, a boot reading and a
+resolution held as a `timespec` — a copy of a private helper of `host`'s,
+where a caller meets `ETimeValue` with no detail whichever check refused it
+(`meta/OPEN_QUESTIONS.md` O-X8), which `fake_refuse_boot` and
+`fake_refuse_res` answer; **a reading that writes its double, the seam's
+receivers `Self->`** — every host taken by pointer, the machine's too, for one
+double's sake, where the pointer a `SteppedHost` holds does the same and the
+seam keeps H-1's shape; **an advance per reading alone** — between two
+readings a test may need any move, a suspend or a refusal or a step back, and
+a step of its own gives each. *(Declined at first, and taken at the plan's
+second verification: **a setter for the resolution** — "no reading a consumer
+computes with, and every clock's here is 1 ns"; a consumer may compute with
+it, and another machine's clock may be coarser.)*
+
+### TM-262 — the double's tests: the double alone, the substitution under `// stress: 40`, and a fixed transcript as the `golden` stage's first member; every single-site mutant of the double run; and V-11 reads "every test of a `src/host/` function"
+
+**2026-10-13, cycle 0.3.3 (the plan's PD-112). Amends `TESTING.md` V-11 —
+the documents audit's TA-4 — and `CONTRIBUTING.md`'s line that restates it;
+gives `nitpick.toml` a `golden` entry; dates `tests/README.md`'s `golden/` row
+and the manifest's note on the stage.**
+
+**What was found** (`0.3.3.md` §1). The `golden` stage is implemented and
+exercised by the self-check alone, case 4: `tests/golden/` is empty and has
+no entry. V-11 says *"`// stress: 40` on everything that reads a clock"*, its
+second sentence scopes it to `src/host/`'s five functions, and
+`tests/probe/probe03_timespec_sys.npk` reads two clocks through `sys`, once
+(the documents audit's TA-4).
+
+**The decision.** *Three test files. `tests/unit/double_readings.npk`, the
+double alone, through the seam: its start; each setter, what it moves and what
+it does not; `fake_advance`'s borrow and carry; the realtime at the range's
+last nanosecond and one past it, refused, while both instants answer, and
+before its first; the zone, the empty name of a set `TZ`, and `NotFound`'s
+empty name; every reading the same twice; two doubles apart — and every other
+answer a caller of `host` can meet: each clock's resolution set, and refused
+with an identity; the realtime handed as the kernel would, refused by
+`NanoRange` and by `YearRange`; the realtime and the boot clock refused with
+an errno or `ETimeValue`, verbatim, held while time passes and the other
+clock is set, and lifted when the reading is set again; and a reading that
+changes per call — a `SteppedHost` under a step of the test's own, a suspend
+between two readings of one call, and under `FakeTick`, each reading what its
+double answers, the double a tick on after each, a refusal forwarded through
+it and a refused reading stepped too.
+`tests/unit/double_substitution.npk`, `// stress: 40`: one generic function
+reads all five readings, instantiated with `FakeHost` — exactly what was set,
+values no machine gives — and with `MachineHost` — the machine's: the
+realtime second inside `probe03`'s window, each instant on its clock, each
+resolution in (0, 1 s], a zone found only with a source — and the double read
+again after the machine, unchanged. `tests/golden/double_transcript.npk`, the
+`golden` stage's first member, and its `double_transcript.txt`: a consumer's
+line — the civil time in UTC, the time since it started by each instant's
+clock, the zone — after each step of a fixed sequence on a fresh double: the
+start, asked twice; 1.5 s passing; `TZ` set; the wall clock stepped back an
+hour while the monotonic clock runs on; a suspend of a minute the boot clock
+counts and the monotonic does not; 0.25 s more; the realtime at the range's
+last nanosecond, and one past it, refused; and the sequence on a second double
+writes the same bytes. Every line of the golden is re-derived with Python's
+`datetime`, never copied from the run. `nitpick.toml` gains a `golden` entry
+over `tests/golden/`. Every single-site mutant of the double is generated and
+run against the three; each is refused by the compiler, red, or named with
+why; and named mutants reach each exit no single-site mutant reaches first, so
+every exit is seen red but the belts each header names.
+V-11 reads "`// stress: 40` on every test of a `src/host/` function" — so
+`probe03`, which asks `sys` the `timespec`'s shape, and the double's two tests
+that read no clock carry none, and the substitution, which reads the machine
+through the seam, carries it.*
+
+*Alternatives declined:* **the transcript held by a literal inside the
+program** — the expected text's home would be the program that prints it,
+where the `golden` stage holds the bytes to a committed file and both legs to
+each other; **`// stress: 40` on the transcript** — the harness holds the
+first run's bytes of a leg to the golden and the other thirty-nine by their
+exit alone, so the forty would add a claim it does not check; **a heap bound
+on the double** — its one owner, the zone's name, is replaced by assignment,
+measured flat over a hundred thousand settings, and test infrastructure is not
+what `heap:` was built to hold; **V-11 left to read "everything that reads a
+clock", and `probe03` given `// stress: 40`** — the probe asks the
+`timespec`'s shape, which forty runs ask forty times.

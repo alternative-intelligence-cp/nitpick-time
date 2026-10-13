@@ -263,7 +263,8 @@ the DST cases from N-13 are goldens.
 
 ### 0.8 — Hardening
 The parser fuzzer to exhaustion, `// stress: 40` on everything that reads a
-clock, `specs/VERIFICATION.md`'s obligation list reconciled against what the
+clock *(every test of a `src/host/` function, as `TESTING.md` V-11 reads since
+cycle 0.3.3, TM-262)*, `specs/VERIFICATION.md`'s obligation list reconciled against what the
 code actually generates, and a full audit of every specification rule against
 its implementation.
 

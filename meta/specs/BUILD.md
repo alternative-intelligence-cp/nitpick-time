@@ -324,9 +324,11 @@ list kept the old code until cycle 0.2.0), `BORROW-001`, `BORROW-012`,
 `RESOLVE-001`, `RESOLVE-002` (since cycle 0.2.0, `probe20b`),
 `REACH-002` and `REACH-003`, and every family
 after the first three runs only on something that parsed. Re-measured at pin
-`5fbaf4a`, cycle 0.3.2: **159 files = 114 parse cleanly + 43
+`7e91730`, cycle 0.3.3: **163 files = 118 parse cleanly + 43
 parse and are refused later + 2 do not parse**
-<!-- [[sweep: npk_total=159]] --> (`152 = 107 + 43 + 2` from its second step
+<!-- [[sweep: npk_total=163]] --> (`159 = 114 + 43 + 2` from cycle 0.3.2's
+third step until cycle 0.3.3 added the double and its three tests, TM-261,
+TM-262; `152 = 107 + 43 + 2` from its second step
 until its third added the system zone's seven units, TM-257; `151 = 106 + 43 + 2` from cycle 0.3.2's
 first step, which added `tests/unit/generic_instances.npk`, TM-254, until its
 second added `probe22`, TM-255; `150 = 105 + 43 + 2` from cycle 0.3.0 until

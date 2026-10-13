@@ -164,11 +164,35 @@ pub func:fake_set_instant = NIL(Instant:i) never fails;
 pub func:fake_advance     = NIL(Duration:d) never fails;
 ```
 
+*(Amended at cycle 0.3.3, TM-261. The three setters, as drafted, take no
+handle, and nothing a module declares keeps a reading between two calls: no
+form measured makes module storage writable (`0.3.3.md` §1.2 names each) —
+among them `NITPICK-TYPE-055` refuses a plain module binding with an
+initialiser (the compiler's D-211), `NITPICK-TYPE-086` a write into a part of
+a `fixed` one, and `NITPICK-TYPE-035` an initialiser that calls, and one with
+no initialiser is a read-only zero. So the double is a value and each setter
+takes the one it sets — `fake_set_utc = NIL(FakeHost->:h, Timestamp:t) never
+fails` and its two siblings; beside them `fake_set_zone`, for the fifth
+reading, and the setters of every other answer `host` gives a caller — the
+realtime as the kernel hands it, each clock's resolution, and a refusal of
+each fallible reading with the identity a test hands it; and `SteppedHost`, a
+reading that changes per call — and the substitution is a type: a
+clock-dependent function takes `<H: HostReadings>`, H-1's five readings as a
+trait, and is instantiated with the machine's host in a program and with the
+double in a test. Still a build-time substitution, and not a runtime flag:
+`tests/double/host_double.npk`.)*
+
 **Rule H-10 — the double lives in `tests/`, not in `src/`.** A test harness
 that links a different `host` module is the honest shape; a `#[cfg(test)]`
 switch inside the shipped library is a second code path in the artifact, and
 the ecosystem's closed-world link makes the substitution trivial anyway — the
 harness links whichever `host` object it was told to.
+
+*(Cycle 0.3.3, TM-261: there is no `host` object to link. `npkc` compiles the
+whole graph a root reaches (TM-117), and at the pin takes one root and no flag
+that maps a path to another, so a `use` line names one file, always. The
+double lives in `tests/double/`, beside `host` and not in its place: a test
+imports both, and hands the double to a function generic over the seam.)*
 
 **Rule H-11 — every other module is tested with no double at all**, because
 every other module is pure. That is the payoff, and it is the reason to keep

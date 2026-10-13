@@ -1,0 +1,404 @@
+// expect-exit: 0
+//
+// THE DOUBLE ALONE (cycle 0.3.3; `HOST.md` H-9 ... H-11, TM-261 and TM-262):
+// `tests/double/host_double.npk`'s `FakeHost`, read through the seam,
+// `HostReadings`, as a clock-dependent function reads it -- its fixed start,
+// each setter and what it moves and does not, `fake_advance`'s borrow and
+// carry, the realtime clock refused past the range while the instants answer,
+// the zone and H-12's invariant, and every reading the same twice -- and
+// every other answer `HOST.md` H-1's signatures allow a caller to meet: each
+// clock's resolution, the realtime as the kernel hands it, refused by
+// `NanoRange` as by `YearRange`, each fallible reading refused with the
+// identity the test hands it -- an errno forwarded verbatim (`SAFETY.md` S-5), or
+// `ETimeValue`, as `timespec_ns` refuses a boot reading or a resolution --
+// and a reading that changes per call, `SteppedHost`, under a tick and under
+// a step of this test's own. No clock is read, so no `stress` (`TESTING.md`
+// V-11): forty runs of a program that reads none are forty copies of one
+// answer.
+//
+// EXIT CODES, clear of every arm code (TM-152):
+//   10 the start's realtime refused, 11 not the epoch, 12 the start's
+//      monotonic reading not 0 ns on its clock, 13 the boot reading refused or
+//      not 0 ns on its clock, 14 a resolution refused or not 1 ns, 15 the
+//      start's zone not `{ "", NotFound, false }`;
+//   16 `fake_set_res`: a clock's resolution not what it set, 17 another
+//      clock's moved by it; 18 `fake_refuse_res`: a resolution not refused
+//      with the identity handed, or another clock's resolution or another
+//      reading refused by it; 19 a refused resolution not answered once it is
+//      set again, or another clock's answered by it;
+//   20 `fake_set_utc`: the realtime not what it set, 21 an instant moved by it;
+//   22 `fake_set_instant`, monotonic: the reading not what it set, 23 the boot
+//      reading or the realtime moved; 24 the same for boot, 25 the monotonic
+//      reading or the realtime moved;
+//   30 `fake_advance`: the realtime not moved by exactly `d`, 31 the monotonic
+//      reading not, 32 the boot reading not; 33 the carry, 34 the borrow, 35 a
+//      carry onto a second exactly, 36 a second, 37 two seconds less a
+//      nanosecond, each not to the nanosecond;
+//   40 the realtime at the range's last nanosecond refused, 41 one past it
+//      answered, 42 an instant not moved beside it, 43 the realtime not back
+//      one nanosecond later; 44 the range's first second, one before it
+//      answered;
+//   45 `fake_set_utc_raw`: the realtime not what it set, or an instant moved
+//      by it; 46 a nanosecond field of one second, or of -1, answered --
+//      `NanoRange`; 47 a second past the range answered -- `YearRange`;
+//   50 a zone set not answered as set, 51 the empty name of a set `TZ` not
+//      found, 52 `NotFound`'s name not empty or found;
+//   60 a reading not the same twice, asked with nothing set between, 61 two
+//      doubles not apart;
+//   62 a step of this test's own not seen between two readings in one call:
+//      the boot clock not moved by the suspend it sets, or the monotonic one
+//      moved; 63 `SteppedHost` under `FakeTick`: a reading not what its
+//      double answers before the step; 64 its double not moved by one tick a
+//      reading; 65 a refusal not forwarded through it verbatim; 66 a refused
+//      reading not followed by its step;
+//   70 `fake_refuse_utc`: the realtime not refused with the errno handed, 71
+//      another reading refused or moved by a refusal; 72 a refusal lifted by
+//      what sets no reading of it -- time passing, the other clock set; 73 a
+//      refusal not lifted when its reading is set again; 74
+//      `fake_refuse_boot`: the boot reading not refused with `ETimeValue`.
+//
+// EVERY EXIT IS SEEN RED ON A MUTANT OF THE DOUBLE BUT FOUR BELTS (`0.3.3.md`
+// §1.9): 40 and 44 read `timestamp_of`'s two ends through the double, and a
+// mutant that moved them would be `span`'s, whose `timestamp_construct` holds
+// every boundary; 60 and 61 because a `FakeHost`'s reading takes its double by
+// loan, `Self:self`, and cannot write it, and two doubles share nothing -- the
+// language keeps no state in a module (the compiler's D-211). Each is kept for
+// a `FakeHost` a later cycle might give a reading that writes; `SteppedHost`'s
+// readings write the double they point to, by design, and 62 ... 66 hold it.
+//
+// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing the
+// double: `host`'s eleven (`SAFETY.md` S-4), and no more.
+mod:double_readings;
+
+use "../double/host_double.npk".*;
+use "../../src/host/host.npk".*;
+use "../../src/span/span.npk".Instant;
+use "../../src/span/span.npk".InstantClock;
+use "../../src/span/span.npk".Timestamp;
+use "../../src/span/span.npk".instant_of;
+use "../../src/span/span.npk".timestamp_of;
+use "../../src/cal/cal.npk".ETimeValue;
+use "../../src/core/limits.npk".NTIME_SECS_MIN;
+use "../../src/core/limits.npk".NTIME_SECS_MAX;
+
+func:ts = Timestamp(int64:secs, int64:nanos) never fails {
+    pass timestamp_of(secs, nanos) ?| #unreachable();
+};
+
+// Each reading through the seam, as a clock-dependent function reads it.
+func:utc_is<H: HostReadings> = bool(H:h, int64:secs, int64:nanos) never fails {
+    Result<Timestamp>:u = h.now_utc();
+    if (u.is_error) { pass false; }
+    if (u.value.secs != secs) { pass false; }
+    pass (u.value.nanos => int64) == nanos;
+};
+
+func:utc_refused<H: HostReadings> = bool(H:h) never fails {
+    Result<Timestamp>:u = h.now_utc();
+    pass u.is_error;
+};
+
+func:mono_is<H: HostReadings> = bool(H:h, int64:ns) never fails {
+    Instant:m = raw h.now_instant();
+    if (m.clock != InstantClock.Monotonic) { pass false; }
+    pass m.ns == ns;
+};
+
+func:boot_is<H: HostReadings> = bool(H:h, int64:ns) never fails {
+    Result<Instant>:b = h.now_boot();
+    if (b.is_error) { pass false; }
+    if (b.value.clock != InstantClock.Boottime) { pass false; }
+    pass b.value.ns == ns;
+};
+
+func:res_is<H: HostReadings> = bool(H:h, HostClock:which, int64:ns) never fails {
+    Result<Duration>:r = h.clock_res(which);
+    if (r.is_error) { pass false; }
+    pass r.value.ns == ns;
+};
+
+func:zone_is<H: HostReadings> = bool(H:h, string:name, ZoneSource:source, bool:found) never fails {
+    SystemZone:z = raw h.system_zone();
+    if (!(string_equals(z.name, name))) { pass false; }
+    if (z.source != source) { pass false; }
+    pass z.found == found;
+};
+
+// Every reading asked twice, nothing set between: the two answers are one.
+func:twice<H: HostReadings> = bool(H:h) never fails {
+    Result<Timestamp>:u1 = h.now_utc();
+    Result<Timestamp>:u2 = h.now_utc();
+    if (u1.is_error != u2.is_error) { pass false; }
+    if (!(u1.is_error)) {
+        if (!(u2.is_error)) {
+            if (u1.value.secs != u2.value.secs) { pass false; }
+            if (u1.value.nanos != u2.value.nanos) { pass false; }
+        }
+    }
+    Instant:m1 = raw h.now_instant();
+    Instant:m2 = raw h.now_instant();
+    if (m1.ns != m2.ns) { pass false; }
+    if (m1.clock != m2.clock) { pass false; }
+    Result<Instant>:b1 = h.now_boot();
+    Result<Instant>:b2 = h.now_boot();
+    if (b1.is_error) { pass false; }
+    if (b2.is_error) { pass false; }
+    if (b1.value.ns != b2.value.ns) { pass false; }
+    if (b1.value.clock != b2.value.clock) { pass false; }
+    Result<Duration>:r1 = h.clock_res(HostClock.Boottime);
+    Result<Duration>:r2 = h.clock_res(HostClock.Boottime);
+    if (r1.is_error) { pass false; }
+    if (r2.is_error) { pass false; }
+    if (r1.value.ns != r2.value.ns) { pass false; }
+    SystemZone:z1 = raw h.system_zone();
+    SystemZone:z2 = raw h.system_zone();
+    if (!(string_equals(z1.name, z2.name))) { pass false; }
+    if (z1.source != z2.source) { pass false; }
+    pass z1.found == z2.found;
+};
+
+// A fallible reading refused with exactly the identity `e`.
+func:utc_refused_with<H: HostReadings> = bool(H:h, Error:e) never fails {
+    Result<Timestamp>:u = h.now_utc();
+    if (!(u.is_error)) { pass false; }
+    pass u.err == e;
+};
+
+func:boot_refused_with<H: HostReadings> = bool(H:h, Error:e) never fails {
+    Result<Instant>:b = h.now_boot();
+    if (!(b.is_error)) { pass false; }
+    pass b.err == e;
+};
+
+func:res_refused_with<H: HostReadings> = bool(H:h, HostClock:which, Error:e) never fails {
+    Result<Duration>:r = h.clock_res(which);
+    if (!(r.is_error)) { pass false; }
+    pass r.err == e;
+};
+
+// A clock-dependent function that reads one clock twice in one call: the span
+// between its two readings -- 0 from a `FakeHost`, and from a `SteppedHost`
+// whatever its step moved between them.
+func:boot_gap<H: HostReadings> = int64(H:h) {
+    Instant:a = relay h.now_boot();
+    Instant:b = relay h.now_boot();
+    pass b.ns - a.ns;
+};
+
+// A STEP OF THIS TEST'S OWN: its first run is a suspend of a minute -- the
+// boot clock moves and the monotonic one does not -- and it counts its runs
+// in the test's own `int64`, through the pointer it holds.
+struct:SuspendOnce = { int64->:runs; };
+
+impl:SuspendOnce:FakeStep = {
+    func:between = NIL(SuspendOnce:self, FakeHost->:h) never fails {
+        <-self.runs = <-self.runs + 1i64;
+        if (<-self.runs == 1i64) {
+            Result<Instant>:b = h.now_boot();
+            if (!(b.is_error)) {
+                drop fake_set_instant(h, raw instant_of(b.value.ns + 60000000000i64, InstantClock.Boottime));
+            }
+        }
+        pass NIL;
+    };
+};
+
+func:main = int32(cstring[]:_~argv) {
+    // ---- the fixed start ----------------------------------------------------
+    FakeHost:h = raw fake_host();
+    if (raw utc_refused(h))                          { exit 10i32; }
+    if (!(raw utc_is(h, 0i64, 0i64)))                { exit 11i32; }
+    if (!(raw mono_is(h, 0i64)))                     { exit 12i32; }
+    if (!(raw boot_is(h, 0i64)))                     { exit 13i32; }
+    if (!(raw res_is(h, HostClock.Realtime, 1i64)))  { exit 14i32; }
+    if (!(raw res_is(h, HostClock.Monotonic, 1i64))) { exit 14i32; }
+    if (!(raw res_is(h, HostClock.Boottime, 1i64)))  { exit 14i32; }
+    if (!(raw zone_is(h, "", ZoneSource.NotFound, false))) { exit 15i32; }
+
+    // ---- each clock's resolution, and its refusal ---------------------------
+    FakeHost:q = raw fake_host();
+    drop fake_set_res(@q, HostClock.Realtime, raw duration_ns(4000000i64));   // a coarse clock's 4 ms
+    if (!(raw res_is(q, HostClock.Realtime, 4000000i64)))  { exit 16i32; }
+    if (!(raw res_is(q, HostClock.Monotonic, 1i64)))       { exit 17i32; }
+    if (!(raw res_is(q, HostClock.Boottime, 1i64)))        { exit 17i32; }
+    drop fake_set_res(@q, HostClock.Monotonic, raw duration_ns(20i64));
+    drop fake_set_res(@q, HostClock.Boottime, raw duration_ns(300i64));
+    if (!(raw res_is(q, HostClock.Monotonic, 20i64)))      { exit 16i32; }
+    if (!(raw res_is(q, HostClock.Boottime, 300i64)))      { exit 16i32; }
+    if (!(raw res_is(q, HostClock.Realtime, 4000000i64)))  { exit 17i32; }
+    drop fake_refuse_res(@q, HostClock.Boottime, NotFound);
+    if (!(raw res_refused_with(q, HostClock.Boottime, NotFound)))     { exit 18i32; }
+    if (!(raw res_is(q, HostClock.Monotonic, 20i64)))      { exit 18i32; }
+    if (!(raw res_is(q, HostClock.Realtime, 4000000i64)))  { exit 18i32; }
+    if (!(raw boot_is(q, 0i64)))                           { exit 18i32; }
+    if (!(raw utc_is(q, 0i64, 0i64)))                      { exit 18i32; }
+    drop fake_refuse_res(@q, HostClock.Realtime, ETimeValue);
+    drop fake_refuse_res(@q, HostClock.Monotonic, Interrupted);
+    if (!(raw res_refused_with(q, HostClock.Realtime, ETimeValue)))   { exit 18i32; }
+    if (!(raw res_refused_with(q, HostClock.Monotonic, Interrupted))) { exit 18i32; }
+    drop fake_set_res(@q, HostClock.Boottime, raw duration_ns(301i64));
+    if (!(raw res_is(q, HostClock.Boottime, 301i64)))      { exit 19i32; }
+    if (!(raw res_refused_with(q, HostClock.Monotonic, Interrupted))) { exit 19i32; }
+    drop fake_set_res(@q, HostClock.Realtime, raw duration_ns(5i64));
+    if (!(raw res_is(q, HostClock.Realtime, 5i64)))        { exit 19i32; }
+    if (!(raw res_refused_with(q, HostClock.Monotonic, Interrupted))) { exit 19i32; }
+    drop fake_set_res(@q, HostClock.Monotonic, raw duration_ns(6i64));
+    if (!(raw res_is(q, HostClock.Monotonic, 6i64)))       { exit 19i32; }
+
+    // ---- fake_set_utc -------------------------------------------------------
+    drop fake_set_utc(@h, raw ts(1000000000i64, 250000000i64));
+    if (!(raw utc_is(h, 1000000000i64, 250000000i64))) { exit 20i32; }
+    if (!(raw mono_is(h, 0i64)))                       { exit 21i32; }
+    if (!(raw boot_is(h, 0i64)))                       { exit 21i32; }
+
+    // ---- fake_set_instant, each clock ---------------------------------------
+    drop fake_set_instant(@h, raw instant_of(5000000000i64, InstantClock.Monotonic));
+    if (!(raw mono_is(h, 5000000000i64)))              { exit 22i32; }
+    if (!(raw boot_is(h, 0i64)))                       { exit 23i32; }
+    if (!(raw utc_is(h, 1000000000i64, 250000000i64))) { exit 23i32; }
+    drop fake_set_instant(@h, raw instant_of(9000000000i64, InstantClock.Boottime));
+    if (!(raw boot_is(h, 9000000000i64)))              { exit 24i32; }
+    if (!(raw mono_is(h, 5000000000i64)))              { exit 25i32; }
+    if (!(raw utc_is(h, 1000000000i64, 250000000i64))) { exit 25i32; }
+
+    // ---- fake_advance -------------------------------------------------------
+    drop fake_advance(@h, raw duration_ns(1500000000i64));
+    if (!(raw utc_is(h, 1000000001i64, 750000000i64))) { exit 30i32; }
+    if (!(raw mono_is(h, 6500000000i64)))              { exit 31i32; }
+    if (!(raw boot_is(h, 10500000000i64)))             { exit 32i32; }
+    drop fake_advance(@h, raw duration_ns(500000000i64));          // .75 + .5: carry
+    if (!(raw utc_is(h, 1000000002i64, 250000000i64))) { exit 33i32; }
+    drop fake_advance(@h, raw duration_ns(-500000000i64));         // .25 - .5: borrow
+    if (!(raw utc_is(h, 1000000001i64, 750000000i64))) { exit 34i32; }
+    if (!(raw mono_is(h, 6500000000i64)))              { exit 34i32; }
+    drop fake_set_utc(@h, raw ts(1000000000i64, 500000000i64));
+    drop fake_advance(@h, raw duration_ns(500000000i64));          // .5 + .5: a second exactly
+    if (!(raw utc_is(h, 1000000001i64, 0i64)))         { exit 35i32; }
+    drop fake_advance(@h, raw duration_ns(1000000000i64));         // one second
+    if (!(raw utc_is(h, 1000000002i64, 0i64)))         { exit 36i32; }
+    drop fake_advance(@h, raw duration_ns(1999999999i64));         // two, less a nanosecond
+    if (!(raw utc_is(h, 1000000003i64, 999999999i64))) { exit 37i32; }
+
+    // ---- the range's two ends, read by the caller ---------------------------
+    drop fake_set_instant(@h, raw instant_of(5000000000i64, InstantClock.Monotonic));
+    drop fake_set_instant(@h, raw instant_of(9000000000i64, InstantClock.Boottime));
+    drop fake_set_utc(@h, raw ts(NTIME_SECS_MAX, 999999999i64));
+    if (!(raw utc_is(h, NTIME_SECS_MAX, 999999999i64))) { exit 40i32; }
+    drop fake_advance(@h, raw duration_ns(1i64));
+    if (!(raw utc_refused(h)))                          { exit 41i32; }
+    if (!(raw mono_is(h, 5000000001i64)))               { exit 42i32; }
+    if (!(raw boot_is(h, 9000000001i64)))               { exit 42i32; }
+    drop fake_advance(@h, raw duration_ns(-1i64));
+    if (!(raw utc_is(h, NTIME_SECS_MAX, 999999999i64))) { exit 43i32; }
+    drop fake_set_utc(@h, raw ts(NTIME_SECS_MIN, 0i64));
+    drop fake_advance(@h, raw duration_ns(-1i64));
+    if (!(raw utc_refused(h)))                          { exit 44i32; }
+
+    // ---- the realtime as the kernel hands it, read through `timestamp_of` ---
+    FakeHost:k = raw fake_host();
+    drop fake_set_utc_raw(@k, 5i64, 999999999i64);
+    if (!(raw utc_is(k, 5i64, 999999999i64)))          { exit 45i32; }
+    if (!(raw mono_is(k, 0i64)))                       { exit 45i32; }
+    if (!(raw boot_is(k, 0i64)))                       { exit 45i32; }
+    drop fake_set_utc_raw(@k, 5i64, 1000000000i64);   // a nanosecond field of one second
+    if (!(raw utc_refused_with(k, ETimeValue)))        { exit 46i32; }
+    drop fake_set_utc_raw(@k, 5i64, -1i64);
+    if (!(raw utc_refused_with(k, ETimeValue)))        { exit 46i32; }
+    drop fake_set_utc_raw(@k, NTIME_SECS_MAX + 1i64, 0i64);
+    if (!(raw utc_refused_with(k, ETimeValue)))        { exit 47i32; }
+
+    // ---- the zone -----------------------------------------------------------
+    drop fake_set_zone(@h, "Europe/Kyiv", ZoneSource.TzEnvironment);
+    if (!(raw zone_is(h, "Europe/Kyiv", ZoneSource.TzEnvironment, true))) { exit 50i32; }
+    drop fake_set_zone(@h, "", ZoneSource.TzEnvironment);
+    if (!(raw zone_is(h, "", ZoneSource.TzEnvironment, true)))            { exit 51i32; }
+    drop fake_set_zone(@h, "Europe/Kyiv", ZoneSource.NotFound);
+    if (!(raw zone_is(h, "", ZoneSource.NotFound, false)))                { exit 52i32; }
+    drop fake_set_zone(@h, "Etc/UTC", ZoneSource.EtcTimezone);
+
+    // ---- the same reading twice, and two doubles apart ----------------------
+    if (!(raw twice(h)))                               { exit 60i32; }
+    drop fake_set_utc(@h, raw ts(1000000000i64, 0i64));
+    if (!(raw twice(h)))                               { exit 60i32; }
+    FakeHost:g = raw fake_host();
+    drop fake_advance(@g, raw duration_ns(7i64));
+    if (!(raw mono_is(g, 7i64)))                       { exit 61i32; }
+    if (!(raw mono_is(h, 4999999999i64)))              { exit 61i32; }
+    if (!(raw zone_is(g, "", ZoneSource.NotFound, false))) { exit 61i32; }
+    if (!(raw zone_is(h, "Etc/UTC", ZoneSource.EtcTimezone, true))) { exit 61i32; }
+
+    // ---- a refusal, verbatim, until its reading is set again ----------------
+    FakeHost:r = raw fake_host();
+    drop fake_refuse_utc(@r, Interrupted);             // an errno, as `host` forwards the kernel's
+    if (!(raw utc_refused_with(r, Interrupted)))       { exit 70i32; }
+    if (!(raw boot_is(r, 0i64)))                       { exit 71i32; }
+    if (!(raw mono_is(r, 0i64)))                       { exit 71i32; }
+    if (!(raw res_is(r, HostClock.Realtime, 1i64)))    { exit 71i32; }
+    drop fake_advance(@r, raw duration_ns(1i64));      // time passing sets nothing
+    if (!(raw utc_refused_with(r, Interrupted)))       { exit 72i32; }
+    drop fake_set_utc(@r, raw ts(7i64, 0i64));
+    if (!(raw utc_is(r, 7i64, 0i64)))                  { exit 73i32; }
+    drop fake_refuse_utc(@r, WouldBlock);
+    drop fake_set_utc_raw(@r, 8i64, 0i64);
+    if (!(raw utc_is(r, 8i64, 0i64)))                  { exit 73i32; }
+    drop fake_refuse_boot(@r, ETimeValue);             // `timespec_ns`'s refusal, as its caller meets it
+    if (!(raw boot_refused_with(r, ETimeValue)))       { exit 74i32; }
+    if (!(raw utc_is(r, 8i64, 0i64)))                  { exit 71i32; }
+    if (!(raw mono_is(r, 1i64)))                       { exit 71i32; }
+    drop fake_set_instant(@r, raw instant_of(3i64, InstantClock.Monotonic));
+    if (!(raw boot_refused_with(r, ETimeValue)))       { exit 72i32; }
+    drop fake_set_instant(@r, raw instant_of(4i64, InstantClock.Boottime));
+    if (!(raw boot_is(r, 4i64)))                       { exit 73i32; }
+
+    // ---- a reading that changes per call: a step of this test's own --------
+    int64:runs = 0i64;
+    FakeHost:u = raw fake_host();
+    SteppedHost<SuspendOnce>:v = raw stepped_host(@u, SuspendOnce{ runs: @runs });
+    Result<int64>:gap = boot_gap(v);
+    if (gap.is_error)                                  { exit 62i32; }
+    if (gap.value != 60000000000i64)                   { exit 62i32; }
+    if (!(raw mono_is(u, 0i64)))                       { exit 62i32; }
+    if (runs != 2i64)                                  { exit 62i32; }
+
+    // ---- and `FakeTick`, an advance per reading -----------------------------
+    FakeHost:s = raw fake_host();
+    drop fake_set_utc(@s, raw ts(1000i64, 0i64));
+    drop fake_set_res(@s, HostClock.Boottime, raw duration_ns(300i64));
+    drop fake_set_zone(@s, "Etc/UTC", ZoneSource.EtcTimezone);
+    SteppedHost<FakeTick>:t = raw stepped_host(@s, FakeTick{ d: raw duration_ns(250i64) });
+    if (!(raw mono_is(t, 0i64)))                       { exit 63i32; }
+    if (!(raw mono_is(t, 250i64)))                     { exit 63i32; }
+    if (!(raw utc_is(t, 1000i64, 500i64)))             { exit 63i32; }
+    if (!(raw boot_is(t, 750i64)))                     { exit 63i32; }
+    if (!(raw res_is(t, HostClock.Boottime, 300i64)))  { exit 63i32; }
+    if (!(raw zone_is(t, "Etc/UTC", ZoneSource.EtcTimezone, true))) { exit 63i32; }
+    if (!(raw mono_is(s, 1500i64)))                    { exit 64i32; }
+    if (!(raw boot_is(s, 1500i64)))                    { exit 64i32; }
+    if (!(raw utc_is(s, 1000i64, 1500i64)))            { exit 64i32; }
+    drop fake_refuse_utc(@s, Interrupted);
+    drop fake_refuse_boot(@s, WouldBlock);
+    drop fake_refuse_res(@s, HostClock.Monotonic, NotFound);
+    if (!(raw utc_refused_with(t, Interrupted)))       { exit 65i32; }
+    if (!(raw boot_refused_with(t, WouldBlock)))       { exit 65i32; }
+    if (!(raw res_refused_with(t, HostClock.Monotonic, NotFound))) { exit 65i32; }
+    if (!(raw mono_is(s, 2250i64)))                    { exit 66i32; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

@@ -1,0 +1,178 @@
+// expect-exit: 0
+// stress: 40
+//
+// THE SUBSTITUTION (cycle 0.3.3; `HOST.md` H-9 and H-10, TM-261 and TM-262):
+// ONE generic function, `read_all`, reads H-1's five readings through the
+// seam, `HostReadings`, and is instantiated twice in this program -- with
+// the double, `FakeHost`, and with the machine's `host` behind the seam,
+// `MachineHost`. The cycle README's "the harness links whichever host object
+// it is told to, and a test proves the substitution works", as TM-261 reads
+// it: there is no host object to link (TM-117), and the substitution is the
+// type a clock-dependent function is handed, chosen in its caller's text.
+//
+// THE DOUBLE'S LEG IS EXACT, AND NO MACHINE GIVES IT: the realtime second
+// 1 000 000 000 (2001-09-09), before `probe03`'s window, and the two instants
+// at 42 ns and 7 s, which no clock that has run since its boot reads -- so a
+// `read_all` that read the machine for the double, or a double that read the
+// machine, is red here. THE MACHINE'S LEG IS THE MACHINE'S: the realtime
+// second inside `probe03`'s window, each instant on its clock, each
+// resolution in (0, 1 s], and a zone found only with a source -- what
+// `host_clocks` and the system zone's units hold exactly, held here only as
+// far as shows the machine answered. And the double, read again after the
+// machine, answers what it answered first.
+//
+// `// stress: 40`: it reads the machine's clocks through `src/host/`
+// (`TESTING.md` V-11), so it runs forty times a leg as every test of a
+// `src/host/` function does.
+//
+// EXIT CODES, clear of every arm code (TM-152):
+//   10 the double's realtime not as set, 11 its monotonic reading, 12 its
+//      boot reading, 13 a resolution, 14 its zone;
+//   20 the machine's realtime refused or outside `probe03`'s window, 21 its
+//      monotonic reading not on its clock, 22 its boot reading refused or not
+//      on its clock, 23 a resolution refused or outside (0, 1 s], 24 a zone
+//      found with no source, or `NotFound` with a name;
+//   30 the double read again after the machine, and answering otherwise.
+//
+// EVERY EXIT IS SEEN RED ON A MUTANT OF THE DOUBLE BUT ONE BELT (`0.3.3.md`
+// §1.9): 30, because a reading takes its double by loan and cannot write it,
+// so the machine's leg cannot move it -- kept for a double whose reading
+// writes. 20 ... 24 are seen on the named mutants of the machine's side.
+//
+// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing the
+// double: `host`'s eleven (`SAFETY.md` S-4), and no more.
+mod:double_substitution;
+
+use "../double/host_double.npk".*;
+use "../../src/host/host.npk".*;
+use "../../src/span/span.npk".Instant;
+use "../../src/span/span.npk".InstantClock;
+use "../../src/span/span.npk".Timestamp;
+use "../../src/span/span.npk".instant_of;
+use "../../src/span/span.npk".timestamp_of;
+
+// What a clock-dependent function sees: H-1's five readings, each kept as it
+// came back -- a refusal as a refusal.
+struct:Readings = {
+    bool:utc_refused; int64:utc_secs; int64:utc_nanos;
+    Instant:mono;
+    bool:boot_refused; Instant:boot;
+    bool:res_refused; int64:res_realtime; int64:res_monotonic; int64:res_boottime;
+    string:zone_name; ZoneSource:zone_source; bool:zone_found;
+};
+
+func:res_of<H: HostReadings> = int64(H:h, HostClock:which) never fails {
+    Result<Duration>:r = h.clock_res(which);
+    if (r.is_error) { pass -1i64; }
+    pass r.value.ns;
+};
+
+// THE ONE FUNCTION, instantiated with each host.
+func:read_all<H: HostReadings> = Readings(H:h) never fails {
+    bool:ur = true;
+    int64:us = 0i64;
+    int64:un = 0i64;
+    Result<Timestamp>:u = h.now_utc();
+    if (!(u.is_error)) {
+        ur = false;
+        us = u.value.secs;
+        un = u.value.nanos => int64;
+    }
+    Instant:m = raw h.now_instant();
+    bool:br = true;
+    Instant:b = raw instant_of(0i64, InstantClock.Boottime);
+    Result<Instant>:bb = h.now_boot();
+    if (!(bb.is_error)) {
+        br = false;
+        b = bb.value;
+    }
+    int64:rr = raw res_of(h, HostClock.Realtime);
+    int64:rm = raw res_of(h, HostClock.Monotonic);
+    int64:rb = raw res_of(h, HostClock.Boottime);
+    SystemZone:z = raw h.system_zone();
+    ZoneSource:zs = z.source;
+    bool:zf = z.found;
+    pass Readings{ utc_refused: ur, utc_secs: us, utc_nanos: un, mono: m,
+                   boot_refused: br, boot: b,
+                   res_refused: (rr < 0i64) || ((rm < 0i64) || (rb < 0i64)),
+                   res_realtime: rr, res_monotonic: rm, res_boottime: rb,
+                   zone_name: move(z.name), zone_source: zs, zone_found: zf };
+};
+
+func:in_res = bool(int64:ns) never fails {
+    if (ns <= 0i64) { pass false; }
+    pass ns <= 1000000000i64;
+};
+
+func:main = int32(cstring[]:_~argv) {
+    // ---- the double ---------------------------------------------------------
+    FakeHost:f = raw fake_host();
+    drop fake_set_utc(@f, timestamp_of(1000000000i64, 125000000i64) ?| #unreachable());
+    drop fake_set_instant(@f, raw instant_of(42i64, InstantClock.Monotonic));
+    drop fake_set_instant(@f, raw instant_of(7000000000i64, InstantClock.Boottime));
+    drop fake_set_zone(@f, "Etc/UTC", ZoneSource.EtcTimezone);
+    Readings:a = raw read_all(f);
+    if (a.utc_refused)                                   { exit 10i32; }
+    if (a.utc_secs != 1000000000i64)                     { exit 10i32; }
+    if (a.utc_nanos != 125000000i64)                     { exit 10i32; }
+    if (a.mono.clock != InstantClock.Monotonic)          { exit 11i32; }
+    if (a.mono.ns != 42i64)                              { exit 11i32; }
+    if (a.boot_refused)                                  { exit 12i32; }
+    if (a.boot.clock != InstantClock.Boottime)           { exit 12i32; }
+    if (a.boot.ns != 7000000000i64)                      { exit 12i32; }
+    if (a.res_refused)                                   { exit 13i32; }
+    if (a.res_realtime != 1i64)                          { exit 13i32; }
+    if (a.res_monotonic != 1i64)                         { exit 13i32; }
+    if (a.res_boottime != 1i64)                          { exit 13i32; }
+    if (!(string_equals(a.zone_name, "Etc/UTC")))        { exit 14i32; }
+    if (a.zone_source != ZoneSource.EtcTimezone)         { exit 14i32; }
+    if (!(a.zone_found))                                 { exit 14i32; }
+
+    // ---- the machine --------------------------------------------------------
+    MachineHost:m = raw machine_host();
+    Readings:b = raw read_all(m);
+    if (b.utc_refused)                                   { exit 20i32; }
+    if (b.utc_secs < 1600000000i64)                      { exit 20i32; }
+    if (b.utc_secs > 4102444800i64)                      { exit 20i32; }
+    if (b.mono.clock != InstantClock.Monotonic)          { exit 21i32; }
+    if (b.boot_refused)                                  { exit 22i32; }
+    if (b.boot.clock != InstantClock.Boottime)           { exit 22i32; }
+    if (b.res_refused)                                   { exit 23i32; }
+    if (!(raw in_res(b.res_realtime)))                   { exit 23i32; }
+    if (!(raw in_res(b.res_monotonic)))                  { exit 23i32; }
+    if (!(raw in_res(b.res_boottime)))                   { exit 23i32; }
+    if (b.zone_found != (b.zone_source != ZoneSource.NotFound)) { exit 24i32; }
+    if (!(b.zone_found)) {
+        if (!(string_equals(b.zone_name, "")))           { exit 24i32; }
+    }
+
+    // ---- the double again, after the machine --------------------------------
+    Readings:c = raw read_all(f);
+    if (c.utc_refused != a.utc_refused)                  { exit 30i32; }
+    if (c.utc_secs != a.utc_secs)                        { exit 30i32; }
+    if (c.utc_nanos != a.utc_nanos)                      { exit 30i32; }
+    if (c.mono.ns != a.mono.ns)                          { exit 30i32; }
+    if (c.boot.ns != a.boot.ns)                          { exit 30i32; }
+    if (c.res_realtime != a.res_realtime)                { exit 30i32; }
+    if (!(string_equals(c.zone_name, a.zone_name)))      { exit 30i32; }
+    if (c.zone_source != a.zone_source)                  { exit 30i32; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

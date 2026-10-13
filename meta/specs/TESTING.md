@@ -17,7 +17,7 @@ than sampled. Where that is possible it is the gate, and §3 says where.
 
 | Stage | Answers |
 |---|---|
-| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **40 files of 159 that no other stage roots** <!-- [[sweep: npk_total=159]] --> *(40 of 152 until cycle 0.3.2's third step added seven units, of 151 until its second added a probe, and of 150 until its first added a unit; 41 of 149 until cycle 0.3.0, when the library build began to reach `src/host/host.npk`)* |
+| `parse` | every source in the tree is readable by the real parser — the grammar is never quietly made partial. **A whole-tree stage, not a `[[test]]` entry**, and it asks `$NPKC` rather than the compiler's `tools/parse_check`: TM-123 has the measurement and the reason. Its value here is the **40 files of 163 that no other stage roots** <!-- [[sweep: npk_total=163]] --> *(40 of 159 until cycle 0.3.3 added the double and its three tests, each rooted or reached by the suite; 40 of 152 until cycle 0.3.2's third step added seven units, of 151 until its second added a probe, and of 150 until its first added a unit; 41 of 149 until cycle 0.3.0, when the library build began to reach `src/host/host.npk`)* |
 | `compile` | **the public API is importable, and the program that imports it RUNS** — `tests/conformance/`, held to `kind = "positive"`, judged on the run's exit code. It is not `accept`: see `BUILD.md` B-4b and TM-114 for why "accepted in silence" is the shape a program with no `failsafe` walks through |
 | `accept` | *(the stage exists upstream; this library does not use it — TM-114)* |
 | `check` | every documented refusal actually refuses, with exactly its code |
@@ -550,11 +550,19 @@ crash-only fuzzer misses.
 
 ## 7. Stress
 
-**Rule V-11 — `// stress: 40` on everything that reads a clock.** `src/host/`'s
-five functions are the only place `ntime` can behave differently on two runs,
-so they are the only place that needs it — but they need it, because "the clock
-went backwards between two calls" is exactly the shape of defect that hides
-behind a single green run.
+**Rule V-11 — `// stress: 40` on every test of a `src/host/` function.**
+`src/host/`'s five functions are the only place `ntime` can behave differently
+on two runs, so they are the only place that needs it — but they need it,
+because "the clock went backwards between two calls" is exactly the shape of
+defect that hides behind a single green run.
+
+*(Amended at cycle 0.3.3, TM-262 — the documents audit's TA-4. The rule read
+"on everything that reads a clock", which its second sentence scoped and
+`tests/probe/probe03_timespec_sys.npk` does not meet: it reads two clocks
+through `sys`, once, and asks the `timespec`'s shape, not `host`. A test of the
+double reads no clock and carries none — forty runs of it are forty copies of
+one answer — and `tests/unit/double_substitution.npk`, which reads the machine
+through the seam, carries it.)*
 
 ---
 

@@ -119,7 +119,9 @@ had asserted — which is why they are here rather than in a specification only.
 - **Unexpected diagnostics fail a test as surely as missing ones.**
 - **Where a property can be checked over its whole domain, it is** — the civil
   round trip covers every day in the supported range, not a sample.
-- **Anything that reads a clock runs forty times**, not once.
+- **Every test of a `src/host/` function runs forty times**, not once
+  (`meta/specs/TESTING.md` V-11; *"anything that reads a clock"* until cycle
+  0.3.3, TM-262 — the documents audit's TA-4).
 - **A red under stress is a stop sign, never a retry.**
 
 ## Compiler defects

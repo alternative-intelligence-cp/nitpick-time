@@ -1,0 +1,232 @@
+// expect-exit: 0
+// expect-golden: double_transcript
+//
+// A CLOCK-DEPENDENT BEHAVIOUR, REPRODUCED (cycle 0.3.3; the cycle README's
+// last 0.3.3 box; `HOST.md` H-9 ... H-11, TM-261 and TM-262). `stamp` is what
+// a consumer writes: a line saying what time it is, in UTC, how long since it
+// started by each of the two clocks an `Instant` reads, and which zone the
+// machine names -- generic over the seam, `HostReadings`, so the same text
+// runs against the machine in a program and against the double here.
+//
+// A FIXED SEQUENCE, AND ITS FIXED TRANSCRIPT. `transcript` drives a fresh
+// double through one sequence, a line after each step: the start; the same
+// reading again; 1.5 s passing; `TZ` set; the wall clock stepped back an hour
+// while the monotonic clock runs on; a suspend of a minute, which the boot
+// clock counts and the monotonic does not; 0.25 s more; the realtime clock at
+// the range's last nanosecond; and one nanosecond past it, where the wall
+// clock is refused (H-8, read by its caller) and both instants still answer.
+//
+//   * THE SAME FAKE READING TWICE GIVES THE SAME ANSWER: `stamp` asked twice
+//     of one double, nothing set between, answers one line (exit 10) -- and
+//     the transcript's second line is its first, asked again, which the
+//     golden shows.
+//   * A FIXED SEQUENCE GIVES A FIXED TRANSCRIPT: the sequence driven on a
+//     second double writes the same bytes (exit 11); and the `golden` stage
+//     holds what this program prints to `double_transcript.txt` beside it,
+//     byte for byte, on both legs -- on every full run, on every machine.
+//
+// No clock is read, so no `stress` (`TESTING.md` V-11): the transcript's
+// sameness across runs is the golden's comparison on every run.
+//
+// EXIT CODES, clear of every arm code (TM-152): 10 a reading asked twice
+// answered two lines, 11 the second double's transcript differs from the
+// first's, 12 the sequence refused -- a span `stamp` takes refused, its two
+// instants on two clocks, or the boot clock refused (the wall clock it
+// answers in words); 20 ... 22 the transcript's `write` (a refusal, a short
+// write). 12 and a golden that differs are seen red on mutants of the double;
+// 10 and 11 are belts, as `double_readings`' 60 and 61 are -- a reading
+// cannot write its double, and two doubles share nothing -- and 20 ... 22 are
+// the kernel's `write` (`0.3.3.md` §1.9).
+//
+// THE `failsafe` NAMES WHAT `NITPICK-REACH-002` ASKS of a root importing the
+// double: `host`'s eleven (`SAFETY.md` S-4), and no more.
+mod:double_transcript;
+
+use "../double/host_double.npk".*;
+use "../../src/host/host.npk".*;
+use "../../src/cal/cal.npk".CivilDateTime;
+use "../../src/span/span.npk".Instant;
+use "../../src/span/span.npk".InstantClock;
+use "../../src/span/span.npk".Timestamp;
+use "../../src/span/span.npk".instant_add;
+use "../../src/span/span.npk".instant_since;
+use "../../src/span/span.npk".timestamp_of;
+use "../../src/span/span.npk".timestamp_to_utc;
+use "../../src/core/limits.npk".NTIME_SECS_MAX;
+
+// `v`, which is at least 0 and under 10^`width`, in exactly `width` digits.
+func:digits = string(int64:v, int64:width) never fails {
+    string:t = "";
+    int64:rest = v;
+    for (int64:k in 1i64..width) {
+        string:d = int_to_string(rest % 10i64);
+        t = string_concat(d, t);
+        rest = rest / 10i64;
+    }
+    pass t;
+};
+
+func:join = string(string:a, string:b) never fails {
+    pass string_concat(a, b);
+};
+
+// The civil reading, `YYYY-MM-DD hh:mm:ss.nnnnnnnnn UTC` -- the four-digit
+// years this sequence reaches, 2025 and 9999.
+func:civil_text = string(CivilDateTime:c) never fails {
+    string:t = raw digits(c.date.year => int64, 4i64);
+    t = raw join(t, "-");
+    t = raw join(t, raw digits(c.date.month => int64, 2i64));
+    t = raw join(t, "-");
+    t = raw join(t, raw digits(c.date.day => int64, 2i64));
+    t = raw join(t, " ");
+    t = raw join(t, raw digits(c.time.hour => int64, 2i64));
+    t = raw join(t, ":");
+    t = raw join(t, raw digits(c.time.minute => int64, 2i64));
+    t = raw join(t, ":");
+    t = raw join(t, raw digits(c.time.second => int64, 2i64));
+    t = raw join(t, ".");
+    t = raw join(t, raw digits(c.time.nanos => int64, 9i64));
+    pass raw join(t, " UTC");
+};
+
+// A span, `+S.nnnnnnnnn s` -- the sign, the seconds, the nanoseconds.
+func:span_text = string(Duration:d) never fails {
+    int64:ns = d.ns;
+    string:t = "+";
+    if (ns < 0i64) {
+        t = "-";
+        ns = 0i64 - ns;
+    }
+    t = raw join(t, int_to_string(ns / 1000000000i64));
+    t = raw join(t, ".");
+    t = raw join(t, raw digits(ns % 1000000000i64, 9i64));
+    pass raw join(t, " s");
+};
+
+func:source_text = string(ZoneSource:s) never fails {
+    pick (s) {
+        (ZoneSource.TzEnvironment) { pass "TzEnvironment"; },
+        (ZoneSource.EtcLocaltime)  { pass "EtcLocaltime"; },
+        (ZoneSource.EtcTimezone)   { pass "EtcTimezone"; },
+        (ZoneSource.NotFound)      { pass "NotFound"; }
+    }
+    pass "";
+};
+
+// Where the consumer started, by each clock an `Instant` reads.
+struct:Start = { Instant:mono; Instant:boot; };
+
+func:start_of<H: HostReadings> = Start(H:h) {
+    Instant:b = relay h.now_boot();
+    pass Start{ mono: raw h.now_instant(), boot: b };
+};
+
+// THE CLOCK-DEPENDENT BEHAVIOUR: a consumer's line.
+func:stamp<H: HostReadings> = string(H:h, Start:s) {
+    string:wall = "the wall clock refused: outside the calendar's range";
+    Result<Timestamp>:u = h.now_utc();
+    if (!(u.is_error)) { wall = raw civil_text(raw timestamp_to_utc(u.value)); }
+    Duration:dm = relay instant_since(raw h.now_instant(), s.mono);
+    Instant:b = relay h.now_boot();
+    Duration:db = relay instant_since(b, s.boot);
+    SystemZone:z = raw h.system_zone();
+    string:zone = "no zone";
+    if (z.found) {
+        zone = raw join("zone ", z.name);
+        zone = raw join(zone, " (");
+        zone = raw join(zone, raw source_text(z.source));
+        zone = raw join(zone, ")");
+    }
+    string:t = raw join(wall, " | monotonic ");
+    t = raw join(t, raw span_text(dm));
+    t = raw join(t, " | boot ");
+    t = raw join(t, raw span_text(db));
+    t = raw join(t, " | ");
+    pass raw join(t, zone);
+};
+
+func:line = string(string:label, string:text) never fails {
+    string:t = raw join(label, ": ");
+    t = raw join(t, text);
+    pass raw join(t, "\n");
+};
+
+// THE FIXED SEQUENCE, on a fresh double: a line after each step.
+func:transcript = string() {
+    FakeHost:h = raw fake_host();
+    drop fake_set_utc(@h, timestamp_of(1760270400i64, 0i64) ?| #unreachable());  // 2025-10-12 12:00 UTC
+    Start:s = relay start_of(h);
+    string:t = raw line("start", relay stamp(h, s));
+    t = raw join(t, raw line("again", relay stamp(h, s)));
+    drop fake_advance(@h, raw duration_ns(1500000000i64));
+    t = raw join(t, raw line("1.5 s on", relay stamp(h, s)));
+    drop fake_set_zone(@h, "Europe/Kyiv", ZoneSource.TzEnvironment);
+    t = raw join(t, raw line("TZ set", relay stamp(h, s)));
+    drop fake_set_utc(@h, timestamp_of(1760266801i64, 500000000i64) ?| #unreachable());
+    t = raw join(t, raw line("the wall clock stepped back an hour", relay stamp(h, s)));
+    Instant:b = relay h.now_boot();
+    drop fake_set_instant(@h, raw instant_add(b, raw duration_ns(60000000000i64)));
+    t = raw join(t, raw line("a suspend of a minute", relay stamp(h, s)));
+    drop fake_advance(@h, raw duration_ns(250000000i64));
+    t = raw join(t, raw line("0.25 s on", relay stamp(h, s)));
+    drop fake_set_utc(@h, timestamp_of(NTIME_SECS_MAX, 999999999i64) ?| #unreachable());
+    t = raw join(t, raw line("the range's last nanosecond", relay stamp(h, s)));
+    drop fake_advance(@h, raw duration_ns(1i64));
+    t = raw join(t, raw line("one nanosecond past it", relay stamp(h, s)));
+    pass t;
+};
+
+// The transcript on stdout, once: the prelude's `to_cstring` and `sys` for
+// `write`, the shape the sweeps print their count with.
+func:say = int32(string:text) never fails {
+    Result<cstring>:c = to_cstring(text);
+    if (c.is_error) { pass 20i32; }
+    cstring:s = move(c.value);         // a `cstring` is move-only (TM-208)
+    Result<int64>:w = sys(1i64, 1i64, s.ptr, s.len);
+    if (w.is_error) { pass 21i32; }
+    if (w.value != s.len) { pass 22i32; }
+    pass 0i32;
+};
+
+// THE SAME FAKE READING TWICE: a double at the sequence's start, `stamp`
+// asked twice with nothing set between.
+func:same_twice = bool() {
+    FakeHost:h = raw fake_host();
+    drop fake_set_utc(@h, timestamp_of(1760270400i64, 0i64) ?| #unreachable());
+    Start:s = relay start_of(h);
+    string:a = relay stamp(h, s);
+    string:b = relay stamp(h, s);
+    pass string_equals(a, b);
+};
+
+func:main = int32(cstring[]:_~argv) {
+    Result<bool>:same = same_twice();
+    if (same.is_error) { exit 12i32; }
+    if (!(same.value)) { exit 10i32; }
+    Result<string>:one = transcript();
+    if (one.is_error) { exit 12i32; }
+    Result<string>:two = transcript();
+    if (two.is_error) { exit 12i32; }
+    if (!(string_equals(one.value, two.value))) { exit 11i32; }
+    int32:said = raw say(one.value);
+    if (said != 0i32) { exit said; }
+    exit 0i32;
+};
+
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (cal.ETimeValue)    { exit 80i32; },
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

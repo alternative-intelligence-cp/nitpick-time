@@ -138,7 +138,8 @@ path  = "tests/probe"
 #   `parse`   HAS NO ENTRY BY DESIGN, not by omission (TM-123). It is a
 #             WHOLE-TREE stage: `BUILD.md` §3's Directory column for it reads
 #             "every `.npk` in the tree", and that is where its value is — of
-#             the 159 files here [[sweep: npk_total=159]] (152, 151 and 150
+#             the 163 files here [[sweep: npk_total=163]] (159 until cycle
+#             0.3.3's double and its three tests, 152, 151 and 150
 #             until cycle 0.3.2's three steps, 149 until 0.3.0, 147 until 0.2.4b), 40 are put in front of the compiler
 #             by nothing else (41 until cycle 0.3.0, when the library build
 #             began to reach `src/host/host.npk`). An entry would narrow it to one directory and silently
@@ -166,7 +167,9 @@ path  = "tests/probe"
 #             so this directory is still empty.)
 #   `golden`  IMPLEMENTED, and `tests/golden/` is empty: nothing formats
 #             anything yet. Exercised by `selfcheck.py` case 4. Its entry
-#             arrives with `fmt` at cycle 0.4.
+#             arrives with `fmt` at cycle 0.4. (It has an entry since cycle
+#             0.3.3, below the conformance entry: the double's transcript is
+#             its first member, TM-262, and cycle 0.4's formats join it.)
 #   `sweep`   HAS AN ENTRY SINCE CYCLE 0.1.2, below the unit tests. Until
 #             then this line read "IMPLEMENTED, and `tests/unit/sweep/` is
 #             empty", and `--quick` had nothing to skip.
@@ -254,3 +257,16 @@ name  = "conformance"
 stage = "compile"
 kind  = "positive"
 path  = "tests/conformance"
+
+# THE GOLDEN MEMBERS -- stage `golden`, since cycle 0.3.3 (TM-262). As
+# `program`, both legs, and what a member prints is held to the committed
+# `<name>.txt` its `expect-golden:` names, beside it, byte for byte -- and the
+# two legs must print the same bytes as each other (`BUILD.md` §3). Its first
+# member is the double's transcript: a clock-dependent behaviour driven
+# through a fixed sequence on `tests/double/`'s `FakeHost`, the cycle 0.3
+# README's demonstration that it is reproducible; cycle 0.4's formats join
+# it, a golden per format.
+[[test]]
+name  = "golden"
+stage = "golden"
+path  = "tests/golden"

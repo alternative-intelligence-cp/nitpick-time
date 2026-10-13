@@ -87,7 +87,7 @@ index cb5e0f9a6269d7c2932953403157f86e599071a9..4dbe8da47b7dcbc05767eaaa97beb29c
      EVERY NUMBER IN THAT SENTENCE IS TAGGED AND CHECKED (TM-142). It read
      `50 = 1 + 27 + 3 + 19` until cycle 0.0.6, three subcycles after the tree
 diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
-index 9f25c37d3694a5c04764475af7329b9db0cb08cb..bef545169916f6622b20545d08a217a377a398e1 100644
+index 9f25c37d3694a5c04764475af7329b9db0cb08cb..26736a874c8d1fe35ff5b0dbd53fde84f4aa817f 100644
 --- a/meta/DECISIONS.md
 +++ b/meta/DECISIONS.md
 @@ -7940,6 +7940,10 @@ reading** — the author's answer is A, and Q-7 records why: no name closes the
@@ -153,7 +153,7 @@ index 9f25c37d3694a5c04764475af7329b9db0cb08cb..bef545169916f6622b20545d08a217a3
 +in one program; setters taking the struct by pointer. A root importing it owes
 +`host`'s eleven identities and no more. (4) The double as first drafted gave
 +a caller of the seam fewer answers than `host` gives one — no kernel errno,
-+which `host_now_utc`, `host_now_boot` and `host_clock_res` forward (H-7); no
++which `host_now_utc`, `host_now_boot` and `host_clock_res` forward (S-5); no
 +refusal of a boot reading or a resolution, which `timespec_ns` makes; no
 +nanosecond field outside one second, which `timestamp_of` refuses
 +(`NanoRange`); no resolution but 1 ns; and no reading that moves between two
@@ -195,7 +195,7 @@ index 9f25c37d3694a5c04764475af7329b9db0cb08cb..bef545169916f6622b20545d08a217a3
 +Error:e) never fails`, and `fake_refuse_res = NIL(FakeHost->:h,
 +HostClock:which, Error:e) never fails`, each fallible reading refused with
 +`e` from then on, forwarded verbatim as `host` forwards the kernel's errno
-+(H-7) and relays `ETimeValue` — a prelude errno a test names, or
++(S-5) and relays `ETimeValue` — a prelude errno a test names, or
 +`ETimeValue` for `timespec_ns`'s refusals — until that reading is set again;
 +time passing sets nothing, and the monotonic reading, `never fails`, has no
 +refusal. **And a reading that changes per call**: `SteppedHost<S: FakeStep>`,
@@ -530,7 +530,7 @@ index f0c9d8706bc72c3be3f9d17df0d16d23dbdc9182..2172b004050d1eaa4b76070539697db4
  Expectations live in the test file. Governed by `../meta/specs/TESTING.md`.
 diff --git a/tests/double/README.md b/tests/double/README.md
 new file mode 100644
-index 0000000000000000000000000000000000000000..d5cd9569e9f978726ccbd72421891fb40ca248e8
+index 0000000000000000000000000000000000000000..6f707cea6a831b779fc17ac365444c2b4e5232af
 --- /dev/null
 +++ b/tests/double/README.md
 @@ -0,0 +1,42 @@
@@ -553,7 +553,7 @@ index 0000000000000000000000000000000000000000..d5cd9569e9f978726ccbd72421891fb4
 +| `fake_set_zone` | the fifth reading's setter, beside H-9's three |
 +| `fake_set_utc_raw` | the realtime as the kernel would hand it, unchecked: `timestamp_of` refuses it where it is read, by `YearRange` or `NanoRange`, as `host_now_utc` refuses the kernel's |
 +| `fake_set_res` | a clock's resolution |
-+| `fake_refuse_utc`, `fake_refuse_boot`, `fake_refuse_res` | a fallible reading refused with the identity the test hands it — an errno, forwarded verbatim as `host` forwards the kernel's (H-7), or `ETimeValue` — until that reading is set again |
++| `fake_refuse_utc`, `fake_refuse_boot`, `fake_refuse_res` | a fallible reading refused with the identity the test hands it — an errno, forwarded verbatim as `host` forwards the kernel's (`SAFETY.md` S-5), or `ETimeValue` — until that reading is set again |
 +| `SteppedHost`, `stepped_host()`, `FakeStep`, `FakeTick` | **a reading that changes per call**: each reading answers what the `FakeHost` it points to answers, then a step runs on that double — `FakeTick` an advance per reading, or a `FakeStep` the test writes |
 +
 +**The double is a value, and the substitution a type** (TM-261). A
@@ -578,7 +578,7 @@ index 0000000000000000000000000000000000000000..d5cd9569e9f978726ccbd72421891fb4
 +sequence and its fixed transcript, `double_transcript.txt`.
 diff --git a/tests/double/host_double.npk b/tests/double/host_double.npk
 new file mode 100644
-index 0000000000000000000000000000000000000000..369f080f390b512a981fc294a21929aa499a6136
+index 0000000000000000000000000000000000000000..49a18dc357b11ce388d73b799e4c53d67d5ef3d1
 --- /dev/null
 +++ b/tests/double/host_double.npk
 @@ -0,0 +1,362 @@
@@ -812,7 +812,7 @@ index 0000000000000000000000000000000000000000..369f080f390b512a981fc294a21929aa
 +
 +// THE REFUSALS. Each fallible reading H-1 declares -- the realtime, the boot
 +// clock, and each clock's resolution -- answers `e` from now on, forwarded
-+// verbatim as `host` forwards the kernel's errno (H-7) and relays
++// verbatim as `host` forwards the kernel's errno (`SAFETY.md` S-5) and relays
 +// `ETimeValue` (H-8, and `timespec_ns`'s refusals of a boot reading or a
 +// resolution): a test hands it a prelude errno -- `Interrupted`,
 +// `WouldBlock`, `NotFound` -- or `cal.ETimeValue`, and the caller meets that
@@ -1199,7 +1199,7 @@ index 0000000000000000000000000000000000000000..b42dcc08911c4f64134b092579887459
 +one nanosecond past it: the wall clock refused: outside the calendar's range | monotonic +1.750000001 s | boot +61.750000001 s | zone Europe/Kyiv (TzEnvironment)
 diff --git a/tests/unit/double_readings.npk b/tests/unit/double_readings.npk
 new file mode 100644
-index 0000000000000000000000000000000000000000..12c9a8a3c41184041d55c1f33df2bf4beef09347
+index 0000000000000000000000000000000000000000..df072a5856d198b92515360b5784bce491d29183
 --- /dev/null
 +++ b/tests/unit/double_readings.npk
 @@ -0,0 +1,404 @@
@@ -1214,7 +1214,7 @@ index 0000000000000000000000000000000000000000..12c9a8a3c41184041d55c1f33df2bf4b
 +// every other answer `HOST.md` H-1's signatures allow a caller to meet: each
 +// clock's resolution, the realtime as the kernel hands it, refused by
 +// `NanoRange` as by `YearRange`, each fallible reading refused with the
-+// identity the test hands it -- an errno forwarded verbatim (H-7), or
++// identity the test hands it -- an errno forwarded verbatim (`SAFETY.md` S-5), or
 +// `ETimeValue`, as `timespec_ns` refuses a boot reading or a resolution --
 +// and a reading that changes per call, `SteppedHost`, under a tick and under
 +// a step of this test's own. No clock is read, so no `stress` (`TESTING.md`

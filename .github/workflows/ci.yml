@@ -53,8 +53,9 @@
 # interop -- and `src/host/` since 0.3.0, the clocks --
 # re-exported together as 84 public names [[sweep: lib_reexports=84]] (81
 # until cycle 0.3.2 added the system zone's three),
-# so this IS evidence about behaviour, of the 143 units the runner reports at
-# compiler `7e91730` since cycle 0.3.2a (143 at `5fbaf4a` at cycle 0.3.2, 134 at cycles 0.3.0 and 0.3.1, 133 at cycles 0.2.4b and 0.2.4, 131 at cycles 0.2.3 and 0.2.4a, 126 at cycles 0.2.2 and 0.2.3a, 122 at cycle 0.2.1, 114 at cycle 0.2.0, 111 at 0.2.0b, 113 at 0.2.0a and at
+# so this IS evidence about behaviour, of the 146 units the runner reports at
+# compiler `7e91730` since cycle 0.3.3, the double's three tests among them
+# (143 at `7e91730` at cycle 0.3.2a, 143 at `5fbaf4a` at cycle 0.3.2, 134 at cycles 0.3.0 and 0.3.1, 133 at cycles 0.2.4b and 0.2.4, 131 at cycles 0.2.3 and 0.2.4a, 126 at cycles 0.2.2 and 0.2.3a, 122 at cycle 0.2.1, 114 at cycle 0.2.0, 111 at 0.2.0b, 113 at 0.2.0a and at
 # `c970483` at cycle 0.1.5's second half; 62 at cycle 0.0.6, 67 at 0.1.0,
 # 70 at 0.1.0b, 75 at 0.1.0c, 78 at 0.1.1, 81 at 0.1.2, 86 at 0.1.3, 90 at
 # 0.1.3b, 91 at 0.1.4 and 0.1.4b, all at `c3bdae2` from 0.1.0b on, 101 at

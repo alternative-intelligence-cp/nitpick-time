@@ -544,6 +544,21 @@ LLVM row moved at the self-check and then, past it, at 33 of its 143 units —
 *(It said "at 35 units" until cycle 0.3.3 — 0.3.2a's verifier.)* A full invocation
 about 230 s at either pin.
 
+**At cycle 0.3.3, the same pin, 146 units**: three tests added — the double's,
+`tests/unit/double_readings.npk`, `double_substitution.npk` under `// stress:
+40`, and `tests/golden/double_transcript.npk`, the `golden` stage's first
+member (TM-262) — and the double they import, `tests/double/host_double.npk`,
+a seventh exemption at `none` (TM-261); `check_layering` reads its imports
+beside `src/`'s (TM-260). The self-check plants 12 of V-14's 13 cases,
+**119** tree-check violations with 119 clean controls — the three new are
+`check_layering`'s, the double importing `fmt`, the umbrella and a unit — 4
+arm specimens and 4 verdict specimens; parse over 163 files, `118 + 43 + 2`;
+the defect corpus unchanged at 36; the library unchanged, its IR 374 606 B; and
+library + repro + suite at **111** (**59 probe**, **42 unit**, **8 sweep**,
+**1 golden**, and the conformance member). `146 = 35 + 111`. A full invocation
+about 230 s; the three tests cost about three seconds of it, both legs, the
+substitution's eighty runs included.
+
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the
 run makes about 200 of them. One that does *not* compile costs ~0.03 s.

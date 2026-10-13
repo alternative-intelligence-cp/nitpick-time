@@ -6,8 +6,10 @@ the safety-critical systems language. No dependencies, no libc, no
 compiled in from a pinned IANA release, so the same program gives the same
 answer on every machine.
 
-> **Status: cycle 0.3, the host boundary, is in progress — its first
-> subcycle, the clocks, done on 2026-10-08 — after cycle 0.2, instants and
+> **Status: cycle 0.3, the host boundary, is in progress — its first five
+> subcycles done: the clocks, the purity boundary's instruments and the
+> system zone on 2026-10-08, the adoption of compiler `7e91730` on
+> 2026-10-09, and the double on 2026-10-13 — after cycle 0.2, instants and
 > timestamps, CLOSED on 2026-10-02, archived at
 > [`meta/roadmap/done/0.2/`](meta/roadmap/done/0.2/README.md)**, as cycle 0.1,
 > the civil calendar, was on 2026-09-26 ([`meta/roadmap/done/0.1/`](meta/roadmap/done/0.1/README.md))
@@ -37,7 +39,9 @@ answer on every machine.
 > the library pure, of its source and of the compiler's own output for it;
 > and since cycle 0.3.2 it says which zone the machine names, and by which
 > mechanism — `$TZ`, `/etc/localtime`'s link or `/etc/timezone` — or that
-> none does, never UTC.
+> none does, never UTC. Since cycle 0.3.3 it has a double, in `tests/`: a
+> clock-dependent function written against the seam the double plugs into
+> runs against the machine in a program and against readings a test sets.
 > Zones and formats are still
 > placeholders, each replaced by the cycle
 > [`meta/roadmap/ROADMAP.md`](meta/roadmap/ROADMAP.md) names. The specification
@@ -57,7 +61,10 @@ answer on every machine.
 > wall-clock time" — a civil reading, in `meta/specs/GLOSSARY.md`'s words,
 > where the conversion refused is to a point on the UTC scale, TM-226; and
 > until cycle 0.3.0, that cycle 0.3 "is next" and the clocks placeholders;
-> and until cycle 0.3.2, that `src/host/` read its clocks and nothing more.)*
+> and until cycle 0.3.2, that `src/host/` read its clocks and nothing more;
+> and until cycle 0.3.3, that its first subcycle alone was done, where the
+> block went on to report the next two — the documents audit's TA-1, and the
+> early ecosystem audit's E2-10.)*
 
 ---
 

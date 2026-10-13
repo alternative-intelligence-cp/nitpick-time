@@ -5,21 +5,24 @@ That is unusual and it is deliberate: the specifications catch design mistakes
 that would otherwise be found by writing the wrong code twice.
 
 **Where it stands:** cycle 0.3, the host boundary, is in progress, its first
-three subcycles done — the clocks (2026-10-08), the purity boundary's
-instruments (2026-10-08) and the system zone (2026-10-08); cycle 0.2,
+five subcycles done — the clocks, the purity boundary's instruments and the
+system zone (2026-10-08), the adoption of compiler `7e91730` (2026-10-09) and
+the double (2026-10-13); cycle 0.2,
 instants and timestamps, is
 closed (2026-10-02), as cycle 0.1, the civil calendar, is (2026-09-26).
 `src/core/` and `src/cal/` are real, `src/span/` holds `Instant` since cycle
 0.2.0, `Timestamp` since 0.2.1, the conversions between a `Timestamp` and its
 civil reading since 0.2.2, and the `Duration` interop since 0.2.3, and
-`src/host/` the clocks since 0.3.0 and the system zone since 0.3.2; the other two `src/` directories hold one
+`src/host/` the clocks since 0.3.0 and the system zone since 0.3.2, and
+`tests/double/` its double since 0.3.3; the other two `src/` directories hold one
 placeholder each until the cycle `meta/roadmap/ROADMAP.md` names replaces it.
 `harness/run.py` is the runner, and it proves first, on every full run, that it
 can fail (`meta/specs/TESTING.md` V-14, V-15). *(This paragraph described cycle
 0.0.1's skeleton — "no self-check yet" — until cycle 0.1.5, said the cycle
 "is in its close" between the close's two halves, said cycle 0.3 "is next"
-until cycle 0.3.0, its first subcycle alone done until cycle 0.3.1, and
-its first two until cycle 0.3.2.)*
+until cycle 0.3.0, its first subcycle alone done until cycle 0.3.1,
+its first two until cycle 0.3.2, and its first three until cycle 0.3.3 —
+which left out 0.3.2a.)*
 
 ## Before you write anything
 

@@ -14,12 +14,59 @@ the library's emission read beside the spelling checks; 0.3.2, the system zone,
 DONE (2026-10-08): `host_system_zone` says which zone the machine names, and
 how; 0.3.2a, the adoption of compiler `7e91730`, DONE (2026-10-09): a string's
 bytes are a read-only view, every slot they reach says so, and LLVM is
-20.1.8; and 0.3.3, the double, is next. Cycle 0.2 CLOSED
+20.1.8; 0.3.3, the double, DONE (2026-10-13): the test host is a value and
+the substitution a type, in `tests/double/`; and 0.3.4, the close, is next.
+Cycle 0.2 CLOSED
 (2026-10-02), archived at `meta/roadmap/done/0.2/` — instants and timestamps:
 `Instant` and its two clocks, `Timestamp` and its one constructor, the
 conversions to and from the civil scale in UTC with their exhaustive gate on
 every run, and the `Duration` interop — after cycle 0.1, the civil calendar,
 CLOSED 2026-09-26 and archived at `meta/roadmap/done/0.1/`.**
+
+**After cycle 0.3.3: the double.** `src/host/` is the one module a test
+needs a double for (`HOST.md` H-9), and it has one, in `tests/`, never in
+`src/` (H-10). **The double is a value, and the substitution a type**
+(TM-261): H-9's setters as cycle 0.0 drafted them take no handle, and nothing
+a module declares keeps a reading between two calls — of the forms measured
+(`meta/roadmap/0.3/0.3.3.md` §1.2), a plain module binding with an
+initialiser is `NITPICK-TYPE-055`, the compiler's D-211, a write into a part of a
+`fixed` one `NITPICK-TYPE-086`, an initialiser that calls `NITPICK-TYPE-035`,
+and one with no initialiser is a read-only zero whose plain write the legs
+disagree on, a compiler-defect candidate raised and relied on nowhere — and
+there is no `host` object to link in `host`'s place, `npkc` compiling the
+whole graph a root reaches (TM-117) and mapping no path to another. So
+`tests/double/host_double.npk` declares the seam, `HostReadings` — H-1's five
+readings as a trait, each named without its `host_` prefix, with H-1's result
+and `never fails` where H-1 says it — the machine's host behind it,
+`MachineHost`, each method one call of `host`'s, and the double beside it,
+`FakeHost`: its fields `hidden`, the realtime held as the kernel hands it and
+read through `timestamp_of`, so a reading past the range is H-8's refusal
+where its caller reads it; H-9's three setters, each taking the double it sets,
+and `fake_set_zone` beside them — and every other answer `host` gives a caller
+is a setter's too: the realtime as the kernel hands it, refused by `NanoRange`
+as by `YearRange`; each clock's resolution; and each fallible reading refused
+with the identity a test hands it, an errno forwarded verbatim or
+`ETimeValue`. And `SteppedHost`, whose readings change per call: each answers
+what its `FakeHost` answers and then runs a step on it — `FakeTick`, an
+advance per reading, or a step a test writes. A clock-dependent function takes
+`<H: HostReadings>` and is instantiated with either: at build time, statically,
+and nothing in `src/` changes. **Its tests** (TM-262): the double alone,
+`tests/unit/double_readings.npk`; one generic function and both hosts,
+`double_substitution.npk`, under `// stress: 40` because it reads the machine;
+and a fixed sequence's fixed transcript, `tests/golden/double_transcript.npk`
+— the `golden` stage's first member, a consumer's line after each step, a wall
+clock stepped back an hour while the monotonic clock runs on, a suspend the
+boot clock counts, the realtime refused past the range — every line of its
+golden re-derived with Python's `datetime`. Every single-site mutant of the
+double was run — 283: 88 refused by the compiler, 188 red, 7 exit 0 and each
+named with why — and eighteen named mutants beside them, and every exit is
+seen red but the belts. And first, in a
+commit of its own, **`check_layering` reads the double's imports as it reads
+`host`'s** (TM-260): what B-17 lets `host` import, `host` itself, or another
+file of the double. `TESTING.md` V-11 reads "every test of a `src/host/`
+function" (the documents audit's TA-4), and the audit's other six are fixed
+where they stood. The self-check plants 119 tree-check violations. A full
+invocation is **146 units green** at pin `7e91730`.
 
 **After cycle 0.3.2a: the adoption of compiler `7e91730`** — the compiler's
 landing 103, carrying its landings 83 … 103 over `5fbaf4a`: the libraries' one

@@ -8716,6 +8716,15 @@ instrument the double stands under, in a commit of its own: the rule two of
 this cycle's plans handed on for it. The second is the double, which the
 language makes a value; the third, its tests.
 
+> **Dated 2026-10-15 at cycle 0.3.4, cycle 0.3's close — the acceptance's
+> path, a note and no decision.** For this batch, *"accepted by the
+> orchestrator at the plan's verification"* reads: accepted at the plan
+> verifier's PASS by the Team seat's manager, which ran the subcycle's chain
+> in the orchestrator's role under the orchestrator's delegation, and confirmed
+> by the orchestrator at its review of the chain on 2026-10-13, before the
+> merge (the workbench's `RECORD.md`, that date). The paragraph is left as
+> written.
+
 ### TM-260 — `check_layering` reads the double's imports as it reads `host`'s: every `.npk` under `tests/double/` imports what B-17 lets `host` import, `host` itself, or another file of the double, and nothing else
 
 **2026-10-13, cycle 0.3.3 (the plan's PD-110). Dates `BUILD.md` B-17 and
@@ -8749,6 +8758,22 @@ two plans handed the check on, and three plants show what review would have to
 see.
 
 ### TM-261 — the double is a value, and the substitution a type: `tests/double/host_double.npk` declares `HostReadings`, H-1's five readings as a trait, the machine's `host` behind it and `FakeHost` beside it; H-9's setters take the double they set, and a clock-dependent function is generic over the seam
+> **Corrected 2026-10-15 at cycle 0.3.4, cycle 0.3's close — a dated note, no
+> new decision.** The words it gives as *"the compiler's D-211"* — *"module
+> state is `fixed` … keep mutable process state in `main`'s scope where it
+> flows through the calls that need it"* — are `NITPICK-TYPE-055`'s message at
+> the pin, which cites D-211 (the compiler's `src/frontend/type_stmt.npk` at
+> `7e91730`); D-211's own are *"mutable process state lives in `main`'s scope
+> and flows explicitly"* (its `meta/specs/DECISIONS.md` at the pin). The
+> refusal is D-211's, as the sentence says. Found by the cycle's documents
+> audit, TA-10. The decision stands as decided.
+>
+> **The author's decision too (2026-10-15, cycle 0.3.4).** Its amendment of
+> `HOST.md` H-9 and H-10 went to the author as the workbench's question 28, and
+> his answer, at 2026-10-13 20:53, accepted it as recommended — *"i'm fine with
+> those recommendations for questions 27-29."* — so H-9 and H-10 stand as
+> amended, and whether the library exports the seam waits for cycle 1.0. The
+> text below is left exactly as written.
 
 **2026-10-13, cycle 0.3.3 (the plan's PD-111). Amends `HOST.md` H-9 and H-10
 by dated notes; marks TM-249 and TM-256, the two decisions that named the

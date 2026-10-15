@@ -25,7 +25,7 @@ library is a type distinction it declined to make.
 | 5 | [`SPAN_MODEL.md`](SPAN_MODEL.md) | `Duration` and `Period`, and every arithmetic rule with worked examples |
 | 6 | [`ZONE_MODEL.md`](ZONE_MODEL.md) | the compiled-in IANA database, offset lookup, and what happens at a DST edge |
 | 7 | [`FORMAT_MODEL.md`](FORMAT_MODEL.md) | formatting and parsing, the typed layout, and why there is no format string |
-| 8 | [`HOST.md`](HOST.md) | the one impure module: the clocks and the system-zone discovery |
+| 8 | [`HOST.md`](HOST.md) | the one impure module: the clocks and the system-zone discovery — and its test double, in `tests/` (H-9 … H-11) *(it named the module's two halves alone until cycle 0.3.4 — the documents audit's TA-9)* |
 | 9 | [`TESTING.md`](TESTING.md) | the harness, the exhaustive gates, the round trips, the fuzzer |
 | 10 | [`VERIFICATION.md`](VERIFICATION.md) | the proof obligations this library carries, and which of them are live clauses rather than comments (P-1b) |
 | 11 | [`COMPAT.md`](COMPAT.md) | what is supported, the tzdb version policy, and what is deliberately absent |

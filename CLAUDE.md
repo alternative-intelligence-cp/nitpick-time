@@ -1054,7 +1054,9 @@ different installation from the one on `PATH`.
 src/       the library, Nitpick only, layered per meta/specs/BUILD.md §6
   core/      Vec, Bytes, the named limits
   cal/       the civil calendar and its algorithms
-  span/      Duration interop and Period
+  span/      Instant, Timestamp, the conversions, the Duration interop;
+             Period at cycle 0.7 (it said "Duration interop and Period"
+             until cycle 0.3.4, the documents audit's TA-8)
   zone/      the GENERATED tz tables and the offset lookup
   fmt/       formatting and parsing, and the typed layout
   host/      THE ONLY IMPURE MODULE — five functions, nothing else

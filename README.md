@@ -181,7 +181,7 @@ row is a later cycle" until cycle 0.3.3 — the documents audit's TA-2.)*
 src/          # THE LIBRARY — Nitpick source only
   core/       #   growable storage, byte building, the named limits
   cal/        #   the civil calendar and its algorithms
-  span/       #   Duration interop and Period
+  span/       #   Instant, Timestamp, the conversions, the Duration interop; Period at 0.7
   zone/       #   the GENERATED time-zone tables and the offset lookup
   fmt/        #   formatting and parsing, and the typed layout
   host/       #   the only module that asks the machine anything

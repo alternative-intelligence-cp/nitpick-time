@@ -7,28 +7,56 @@ Guidance for Claude Code sessions working in this repository.
 `ntime` — a date, time and time-zone library for **Nitpick**, the
 safety-critical systems language at `../../nitpick`.
 
-**Status: cycle 0.3, the host boundary, IN PROGRESS — 0.3.0, the clocks,
-DONE (2026-10-08): `src/host/` reads the machine's clocks; 0.3.1, the purity
-boundary's instruments, DONE (2026-10-08): `check_purity`'s ban list reviewed, and
-the library's emission read beside the spelling checks; 0.3.2, the system zone,
-DONE (2026-10-08): `host_system_zone` says which zone the machine names, and
-how; 0.3.2a, the adoption of compiler `7e91730`, DONE (2026-10-09): a string's
-bytes are a read-only view, every slot they reach says so, and LLVM is
-20.1.8; 0.3.3, the double, DONE (2026-10-13): the test host is a value and
-the substitution a type, in `tests/double/`; and 0.3.4, the close, is next.
-Cycle 0.2 CLOSED
-(2026-10-02), archived at `meta/roadmap/done/0.2/` — instants and timestamps:
+**Status: cycle 0.3, the host boundary, CLOSED (2026-10-15), archived at
+`meta/roadmap/done/0.3/` — the clocks, the purity boundary's instruments, the
+system zone, the adoption of compiler `7e91730` and the double: `src/host/`
+reads the machine and nothing else in the library does — `check_purity`
+reads that in the source and `check_call_edges` in the library's emission —
+and the test host is a value in `tests/double/`, the substitution a type.
+Cycle 0.4, formatting and parsing, is next, its README opened at the close.
+Cycle 0.2 CLOSED (2026-10-02), archived at `meta/roadmap/done/0.2/` — instants and timestamps:
 `Instant` and its two clocks, `Timestamp` and its one constructor, the
 conversions to and from the civil scale in UTC with their exhaustive gate on
 every run, and the `Duration` interop — after cycle 0.1, the civil calendar,
 CLOSED 2026-09-26 and archived at `meta/roadmap/done/0.1/`.**
+
+**After cycle 0.3.4: cycle 0.3's close.** The cycle's documents audit (the
+workbench's, at `fa9fb37`) found its predecessor's TA-1 … TA-7 fixed and four
+findings more, all wording, each fixed where it stood: `src/span/`'s line in
+the layout blocks names what it holds — `Instant`, `Timestamp`, the
+conversions and the `Duration` interop (TA-8); the specifications' index gives
+`HOST.md` its double (TA-9); the double's header, and a dated note under
+TM-261, say the words they quote are `NITPICK-TYPE-055`'s message, which cites
+the compiler's D-211, and not D-211's own (TA-10); and the cycle README's tick
+for the double's demonstration names all four of `double_readings`' belts
+(TA-11). **And first, a `python3 -B` run leaves no bytecode**: the self-check
+starts this runner again for each scratch tree, and the parent's `-B` did not
+reach that child, so a `python3 -B` run wrote every harness module's bytecode
+into `harness/__pycache__/`, ten files; the child runs under `-B` now, and
+`harness/README.md` names what a run does leave — `build/` and the
+self-check's scratch. The 0.3.3 batch heading in `meta/DECISIONS.md` has a
+dated note: the Team seat's manager accepted those three decisions in the
+orchestrator's role, and the orchestrator confirmed them; and TM-261 another,
+the author's acceptance of H-9 and H-10 as it amends them, the workbench's
+question 28. The cycle's gate was read again and met — `check_purity` green,
+the cycle README's two plants red by name in a copy, and every clock test
+green under `// stress: 40`. Cycle 0.3's records moved to
+`meta/roadmap/done/0.3/`, the links the move broke in its own commit and every
+plain mention after it; cycle 0.4's README was given what cycle 0.3 hands it —
+the `golden` stage's member, the read-only view a parser takes, the emission
+readings `fmt` meets, the questions its planning settles, and the adoption
+list, the compiler's D-341 still unbuilt — cycle 1.0's, whether the library
+exports the double's seam, and cycles 0.7's and 0.8's a hand-on each that the
+archive would have left in a plan alone. No decision was recorded, and `src/`
+changed in comments only. A full invocation is **146 units green** at pin
+`7e91730`.
 
 **After cycle 0.3.3: the double.** `src/host/` is the one module a test
 needs a double for (`HOST.md` H-9), and it has one, in `tests/`, never in
 `src/` (H-10). **The double is a value, and the substitution a type**
 (TM-261): H-9's setters as cycle 0.0 drafted them take no handle, and nothing
 a module declares keeps a reading between two calls — of the forms measured
-(`meta/roadmap/0.3/0.3.3.md` §1.2), a plain module binding with an
+(`meta/roadmap/done/0.3/0.3.3.md` §1.2), a plain module binding with an
 initialiser is `NITPICK-TYPE-055`, the compiler's D-211, a write into a part of a
 `fixed` one `NITPICK-TYPE-086`, an initialiser that calls `NITPICK-TYPE-035`,
 and one with no initialiser is a read-only zero whose plain write the legs
@@ -208,7 +236,7 @@ audit's S4); cycle 0.2's records
 moved to `meta/roadmap/done/0.2/`, the links the move broke in the move's own
 commit and every plain mention after it; cycle 0.3's README given what cycle
 0.2 hands it — `meta/OPEN_QUESTIONS.md` Q-7, which is the author's, and what
-the next adoption owes; and `meta/roadmap/0.3/0.3.0.md` written. **Three
+the next adoption owes; and `meta/roadmap/done/0.3/0.3.0.md` written. **Three
 items reached the close after the audit, a row of the triage each.**
 `check_int128_sites` reads a wide type's NAME and not a literal's width
 suffix, so `(3i256 * 5i256) =>! int64` passes it — it compiles, and narrows

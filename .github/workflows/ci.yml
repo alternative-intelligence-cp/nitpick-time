@@ -322,7 +322,7 @@ env:
   # count, and the unadopted tree is RED at `7e91730`, which refuses its
   # readers of a string's bytes (TM-258, TM-259). All of them are pushed
   # together, so CI runs once, on the adopted tree
-  # (`meta/roadmap/0.3/0.3.2a.md` §3).
+  # (`meta/roadmap/done/0.3/0.3.2a.md` §3).
   #
   # EVERY HEX VALUE IN THIS BLOCK IS QUOTED. GitHub's YAML reads a bare scalar
   # of digits, one `e` and digits as a NUMBER: unquoted, `7e91730` is the

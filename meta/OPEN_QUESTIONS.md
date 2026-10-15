@@ -225,7 +225,7 @@ freeze of the public names. **Not blocking.**
 *(Answered 2026-10-02 at 08:24 by the author — the workbench's question 21,
 put beside two others and answered "go with the recommendations": **A, keep
 `instant_of`**. Recorded here on 2026-10-08, at the rehearsal of cycle 0.3's
-first plan: nothing in `roadmap/0.3/0.3.0.md` moves under A, and the decision
+first plan: nothing in `roadmap/done/0.3/0.3.0.md` moves under A, and the decision
 that records the answer is that plan's for the clocks, which strikes this
 question with its number.)*
 
@@ -912,7 +912,7 @@ it is now, so it is a claim and not a record. TM-142.)*
 ### ~~O-X9 — should an IR call-edge scan answer "did this module touch the kernel"?~~ — **SETTLED 2026-10-08 (TM-250): yes, beside `check_purity` and never instead of it — `check_call_edges` reads every call a function of `src/` outside `src/host/` makes in `npkc`'s emission of the umbrella**
 
 > The recommendation, taken at cycle 0.3.1 once `src/host/` named the kernel
-> (`meta/roadmap/0.3/0.3.1.md` §1). Measured at compiler `5fbaf4a`: a
+> (`meta/roadmap/done/0.3/0.3.1.md` §1). Measured at compiler `5fbaf4a`: a
 > function in a copy's `src/cal/` calling `hardware_concurrency()`,
 > `read_stdin()`, `chain_depth()` or the prelude's `std_out()` compiles, and
 > `check_purity` passed each — none of their names was on its list — while
@@ -1060,7 +1060,7 @@ What cycle 0.3.0 added was the sentences saying the gap was closed —
 `harness/checks.py`'s *"so the literal was the whole gap"* and TM-246's *"so a
 computation of literals alone is the whole gap"* — corrected since, the first
 in place and the second by a dated note, with their twins in other words
-(`meta/roadmap/0.3/0.3.0.md`'s record, its addendum).
+(`meta/roadmap/done/0.3/0.3.0.md`'s record, its addendum).
 
 *Dormant.* Of `src/`'s 57 functions none returns or takes a wide type, and the
 three that spell one — `timestamp_since`, `instant_since` and `bytes_put_int` —
@@ -1103,14 +1103,14 @@ types rather than spellings is in scope, and when — 0.3.1 reviews
 that sees spellings beside an IR scan that sees what was emitted. Until it is
 settled, `TESTING.md` V-1 and §2's row, `SPAN_MODEL.md` N-20, TM-240 and
 TM-246, `harness/checks.py`, `CLAUDE.md` and CI's comment each carry a dated
-pointer here (`meta/roadmap/0.3/0.3.0.md` §7).
+pointer here (`meta/roadmap/done/0.3/0.3.0.md` §7).
 
 ---
 
 ### ~~O-X12 — a generic function of `src/` that nobody instantiates is in no emission: what reads it?~~ — **SETTLED 2026-10-08 (TM-254): an emission — every generic function `src/` declares is instantiated in `tests/unit/generic_instances.npk`, whose emission `check_call_edges` and `check_wide_types` read beside the umbrella's, and a generic no instance holds is a finding**
 
 > The recommendation, taken at cycle 0.3.2. Measured at compiler `5fbaf4a`
-> (`meta/roadmap/0.3/0.3.2.md` §1.3): each of the four shapes below, in a
+> (`meta/roadmap/done/0.3/0.3.2.md` §1.3): each of the four shapes below, in a
 > generic function appended to a copy's `src/cal/cal.npk`, is a finding of
 > `check_call_edges` with no instance — the drop and the truncation reach
 > `npk_ofd_close` with one, the alias is refused where it is instantiated,
@@ -1131,7 +1131,7 @@ only where a caller instantiates it. The umbrella instantiates none, so the
 declared-function rule holds only the non-generic functions `src/` declares,
 and `check_purity` reads a generic one's spellings alone. Measured at compiler
 `5fbaf4a`, each a generic function appended to a copy's `src/cal/cal.npk`, in
-full runs (`meta/roadmap/0.3/0.3.1.md`, its third addendum):
+full runs (`meta/roadmap/done/0.3/0.3.1.md`, its third addendum):
 
 - one that lets a `ByteReader` it takes by `move` die, and one that calls
   `mono_now` through a function-typed local: **GREEN**, 134 units, every check
@@ -1156,7 +1156,7 @@ declares, instantiated in an emission the two checks read** — a unit,
 `tests/unit/generic_instances.npk`, that calls each at a type its bounds admit,
 emitted by `run.py`'s step 7 beside the umbrella — and the declared-function
 rule held to the generic ones too: a generic no instance holds is a finding.
-Measured at planning (`meta/roadmap/0.3/0.3.2.md` §1.3): each of the four
+Measured at planning (`meta/roadmap/done/0.3/0.3.2.md` §1.3): each of the four
 shapes above is a finding of `check_call_edges` with no instance, and with one
 the drop and the truncation reach `npk_ofd_close` through the drop glue, the
 alias is refused where it is instantiated (`NITPICK-EMIT-002`), and the
@@ -1179,7 +1179,7 @@ alias is refused where it is instantiated (`NITPICK-EMIT-002`), and the
   code may live, where the question is what reads it.
 
 *What settles it:* **cycle 0.3.2's planning**, by that subcycle's first
-decision (`meta/roadmap/0.3/0.3.2.md`'s PD-99), or the orchestrator's choice of
+decision (`meta/roadmap/done/0.3/0.3.2.md`'s PD-99), or the orchestrator's choice of
 an alternative.
 
 ---

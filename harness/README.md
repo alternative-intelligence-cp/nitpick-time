@@ -551,7 +551,7 @@ higher, the prelude's six frac sites, and the derived `Debug` bodies' template
 drops. The unchanged tree had stopped at the toolchain check, and with its
 LLVM row moved at the self-check and then, past it, at 33 of its 143 units —
 35 failures, with the library's build and `check_failsafe_arms` — landing
-103's readers and five headers' counts (`meta/roadmap/0.3/0.3.2a.md` §1).
+103's readers and five headers' counts (`meta/roadmap/done/0.3/0.3.2a.md` §1).
 *(It said "at 35 units" until cycle 0.3.3 — 0.3.2a's verifier.)* A full invocation
 about 230 s at either pin.
 

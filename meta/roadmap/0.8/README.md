@@ -43,6 +43,9 @@ buffer, decided here against the benchmark rather than in advance.
 - [ ] **O-X4 decided against the measurement**: if the `string`-returning formatters' allocation is material, the answer is documentation pointing at the `Bytes` form, not hidden state
 
 ### 0.8.3 — the verification reconciliation
+*(From cycle 0.3's close — `meta/roadmap/done/0.3/0.3.0.md` §7:
+`src/host/host.npk`'s `timespec_ns` gains its range as a contract comment
+(`VERIFICATION.md` P-3), in the syntax a live clause takes (TM-244).)*
 - [ ] `specs/VERIFICATION.md`'s obligation list read against the code, entry by entry
 - [ ] every obligation the code generates that the list does not name, added
 - [ ] every obligation the list names that the code does not generate, removed or scheduled

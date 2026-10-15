@@ -116,7 +116,7 @@ appears there only as a shell command in its scripts.
   ```
 
 - The same table, fetched once on 2026-10-02 by cycle 0.2's close, which
-  quoted rows 228 and 229 into `meta/roadmap/0.3/0.3.0.md` §1.3.
+  quoted rows 228 and 229 into `meta/roadmap/done/0.3/0.3.0.md` §1.3.
 
 ## What would change this
 

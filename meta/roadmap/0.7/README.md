@@ -44,6 +44,10 @@ file's head says; dated at cycle 0.3.3, beside E2-6.)*
 - [ ] **`Period + Timestamp` and `Period + Instant` do not exist** (TM-012) — rejection tests assert the programs do not compile
 
 ### 0.7.1 — addition
+*(From cycle 0.3's close — `meta/roadmap/done/0.3/0.3.1.md` §7: `period_add`'s
+nanosecond step is `SPAN_MODEL.md` §5's fourth marked `int128` site, and both
+wide checks read it the day it is written — `check_int128_sites` its
+spelling and `check_wide_types` its emission (TM-246, TM-251).)*
 - [ ] the order: years, months, days, nanoseconds, each clamped before the next (N-8)
 - [ ] the year and month steps clamp the day to the last of the target month (N-9); the day step is exact and never clamps (N-11)
 - [ ] **every row of `SPAN_MODEL.md` §3's worked-example tables is a test**, by name

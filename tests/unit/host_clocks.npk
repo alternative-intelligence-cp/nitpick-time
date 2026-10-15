@@ -32,7 +32,7 @@
 // not above 0; 21 a resolution above 1 s.
 //
 // SEEN RED AT PLANNING, each on a one-line mutant of `src/host/host.npk` in a
-// copy of the tree, on both legs (`meta/roadmap/0.3/0.3.0.md`, step 3): 10
+// copy of the tree, on both legs (`meta/roadmap/done/0.3/0.3.0.md`, step 3): 10
 // with `host_now_utc` handing `timestamp_of` a nanosecond field a second
 // high; 11 with it reading `CLOCK_MONOTONIC` -- the second is uptime, below
 // the window; 12 with it passing `timestamp_of(1700000000, 0)` -- a reading

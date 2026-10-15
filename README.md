@@ -6,13 +6,13 @@ the safety-critical systems language. No dependencies, no libc, no
 compiled in from a pinned IANA release, so the same program gives the same
 answer on every machine.
 
-> **Status: cycle 0.3, the host boundary, is in progress — its first five
-> subcycles done: the clocks, the purity boundary's instruments and the
-> system zone on 2026-10-08, the adoption of compiler `7e91730` on
-> 2026-10-09, and the double on 2026-10-13 — after cycle 0.2, instants and
-> timestamps, CLOSED on 2026-10-02, archived at
-> [`meta/roadmap/done/0.2/`](meta/roadmap/done/0.2/README.md)**, as cycle 0.1,
-> the civil calendar, was on 2026-09-26 ([`meta/roadmap/done/0.1/`](meta/roadmap/done/0.1/README.md))
+> **Status: cycle 0.3, the host boundary, CLOSED on 2026-10-15, archived at
+> [`meta/roadmap/done/0.3/`](meta/roadmap/done/0.3/README.md) — the clocks,
+> the purity boundary's instruments, the system zone, the adoption of
+> compiler `7e91730` and the double — and cycle 0.4, formatting and parsing,
+> is next**, as cycle 0.2, instants and timestamps, CLOSED on 2026-10-02
+> ([`meta/roadmap/done/0.2/`](meta/roadmap/done/0.2/README.md)), and cycle
+> 0.1, the civil calendar, on 2026-09-26 ([`meta/roadmap/done/0.1/`](meta/roadmap/done/0.1/README.md))
 > — each with its code, its gate and its audit done.
 > What exists: `src/core/` — `Vec<T>`, `Bytes` and the named limits — since
 > cycle 0.0, its `Vec` holding only `Copy` elements since cycle 0.2.0b; and
@@ -64,7 +64,8 @@ answer on every machine.
 > and until cycle 0.3.2, that `src/host/` read its clocks and nothing more;
 > and until cycle 0.3.3, that its first subcycle alone was done, where the
 > block went on to report the next two — the documents audit's TA-1, and the
-> early ecosystem audit's E2-10.)*
+> early ecosystem audit's E2-10; and until cycle 0.3.4, the close, that
+> cycle 0.3 was in progress, its first five subcycles done.)*
 
 ---
 

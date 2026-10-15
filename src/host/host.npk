@@ -1,5 +1,5 @@
 // THE ONLY IMPURE MODULE IN THE LIBRARY — the clocks, since cycle 0.3.0
-// (`meta/roadmap/0.3/0.3.0.md`, TM-247 … TM-249). Governed by
+// (`meta/roadmap/done/0.3/0.3.0.md`, TM-247 … TM-249). Governed by
 // `meta/specs/HOST.md`.
 //
 // ============================ THE PURITY RULE ============================
@@ -28,7 +28,7 @@
 // `readlink` through `sys` into a `buffer` of `NTIME_PATH_MAX` bytes, and
 // `/etc/timezone` through the floor's `open` and `read`, its descriptor an
 // `OwnedFd` -- the library's one (`SAFETY.md` S-20).
-// WHEN: cycle 0.3 (`meta/roadmap/0.3/README.md`) — the clocks at 0.3.0, the
+// WHEN: cycle 0.3 (`meta/roadmap/done/0.3/README.md`) — the clocks at 0.3.0, the
 // review of `check_purity`'s ban list against this body at 0.3.1, the system
 // zone at 0.3.2 and the double at 0.3.3. (Until cycle 0.3.0 this file was the
 // PLACEHOLDER of 0.0.1 P-7 and P-11, replaced and never deleted, and it said

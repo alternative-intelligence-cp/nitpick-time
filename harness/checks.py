@@ -1372,7 +1372,7 @@ def check_raw_index(tree, **_):
 # six -- `sys`, `mono_now`, `environ`, `read_file`, `open`, `write` -- and a
 # function in a copy's `src/cal/` calling `hardware_concurrency()`,
 # `read_stdin()`, `chain_depth()`, `arena_make()` or the prelude's `std_out()`
-# compiled and passed it, measured (`meta/roadmap/0.3/0.3.1.md` §1).
+# compiled and passed it, measured (`meta/roadmap/done/0.3/0.3.1.md` §1).
 PURITY_BAN = (
     # the kernel, the clock and the machine (S-7)
     "sys(", "mono_now(", "environ(", "hardware_concurrency(",
@@ -1628,7 +1628,7 @@ def check_host_isolation(tree, **_):
 # `npk.drop.<n>` and `npk.vacant.<n>` -- `<n>` a type's id, which moved by one
 # at `7e91730` for every type interned after the prelude's `Writer`, and
 # which nothing here reads (cycle 0.3.2a, TM-259). Measured at compiler `5fbaf4a`
-# (`meta/roadmap/0.3/0.3.1.md` §1): the umbrella's emission defines every
+# (`meta/roadmap/done/0.3/0.3.1.md` §1): the umbrella's emission defines every
 # function `src/` declares but the nine generic ones of `src/core/vec.npk`,
 # which a module holds only where a caller instantiates them.
 EMISSION = "build/ntime.ll"
@@ -1637,7 +1637,7 @@ EMISSION = "build/ntime.ll"
 # generic function, so until then neither reading below read one, and a
 # generic function that let a `ByteReader` it took by `move` die, or called
 # `mono_now` through a function-typed local, passed a full run
-# (`meta/roadmap/0.3/0.3.1.md`'s third addendum). `INSTANCES_ROOT` calls every
+# (`meta/roadmap/done/0.3/0.3.1.md`'s third addendum). `INSTANCES_ROOT` calls every
 # generic function `src/` declares, each at a type its bounds admit; `run.py`'s
 # step 7 emits it to `INSTANCES` beside the umbrella, and both checks read each
 # instance of a function of `src/` there as they read the umbrella's functions.

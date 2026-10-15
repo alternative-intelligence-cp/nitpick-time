@@ -45,7 +45,9 @@ TM-259; **seven questions are open** — the compiler's three, O-N1, O-N2 and
 O-N3, and our four, O-X1, O-B1, O-X4 and O-X8: O-N34 is struck, its fix in the
 pin, TM-259.)* *(Re-derived at cycle 0.3.3: **193 decisions are settled**, the
 subcycle's three, TM-260 … TM-262; **seven questions are open**, the same
-seven.)*
+seven.)* *(Re-derived at cycle 0.3's close, 0.3.4: **193 decisions are
+settled** — the close records none — and **seven questions are open**, the
+same seven.)*
 
 ## How this is organised
 
@@ -105,8 +107,8 @@ sibling libraries.
 | ~~**0.0**~~ | **Foundations** — the language probes, the harness, `src/core/` — **CLOSED 2026-09-06, archived at [`done/0.0/`](done/0.0/README.md)** | — |
 | ~~**0.1**~~ | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **CLOSED 2026-09-26, archived at [`done/0.1/`](done/0.1/README.md)** | 0.0 ✓ |
 | ~~**0.2**~~ | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **CLOSED 2026-10-02, archived at [`done/0.2/`](done/0.2/README.md)** | 0.1 ✓ |
-| **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double — **IN PROGRESS**: [`0.3/0.3.0.md`](done/0.3/0.3.0.md), the clocks, DONE 2026-10-08; [`0.3/0.3.1.md`](done/0.3/0.3.1.md), `check_purity` reviewed and the library's emission read beside it, DONE 2026-10-08; [`0.3/0.3.2.md`](done/0.3/0.3.2.md), the system zone, every generic function read first, DONE 2026-10-08; [`0.3/0.3.2a.md`](done/0.3/0.3.2a.md), the adoption of compiler `7e91730`, DONE 2026-10-09; [`0.3/0.3.3.md`](done/0.3/0.3.3.md), the double, DONE 2026-10-13; 0.3.4, the close, next | 0.2 ✓ |
-| **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate | 0.2 |
+| ~~**0.3**~~ | **The host boundary** — the clocks, the system-zone discovery, the test double — **CLOSED 2026-10-15, archived at [`done/0.3/`](done/0.3/README.md)** | 0.2 ✓ |
+| **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate — **NEXT**: [its README](0.4/README.md), given what cycle 0.3 hands it at cycle 0.3's close | 0.2 ✓ |
 | **0.5** | **The zone table** — the generator, the committed tables, the size measurement | 0.1 |
 | **0.6** | **Zoned time** — offset lookup, the four resolution modes, the transition sweep | 0.4, 0.5 |
 | **0.7** | **Calendar arithmetic** — `Period`, the clamping rules, `until`, rounding, the dogfood consumers | 0.6 |
@@ -222,6 +224,23 @@ been live since cycle 0.0.3 (TM-126), and its self-check row plants a
 `mono_now()` outside `src/host/` on every run. What cycle 0.3 owes is its ban
 list reviewed against a `src/host/` with a body, and the gate is that check
 green and seen to fail there — cycle 0.3's README, its 0.3.1 note.)*
+
+**CLOSED 2026-10-15 at compiler `7e91730`, archived at
+[`done/0.3/`](done/0.3/README.md)** — six subcycles, the close one. What it
+produced: `src/host/` — the clocks (TM-247 … TM-249) and the system zone
+(TM-255 … TM-257), H-1's five functions with the three types they take and
+answer, and nothing else; `check_purity`'s ban list reviewed against the
+pinned compiler and `check_host_isolation` reading every public name of
+`src/host/` (TM-252, TM-253), and the library's emission read beside them —
+the calls (TM-250), the wide values (TM-251), every generic function in an
+emission (TM-254) — with `check_int128_sites` reading a literal's width
+(TM-246); one adoption, to compiler `7e91730`, the read-only view (TM-258,
+TM-259); the double in `tests/`, a value, and the substitution a type
+(TM-260 … TM-262); and 146 units green. The gate, read again at the close:
+`check_purity` green, and the cycle README's two plants red by name in a copy.
+The table row read *"IN PROGRESS: …"* with each subcycle's file linked, and
+`done/0.3/README.md` keeps that list. `done/0.3/0.3.4.md`'s record holds what
+the cycle found and taught.
 
 ### 0.4 — Formatting and parsing
 `src/fmt/`: the named formats in both directions, `FmtPart` and `Layout`,

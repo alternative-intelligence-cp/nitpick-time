@@ -12,7 +12,27 @@ recursion). All settled.
 
 **Open questions to settle:** O-X4 — whether the `string`-returning formatters
 keep a scratch buffer. Recommendation on file: no, and the benchmark at 0.8
-decides if it is ever reopened.
+decides if it is ever reopened. *(Dated at cycle 0.3's close:
+`meta/OPEN_QUESTIONS.md` says O-X4 is open by design until cycle 0.8's
+benchmark, so it blocks nothing here — until then the formatters follow its
+recommendation, F-10's caller-supplied `Bytes` and no scratch buffer.)*
+
+**And two questions this cycle's planning settles**, found at cycle 0.3's
+close by reading this README against the documents it names
+(`meta/roadmap/done/0.3/0.3.4.md` §1.8), neither blocking 0.4.0's start:
+
+1. **Where `check_no_format_string` goes live.** 0.4.0's item below says at
+   0.4.0. The check's `PENDING` entry in `harness/checks.py`, and `TESTING.md`
+   §2's row, say what it needs is the layout interpreter F-5 is written
+   against, to tell a function that interprets a pattern `string` from one
+   that copies it — and at 0.4.0 one copy is `layout_lit`'s own, which F-4's
+   example hands `"-"`, beside `bytes_extend_str`'s since cycle 0.0.4.
+   0.4.0's plan decides, by a decision with its alternatives.
+2. **Whose the ISO 8601 duration is.** 0.4.1's item below names it among the
+   emitters, and `FORMAT_MODEL.md` F-2 lists `period_to_iso` and
+   `period_parse_iso`; but `Period` is cycle 0.7's (`../ROADMAP.md`), and
+   cycle 0.7's README holds both functions at its 0.7.0. Recommendation:
+   0.7's, with the type it formats — 0.4.1's plan restates its item.
 
 ## Why printer-first
 
@@ -39,12 +59,12 @@ means writing a parser with nothing to feed it.
 - [ ] `FmtPart` with every variant in `FORMAT_MODEL.md` §3, and `Layout` holding a `Vec<FmtPart>` and its own text pool
 - [ ] `layout_new`, `layout_push`, `layout_lit`
 - [ ] `layout_validate` (F-7): two adjacent variable-width numeric parts with no literal between them is refused **at construction**, and `NanosAuto` is refused in a parsing layout
-- [ ] **`check_no_format_string` goes live** — no function anywhere takes a pattern `string` and interprets it (TM-023's guard)
+- [ ] **`check_no_format_string` goes live** — no function anywhere takes a pattern `string` and interprets it (TM-023's guard) *(where it goes live is 0.4.0's plan's to decide — the first question above, from cycle 0.3's close)*
 - [ ] a rejection test proving there is no `layout_from_pattern`, so the absence is checked rather than merely true today
 
 ### 0.4.1 — the printer
 - [ ] `format_with(value, layout, sink)` writing into a caller-supplied `Bytes` (F-10)
-- [ ] the named emitters: RFC 3339 (Z and offset forms), ISO date/time/datetime/week-date/ordinal-date, RFC 5322, HTTP-date, Unix seconds, ISO 8601 duration
+- [ ] the named emitters: RFC 3339 (Z and offset forms), ISO date/time/datetime/week-date/ordinal-date, RFC 5322, HTTP-date, Unix seconds, ISO 8601 duration *(the duration's place is 0.4.1's plan's to restate — the second question above, from cycle 0.3's close)*
 - [ ] **each emitter refuses what its format cannot express** (F-3): `to_rfc3339` on a negative year is `ETimeValue`/`YearRange`, not an invented spelling
 - [ ] `to_iso_date_expanded` as the separate, named opt-in for expanded years
 - [ ] `NanosAuto` emits the shortest round-tripping form; `Nanos3/6/9` **truncate, never round** (F-12) — rounding during display would print a different instant
@@ -73,6 +93,76 @@ means writing a parser with nothing to feed it.
 - [ ] RFC 5322's examples, including obsolete two-digit years
 - [ ] ISO 8601's week-date and ordinal-date examples
 - [ ] each fixture's header naming the document and section it came from
+
+## What cycle 0.3 hands on
+
+*(From cycle 0.3's close, `meta/roadmap/done/0.3/0.3.4.md` — each the hand-on
+of the cycle 0.3 plan it names, read again at the close.)*
+
+- **The `golden` stage has a member and an entry** (`nitpick.toml`'s
+  `golden` entry over `tests/golden/`, TM-262): a format's golden is a test
+  whose `// expect-golden:` header names a `.txt` beside it, held byte for
+  byte on both legs and between them. **And the `.txt` is derived by an
+  oracle, never copied from the run** — `tests/golden/double_transcript.txt`
+  is Python's `datetime`'s, through
+  `meta/roadmap/done/0.3/0.3.3_tools/oracle.py` (`0.3.3.md` §7).
+- **A parser takes `fixed uint8[]`**, the read-only view a string's bytes are
+  since compiler `7e91730` (TM-258; `SAFETY.md` S-22's note, and
+  `FORMAT_MODEL.md` F-16's). **`bytes_view`'s result is a question of its
+  own**: a plain `uint8[]` today (`src/core/bytes.npk`), and a read-only one
+  would refuse a consumer's write into the sink's `hidden` body. The
+  compiler's D-341, `buffer`'s checked indexing, names `bytes.npk` its
+  consumer and is not built — the list below — and the re-pin that carries
+  its build is where both are decided (`0.3.2a.md` §7).
+- **`fmt`'s functions are read in the library's emission the day they are
+  written.** `check_call_edges` holds every call a function of `src/` outside
+  `src/host/` makes to its reviewed allowlist, and names a non-generic
+  function `src/` declares that the umbrella's emission does not define
+  (TM-250); a generic one is instantiated in
+  `tests/unit/generic_instances.npk`, or it is a finding (TM-254). And F-11's
+  *"verified by reading the IR for allocator calls"* (0.4.1's item) can be a
+  check over the same reader, `checks.read_emission` and `_reach`, where
+  `tools/ir_alloc_scan.py` reads the IR its own way and is a tool
+  (`0.3.1.md` §7).
+- **`fmt` reads no clock**, so no test of it carries `// stress: 40`: a clock
+  test is a test of a `src/host/` function (`TESTING.md` V-11, TM-262).
+- **`check_no_view_returns` names a `fixed uint8[]` result `fixeduint8[]`** in
+  its message — its `functions()` removes a result type's whitespace — and
+  reads it as the view it is: a message, not a verdict (`0.3.2a.md` §7, and
+  `0.3.3.md` §7 again). A parser's result is the likeliest to meet that check
+  first (TM-239), so the subcycle that does fixes the message.
+
+## The adoption, when the pin moves
+
+**Cycle 0.3 closed at compiler `7e91730`**, its landing 103, and the next
+re-pin is the orchestrator's to place, as an adoption subcycle of its own
+that measures the unchanged tree at both pins before it changes anything and
+re-spells at the old pin first — the shape of 0.1.0b, 0.1.4c, 0.2.0a and
+0.3.2a. At the close the compiler's `main` was `e50eaf4`, its landing 111;
+landings 104 … 111 are announced, and none is pinned. What a re-pin owes here,
+from the list cycle 0.3's README carried (`meta/roadmap/done/0.3/README.md`),
+each item measured by 0.3.2a at `7e91730` and owed again at every pin:
+
+1. **`src/`'s `#wild_slice` sites, at a pin that builds the compiler's
+   D-341** — nine in code, five in `src/core/bytes.npk` and four in
+   `src/core/vec.npk` — and `bytes_view`'s result decided there (above).
+   D-341 is settled and not built at `7e91730`, and none of landings 104 …
+   111 names it: at `e50eaf4` the compiler's record holds `buffer`'s indexing
+   as a plan (its `meta/roadmap/OPEN_DECISIONS.md`).
+2. **`timestamp_since`'s `int128` multiplication and `instant_since`'s
+   `int128` subtraction** linked at both legs against `npkrt.o` alone —
+   inline at `7e91730`, no libcall (TM-259).
+3. **The compiler's lexer re-read** whatever part E says (TM-202), and
+   `harness/lexical.py` brought to it; part E's third half re-run against the
+   literal reader `check_constants_named` uses (TM-231).
+4. **The builtin table and the prelude re-read against `check_purity`'s
+   list** (TM-252); a runtime symbol `check_call_edges` finds unreviewed
+   joining `CALL_EDGE_ALLOW` or refused (TM-250); and the emission's names
+   read again.
+5. **The instances' unit compiles at the new pin** (TM-254), and CI's
+   namespace step is read again with the runner image (TM-255).
+6. **Each CI's pin bump**, and the emission row CI asserts (TM-212), in the
+   adoption's own commit.
 
 ## Gate
 

@@ -21,6 +21,14 @@ this cycle **publishes** it rather than deciding it.
 ## Checklist
 
 ### 1.0.0 — the API freeze
+*(From cycle 0.3's close — `meta/roadmap/done/0.3/0.3.3.md` §7: whether the
+library exports the test seam, `HostReadings` and the machine's
+implementation, `MachineHost` — in `tests/double/host_double.npk` since cycle
+0.3.3 (TM-261) — so that a consumer's clock-dependent code can be written
+against it and tested with a double of its own. Recommendation: not before a
+consumer asks; each public name is a major version to take away (TM-013). It
+waits for a consumer: the author's before this cycle if one asks, and this
+subcycle's review of the surface otherwise.)*
 - [ ] `src/lib.npk` lists every public name, one per line, grouped by module
 - [ ] each reviewed: is it needed, is it named right, does it belong at this layer?
 - [ ] anything not needed removed **now** — removing a public name after 1.0 is a major version

@@ -4,12 +4,11 @@
 That is unusual and it is deliberate: the specifications catch design mistakes
 that would otherwise be found by writing the wrong code twice.
 
-**Where it stands:** cycle 0.3, the host boundary, is in progress, its first
-five subcycles done — the clocks, the purity boundary's instruments and the
-system zone (2026-10-08), the adoption of compiler `7e91730` (2026-10-09) and
-the double (2026-10-13); cycle 0.2,
-instants and timestamps, is
-closed (2026-10-02), as cycle 0.1, the civil calendar, is (2026-09-26).
+**Where it stands:** cycle 0.3, the host boundary, is closed (2026-10-15) —
+the clocks, the purity boundary's instruments, the system zone, the adoption
+of compiler `7e91730` and the double — as cycle 0.2, instants and timestamps,
+is (2026-10-02), and cycle 0.1, the civil calendar (2026-09-26); cycle 0.4,
+formatting and parsing, is next.
 `src/core/` and `src/cal/` are real, `src/span/` holds `Instant` since cycle
 0.2.0, `Timestamp` since 0.2.1, the conversions between a `Timestamp` and its
 civil reading since 0.2.2, and the `Duration` interop since 0.2.3, and
@@ -21,8 +20,8 @@ can fail (`meta/specs/TESTING.md` V-14, V-15). *(This paragraph described cycle
 0.0.1's skeleton — "no self-check yet" — until cycle 0.1.5, said the cycle
 "is in its close" between the close's two halves, said cycle 0.3 "is next"
 until cycle 0.3.0, its first subcycle alone done until cycle 0.3.1,
-its first two until cycle 0.3.2, and its first three until cycle 0.3.3 —
-which left out 0.3.2a.)*
+its first two until cycle 0.3.2, its first three until cycle 0.3.3 —
+which left out 0.3.2a — and its first five until cycle 0.3.4, the close.)*
 
 ## Before you write anything
 

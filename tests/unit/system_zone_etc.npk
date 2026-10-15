@@ -85,7 +85,7 @@
 // and 80 a setup syscall of the unit's own refused after the namespace.
 //
 // SEEN RED AT PLANNING, on mutants of `src/host/host.npk` in a copy of the
-// tree, on both legs (`meta/roadmap/0.3/0.3.2.md` §1.9): every exit above is
+// tree, on both legs (`meta/roadmap/done/0.3/0.3.2.md` §1.9): every exit above is
 // reached by one -- of the thirty-five named shapes of a careless
 // implementation, or of the section's every single-site mutant -- but three
 // BELTS. 47: a directory's failed read takes the path an empty file's does,

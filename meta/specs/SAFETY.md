@@ -423,7 +423,7 @@ SEEN TO FAIL.** Three separate claims, and each was missing:
   cycle 0.3.1 in the real module, once: a full run over a copy with a
   `mono_now()` appended to `src/cal/cal.npk` is RED, this check naming the
   file, the line and the name, and `check_call_edges` the function and
-  `npk_mono_now` — `meta/roadmap/0.3/0.3.1.md`'s record; TM-252.)*
+  `npk_mono_now` — `meta/roadmap/done/0.3/0.3.1.md`'s record; TM-252.)*
 
 The matching statement for `check_host_isolation` is the same three, with
 `src/lib.npk` as its one **named** exemption (V-1c) rather than a pattern.

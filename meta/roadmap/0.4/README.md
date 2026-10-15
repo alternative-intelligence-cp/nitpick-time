@@ -34,6 +34,12 @@ close by reading this README against the documents it names
    cycle 0.7's README holds both functions at its 0.7.0. Recommendation:
    0.7's, with the type it formats — 0.4.1's plan restates its item.
 
+**Currency** — the standards this cycle rests on are rows of
+`meta/research/CURRENCY.md` since cycle 0.3's close, each with the date it
+was checked and its digest: RFC 3339, RFC 5322, RFC 9110's HTTP-date and
+ISO 8601-1's date and time representations. A row unchecked for six months
+is stale, and a cycle whose rows are unchecked is not ready to start.
+
 ## Why printer-first
 
 The sibling library writes its screen oracle before its renderer, so the
@@ -46,7 +52,7 @@ means writing a parser with nothing to feed it.
 
 | # | Topic | Ends with |
 |---|---|---|
-| 0.4.0 | **The layout type** — `FmtPart`, `Layout`, `layout_validate` | a layout is a value the type checker sees |
+| 0.4.0 | **The layout type** — `FmtPart`, `Layout`, `layout_validate` — **[`0.4.0.md`](0.4.0.md)**, written at cycle 0.3's close at `7e91730` (its §8 says whether it was rehearsed) | a layout is a value the type checker sees |
 | 0.4.1 | **The printer** — `format_with`, and the named emitters | goldens for every format |
 | 0.4.2 | **The parser** — `parse_with`, the named parsers, `Parsed`, `ParseError` | every format read back |
 | 0.4.3 | **The round trip** — the generated corpus and the fixed-point gate | the cycle's gate |
@@ -56,11 +62,12 @@ means writing a parser with nothing to feed it.
 ## Checklist
 
 ### 0.4.0 — the layout type
-- [ ] `FmtPart` with every variant in `FORMAT_MODEL.md` §3, and `Layout` holding a `Vec<FmtPart>` and its own text pool
-- [ ] `layout_new`, `layout_push`, `layout_lit`
-- [ ] `layout_validate` (F-7): two adjacent variable-width numeric parts with no literal between them is refused **at construction**, and `NanosAuto` is refused in a parsing layout
-- [ ] **`check_no_format_string` goes live** — no function anywhere takes a pattern `string` and interprets it (TM-023's guard) *(where it goes live is 0.4.0's plan's to decide — the first question above, from cycle 0.3's close)*
-- [ ] a rejection test proving there is no `layout_from_pattern`, so the absence is checked rather than merely true today
+*(Restated 2026-10-15, at cycle 0.3's close, to `0.4.0.md`'s drafted decisions, PD-149 … PD-154. The instrument's item moves first, in a commit of its own, and says where and what it reads — the first question above, which PD-149 answers; `Layout`'s fields, its pool and its release are named; construction never fails, as F-4's `drop` requires; and `layout_validate` is F-7's answer, a predicate. The rest keep their words.)*
+- [ ] **FIRST, `check_no_format_string` goes live, in a commit of its own** — no function anywhere takes a pattern `string` and interprets it (TM-023's guard): every text parameter of a function in `src/` outside `src/host/` is copied or measured and nothing else, `bytes_extend`, the copier, excused by name and its reason re-derived; four plants seen red first (PD-149) *(where it goes live was the first question above, from cycle 0.3's close)*
+- [ ] `FmtPart` with every variant in `FORMAT_MODEL.md` §3 — thirty, `Literal(uint16)` the one payload, claiming `Copy` beside its declaration — and `Layout` holding a `Vec<FmtPart>` and its own text pool, every field `hidden`, and a third, `refused` (PD-150); a `Literal` holds the byte offset of a length-prefixed entry of the pool, and `NTIME_PARSE_MAX` bounds both the parts and a literal's bytes (PD-151)
+- [ ] `layout_new`, `layout_push`, `layout_lit` — each `never fails`, as F-4's `drop` requires, a step a layout cannot take recorded in `refused` (PD-152) — and `layout_free`, which releases the parts (PD-154)
+- [ ] `layout_validate` (F-7): two adjacent variable-width numeric parts with no literal between them is refused **at construction**, and `NanosAuto` is refused in a parsing layout — *as PD-153 reads F-7: `bool(Layout:l) never fails`, its false the refusal, and `YearExpanded`, `NanosAuto` and `UnixSecs` the variable-width numeric parts*
+- [ ] a rejection test proving there is no `layout_from_pattern`, so the absence is checked rather than merely true today — *`probe23c`, refused `NITPICK-RESOLVE-002` by name, beside `probe23` and `probe23b`, a layout copied and its field read*
 
 ### 0.4.1 — the printer
 - [ ] `format_with(value, layout, sink)` writing into a caller-supplied `Bytes` (F-10)

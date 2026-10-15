@@ -108,7 +108,7 @@ sibling libraries.
 | ~~**0.1**~~ | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **CLOSED 2026-09-26, archived at [`done/0.1/`](done/0.1/README.md)** | 0.0 ✓ |
 | ~~**0.2**~~ | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **CLOSED 2026-10-02, archived at [`done/0.2/`](done/0.2/README.md)** | 0.1 ✓ |
 | ~~**0.3**~~ | **The host boundary** — the clocks, the system-zone discovery, the test double — **CLOSED 2026-10-15, archived at [`done/0.3/`](done/0.3/README.md)** | 0.2 ✓ |
-| **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate — **NEXT**: [its README](0.4/README.md), given what cycle 0.3 hands it at cycle 0.3's close | 0.2 ✓ |
+| **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate — **NEXT**: [its README](0.4/README.md), given what cycle 0.3 hands it at cycle 0.3's close, and [`0.4/0.4.0.md`](0.4/0.4.0.md), the layout type, written there | 0.2 ✓ |
 | **0.5** | **The zone table** — the generator, the committed tables, the size measurement | 0.1 |
 | **0.6** | **Zoned time** — offset lookup, the four resolution modes, the transition sweep | 0.4, 0.5 |
 | **0.7** | **Calendar arithmetic** — `Period`, the clamping rules, `until`, rounding, the dogfood consumers | 0.6 |

@@ -293,7 +293,14 @@ def invoke(where, extra_env=None, args=()):
     verdicts_path = os.path.join(where, "verdicts.txt")
     env = dict(os.environ)
     env.update(extra_env or {})
-    argv = [sys.executable, os.path.join(HARNESS, "run.py"),
+    # `-B`, SINCE CYCLE 0.3.4. An interpreter's `-B` is its own and does not
+    # reach a child it starts, so through this call a `python3 -B
+    # harness/run.py` run wrote every harness module's bytecode into
+    # `harness/__pycache__/` -- ten files, measured in a fresh clone -- as
+    # `nitpick-regex`'s harness did until that library's cycle 0.2.3 put its
+    # own child under `-B`. A run without `-B` writes the runner's own
+    # bytecode still, as Python does.
+    argv = [sys.executable, "-B", os.path.join(HARNESS, "run.py"),
             "--root", where, "--verdicts", verdicts_path] + list(args)
     # NO SHELL AND NO PIPELINE. `$?` after a pipeline is the last command's
     # status, and this function's whole job is to return a status that is the

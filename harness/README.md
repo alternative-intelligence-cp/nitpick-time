@@ -11,6 +11,17 @@ $ NPKC=… NPKRT=… python3 harness/run.py [--only SUBSTRING] [--quick]
                                         [--verdicts PATH] [--root DIR]
 ```
 
+**What a run leaves in the tree**, all of it gitignored: `build/`, the
+runner's own output — the library's and every unit's artefacts, as
+`../meta/specs/BUILD.md` §2 draws them — and `.internal/scratch/selfcheck/`,
+the self-check's scratch trees, made again on every run. **And no bytecode
+under `python3 -B`**, since cycle 0.3.4: the self-check starts this runner
+again for each scratch tree, and the `-B` of the interpreter that runs it did
+not reach that child, so until then a `python3 -B` run wrote every harness
+module's bytecode into `harness/__pycache__/` — ten files, measured in a
+fresh clone. The child runs under `-B` too now (`selfcheck.py`'s `invoke`);
+a run without `-B` writes the runner's own bytecode, as Python does.
+
 ## The files
 
 | File | What it is |

@@ -154,7 +154,7 @@ audit, the workbench's `meta/audits/nitpick-time-docs-fa9fb37-2026-10-15.md`,
 found TA-1 … TA-7 fixed and four findings more, TA-8 … TA-11, all wording; and
 0.3.3's review carried five items to this close, the workbench's `RECORD.md`,
 2026-10-13. The rest is the worker skill's §7 and §8.)*
-- [ ] every finding of the audit one row of the record's triage table — TA-8 … TA-11, its five known items and its two hand-ons not checked — and each item 0.3.3's review carried, fixed with its commit or left with its reason
+- [ ] every finding of the audit one row of the record's triage table — TA-8 … TA-11, its five known items and each of its four not checked — and each item 0.3.3's review carried, fixed with its commit or left with its reason
 - [ ] **first**, a `python3 -B` run leaves no bytecode: the self-check starts the runner under `-B`, in a commit of its own, and `harness/README.md` names what a run does leave
 - [ ] TA-8 … TA-11 fixed where each stands, before the archive; TM-261's quotation and the 0.3.3 batch's acceptance path each dated by a note, no decision's text rewritten
 - [ ] the cycle's gate read again and met: `check_purity` green and seen to fail — the two plants of 0.3.1's boxes RED by name in a copy of the closing tree — and every clock test green under `// stress: 40`

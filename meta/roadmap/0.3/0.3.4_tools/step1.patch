@@ -1,0 +1,42 @@
+diff --git a/harness/README.md b/harness/README.md
+index 31b0d54771ffddd1e15cf9839fe7480a13789f68..4365adcf75b04b78e95a48002c4f4353815d21ab 100644
+--- a/harness/README.md
++++ b/harness/README.md
+@@ -11,6 +11,17 @@ $ NPKC=… NPKRT=… python3 harness/run.py [--only SUBSTRING] [--quick]
+                                         [--verdicts PATH] [--root DIR]
+ ```
+ 
++**What a run leaves in the tree**, all of it gitignored: `build/`, the
++runner's own output — the library's and every unit's artefacts, as
++`../meta/specs/BUILD.md` §2 draws them — and `.internal/scratch/selfcheck/`,
++the self-check's scratch trees, made again on every run. **And no bytecode
++under `python3 -B`**, since cycle 0.3.4: the self-check starts this runner
++again for each scratch tree, and the `-B` of the interpreter that runs it did
++not reach that child, so until then a `python3 -B` run wrote every harness
++module's bytecode into `harness/__pycache__/` — ten files, measured in a
++fresh clone. The child runs under `-B` too now (`selfcheck.py`'s `invoke`);
++a run without `-B` writes the runner's own bytecode, as Python does.
++
+ ## The files
+ 
+ | File | What it is |
+diff --git a/harness/selfcheck.py b/harness/selfcheck.py
+index 3427531596bb4948b8cc1f27e9dac2fc5387152f..2c88829659f3962299a8dfbaeba197ed16454340 100644
+--- a/harness/selfcheck.py
++++ b/harness/selfcheck.py
+@@ -293,7 +293,14 @@ def invoke(where, extra_env=None, args=()):
+     verdicts_path = os.path.join(where, "verdicts.txt")
+     env = dict(os.environ)
+     env.update(extra_env or {})
+-    argv = [sys.executable, os.path.join(HARNESS, "run.py"),
++    # `-B`, SINCE CYCLE 0.3.4. An interpreter's `-B` is its own and does not
++    # reach a child it starts, so through this call a `python3 -B
++    # harness/run.py` run wrote every harness module's bytecode into
++    # `harness/__pycache__/` -- ten files, measured in a fresh clone -- as
++    # `nitpick-regex`'s harness did until that library's cycle 0.2.3 put its
++    # own child under `-B`. A run without `-B` writes the runner's own
++    # bytecode still, as Python does.
++    argv = [sys.executable, "-B", os.path.join(HARNESS, "run.py"),
+             "--root", where, "--verdicts", verdicts_path] + list(args)
+     # NO SHELL AND NO PIPELINE. `$?` after a pipeline is the last command's
+     # status, and this function's whole job is to return a status that is the

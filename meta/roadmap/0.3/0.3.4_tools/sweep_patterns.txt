@@ -1,0 +1,25 @@
+# 0.3.4's omission sweep, block 4b -- one extended regular expression per line, each read by `sweep.py` line by line
+# AND across line breaks, case-insensitive: every statement steps 1 ... 4 make false, and the corrected claims' own
+# words (the workbench's lesson from regex 0.2.2's work verifier: a sweep built from what the steps make false cannot
+# see a twin of what an audit finding corrects). Cycle 0.3's state and what is next; cycle 0.4's; the folder the
+# archive moved; TA-8's, TA-9's, TA-10's and TA-11's words; the bytecode's; the batch heading's path; the counts the
+# census re-derives; the gate, read again; and the five things cycle 0.4 and 1.0 are handed -- D-341 and the
+# `#wild_slice` sites, `check_no_format_string`'s place, the duration's, O-X4's, and the seam's.
+# `control.py` holds these to every hunk's parent side, the PLAYBOOK's positive control.
+(cycle 0\.3|0\.3,|0\.3 is|0\.3 —).{0,60}\b(in progress|in its close|under way)\b|its first (subcycle|two|three|five)\b|first five subcycles
+0\.3\.4.{0,40}\b(next|follows)\b|the close,? (is )?next|(is|are|comes) next
+cycle 0\.4.{0,40}\b(next|opens|opened)\b|0\.4\.0.{0,40}\b(written|next|planned)\b
+roadmap/0\.3/|\.\./0\.3/
+Duration interop and Period|interop and .{0,3}Period
+clocks and the system.zone discovery|HOST\.md.{0,40}impure
+D-211|TYPE-055|keep mutable process state
+belts? (its|the) header names|60 and 61|four belts
+__pycache__|bytecode|sys\.executable|python3 (-B )?harness/run\.py
+accepted by the orchestrator|Team seat
+\b193\b.{0,20}decisions|seven questions|\b146\b.{0,20}units?
+check_purity.{0,60}seen to fail|green and seen to fail|gate.{0,40}read again
+D-341|wild_slice.{0,12}sites
+check_no_format_string
+ISO 8601 duration|period_to_iso|period_parse_iso
+O-X4|scratch buffer
+exports? the (test )?seam

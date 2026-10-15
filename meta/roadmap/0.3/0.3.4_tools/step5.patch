@@ -1,0 +1,39 @@
+diff --git a/meta/roadmap/0.4/README.md b/meta/roadmap/0.4/README.md
+index 4ac92fedf4ad3d48291c750f253699705004f277..63d315fb0c00ba5f53cc4601936f3e3c817e2827 100644
+--- a/meta/roadmap/0.4/README.md
++++ b/meta/roadmap/0.4/README.md
+@@ -34,6 +34,12 @@ close by reading this README against the documents it names
+    cycle 0.7's README holds both functions at its 0.7.0. Recommendation:
+    0.7's, with the type it formats — 0.4.1's plan restates its item.
+ 
++**Currency** — the standards this cycle rests on are rows of
++`meta/research/CURRENCY.md` since cycle 0.3's close, each with the date it
++was checked and its digest: RFC 3339, RFC 5322, RFC 9110's HTTP-date and
++ISO 8601-1's date and time representations. A row unchecked for six months
++is stale, and a cycle whose rows are unchecked is not ready to start.
++
+ ## Why printer-first
+ 
+ The sibling library writes its screen oracle before its renderer, so the
+@@ -46,7 +52,7 @@ means writing a parser with nothing to feed it.
+ 
+ | # | Topic | Ends with |
+ |---|---|---|
+-| 0.4.0 | **The layout type** — `FmtPart`, `Layout`, `layout_validate` | a layout is a value the type checker sees |
++| 0.4.0 | **The layout type** — `FmtPart`, `Layout`, `layout_validate` — **[`0.4.0.md`](0.4.0.md)**, written at cycle 0.3's close at `7e91730` (its §8 says whether it was rehearsed) | a layout is a value the type checker sees |
+ | 0.4.1 | **The printer** — `format_with`, and the named emitters | goldens for every format |
+ | 0.4.2 | **The parser** — `parse_with`, the named parsers, `Parsed`, `ParseError` | every format read back |
+ | 0.4.3 | **The round trip** — the generated corpus and the fixed-point gate | the cycle's gate |
+diff --git a/meta/roadmap/ROADMAP.md b/meta/roadmap/ROADMAP.md
+index b670cd7fc964f5708f9c6a70dfe83bf679562ef4..78a602652d91c412cbf6ccd97585fff8c10695f9 100644
+--- a/meta/roadmap/ROADMAP.md
++++ b/meta/roadmap/ROADMAP.md
+@@ -108,7 +108,7 @@ sibling libraries.
+ | ~~**0.1**~~ | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **CLOSED 2026-09-26, archived at [`done/0.1/`](done/0.1/README.md)** | 0.0 ✓ |
+ | ~~**0.2**~~ | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **CLOSED 2026-10-02, archived at [`done/0.2/`](done/0.2/README.md)** | 0.1 ✓ |
+ | ~~**0.3**~~ | **The host boundary** — the clocks, the system-zone discovery, the test double — **CLOSED @@DATE034@@, archived at [`done/0.3/`](done/0.3/README.md)** | 0.2 ✓ |
+-| **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate — **NEXT**: [its README](0.4/README.md), given what cycle 0.3 hands it at cycle 0.3's close | 0.2 ✓ |
++| **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate — **NEXT**: [its README](0.4/README.md), given what cycle 0.3 hands it at cycle 0.3's close, and [`0.4/0.4.0.md`](0.4/0.4.0.md), the layout type, written there | 0.2 ✓ |
+ | **0.5** | **The zone table** — the generator, the committed tables, the size measurement | 0.1 |
+ | **0.6** | **Zoned time** — offset lookup, the four resolution modes, the transition sweep | 0.4, 0.5 |
+ | **0.7** | **Calendar arithmetic** — `Period`, the clamping rules, `until`, rounding, the dogfood consumers | 0.6 |

@@ -52,7 +52,7 @@ an emission the two readings read — `0.3.2.md`'s PD-99, its first step.)*
 | 0.3.2 | **The system zone** — the four-step discovery, and what it reports — **[`0.3.2.md`](0.3.2.md)**: `host_system_zone` answering the name each step finds and the mechanism that answered, the lookup the caller's at cycle 0.6, its tests in a user and mount namespace each unit makes with an `/etc` of its own; and first every generic function of `src/` read in an emission (O-X12) — planned at `5fbaf4a`, rehearsed from its blocks in its real position, and revised for its verifier's findings and rehearsed again, on 2026-10-08 (its §8) | a program can ask, and is told which mechanism answered |
 | 0.3.2a | **The adoption of compiler `7e91730`** — landing 103, the libraries' one re-pin, by the author's word of 2026-10-08: every slot a string's bytes reach spelled `fixed uint8[]`, the read-only view, with the old compiler seeing no difference; then the pin's own moves — LLVM 20.1.8, the self-check's two-code case, five returns of the view, five headers' counts (the compiler's DEF-164 and DEF-165), and the adoption list below — **[`0.3.2a.md`](0.3.2a.md)**, planned and rehearsed in its real position at both pins on 2026-10-09 (its §8) | the tree green at `7e91730`, and CI pinned there |
 | 0.3.3 | **The double** — the test host module, in `tests/` — **[`0.3.3.md`](0.3.3.md)**: the double a value and the substitution a type — `HostReadings`, H-1's five readings as a trait, the machine's `host` behind it and `FakeHost` beside it, H-9's setters each taking the double it sets, and every other answer `host` gives a caller a setter's too, a reading that changes per call among them — because the language keeps no state in a module and links no `host` object in `host`'s place; first `check_layering` reading the double's imports as `host`'s; the double's tests, a fixed sequence's transcript the `golden` stage's first member, and every single-site mutant of the double run; and the documents owed — planned at `7e91730` and rehearsed from its blocks in its real position on 2026-10-12 (its §8) | every clock-dependent behaviour reproducible |
-| 0.3.4 | **Close** | `done/0.3/`, `0.4.0.md` written |
+| 0.3.4 | **Close** — the documents audit's TA-8 … TA-11 and the five items 0.3.3's review carried, triaged; a `python3 -B` run leaving no bytecode, first; the gate read again, its two plants RED by name in a copy; the archive; and cycle 0.4 opened — its README given what cycle 0.3 hands it, and `0.4.0.md` written — **[`0.3.4.md`](0.3.4.md)**, planned and rehearsed in its real position at `7e91730` on 2026-10-15 (its §8) | `done/0.3/`, `0.4.0.md` written |
 
 ## Checklist
 
@@ -147,6 +147,22 @@ subcycle. The four above keep their words.)*
 - [x] **first**, `check_layering` reads the double's imports as it reads `host`'s — what B-17 lets `host` import, `host` itself, or another file of the double — three plants, each unseen by the check before it (PD-110) — **TM-260**, `0e866f6`, a commit of its own: each plant unseen by the check before it and found after, each control silent (block 0b); every plant caught and every control silent, `GREEN -- 143` (block 1)
 - [x] the double's tests: the double alone; one generic function and both hosts, under `// stress: 40`; a fixed sequence's transcript as the `golden` stage's first member, every line re-derived by Python's `datetime`; every single-site mutant of the double run, each red, refused or named with why; and `TESTING.md` V-11 restated — the documents audit's TA-4 (PD-112) — **TM-262**, `fc7a6cc`: the three tests 0 / 0 on both legs, the transcript's text the oracle's nine lines and 1 166 bytes; 283 single-site mutants of the double, 88 refused, 188 red and the seven of the plan's §1.9 named, and eighteen named mutants each at its exit (block 2m); V-11 amended, its twins and the Gate dated; `GREEN -- 146` (block 2)
 - [x] the documents owed: the audit's TA-1 … TA-3 and TA-5 … TA-7, the early ecosystem audit's E2-10 and this repository's part of E2-6, cycle 0.3.2a's two prose slips and TM-221's two markers — `ac6fae9`: TA-2, TA-3, TA-5 … TA-7, E2-6's twin, the two slips and the line between TM-221's markers; `0bb4902`: TA-1 and E2-10, the status pages; each dated in place, and block 5 read line by line, no omission
+
+### 0.3.4 — the close
+*(Written at 0.3.4's planning, 2026-10-15 — `0.3.4.md`. The cycle's documents
+audit, the workbench's `meta/audits/nitpick-time-docs-fa9fb37-2026-10-15.md`,
+found TA-1 … TA-7 fixed and four findings more, TA-8 … TA-11, all wording; and
+0.3.3's review carried five items to this close, the workbench's `RECORD.md`,
+2026-10-13. The rest is the worker skill's §7 and §8.)*
+- [ ] every finding of the audit one row of the record's triage table — TA-8 … TA-11, its five known items and its two hand-ons not checked — and each item 0.3.3's review carried, fixed with its commit or left with its reason
+- [ ] **first**, a `python3 -B` run leaves no bytecode: the self-check starts the runner under `-B`, in a commit of its own, and `harness/README.md` names what a run does leave
+- [ ] TA-8 … TA-11 fixed where each stands, before the archive; TM-261's quotation and the 0.3.3 batch's acceptance path each dated by a note, no decision's text rewritten
+- [ ] the cycle's gate read again and met: `check_purity` green and seen to fail — the two plants of 0.3.1's boxes RED by name in a copy of the closing tree — and every clock test green under `// stress: 40`
+- [ ] every checklist item above ticked, or struck with a reason
+- [ ] cycle 0.3 archived to `done/0.3/` — the move and the links it breaks in one commit, the plain mentions after it, `check_refs` clean at each, the full run unchanged
+- [ ] cycle 0.4 opened: its README given what cycle 0.3 hands it, the adoption list and the two questions its planning settles; cycle 1.0's given the seam's question, and cycles 0.7's and 0.8's a hand-on each that the archive would leave in a plan alone
+- [ ] `meta/roadmap/0.4/0.4.0.md`, the layout type, written execution-grade and saying whether it was rehearsed, with the currency rows cycle 0.4 rests on
+- [ ] the close's texts and `ROADMAP.md`'s rows and census; `GREEN` locally and in CI on every pushed commit; `check_record` clean; `DONE`
 
 ## The adoption, when the pin moves
 

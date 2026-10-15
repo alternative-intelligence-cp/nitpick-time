@@ -1,0 +1,357 @@
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 017669d8ef28438ac05b70a456423d04fb3b848d..bf102f9c8c72cedddc0be99e51e39694f2e118f9 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -7,22 +7,50 @@ Guidance for Claude Code sessions working in this repository.
+ `ntime` — a date, time and time-zone library for **Nitpick**, the
+ safety-critical systems language at `../../nitpick`.
+ 
+-**Status: cycle 0.3, the host boundary, IN PROGRESS — 0.3.0, the clocks,
+-DONE (2026-10-08): `src/host/` reads the machine's clocks; 0.3.1, the purity
+-boundary's instruments, DONE (2026-10-08): `check_purity`'s ban list reviewed, and
+-the library's emission read beside the spelling checks; 0.3.2, the system zone,
+-DONE (2026-10-08): `host_system_zone` says which zone the machine names, and
+-how; 0.3.2a, the adoption of compiler `7e91730`, DONE (2026-10-09): a string's
+-bytes are a read-only view, every slot they reach says so, and LLVM is
+-20.1.8; 0.3.3, the double, DONE (2026-10-13): the test host is a value and
+-the substitution a type, in `tests/double/`; and 0.3.4, the close, is next.
+-Cycle 0.2 CLOSED
+-(2026-10-02), archived at `meta/roadmap/done/0.2/` — instants and timestamps:
++**Status: cycle 0.3, the host boundary, CLOSED (@@DATE034@@), archived at
++`meta/roadmap/done/0.3/` — the clocks, the purity boundary's instruments, the
++system zone, the adoption of compiler `7e91730` and the double: `src/host/`
++reads the machine and nothing else in the library does — `check_purity`
++reads that in the source and `check_call_edges` in the library's emission —
++and the test host is a value in `tests/double/`, the substitution a type.
++Cycle 0.4, formatting and parsing, is next, its README opened at the close.
++Cycle 0.2 CLOSED (2026-10-02), archived at `meta/roadmap/done/0.2/` — instants and timestamps:
+ `Instant` and its two clocks, `Timestamp` and its one constructor, the
+ conversions to and from the civil scale in UTC with their exhaustive gate on
+ every run, and the `Duration` interop — after cycle 0.1, the civil calendar,
+ CLOSED 2026-09-26 and archived at `meta/roadmap/done/0.1/`.**
+ 
++**After cycle 0.3.4: cycle 0.3's close.** The cycle's documents audit (the
++workbench's, at `fa9fb37`) found its predecessor's TA-1 … TA-7 fixed and four
++findings more, all wording, each fixed where it stood: `src/span/`'s line in
++the layout blocks names what it holds — `Instant`, `Timestamp`, the
++conversions and the `Duration` interop (TA-8); the specifications' index gives
++`HOST.md` its double (TA-9); the double's header, and a dated note under
++TM-261, say the words they quote are `NITPICK-TYPE-055`'s message, which cites
++the compiler's D-211, and not D-211's own (TA-10); and the cycle README's tick
++for the double's demonstration names all four of `double_readings`' belts
++(TA-11). **And first, a `python3 -B` run leaves no bytecode**: the self-check
++starts this runner again for each scratch tree, and the parent's `-B` did not
++reach that child, so a `python3 -B` run wrote every harness module's bytecode
++into `harness/__pycache__/`, ten files; the child runs under `-B` now, and
++`harness/README.md` names what a run does leave — `build/` and the
++self-check's scratch. The 0.3.3 batch heading in `meta/DECISIONS.md` has a
++dated note: the Team seat's manager accepted those three decisions in the
++orchestrator's role, and the orchestrator confirmed them; and TM-261 another,
++the author's acceptance of H-9 and H-10 as it amends them, the workbench's
++question 28. The cycle's gate was read again and met — `check_purity` green,
++the cycle README's two plants red by name in a copy, and every clock test
++green under `// stress: 40`. Cycle 0.3's records moved to
++`meta/roadmap/done/0.3/`, the links the move broke in its own commit and every
++plain mention after it; cycle 0.4's README was given what cycle 0.3 hands it —
++the `golden` stage's member, the read-only view a parser takes, the emission
++readings `fmt` meets, the questions its planning settles, and the adoption
++list, the compiler's D-341 still unbuilt — cycle 1.0's, whether the library
++exports the double's seam, and cycles 0.7's and 0.8's a hand-on each that the
++archive would have left in a plan alone. No decision was recorded, and `src/`
++changed in comments only. A full invocation is **146 units green** at pin
++`7e91730`.
++
+ **After cycle 0.3.3: the double.** `src/host/` is the one module a test
+ needs a double for (`HOST.md` H-9), and it has one, in `tests/`, never in
+ `src/` (H-10). **The double is a value, and the substitution a type**
+diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
+index 3f2b6d6fc00c5091e75c99c31f10732bfcef1b60..d5e1b9657ef20e8f21604dd5adf52f9dd08292f5 100644
+--- a/CONTRIBUTING.md
++++ b/CONTRIBUTING.md
+@@ -4,12 +4,11 @@
+ That is unusual and it is deliberate: the specifications catch design mistakes
+ that would otherwise be found by writing the wrong code twice.
+ 
+-**Where it stands:** cycle 0.3, the host boundary, is in progress, its first
+-five subcycles done — the clocks, the purity boundary's instruments and the
+-system zone (2026-10-08), the adoption of compiler `7e91730` (2026-10-09) and
+-the double (2026-10-13); cycle 0.2,
+-instants and timestamps, is
+-closed (2026-10-02), as cycle 0.1, the civil calendar, is (2026-09-26).
++**Where it stands:** cycle 0.3, the host boundary, is closed (@@DATE034@@) —
++the clocks, the purity boundary's instruments, the system zone, the adoption
++of compiler `7e91730` and the double — as cycle 0.2, instants and timestamps,
++is (2026-10-02), and cycle 0.1, the civil calendar (2026-09-26); cycle 0.4,
++formatting and parsing, is next.
+ `src/core/` and `src/cal/` are real, `src/span/` holds `Instant` since cycle
+ 0.2.0, `Timestamp` since 0.2.1, the conversions between a `Timestamp` and its
+ civil reading since 0.2.2, and the `Duration` interop since 0.2.3, and
+@@ -21,8 +20,8 @@ can fail (`meta/specs/TESTING.md` V-14, V-15). *(This paragraph described cycle
+ 0.0.1's skeleton — "no self-check yet" — until cycle 0.1.5, said the cycle
+ "is in its close" between the close's two halves, said cycle 0.3 "is next"
+ until cycle 0.3.0, its first subcycle alone done until cycle 0.3.1,
+-its first two until cycle 0.3.2, and its first three until cycle 0.3.3 —
+-which left out 0.3.2a.)*
++its first two until cycle 0.3.2, its first three until cycle 0.3.3 —
++which left out 0.3.2a — and its first five until cycle 0.3.4, the close.)*
+ 
+ ## Before you write anything
+ 
+diff --git a/README.md b/README.md
+index 10072564659d757c09a36a959a041b14df9aaa12..7007662cd8852489d89e0b7188a541c000a41811 100644
+--- a/README.md
++++ b/README.md
+@@ -6,13 +6,13 @@ the safety-critical systems language. No dependencies, no libc, no
+ compiled in from a pinned IANA release, so the same program gives the same
+ answer on every machine.
+ 
+-> **Status: cycle 0.3, the host boundary, is in progress — its first five
+-> subcycles done: the clocks, the purity boundary's instruments and the
+-> system zone on 2026-10-08, the adoption of compiler `7e91730` on
+-> 2026-10-09, and the double on 2026-10-13 — after cycle 0.2, instants and
+-> timestamps, CLOSED on 2026-10-02, archived at
+-> [`meta/roadmap/done/0.2/`](meta/roadmap/done/0.2/README.md)**, as cycle 0.1,
+-> the civil calendar, was on 2026-09-26 ([`meta/roadmap/done/0.1/`](meta/roadmap/done/0.1/README.md))
++> **Status: cycle 0.3, the host boundary, CLOSED on @@DATE034@@, archived at
++> [`meta/roadmap/done/0.3/`](meta/roadmap/done/0.3/README.md) — the clocks,
++> the purity boundary's instruments, the system zone, the adoption of
++> compiler `7e91730` and the double — and cycle 0.4, formatting and parsing,
++> is next**, as cycle 0.2, instants and timestamps, CLOSED on 2026-10-02
++> ([`meta/roadmap/done/0.2/`](meta/roadmap/done/0.2/README.md)), and cycle
++> 0.1, the civil calendar, on 2026-09-26 ([`meta/roadmap/done/0.1/`](meta/roadmap/done/0.1/README.md))
+ > — each with its code, its gate and its audit done.
+ > What exists: `src/core/` — `Vec<T>`, `Bytes` and the named limits — since
+ > cycle 0.0, its `Vec` holding only `Copy` elements since cycle 0.2.0b; and
+@@ -64,7 +64,8 @@ answer on every machine.
+ > and until cycle 0.3.2, that `src/host/` read its clocks and nothing more;
+ > and until cycle 0.3.3, that its first subcycle alone was done, where the
+ > block went on to report the next two — the documents audit's TA-1, and the
+-> early ecosystem audit's E2-10.)*
++> early ecosystem audit's E2-10; and until cycle 0.3.4, the close, that
++> cycle 0.3 was in progress, its first five subcycles done.)*
+ 
+ ---
+ 
+diff --git a/meta/roadmap/0.4/README.md b/meta/roadmap/0.4/README.md
+index 1936104a8962c6530c69707024e93aafd03d8dd1..4ac92fedf4ad3d48291c750f253699705004f277 100644
+--- a/meta/roadmap/0.4/README.md
++++ b/meta/roadmap/0.4/README.md
+@@ -12,7 +12,27 @@ recursion). All settled.
+ 
+ **Open questions to settle:** O-X4 — whether the `string`-returning formatters
+ keep a scratch buffer. Recommendation on file: no, and the benchmark at 0.8
+-decides if it is ever reopened.
++decides if it is ever reopened. *(Dated at cycle 0.3's close:
++`meta/OPEN_QUESTIONS.md` says O-X4 is open by design until cycle 0.8's
++benchmark, so it blocks nothing here — until then the formatters follow its
++recommendation, F-10's caller-supplied `Bytes` and no scratch buffer.)*
++
++**And two questions this cycle's planning settles**, found at cycle 0.3's
++close by reading this README against the documents it names
++(`meta/roadmap/done/0.3/0.3.4.md` §1.8), neither blocking 0.4.0's start:
++
++1. **Where `check_no_format_string` goes live.** 0.4.0's item below says at
++   0.4.0. The check's `PENDING` entry in `harness/checks.py`, and `TESTING.md`
++   §2's row, say what it needs is the layout interpreter F-5 is written
++   against, to tell a function that interprets a pattern `string` from one
++   that copies it — and at 0.4.0 one copy is `layout_lit`'s own, which F-4's
++   example hands `"-"`, beside `bytes_extend_str`'s since cycle 0.0.4.
++   0.4.0's plan decides, by a decision with its alternatives.
++2. **Whose the ISO 8601 duration is.** 0.4.1's item below names it among the
++   emitters, and `FORMAT_MODEL.md` F-2 lists `period_to_iso` and
++   `period_parse_iso`; but `Period` is cycle 0.7's (`../ROADMAP.md`), and
++   cycle 0.7's README holds both functions at its 0.7.0. Recommendation:
++   0.7's, with the type it formats — 0.4.1's plan restates its item.
+ 
+ ## Why printer-first
+ 
+@@ -39,12 +59,12 @@ means writing a parser with nothing to feed it.
+ - [ ] `FmtPart` with every variant in `FORMAT_MODEL.md` §3, and `Layout` holding a `Vec<FmtPart>` and its own text pool
+ - [ ] `layout_new`, `layout_push`, `layout_lit`
+ - [ ] `layout_validate` (F-7): two adjacent variable-width numeric parts with no literal between them is refused **at construction**, and `NanosAuto` is refused in a parsing layout
+-- [ ] **`check_no_format_string` goes live** — no function anywhere takes a pattern `string` and interprets it (TM-023's guard)
++- [ ] **`check_no_format_string` goes live** — no function anywhere takes a pattern `string` and interprets it (TM-023's guard) *(where it goes live is 0.4.0's plan's to decide — the first question above, from cycle 0.3's close)*
+ - [ ] a rejection test proving there is no `layout_from_pattern`, so the absence is checked rather than merely true today
+ 
+ ### 0.4.1 — the printer
+ - [ ] `format_with(value, layout, sink)` writing into a caller-supplied `Bytes` (F-10)
+-- [ ] the named emitters: RFC 3339 (Z and offset forms), ISO date/time/datetime/week-date/ordinal-date, RFC 5322, HTTP-date, Unix seconds, ISO 8601 duration
++- [ ] the named emitters: RFC 3339 (Z and offset forms), ISO date/time/datetime/week-date/ordinal-date, RFC 5322, HTTP-date, Unix seconds, ISO 8601 duration *(the duration's place is 0.4.1's plan's to restate — the second question above, from cycle 0.3's close)*
+ - [ ] **each emitter refuses what its format cannot express** (F-3): `to_rfc3339` on a negative year is `ETimeValue`/`YearRange`, not an invented spelling
+ - [ ] `to_iso_date_expanded` as the separate, named opt-in for expanded years
+ - [ ] `NanosAuto` emits the shortest round-tripping form; `Nanos3/6/9` **truncate, never round** (F-12) — rounding during display would print a different instant
+@@ -74,6 +94,76 @@ means writing a parser with nothing to feed it.
+ - [ ] ISO 8601's week-date and ordinal-date examples
+ - [ ] each fixture's header naming the document and section it came from
+ 
++## What cycle 0.3 hands on
++
++*(From cycle 0.3's close, `meta/roadmap/done/0.3/0.3.4.md` — each the hand-on
++of the cycle 0.3 plan it names, read again at the close.)*
++
++- **The `golden` stage has a member and an entry** (`nitpick.toml`'s
++  `golden` entry over `tests/golden/`, TM-262): a format's golden is a test
++  whose `// expect-golden:` header names a `.txt` beside it, held byte for
++  byte on both legs and between them. **And the `.txt` is derived by an
++  oracle, never copied from the run** — `tests/golden/double_transcript.txt`
++  is Python's `datetime`'s, through
++  `meta/roadmap/done/0.3/0.3.3_tools/oracle.py` (`0.3.3.md` §7).
++- **A parser takes `fixed uint8[]`**, the read-only view a string's bytes are
++  since compiler `7e91730` (TM-258; `SAFETY.md` S-22's note, and
++  `FORMAT_MODEL.md` F-16's). **`bytes_view`'s result is a question of its
++  own**: a plain `uint8[]` today (`src/core/bytes.npk`), and a read-only one
++  would refuse a consumer's write into the sink's `hidden` body. The
++  compiler's D-341, `buffer`'s checked indexing, names `bytes.npk` its
++  consumer and is not built — the list below — and the re-pin that carries
++  its build is where both are decided (`0.3.2a.md` §7).
++- **`fmt`'s functions are read in the library's emission the day they are
++  written.** `check_call_edges` holds every call a function of `src/` outside
++  `src/host/` makes to its reviewed allowlist, and names a non-generic
++  function `src/` declares that the umbrella's emission does not define
++  (TM-250); a generic one is instantiated in
++  `tests/unit/generic_instances.npk`, or it is a finding (TM-254). And F-11's
++  *"verified by reading the IR for allocator calls"* (0.4.1's item) can be a
++  check over the same reader, `checks.read_emission` and `_reach`, where
++  `tools/ir_alloc_scan.py` reads the IR its own way and is a tool
++  (`0.3.1.md` §7).
++- **`fmt` reads no clock**, so no test of it carries `// stress: 40`: a clock
++  test is a test of a `src/host/` function (`TESTING.md` V-11, TM-262).
++- **`check_no_view_returns` names a `fixed uint8[]` result `fixeduint8[]`** in
++  its message — its `functions()` removes a result type's whitespace — and
++  reads it as the view it is: a message, not a verdict (`0.3.2a.md` §7, and
++  `0.3.3.md` §7 again). A parser's result is the likeliest to meet that check
++  first (TM-239), so the subcycle that does fixes the message.
++
++## The adoption, when the pin moves
++
++**Cycle 0.3 closed at compiler `7e91730`**, its landing 103, and the next
++re-pin is the orchestrator's to place, as an adoption subcycle of its own
++that measures the unchanged tree at both pins before it changes anything and
++re-spells at the old pin first — the shape of 0.1.0b, 0.1.4c, 0.2.0a and
++0.3.2a. At the close the compiler's `main` was `e50eaf4`, its landing 111;
++landings 104 … 111 are announced, and none is pinned. What a re-pin owes here,
++from the list cycle 0.3's README carried (`meta/roadmap/done/0.3/README.md`),
++each item measured by 0.3.2a at `7e91730` and owed again at every pin:
++
++1. **`src/`'s `#wild_slice` sites, at a pin that builds the compiler's
++   D-341** — nine in code, five in `src/core/bytes.npk` and four in
++   `src/core/vec.npk` — and `bytes_view`'s result decided there (above).
++   D-341 is settled and not built at `7e91730`, and none of landings 104 …
++   111 names it: at `e50eaf4` the compiler's record holds `buffer`'s indexing
++   as a plan (its `meta/roadmap/OPEN_DECISIONS.md`).
++2. **`timestamp_since`'s `int128` multiplication and `instant_since`'s
++   `int128` subtraction** linked at both legs against `npkrt.o` alone —
++   inline at `7e91730`, no libcall (TM-259).
++3. **The compiler's lexer re-read** whatever part E says (TM-202), and
++   `harness/lexical.py` brought to it; part E's third half re-run against the
++   literal reader `check_constants_named` uses (TM-231).
++4. **The builtin table and the prelude re-read against `check_purity`'s
++   list** (TM-252); a runtime symbol `check_call_edges` finds unreviewed
++   joining `CALL_EDGE_ALLOW` or refused (TM-250); and the emission's names
++   read again.
++5. **The instances' unit compiles at the new pin** (TM-254), and CI's
++   namespace step is read again with the runner image (TM-255).
++6. **Each CI's pin bump**, and the emission row CI asserts (TM-212), in the
++   adoption's own commit.
++
+ ## Gate
+ 
+ The round-trip fixed point over the generated corpus, with exactly two
+diff --git a/meta/roadmap/0.7/README.md b/meta/roadmap/0.7/README.md
+index b65c6756bea0e6920345fec6053336898279f781..0df86c2af296b09b9389ed468a37dc5c28f616c4 100644
+--- a/meta/roadmap/0.7/README.md
++++ b/meta/roadmap/0.7/README.md
+@@ -44,6 +44,10 @@ file's head says; dated at cycle 0.3.3, beside E2-6.)*
+ - [ ] **`Period + Timestamp` and `Period + Instant` do not exist** (TM-012) — rejection tests assert the programs do not compile
+ 
+ ### 0.7.1 — addition
++*(From cycle 0.3's close — `meta/roadmap/done/0.3/0.3.1.md` §7: `period_add`'s
++nanosecond step is `SPAN_MODEL.md` §5's fourth marked `int128` site, and both
++wide checks read it the day it is written — `check_int128_sites` its
++spelling and `check_wide_types` its emission (TM-246, TM-251).)*
+ - [ ] the order: years, months, days, nanoseconds, each clamped before the next (N-8)
+ - [ ] the year and month steps clamp the day to the last of the target month (N-9); the day step is exact and never clamps (N-11)
+ - [ ] **every row of `SPAN_MODEL.md` §3's worked-example tables is a test**, by name
+diff --git a/meta/roadmap/0.8/README.md b/meta/roadmap/0.8/README.md
+index 9d54767a96c504b58cdb9b27dedfd164a9d1b8dc..25057d7ca99a82a2a1783757e12298d5b6abc918 100644
+--- a/meta/roadmap/0.8/README.md
++++ b/meta/roadmap/0.8/README.md
+@@ -43,6 +43,9 @@ buffer, decided here against the benchmark rather than in advance.
+ - [ ] **O-X4 decided against the measurement**: if the `string`-returning formatters' allocation is material, the answer is documentation pointing at the `Bytes` form, not hidden state
+ 
+ ### 0.8.3 — the verification reconciliation
++*(From cycle 0.3's close — `meta/roadmap/done/0.3/0.3.0.md` §7:
++`src/host/host.npk`'s `timespec_ns` gains its range as a contract comment
++(`VERIFICATION.md` P-3), in the syntax a live clause takes (TM-244).)*
+ - [ ] `specs/VERIFICATION.md`'s obligation list read against the code, entry by entry
+ - [ ] every obligation the code generates that the list does not name, added
+ - [ ] every obligation the list names that the code does not generate, removed or scheduled
+diff --git a/meta/roadmap/1.0/README.md b/meta/roadmap/1.0/README.md
+index 3f47f2ec61eaa4db3ef4c6fd68f5459b4d10ec85..02353718870465281e87de74b3f06d437314f3cc 100644
+--- a/meta/roadmap/1.0/README.md
++++ b/meta/roadmap/1.0/README.md
+@@ -21,6 +21,14 @@ this cycle **publishes** it rather than deciding it.
+ ## Checklist
+ 
+ ### 1.0.0 — the API freeze
++*(From cycle 0.3's close — `meta/roadmap/done/0.3/0.3.3.md` §7: whether the
++library exports the test seam, `HostReadings` and the machine's
++implementation, `MachineHost` — in `tests/double/host_double.npk` since cycle
++0.3.3 (TM-261) — so that a consumer's clock-dependent code can be written
++against it and tested with a double of its own. Recommendation: not before a
++consumer asks; each public name is a major version to take away (TM-013). It
++waits for a consumer: the author's before this cycle if one asks, and this
++subcycle's review of the surface otherwise.)*
+ - [ ] `src/lib.npk` lists every public name, one per line, grouped by module
+ - [ ] each reviewed: is it needed, is it named right, does it belong at this layer?
+ - [ ] anything not needed removed **now** — removing a public name after 1.0 is a major version
+diff --git a/meta/roadmap/ROADMAP.md b/meta/roadmap/ROADMAP.md
+index 1a33d910c928c6eb8e27d8f90fc727851f66fc7e..b670cd7fc964f5708f9c6a70dfe83bf679562ef4 100644
+--- a/meta/roadmap/ROADMAP.md
++++ b/meta/roadmap/ROADMAP.md
+@@ -45,7 +45,9 @@ TM-259; **seven questions are open** — the compiler's three, O-N1, O-N2 and
+ O-N3, and our four, O-X1, O-B1, O-X4 and O-X8: O-N34 is struck, its fix in the
+ pin, TM-259.)* *(Re-derived at cycle 0.3.3: **193 decisions are settled**, the
+ subcycle's three, TM-260 … TM-262; **seven questions are open**, the same
+-seven.)*
++seven.)* *(Re-derived at cycle 0.3's close, 0.3.4: **193 decisions are
++settled** — the close records none — and **seven questions are open**, the
++same seven.)*
+ 
+ ## How this is organised
+ 
+@@ -105,8 +107,8 @@ sibling libraries.
+ | ~~**0.0**~~ | **Foundations** — the language probes, the harness, `src/core/` — **CLOSED 2026-09-06, archived at [`done/0.0/`](done/0.0/README.md)** | — |
+ | ~~**0.1**~~ | **The civil calendar** — the types, Hinnant's algorithms, the exhaustive sweep — **CLOSED 2026-09-26, archived at [`done/0.1/`](done/0.1/README.md)** | 0.0 ✓ |
+ | ~~**0.2**~~ | **Instants and timestamps** — `Instant`, `Timestamp`, `Duration` interop — **CLOSED 2026-10-02, archived at [`done/0.2/`](done/0.2/README.md)** | 0.1 ✓ |
+-| **0.3** | **The host boundary** — the clocks, the system-zone discovery, the test double — **IN PROGRESS**: [`done/0.3/0.3.0.md`](done/0.3/0.3.0.md), the clocks, DONE 2026-10-08; [`done/0.3/0.3.1.md`](done/0.3/0.3.1.md), `check_purity` reviewed and the library's emission read beside it, DONE 2026-10-08; [`done/0.3/0.3.2.md`](done/0.3/0.3.2.md), the system zone, every generic function read first, DONE 2026-10-08; [`done/0.3/0.3.2a.md`](done/0.3/0.3.2a.md), the adoption of compiler `7e91730`, DONE 2026-10-09; [`done/0.3/0.3.3.md`](done/0.3/0.3.3.md), the double, DONE 2026-10-13; 0.3.4, the close, next | 0.2 ✓ |
+-| **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate | 0.2 |
++| ~~**0.3**~~ | **The host boundary** — the clocks, the system-zone discovery, the test double — **CLOSED @@DATE034@@, archived at [`done/0.3/`](done/0.3/README.md)** | 0.2 ✓ |
++| **0.4** | **Formatting and parsing** — the named formats, the typed layout, the round-trip gate — **NEXT**: [its README](0.4/README.md), given what cycle 0.3 hands it at cycle 0.3's close | 0.2 ✓ |
+ | **0.5** | **The zone table** — the generator, the committed tables, the size measurement | 0.1 |
+ | **0.6** | **Zoned time** — offset lookup, the four resolution modes, the transition sweep | 0.4, 0.5 |
+ | **0.7** | **Calendar arithmetic** — `Period`, the clamping rules, `until`, rounding, the dogfood consumers | 0.6 |
+@@ -223,6 +225,23 @@ been live since cycle 0.0.3 (TM-126), and its self-check row plants a
+ list reviewed against a `src/host/` with a body, and the gate is that check
+ green and seen to fail there — cycle 0.3's README, its 0.3.1 note.)*
+ 
++**CLOSED @@DATE034@@ at compiler `7e91730`, archived at
++[`done/0.3/`](done/0.3/README.md)** — six subcycles, the close one. What it
++produced: `src/host/` — the clocks (TM-247 … TM-249) and the system zone
++(TM-255 … TM-257), H-1's five functions with the three types they take and
++answer, and nothing else; `check_purity`'s ban list reviewed against the
++pinned compiler and `check_host_isolation` reading every public name of
++`src/host/` (TM-252, TM-253), and the library's emission read beside them —
++the calls (TM-250), the wide values (TM-251), every generic function in an
++emission (TM-254) — with `check_int128_sites` reading a literal's width
++(TM-246); one adoption, to compiler `7e91730`, the read-only view (TM-258,
++TM-259); the double in `tests/`, a value, and the substitution a type
++(TM-260 … TM-262); and 146 units green. The gate, read again at the close:
++`check_purity` green, and the cycle README's two plants red by name in a copy.
++The table row read *"IN PROGRESS: …"* with each subcycle's file linked, and
++`done/0.3/README.md` keeps that list. `done/0.3/0.3.4.md`'s record holds what
++the cycle found and taught.
++
+ ### 0.4 — Formatting and parsing
+ `src/fmt/`: the named formats in both directions, `FmtPart` and `Layout`,
+ `format_with` and `parse_with`, the `Parsed` record with its two `folded_`

@@ -30,7 +30,7 @@ without a handle nor a second `host` module could be built.
 **What it cannot do**: test `host` (TM-249). It stands beside `host`, not in it.
 What reaches a caller from `host` — every reading, every refusal and its
 identity, a clock that moves between two readings — it answers when a test
-tells it to ([`0.3.3.md`](../../meta/roadmap/0.3/0.3.3.md) §1.4b).
+tells it to ([`0.3.3.md`](../../meta/roadmap/done/0.3/0.3.3.md) §1.4b).
 
 **What may import what**: this directory imports what `host` may (`BUILD.md`
 B-17's row), and `host` itself, and `check_layering` holds it to that (TM-260).

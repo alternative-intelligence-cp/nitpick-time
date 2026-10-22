@@ -5039,6 +5039,13 @@ becomes a test of the allocator's accounting, which `bytes_view_lifetime.npk`
 already argues against for `!=` over `== 170`.
 
 ### TM-185 — six files carry bounds: each leaking twin's `peak_live` at least its leak's arithmetic; each remedy's `peak_live` under a ceiling and its `count` over the allocations its loop must make; the two `Bytes` tests' `peak_live` under a ceiling; every ceiling the geometric mean of the correct program's measured peak and a leak mutant's, rounded down to two significant figures
+> **Read with TM-263 (2026-10-22, cycle 0.4.0a).** `bytes_view_lifetime`'s
+> exit 26, the poison read this decision names as the file's other sight of a
+> `bytes_reserve` that keeps its old bodies, left the file at the adoption of
+> compiler `2e1cb4a`, where the read is refused. Its ceiling is now the only
+> thing in it that sees that mutant, as in `bytes_growth`: measured, the mutant
+> peaks at 214 there and exits 0 at both pins. The bound stands; the text below
+> is left exactly as written.
 
 **2026-09-26, cycle 0.1.4b (PD-36).** `0.1.0.md` §8 named four: the two twin pairs
 and the two `Bytes` tests, six files. Measured at `c3bdae2`, identical on both
@@ -8973,3 +8980,65 @@ measured flat over a hundred thousand settings, and test infrastructure is not
 what `heap:` was built to hold; **V-11 left to read "everything that reads a
 clock", and `probe03` given `// stress: 40`** — the probe asks the
 `timespec`'s shape, which forty runs ask forty times.
+
+# Cycle 0.4.0a — the adoption of compiler `2e1cb4a`, ratified 2026-10-22
+
+Three decisions, drafted at planning (`meta/roadmap/0.4/0.4.0a.md` §2,
+PD-201 … PD-203, in that order), accepted by the orchestrator at the plan's
+verification, and each measured at both compilers: the one this repository
+leaves, `7e91730`, its landing 103, and the one it adopts, `2e1cb4a`, its
+landing 140 — the libraries' one re-pin, by the author's word of 2026-10-22,
+two pins on, since this repository did not take the adoption of `c9baa9e`
+(landing 118). The first two are made at the OLD pin, so that the old compiler
+testifies they changed no answer; the third moves the pin.
+
+### TM-263 — the view's freeze met: `bytes_reserve`'s two views are a block of their own, ended before its overwrite; `bytes_view_lifetime.npk` holds no view across a push; and `probe19` asks the `Copy` judgement of `Bytes`, an owning type of this library's own
+
+**2026-10-22, cycle 0.4.0a (the plan's PD-201) — the adoption of compiler
+`2e1cb4a`, its landings 128 (the compiler's D-341) and 124 (D-359). Re-spells
+`src/core/bytes.npk`'s `bytes_reserve`, `tests/unit/bytes_view_lifetime.npk`
+and `tests/probe/probe19_pod_owner_refused.npk`, each a spelling both compilers
+accept; dates `SAFETY.md` S-18e and S-18h and the probe README's row; and
+marks TM-185.**
+
+**What was found** (`0.4.0a.md` §1). Every file compiled as a root reports at
+`2e1cb4a` the codes and sites it reports at `7e91730` but nine. Eight reach
+`bytes.npk`'s line 140, `b.body = move(fresh);`, which is `NITPICK-BORROW-015`
+twice — the write to `b.body` under `from`'s view of `b.body.ptr`, and the move
+of `fresh` under `into`'s view of `fresh.ptr` — since a `#wild_slice` over a
+managed header's pointer is a view of its owner (D-341), held to the end of the
+block that declares it (the compiler's D-325). Both views are dead after the
+copy, so this is the freeze's lexical reach, not a use-after-free of the
+library's own. `bytes_view_lifetime` is refused twice more, at the push that
+follows each held view, 77:63 and 107:63: §2's is the use-after-free the file
+was written to show — its last read gives the allocator's poison, 170 on both
+legs at `7e91730` — and §1's, which grows nothing, is refused the same way,
+since what the compiler reads is the call, which can grow the sink. Measured
+call by call: while a view lives, the six calls that can grow a sink are
+refused at their argument, and the five that cannot are not. And `probe19`'s
+`impl:string:Copy` is `NITPICK-TYPE-099` at `2e1cb4a` where it was
+`NITPICK-TYPE-087`, the orphan rule asked first: `string` is a builtin and
+`Copy` the prelude's.
+
+**The decision.** *The copy in `bytes_reserve` and its two views are a block of
+their own, ended before the overwrite — D-341's own words for this file; the old
+compiler emits the same code for it but the site table's lines. Every view
+`bytes_view_lifetime` takes is a block of its own, ended before the next push;
+§1 takes its view again after its pushes and reads the bytes the first view
+read; §2's last read leaves the file, its refusal asserted by the batch's third
+decision. `probe19` claims `Copy` for `Bytes`, declared in this tree and owning
+a `buffer`: the orphan rule admits the impl and the judgement refuses it,
+`NITPICK-TYPE-087`, at both compilers.*
+
+*Alternatives declined:* **the checked spellings D-341 builds — `fresh[i] =
+b.body[i]`, and no view at all** — a spelling the old compiler refuses, since a
+`buffer` has no checked index there, so it cannot be made at the old pin; and
+each slice's guard is the compiler's already (S-17c). The batch's second
+decision reads every site where it stands. **The views' declarations moved
+below the overwrite** — they are the copy's source and target, which the
+overwrite ends. **`bytes_view_lifetime`'s §1 retired with its stale read** — it
+is the control TM-139 asks for: a sink that does not grow, whose bytes a later
+view reads. **`probe19` re-headed to `NITPICK-TYPE-099`** — it would assert the
+orphan rule and no longer S-18h's claim. **A struct declared in the probe** —
+admitted and refused alike, measured; `Bytes` is the library's own owning type,
+which a consumer's `Vec<Bytes>` would make the element.

@@ -32,11 +32,27 @@
 // §1.6). This library writes none; `nitpick-regex` pins the shape. (CLOSED
 // at `5fbaf4a`: such an impl is `NITPICK-TYPE-014` there, the compiler's
 // landing 69, and `Copy` has no method to declare one on -- TM-211.)
+//
+// *(CYCLE 0.4.0a, THE ADOPTION OF COMPILER `2e1cb4a` -- 2026-10-22, TM-263:
+// THE TYPE ASKED ABOUT IS THIS LIBRARY'S OWN `Bytes`, WHERE IT WAS `string`.
+// Since that compiler an impl names a type or a trait declared in its own
+// manifest's tree, or it is `NITPICK-TYPE-099` at the impl, asked before the
+// `Copy` judgement (the compiler's D-359, landing 124). `impl:string:Copy`
+// names neither -- `string` is a builtin and `Copy` the prelude's -- so this
+// file would have read the orphan rule and not the judgement S-18h rests on.
+// `Bytes` is declared in this tree and owns a `buffer`, so the orphan rule
+// admits the impl and the judgement refuses it: `NITPICK-TYPE-087`, once, at
+// the impl -- *"`Bytes` owns what it holds, so a copy of it would be a second
+// owner"* -- at both compilers, measured. Were it admitted, `vec_at` at
+// `T = Bytes` would hand back a second owner of a sink's body. `string`'s
+// claim is `probe19b`'s, from the commit that moves the pin, where the
+// orphan rule refuses it before the judgement is asked.)*
 mod:probe19_pod_owner_refused;
 
 use "../../src/core/vec.npk".*;
+use "../../src/core/bytes.npk".Bytes;
 
-impl:string:Copy = { };
+impl:Bytes:Copy = { };
 
 func:main = int32(cstring[]:_~argv) {
     exit 0i32;

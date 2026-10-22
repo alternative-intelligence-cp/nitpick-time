@@ -48,6 +48,26 @@
 // here; the bound reads the allocator's COUNT, which no change to the poison
 // moves. The ceiling is the geometric mean of 160 and 214 rounded down to two
 // significant figures; the mutant is `meta/roadmap/done/0.1/0.1.4b.md` §7's K6.
+//
+// *(CYCLE 0.4.0a, THE ADOPTION OF COMPILER `2e1cb4a` -- 2026-10-22, TM-263:
+// NO VIEW HERE LIVES ACROSS A PUSH, AND §2'S STALE READ HAS LEFT THE FILE.
+// Since that compiler a view `bytes_view` hands back holds the caller's sink
+// (its D-341, landing 128), and handing the sink to a call that can grow it
+// while the view lives is `NITPICK-BORROW-015` at that argument -- §1's
+// forty pushes as much as §2's, because the compiler reads the call, which
+// can grow the sink, and not the run, which in §1 does not. So every view is
+// taken in a block of its own and ended before the next push, and §1 takes
+// its view again after the pushes and reads the bytes the first view read:
+// no growth happened (exit 12), so the body is the one it was. §2's last
+// read, the use-after-free itself -- exit 26 above, the allocator's poison,
+// 170 on both legs at the old compiler -- cannot be written at the new one,
+// which refuses it where it stands, and
+// `tests/probe/probe10d_view_held_across_growth_refused.npk` asserts that
+// refusal from the commit that moves the pin. So the pair is a sink that
+// does not grow and one that does, each read through a view taken while
+// nothing writes it; and the release is the `heap:` bound's alone, as
+// `0.1.4b.md` §7's K6b found it could be: a `bytes_reserve` that keeps each
+// old body peaks at 214 and exits 0 here now, red by the ceiling.)*
 mod:bytes_view_lifetime;
 
 use "../../src/core/bytes.npk".*;
@@ -69,9 +89,12 @@ func:main = int32(cstring[]:_~argv) {
     // The capacity through `bytes_capacity` since cycle 0.1.3c (TM-195): `body`
     // is `hidden`. It writes nothing, so it cannot move what it measures.
     int64:cap_before = raw bytes_capacity(@b);
-    uint8[]:v = raw bytes_view(@b);
-    if (v.len != HELD)                          { exit 10i32; }
-    if (v[0i64] != A)                           { exit 11i32; }
+    // THE VIEW IN A BLOCK, ENDED BEFORE THE PUSHES (cycle 0.4.0a, TM-263).
+    {
+        uint8[]:v = raw bytes_view(@b);
+        if (v.len != HELD)                      { exit 10i32; }
+        if (v[0i64] != A)                       { exit 11i32; }
+    }
 
     i = 0i64;
     while (i < PUSHES) decreases PUSHES - i { drop bytes_push(@b, B); i = i + 1i64; }
@@ -83,10 +106,15 @@ func:main = int32(cstring[]:_~argv) {
     if (raw bytes_capacity(@b) != cap_before)   { exit 12i32; }
     if (raw bytes_len(@b) != HELD + PUSHES)     { exit 13i32; }
 
-    // The held view is still the live prefix it was taken over.
-    if (v.len != HELD)                          { exit 14i32; }
-    if (v[0i64] != A)                           { exit 15i32; }
-    if (v[HELD - 1i64] != A)                    { exit 16i32; }
+    // The view taken again reads the bytes the first one read: no growth, so
+    // the same body (cycle 0.4.0a, TM-263: the view held across the pushes,
+    // and its length the HELD bytes it was taken over, until then).
+    {
+        uint8[]:v = raw bytes_view(@b);
+        if (v.len != HELD + PUSHES)             { exit 14i32; }
+        if (v[0i64] != A)                       { exit 15i32; }
+        if (v[HELD - 1i64] != A)                { exit 16i32; }
+    }
 
     // =======================================================================
     // 2. THE SAME PROGRAM, ONE CAPACITY DIFFERENT -- growth is forced, and
@@ -97,11 +125,13 @@ func:main = int32(cstring[]:_~argv) {
     while (i < 2i64) decreases 2i64 - i { drop bytes_push(@c, A); i = i + 1i64; }
 
     int64:cap_small = raw bytes_capacity(@c);
-    uint8[]:w = raw bytes_view(@c);
-    if (w.len != 2i64)                          { exit 20i32; }
-    // VALID HERE, BEFORE ANY GROWTH -- so the read below is about the growth
-    // and not about a view that never worked.
-    if (w[0i64] != A)                           { exit 21i32; }
+    {
+        uint8[]:w = raw bytes_view(@c);
+        if (w.len != 2i64)                      { exit 20i32; }
+        // VALID HERE, BEFORE ANY GROWTH -- so the read below is about the
+        // growth and not about a view that never worked.
+        if (w[0i64] != A)                       { exit 21i32; }
+    }
 
     i = 0i64;
     while (i < PUSHES) decreases PUSHES - i { drop bytes_push(@c, B); i = i + 1i64; }
@@ -111,16 +141,18 @@ func:main = int32(cstring[]:_~argv) {
 
     // THE SINK ITSELF IS INTACT. Growth copies, so a view taken NOW is
     // correct -- the defect is the stale handle, never the container.
-    uint8[]:fresh = raw bytes_view(@c);
-    if (fresh.len != 2i64 + PUSHES)             { exit 23i32; }
-    if (fresh[0i64] != A)                       { exit 24i32; }
-    if (fresh[2i64] != B)                       { exit 25i32; }
+    {
+        uint8[]:fresh = raw bytes_view(@c);
+        if (fresh.len != 2i64 + PUSHES)         { exit 23i32; }
+        if (fresh[0i64] != A)                   { exit 24i32; }
+        if (fresh[2i64] != B)                   { exit 25i32; }
+    }
 
-    // AND THE OLD VIEW IS NOT THE SINK ANY MORE. This read is the
-    // use-after-free itself, written down on purpose in the one file that
-    // documents it. Everything else in this library must obey the rule the
-    // header of `bytes_view` now states.
-    if (w[0i64] == A)                           { exit 26i32; }
+    // AND THE OLD VIEW IS NOT THE SINK ANY MORE. The read that stood here,
+    // exit 26, was the use-after-free itself, written down on purpose in the
+    // one file that documented it; since compiler `2e1cb4a` it cannot be
+    // written -- `w` held across the pushes is `NITPICK-BORROW-015` at the
+    // push -- and the refusal is the probe's (cycle 0.4.0a, TM-263).
 
     // NOTHING IS FREED HERE (P-24, TM-133). Both sinks are over a managed
     // `buffer` and their scope-exit drop is the reclaim; there is no

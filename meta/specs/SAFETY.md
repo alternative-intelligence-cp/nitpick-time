@@ -1096,6 +1096,19 @@ be held:
   — but **no function in `vec.npk` returns a slice**, so there is no view for a
   caller to hold. `vec_at<T>` returns by value.
 
+*(2026-10-22, cycle 0.4.0a, TM-263 — the adoption of compiler `2e1cb4a`.)*
+**`bytes_reserve`'s two views are a block of their own, ended before its
+overwrite, and `bytes_view_lifetime` holds no view across a push.** Since that
+compiler a `#wild_slice` over a managed header's pointer is a view of its owner
+(the compiler's D-341, landing 128), held to the end of the block that
+declares it (D-325). Declared in `bytes_reserve`'s body, `from` and `into` held
+`b.body` and `fresh` across `b.body = move(fresh);` — `NITPICK-BORROW-015`
+twice, though neither is read past the copy — so the copy and its views take a
+block, which the old compiler emits the same code for but the site table's
+lines, measured. The unit takes each view in a block of its own, ended before
+the next push, and its §1 takes its view again after the pushes; §2's stale
+read leaves the unit, a refusal now.
+
 **Rule S-18f (TM-188) — no function hands back a `string` made by
 `string_from_bytes`, because the type cannot tell a view from a copy.**
 `string_from_bytes` wraps existing bytes as a VIEW — capacity 0, by the
@@ -1195,6 +1208,15 @@ no pin of ours, makes `Copy` a prelude marker trait over every copyable scalar,
 derivable for a struct of copyables; at the re-pin that carries it, `Pod` is
 replaced by `Copy` — its block in `src/core/vec.npk`, one bound, one call, one
 umbrella line and three test impls — and this rule is restated for it.
+
+*(2026-10-22, cycle 0.4.0a, TM-263 — the adoption of compiler `2e1cb4a`.)*
+**`probe19` asks the judgement of `Bytes`, this library's own owning type,
+where it asked `string`'s.** Since that compiler an impl names a type or a
+trait declared in its own manifest's tree, or it is `NITPICK-TYPE-099` at the
+impl, asked before the `Copy` judgement (the compiler's D-359, landing 124):
+`impl:string:Copy` names neither, so the probe would have shown that rule and
+not this one. `impl:Bytes:Copy = { };` is admitted by the orphan rule and
+refused by the judgement, `NITPICK-TYPE-087`, at both compilers, measured.
 
 **Rule S-19.** The generated zone tables are `fixed` module state — read-only
 memory, no initialisation at startup, nothing to leak, and nothing to race.

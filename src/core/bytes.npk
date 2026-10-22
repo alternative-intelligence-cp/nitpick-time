@@ -117,24 +117,36 @@ pub func:bytes_init = Bytes(int64:cap) never fails {
 // DOUBLING, which is what makes a run of pushes amortised linear rather than
 // quadratic. The new capacity is at least twice the old and at least what was
 // asked for, so `bytes_push` needs no special case for the first byte.
+//
+// THE COPY AND ITS TWO VIEWS ARE A BLOCK OF THEIR OWN, ENDED BEFORE THE
+// OVERWRITE (cycle 0.4.0a, the adoption of compiler `2e1cb4a`, TM-263). Since
+// that compiler a `#wild_slice` over a managed header's pointer is a view of
+// its owner (the compiler's D-341, landing 128), held to the end of the block
+// that declares it (D-325). Declared in the function's body, `from` held
+// `b.body` and `into` held `fresh` across `b.body = move(fresh);`, which that
+// compiler refuses, `NITPICK-BORROW-015` twice. Neither view is read past the
+// copy, so the block is a spelling and not a fix: the old compiler emits the
+// same code for it but for the site table's line numbers, measured.
 pub func:bytes_reserve = NIL(Bytes->:b, int64:need) never fails {
     int64:want = b.len + need;
     if (b.body.cap >= want) { pass NIL; }
     int64:n = b.body.cap * 2i64;
     if (n < want) { n = want; }
     buffer:fresh = buffer_new(n);
-    uint8[]:from = #wild_slice<uint8>(b.body.ptr, b.len);
-    uint8[]:into = #wild_slice<uint8>(fresh.ptr, b.len);
-    int64:i = 0i64;
-    // `live` IS HOISTED SO THE MEASURE IS OVER TWO LOCALS (cycle 0.1.0b,
-    // TM-151). `b.len` is read through a pointer, and a measure over it keeps
-    // its `terminate` row open whatever the proof effort (the compiler's
-    // DEF-14 frame problem). Nothing in the loop writes `b.len`, so the hoist
-    // changes nothing at run time.
-    int64:live = b.len;
-    while (i < live) decreases live - i {
-        into[i] = from[i];
-        i = i + 1i64;
+    {
+        uint8[]:from = #wild_slice<uint8>(b.body.ptr, b.len);
+        uint8[]:into = #wild_slice<uint8>(fresh.ptr, b.len);
+        int64:i = 0i64;
+        // `live` IS HOISTED SO THE MEASURE IS OVER TWO LOCALS (cycle 0.1.0b,
+        // TM-151). `b.len` is read through a pointer, and a measure over it
+        // keeps its `terminate` row open whatever the proof effort (the
+        // compiler's DEF-14 frame problem). Nothing in the loop writes
+        // `b.len`, so the hoist changes nothing at run time.
+        int64:live = b.len;
+        while (i < live) decreases live - i {
+            into[i] = from[i];
+            i = i + 1i64;
+        }
     }
     // THE OVERWRITE THAT DROPS THE OLD BODY (D-186), measured above.
     b.body = move(fresh);

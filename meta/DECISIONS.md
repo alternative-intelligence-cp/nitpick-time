@@ -3002,6 +3002,15 @@ MECHANISM covered something narrower (TM-115, TM-137, this).
 ---
 
 ### TM-139 — `bytes_view`'s view is invalidated by growth; the comment said the opposite, and a use-after-free on the public surface is found by a WRONG ANSWER and by no gate here
+> **Read with TM-263 and TM-265 (2026-10-22, cycle 0.4.0a).** Since compiler
+> `2e1cb4a` the compiler refuses the use-after-free this decision says no gate
+> here finds: a caller holding `bytes_view`'s answer across a call that can
+> grow the sink is `NITPICK-BORROW-015` at the call (its D-341). Measured call
+> by call, the six this decision names as growing are refused and the five it
+> names as not are admitted, so its rule is the compiler's, to the function.
+> `bytes_view_lifetime` takes each view in a block of its own, and its stale
+> read is `probe10d`'s refusal. The text below is left exactly as written.
+
 **2026-09-06, cycle 0.0.6. Amends `src/core/bytes.npk`, adds `SAFETY.md`
 S-18e and `tests/unit/bytes_view_lifetime.npk`. From the pre-close audit,
 finding A2 — the finding the audit said to read first.**
@@ -4555,6 +4564,23 @@ and a branch no valid input takes; a cumulative table of month offsets for
 `MONTH_LENGTH`.
 
 ### TM-171 — one weekday computation: a private `weekday_index` applies C-13's correction and then checks `0 ≤ index ≤ 6` with `#unreachable()`; `weekday` manufactures the tag from it with `=>!`; `SAFETY.md` gains S-15c
+> **Read with TM-265 (2026-10-22, cycle 0.4.0a) — the table, weighed again
+> and declined again.** The `fixed Weekday[7]` table this decision declined as
+> not spellable is spellable since compiler `2e1cb4a`: a payload-less variant
+> is a constant there, as an array's member too (the compiler's D-356, landing
+> 123), and `weekday` read from such a table compiles and passes every test
+> that reads a weekday, measured. It stays declined, on this decision's other
+> grounds, which hold at the new pin. `weekday_index`'s belt runs first on
+> every path, so the table's bounds check would guard an index the belt has
+> already held to 0 … 6: with the correction deleted, both spellings stop at
+> the belt, `Unreachable`, measured. And the enum stays the one statement of
+> C-7's order (`CALENDAR.md` C-13), where the table would be a second, held by
+> tests alone. Only with the correction and the belt both deleted do the two
+> differ — the weekday sweep stops at the table's index, `OutOfBounds`, where
+> the `=>!` hands on a forged tag that its rider reads as a wrong weekday —
+> and both are red. Declined with it: the table beside the `=>!` as a second
+> guard, two statements of the order for a check the belt already makes. The
+> text below is left exactly as written.
 
 **2026-09-25, cycle 0.1.3 (PD-22).** The index has to become a `Weekday`. The
 checked cast is refused — `k => Wd` is `NITPICK-TYPE-009`, whose own text reads
@@ -6084,6 +6110,12 @@ facts until DEF-165 says otherwise; **counting notes too** — a note is the
 compiler's explanation, not a site, and B-7 has never counted them.
 
 ### TM-211 — `Pod` retires into the prelude's `Copy`: `vec_at<T: Copy>` copies its element plainly, the trait and its nine impls are deleted, and the umbrella re-exports 58 names
+> **Read with TM-263 and TM-265 (2026-10-22, cycle 0.4.0a).** `probe19`'s
+> `impl:string:Copy` is `NITPICK-TYPE-099` at compiler `2e1cb4a`, the orphan
+> rule (its D-359) asked before the `Copy` judgement: `probe19` asks the
+> judgement of `Bytes`, `NITPICK-TYPE-087` at both pins, and `probe19b` keeps
+> `string`'s claim, refused by the orphan rule. The bound stands as decided.
+> The text below is left exactly as written.
 
 **2026-09-27, cycle 0.2.0a (the plan's PD-60) — the adoption of compiler
 `5fbaf4a`, its landing 73 (D-327) and landing 69 (DEF-116). Amends
@@ -7099,6 +7131,12 @@ would be red; **the tests' `int128` read too** — N-20 is about `src/`, and
 `probe02` is a probe of the type itself.
 
 ### TM-231 — `check_constants_named` reads a literal as the compiler's lexer does — every base, separator and width, a character literal's code point, and a bound after `..` — and holds its VALUE to the owner map; part E asks the pinned compiler about every spelling
+> **Read with TM-265 (2026-10-22, cycle 0.4.0a).** Since compiler `2e1cb4a`
+> a numeral's digit run ends in a digit (the compiler's DEF-190, landing 135):
+> `86400_i64`, one `_` before the width, is `NITPICK-LEX-003` there, so it is no
+> spelling of 86 400 and part E's third half no longer holds it. The reader
+> still reads it, which only a refused file can hold. The rule stands; the
+> text below is left exactly as written.
 
 **2026-10-01, cycle 0.2.3a (the plan's PD-76). Amends `harness/checks.py`'s
 `check_constants_named` and `TESTING.md` §2's row; extends `TESTING.md` V-1k's
@@ -8770,6 +8808,14 @@ two plans handed the check on, and three plants show what review would have to
 see.
 
 ### TM-261 — the double is a value, and the substitution a type: `tests/double/host_double.npk` declares `HostReadings`, H-1's five readings as a trait, the machine's `host` behind it and `FakeHost` beside it; H-9's setters take the double they set, and a clock-dependent function is generic over the seam
+> **Read with TM-265 (2026-10-22, cycle 0.4.0a).** A module binding with NO
+> initialiser, which this decision measured as a read-only zero whose plain
+> write the legs disagreed on, is `NITPICK-TYPE-055` at the declaration since
+> compiler `2e1cb4a` — the candidate raised at this decision's planning, fixed
+> as the compiler's DEF-250 (landing 114). No form makes module storage
+> writable, as before, so the decision stands; the text below is left exactly
+> as written.
+>
 > **Corrected 2026-10-15 at cycle 0.3.4, cycle 0.3's close — a dated note, no
 > new decision.** The words it gives as *"the compiler's D-211"* — *"module
 > state is `fixed` … keep mutable process state in `main`'s scope where it
@@ -9093,3 +9139,81 @@ already, so the spelling would move every site and change no answer; nothing
 the new compiler requires moves them, and a later subcycle that wants a check
 the slices do not give may take it then. **`bytes_view` removed** — a consumer
 of a sink reads its bytes without a copy through it, and `bytes_take` copies.
+
+### TM-265 — the adoption of compiler `2e1cb4a`: part E's third half without the numeral the compiler refuses; a view held across a growing call and an orphan impl, each a refusal a probe asserts; the lexer re-read; the reserved words and a module binding with no initialiser re-measured; the rest of the adoption list, each measured; and CI pinned, its LLVM asset's digest checked before the asset is unpacked
+
+**2026-10-22, cycle 0.4.0a (the plan's PD-203) — the adoption of compiler
+`2e1cb4a`, carrying its landings 104 … 140 over `7e91730`: the libraries' one
+re-pin, by the author's word of 2026-10-22. Amends `harness/selfcheck.py`'s
+part E; adds `tests/probe/probe10d_view_held_across_growth_refused.npk` and
+`tests/probe/probe19b_orphan_copy_refused.npk`; dates `lexical.py`, three
+readings of `checks.py`, `BUILD.md` §7 and its parse counts, the counts beside
+five tags, `TESTING.md`'s literal reader, `SAFETY.md` S-18e and S-18h,
+`HOST.md`'s module storage, the double's header, the view notes of `bytes.npk`,
+`core.npk` and `src/lib.npk`, `vec.npk`'s note on `Copy` and
+`OPEN_QUESTIONS.md` O-N25; marks TM-139, TM-171, TM-211, TM-231 and TM-261;
+and moves CI to the pin, in a commit of its own after this one.**
+
+**What was found** (`0.4.0a.md` §1). With TM-263's and TM-264's re-spellings
+every file compiles at `2e1cb4a` as it does at `7e91730`, its codes and sites
+the same, and the full run there is red at its self-check alone: part E's
+third half asks the compiler to read 22 spellings of a number, and one,
+`86400_i64`, is `NITPICK-LEX-003` there — a numeral's digit run ends in a digit
+since landing 135 (the compiler's DEF-190) — so the program holding them builds
+nothing. Every other spelling reads as before at both pins, the literal reader
+reads each the same, and no span `harness/lexical.py` finds moved. The compiler
+now refuses two things this library wrote down as hazards: a view `bytes_view`
+hands back, held across a call that can grow its sink, is `NITPICK-BORROW-015`
+at the call (D-341, landing 128), where at `7e91730` its read returned the
+allocator's poison, 170; and `impl:string:Copy` is `NITPICK-TYPE-099`, the
+orphan rule (D-359, landing 124), asked before the judgement — in this tree,
+and in a consumer's of its own for `impl:Bytes:Copy`. Two readings this
+repository recorded moved: a local declared `T:keyword` is `NITPICK-PARSE-001`
+at the name, naming the keyword, where it was `NITPICK-PARSE-002` at the
+declaration (DEF-258, DEF-259, landing 136), `result` alone keeping the old
+report; and a module binding with no initialiser is `NITPICK-TYPE-055` at the
+declaration (DEF-250, landing 114), where it compiled as a read-only zero whose
+write the legs disagreed on — the candidate this repository raised. The
+emission moves in text, by landing 115's attribute on every define, 126's site
+table trimmed to the sites a program holds, and 105's drops in two programs,
+and in nothing `check_call_edges`, `check_wide_types` or `check_purity` reads.
+And TM-171's `fixed Weekday[7]` table, declined as not spellable, is spellable
+since landing 123 (D-356). The adoption list, each item measured: the `int128` arithmetic is inline at
+both pins, no object naming a symbol `npkrt.o` lacks; the builtin table and the
+prelude name the same functions, so `check_purity`'s list stands; the
+instances' unit compiles; and the nine `#wild_slice` sites are TM-264's.
+
+**The decision.** *Part E's third half holds the 21 spellings the compiler
+accepts, and names `86400_i64` beside them as the one it refuses; the literal
+reader keeps reading it, which only a refused file can hold. `probe10d`
+asserts the held view's refusal, its control the old compiler's 170, and
+`probe19b` the orphan impl's, `probe19`'s question as it stood. `lexical.py`,
+`checks.py`'s literal reader, builtin list and glue names, `BUILD.md` §7, the
+double's header, `HOST.md` and O-N25 say what the new compiler does, each in a
+dated note, and TM-139, TM-171, TM-211, TM-231 and TM-261 are marked —
+TM-171's table, spellable now, weighed again and declined again. CI pins
+`2e1cb4a`, its emission held to notice 140's `npkc.ll` row, and holds the LLVM
+release asset it installs to a digest pinned in the workflow: downloaded to a
+file and checked with `sha256sum -c` before it is unpacked, the cache keyed on
+the digest as well as the version — the digest measured from the asset and
+equal to the one the LLVM project's release attests.*
+
+*Alternatives declined:* **TM-171's table taken, `weekday` read from a `fixed
+Weekday[7]`** — its bounds check would guard an index the belt has already
+held, and C-7's order would be stated twice (TM-171's marker has the
+measurement). **`86400_i64` kept, and part E taught to expect its
+refusal** — the third half asks whether the reader reads every number the
+compiler reads, and a refused spelling is no number. **The literal reader
+taught to refuse a trailing `_`** — it would decide nothing, since a file
+holding one never compiles, and the reader would restate the lexer for a case
+no shipped file can hold. **The stale read retired, with no probe** — the
+refusal is the safety fix the compiler now makes, and a probe is what reddens
+if a compiler stops making it. **No `probe19b`** — S-18h's note says a consumer
+can claim `Copy` for no type it does not declare, and a claim no probe holds is
+held by nothing. **The asset checked against GitHub's API digest at run time**
+— a second service asked on every run, where a pin in the workflow is read by
+review and moves only by a commit. **The cache left keyed on the version
+alone** — it restores whatever was cached first, so a check that runs only
+when the cache misses would guard nothing a hit restores. **Provenance
+verified by `gh attestation verify` or `cosign`** — a tool and a trust root CI
+does not have, for a check the pinned digest already makes.

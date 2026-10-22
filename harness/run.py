@@ -645,10 +645,12 @@ def run_parse(rep, root, bld):
     """Every `.npk` in the tree in front of the real parser, each exactly once.
 
     THE DENOMINATOR IS THE WHOLE TREE AND THAT IS WHY THE STAGE IS WORTH ITS
-    COST. Re-measured at cycle 0.3.3: of the 163 `.npk` files
-    here [[sweep: npk_total=163]] the library build roots 7
-    [[sweep: lib_reach=7]], the suite roots 111 [[sweep: suite_roots=111]]
-    (159 and 108 from cycle 0.3.2's third step until cycle 0.3.3 added the
+    COST. Re-measured at cycle 0.4.0a: of the 165 `.npk` files
+    here [[sweep: npk_total=165]] the library build roots 7
+    [[sweep: lib_reach=7]], the suite roots 113 [[sweep: suite_roots=113]]
+    (163 and 111 from cycle 0.3.3 until cycle 0.4.0a added two refusal
+    probes, TM-265;
+    159 and 108 from cycle 0.3.2's third step until cycle 0.3.3 added the
     double's three tests, two units and the `golden` stage's first member,
     TM-262; 127 and 77 from cycle 0.1.3c until `tests/unit/civil_total_edges.npk`
     joined; 128 and 78 from then until cycle 0.2.0b retired the churn pair,
@@ -678,7 +680,7 @@ def run_parse(rep, root, bld):
     a support module no suite root imports, which only its part C compiles
     (TM-217).
 
-        163 = 7 (library) + 111 (suite roots) + 3 + 1 + 1 (reached by `use`) + 40
+        165 = 7 (library) + 113 (suite roots) + 3 + 1 + 1 (reached by `use`) + 40
 
     (It read `116 = 5 + 66 + 3 + 1 + 41` from cycle 0.1.4c until cycle 0.1.3c
     added eleven suite roots -- seven probes and four unit tests -- and none
@@ -693,7 +695,8 @@ def run_parse(rep, root, bld):
     `150 = 7 + 99 + 3 + 1 + 40` from cycle 0.3.0 -- which this equation went
     on reading through cycle 0.3.2's three steps, while the tagged sentence
     moved to 159, 108 and 40, found at cycle 0.3.3's planning -- until the
-    double.)
+    double; and `163 = 7 + 111 + 3 + 1 + 1 + 40` from the double until cycle
+    0.4.0a's two probes.)
 
     EVERY NUMBER IN THAT SENTENCE IS TAGGED AND CHECKED (TM-142). It read
     `50 = 1 + 27 + 3 + 19` until cycle 0.0.6, three subcycles after the tree
@@ -834,9 +837,9 @@ def select(root, entry):
     """The files a `[[test]]` entry selects: `<path>/*.npk`, non-recursive.
 
     NOT recursive, and the omission is load-bearing (the manifest says so at
-    length): a plain glob over `tests/probe/` is exactly the 59
-    [[sweep: probe_dir=59]] probe programs (58 until cycle 0.3.2, 57 until
-    cycle 0.2.4b) and
+    length): a plain glob over `tests/probe/` is exactly the 61
+    [[sweep: probe_dir=61]] probe programs (59 until cycle 0.4.0a, 58 until
+    cycle 0.3.2, 57 until cycle 0.2.4b) and
     excludes `support/` -- four
     library modules with no `main`, three until cycle 0.2.0 -- and `defect/`, whose files are
     reproductions rather than tests of this library and are judged by

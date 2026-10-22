@@ -170,7 +170,9 @@ form measured makes module storage writable (`0.3.3.md` §1.2 names each) —
 among them `NITPICK-TYPE-055` refuses a plain module binding with an
 initialiser (the compiler's D-211), `NITPICK-TYPE-086` a write into a part of
 a `fixed` one, and `NITPICK-TYPE-035` an initialiser that calls, and one with
-no initialiser is a read-only zero. So the double is a value and each setter
+no initialiser is a read-only zero *(`NITPICK-TYPE-055` too since compiler
+`2e1cb4a`, the compiler's DEF-250, landing 114 — cycle 0.4.0a, TM-265)*. So
+the double is a value and each setter
 takes the one it sets — `fake_set_utc = NIL(FakeHost->:h, Timestamp:t) never
 fails` and its two siblings; beside them `fake_set_zone`, for the fifth
 reading, and the setters of every other answer `host` gives a caller — the

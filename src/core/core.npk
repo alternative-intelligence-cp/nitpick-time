@@ -40,5 +40,7 @@
 // AND THE OBLIGATION NO GATE HERE CAN DISCHARGE (S-18e, TM-139): a view from
 // `bytes_view` is invalidated by growth, and a use-after-free is found by a
 // WRONG ANSWER rather than by a leak gate. Read `bytes.npk`'s `bytes_view`
-// before holding one.
+// before holding one. *(Since compiler `2e1cb4a` the compiler discharges it:
+// a view held across a call that can grow its sink is `NITPICK-BORROW-015` at
+// the call -- cycle 0.4.0a, TM-265.)*
 mod:core;

@@ -20,7 +20,9 @@
 // one with no initialiser compiles as a read-only zero, whose plain write
 // ends the program at -O0 and is dropped at -O2 -- the legs disagreeing, a
 // compiler-defect candidate raised to the compiler's seat, and nothing here
-// relies on it. (The quoted words are the message's, and D-211's own are
+// relies on it. (Since compiler `2e1cb4a` that one is `NITPICK-TYPE-055` at
+// the declaration as well -- the candidate, fixed as the compiler's DEF-250,
+// landing 114: cycle 0.4.0a, TM-265.) (The quoted words are the message's, and D-211's own are
 // "mutable process state lives in `main`'s scope and flows explicitly":
 // this said "the compiler's D-211" of the message until cycle 0.3.4, the
 // documents audit's TA-10.)

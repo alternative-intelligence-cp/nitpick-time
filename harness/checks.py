@@ -711,6 +711,12 @@ def limits_names(tree):
 # `a` ... `d` for -1 ... -4 in nonary. A character literal's value is its code
 # point, the lexer's `CharLit` payload, and a widening makes it an integer
 # (`'\u{15180}' => int64` is 86 400, measured at the pin), so it is read too.
+# (AND AGAIN AT `2e1cb4a`, cycle 0.4.0a, TM-265: `num_scan` and `lexer_next`
+# refuse a digit run that ends in `_` -- `10_`, `1_i32`, and one before the
+# width, `86400_i64` -- `NITPICK-LEX-003`, the compiler's DEF-190, landing
+# 135, and read every other spelling as before. This reader still drops such
+# a `_`, so it reads a numeral only a refused file can hold; part E's third
+# half asks both about every spelling the compiler accepts.)
 #
 # WHY, MEASURED AT CYCLE 0.2.3a's PLANNING. The pattern below the line read a
 # literal as four or more DECIMAL digits not after a letter, a digit, `_` or
@@ -1353,7 +1359,9 @@ def check_raw_index(tree, **_):
 # needed on its first run. The list is every bare-name builtin of the pinned
 # compiler -- fifty-seven at `5fbaf4a`, its `src/frontend/builtins.npk`, and the
 # same fifty-seven at `7e91730` (cycle 0.3.2a, TM-259: the one row that moved
-# is `string_bytes`'s result, the read-only view) --
+# is `string_bytes`'s result, the read-only view) and at `2e1cb4a` (cycle
+# 0.4.0a, TM-265: the one row of `builtins.npk` that moved is `#wild_slice`'s
+# views, D-341's belt, and the prelude did not move at all) --
 # generated from `BUILTIN_REFERENCE.md`'s marked rows -- and every SYNCHRONOUS
 # public function of its prelude, that reaches past the program's own memory.
 # The asynchronous prelude names that do and are not on it are named in
@@ -1627,7 +1635,8 @@ def check_host_isolation(tree, **_):
 # file's basename (B-14). The prelude's are `npk.prelude.*`, the drop glue's
 # `npk.drop.<n>` and `npk.vacant.<n>` -- `<n>` a type's id, which moved by one
 # at `7e91730` for every type interned after the prelude's `Writer`, and
-# which nothing here reads (cycle 0.3.2a, TM-259). Measured at compiler `5fbaf4a`
+# which nothing here reads (cycle 0.3.2a, TM-259; none moved at `2e1cb4a`,
+# cycle 0.4.0a, TM-265). Measured at compiler `5fbaf4a`
 # (`meta/roadmap/done/0.3/0.3.1.md` §1): the umbrella's emission defines every
 # function `src/` declares but the nine generic ones of `src/core/vec.npk`,
 # which a module holds only where a caller instantiates them.

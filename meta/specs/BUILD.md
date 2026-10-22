@@ -212,7 +212,7 @@ what kind of test it is. This is a deliberate divergence from `npkg`'s `kind`.**
 A `[[test]]` selects by **directory** and `kind` is per entry, so one entry over
 `tests/probe/` cannot be true about both the 30 files carrying `expect-exit:`
 <!-- [[sweep: probe_exit=30]] --> (29 until cycle 0.3.2, 28 until cycle 0.2.4b)
-and the 29 carrying `expect-error:` (O-X7; 8 until cycle 0.1.0c, 13 until 0.1.3b, 15 until 0.1.3c, 21 until 0.2.0, 23 until 0.2.1). The runner therefore dispatches per
+and the 31 carrying `expect-error:` (O-X7; 8 until cycle 0.1.0c, 13 until 0.1.3b, 15 until 0.1.3c, 21 until 0.2.0, 23 until 0.2.1, 29 until 0.4.0a). The runner therefore dispatches per
 file: `expect-error:` present makes it a **refusal** member — `npkc` must fail
 and the *set* of codes must equal the set named (B-7), each code named once
 per site it is reported at (B-7c, since cycle 0.2.0a) — and `expect-exit:`
@@ -314,19 +314,22 @@ and names the sites when the count differs; self-check cases 12 and 13
 `NITPICK-LEX-*` comes from the compiler's `src/frontend/diag_codes.npk` and
 `NITPICK-PARSE-*` from `parse_codes.npk`; every other family belongs to a later
 phase, so a file reported with one of those **necessarily parsed**. That is what
-lets the stage cover the 45 files here that must not compile
-<!-- [[sweep: tests_error=45]] --> — they are
+lets the stage cover the 47 files here that must not compile
+<!-- [[sweep: tests_error=47]] --> (45 until cycle 0.4.0a, TM-265) — they are
 refused at `PARSE-001`, `LEX-004`, `PARSE-002`, `TYPE-007` and `TYPE-032`
 (since cycle 0.2.1, `probe20c` … `probe20f`), `TYPE-009`, `TYPE-017`,
 `TYPE-046`, `TYPE-079`, `TYPE-080`, `TYPE-084`, `TYPE-087` (`TYPE-047` until
 cycle 0.2.0a, whose `probe19` asks `Copy` where it asked `Pod`, TM-211 — this
-list kept the old code until cycle 0.2.0), `BORROW-001`, `BORROW-012`,
+list kept the old code until cycle 0.2.0), `TYPE-099` and `BORROW-015` (since
+cycle 0.4.0a, `probe19b` and `probe10d`), `BORROW-001`, `BORROW-012`,
 `RESOLVE-001`, `RESOLVE-002` (since cycle 0.2.0, `probe20b`),
 `REACH-002` and `REACH-003`, and every family
 after the first three runs only on something that parsed. Re-measured at pin
-`7e91730`, cycle 0.3.3: **163 files = 118 parse cleanly + 43
+`2e1cb4a`, cycle 0.4.0a: **165 files = 118 parse cleanly + 45
 parse and are refused later + 2 do not parse**
-<!-- [[sweep: npk_total=163]] --> (`159 = 114 + 43 + 2` from cycle 0.3.2's
+<!-- [[sweep: npk_total=165]] --> (`163 = 118 + 43 + 2` at pin `7e91730`
+from cycle 0.3.3 until cycle 0.4.0a added two refusal probes, TM-265;
+`159 = 114 + 43 + 2` from cycle 0.3.2's
 third step until cycle 0.3.3 added the double and its three tests, TM-261,
 TM-262; `152 = 107 + 43 + 2` from its second step
 until its third added the system zone's seven units, TM-257; `151 = 106 + 43 + 2` from cycle 0.3.2's
@@ -644,7 +647,7 @@ these reads like an ordinary local name and is not:
 | `prove`, `assert_static`, `requires`, `ensures`, `acquires`, `gives`, `invariant` | the rest of the same production |
 | `decreases`, `unbounded` | **the loop clause's two words** (D-304), in the same production since compiler `c3bdae2` — and "unbounded" is what an open range wants to be called (TM-151) |
 | `sealed`, `hidden` | **field qualifiers** (D-313, D-314) since compiler `c3bdae2` — and "hidden" is what a flag wants to be called |
-| `uid`, `gid`, `pid`, `tid`, `fd`, `thread`, `cfg`, `arena` | **refused as local names**, `NITPICK-PARSE-002` at the declaration — measured at pin `5fbaf4a` (cycle 0.3.2), each by declaring `int64:<name> = 1i64;`, with `ppid` compiling beside them. The first two are what a user namespace's maps want: `probe22` and the system zone's unit write `me` and `mg`; `fd` is the prelude's descriptor type |
+| `uid`, `gid`, `pid`, `tid`, `fd`, `thread`, `cfg`, `arena` | **refused as local names**, `NITPICK-PARSE-002` at the declaration — measured at pin `5fbaf4a` (cycle 0.3.2), each by declaring `int64:<name> = 1i64;`, with `ppid` compiling beside them. The first two are what a user namespace's maps want: `probe22` and the system zone's unit write `me` and `mg`; `fd` is the prelude's descriptor type *(`NITPICK-PARSE-001` at the NAME since pin `2e1cb4a`, cycle 0.4.0a — the note below)* |
 
 **Rule B-18 (TM-130) — the ten `VerificationKeyword` spellings are reserved as
 ordinary names, and the diagnostic will not tell you.** Measured one at a time
@@ -677,6 +680,19 @@ produce — with nothing anywhere saying they cannot also be locals.
 pointing at the **colon** and at a closing paren, so it reads as punctuation
 trouble rather than as a name. Cycle 0.0.4 met it in
 `tests/probe/probe12b_set_overwrite_drop.npk`.
+
+> **At compiler `2e1cb4a` (cycle 0.4.0a, TM-265) THE DIAGNOSTIC TELLS YOU.** A
+> local declared `T:<keyword>` is `NITPICK-PARSE-001` at the NAME — *"expected
+> a name: `old` is a keyword and cannot name a binding, a parameter, a field
+> or a variant"* — where it was `NITPICK-PARSE-002`, *"expected an
+> expression"*, at the declaration's type (the compiler's DEF-258 and DEF-259,
+> landing 136). Measured by declaring `int64:<name> = 1i64;` for every keyword
+> of the table and the rule above, at both pins: each is `PARSE-001` at the
+> name at `2e1cb4a` but `result`, which is `PARSE-002` at the declaration at
+> both, and `Ordering`, `ppid` and `measure` compile at both. `int64:old =
+> move(s[0i64]);` reports the name first, and the report after it is its
+> use's. The table and the rule stand as what to avoid; what the compiler says
+> is what moved.
 
 The names this library uses instead, fixed here so they are used consistently:
 **`gran`** for a rounding granularity, **`hi`** and **`lo`** for range bounds,

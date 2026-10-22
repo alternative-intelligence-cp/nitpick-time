@@ -374,6 +374,18 @@ pub func:bytes_capacity = int64(Bytes->:b) never fails {
 // repository owns is a LEAK gate, and this is a WRONG ANSWER -- so it is
 // found by a test that reads, and by nothing else.
 //
+// *(Cycle 0.4.0a, the adoption of compiler `2e1cb4a`, TM-265: THE COMPILER
+// HOLDS A CALLER TO THIS RULE NOW. Since its D-341 (landing 128) the view
+// below is a view of `b`'s body that travels up to the caller, so while the
+// caller holds the answer, handing the sink to any of the six calls above
+// that can grow it is `NITPICK-BORROW-015` at that argument, at compile time
+// -- growth or not, since the call is what is read -- and the five that
+// cannot are not refused, `bytes_clear` among them: measured, call by call.
+// `../../tests/unit/bytes_view_lifetime.npk` takes each view in a block of
+// its own now, and its stale read is the refusal
+// `../../tests/probe/probe10d_view_held_across_growth_refused.npk` asserts.
+// The paragraph above is the record of the gates this repository owns.)*
+//
 // `Vec<T>` DOES NOT HAVE THIS SHAPE, and the reason is worth writing down
 // rather than rediscovering: `vec_reserve` reallocates too -- with `ralloc`
 // since cycle 0.1.0b, which invalidates the old pointer just as surely -- but

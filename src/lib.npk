@@ -119,7 +119,10 @@ pub use "./core/vec.npk".vec_free;
 // call that can grow the sink -- `push`, `extend`, `extend_str`, `put_uint`,
 // `put_int`, `reserve` -- and reading it afterwards returns the allocator's
 // poison, not the sink's bytes. Its header states the rule; this line is here
-// because a public surface is where a consumer looks first.
+// because a public surface is where a consumer looks first. *(Since compiler
+// `2e1cb4a`, cycle 0.4.0a, TM-265, the compiler holds a consumer to it: a
+// view held across one of those six calls is `NITPICK-BORROW-015` at the
+// call, so the read that returned the poison is never compiled.)*
 //
 // SINCE CYCLE 0.1.0c (TM-156) `body` and `len` are `sealed` and `len` carries
 // `ListLen`. The seal keeps the header, NOT the bytes: a write THROUGH

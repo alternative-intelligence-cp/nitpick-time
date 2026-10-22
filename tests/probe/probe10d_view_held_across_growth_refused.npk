@@ -1,0 +1,69 @@
+// expect-error: NITPICK-BORROW-015
+// expect-error-at: 42:63
+//
+// PROBE 10d -- A VIEW `bytes_view` HANDS BACK, HELD ACROSS A CALL THAT GROWS
+// ITS SINK, IS REFUSED WHERE THE CALL IS WRITTEN (cycle 0.4.0a, TM-265).
+//
+// ASKS: may a consumer hold `bytes_view`'s answer across a `bytes_push` that
+// grows the sink, and read it after?
+//
+// MATTERS BECAUSE `bytes_reserve` grows by allocating a fresh body, copying,
+// and overwriting the old one, which drops it (the compiler's D-186;
+// `SAFETY.md` S-18e, TM-139): a view taken before the growth points into the
+// released block. This is `tests/unit/bytes_view_lifetime.npk`'s §2 as it
+// stood until cycle 0.4.0a, whose last read was the use-after-free itself,
+// written down on purpose; this file holds that read and nothing after it.
+//
+// ANSWER, measured at compiler `2e1cb4a`: NO. Since its D-341 (landing 128)
+// a `#wild_slice` over a managed header's pointer is a view of its owner,
+// and a view taken through a pointer parameter travels up to the caller, so
+// `w` holds `c`'s body, and `@c` handed to `bytes_push` -- a call that can
+// write it -- is `NITPICK-BORROW-015`, once, at that argument: "a view's
+// root is FROZEN while the view is live (D-325)". The read after the pushes
+// is never reached. THE REFUSAL IS THE ASSERTION (B-7). ITS CONTROL is this
+// file at compiler `7e91730`, which compiles it: the read returns the
+// allocator's poison, 170, the exit on both legs.
+mod:probe10d_view_held_across_growth_refused;
+
+use "../../src/core/bytes.npk".*;
+
+fixed uint8:A = 65u8;      // the byte written before the view is taken
+fixed uint8:B = 66u8;      // the bytes that grow the sink
+fixed int64:PUSHES = 40i64;
+
+func:main = int32(cstring[]:_~argv) {
+    Bytes:c = raw bytes_init(2i64);
+    int64:i = 0i64;
+    while (i < 2i64) decreases 2i64 - i { drop bytes_push(@c, A); i = i + 1i64; }
+    int64:cap_small = raw bytes_capacity(@c);
+    fixed uint8[]:w = raw bytes_view(@c);
+    if (w[0i64] != A)                           { exit 21i32; }
+    i = 0i64;
+    while (i < PUSHES) decreases PUSHES - i { drop bytes_push(@c, B); i = i + 1i64; }
+    if (raw bytes_capacity(@c) == cap_small)    { exit 22i32; }
+    exit (w[0i64] => int32);
+};
+
+// A SUPERSET of what `NITPICK-REACH-002` asks, deliberately (`SAFETY.md` S-6b,
+// constraint 3: a superset compiles). If a later compiler reordered its phases
+// so that the reach analysis ran before the check this file asserts, a
+// failsafe naming exactly the demanded arms could add a stray `REACH-002` to
+// the refusal; this one cannot.
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
+        (LimitViolated)     { exit 109i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

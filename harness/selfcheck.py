@@ -2506,8 +2506,14 @@ _FORMS_LITERALS = ((21, "a = 5i32"), (24, "a = 6i32"), (27, "a = 7i32"),
 # A re-pin that moves the numeric scan on one of them -- a base suffix, a
 # width, the separator, the leading-digit rule -- is a red run. Its own
 # `failsafe`, because the loop's counter can reach `IntOverflow`.
+# (`86400_i64`, one `_` before the width, stood beside `86__400i64` until
+# cycle 0.4.0a. Since compiler `2e1cb4a` a numeral's digit run ends in a
+# digit, so it is `NITPICK-LEX-003` there and spells no number -- the
+# compiler's DEF-190, landing 135 -- and the program holding it built
+# nothing. The reader still reads it as 86 400, a spelling only a refused
+# file can hold, so that reading decides nothing; TM-265.)
 _NUM_FORMS = (
-    ("86_400i64", 86400), ("86__400i64", 86400), ("86400_i64", 86400),
+    ("86_400i64", 86400), ("86__400i64", 86400),
     ("086400i64", 86400), ("15180hexi64", 86400),
     ("10101000110000000bini64", 86400), ("250600octi64", 86400),
     ("1111TTTT000ti64", 86400), ("142dc0ni64", 86400),

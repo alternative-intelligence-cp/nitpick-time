@@ -1478,6 +1478,13 @@ row type by name is a belt, not the guarantee, and
 > govern it. The heading read *"OPEN here: the compiler's D-325 settles it, in
 > pin `c970483`, and its refusal, `NITPICK-BORROW-015`, is at no pin of ours"*;
 > the entry below is left as written.
+>
+> **Re-measured at the adoption of `2e1cb4a` (cycle 0.4.0a, TM-263, TM-265).**
+> The freeze tracks `bytes_view`'s answer since the compiler's D-341 (landing
+> 128): a `#wild_slice` over a managed header's pointer is a view of its
+> owner. So the file this entry says to read first was refused there at the
+> two pushes after its held views; it takes each view in a block of its own
+> now, and its stale read is `probe10d`'s refusal, `NITPICK-BORROW-015`.
 
 **Raised** from this repository's cycle 0.1.4b planning, 2026-09-25, at pin
 `c3bdae2`, where `bytes_take` was found handing back a view of its sink typed

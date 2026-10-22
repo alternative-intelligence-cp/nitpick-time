@@ -120,6 +120,7 @@ by the harness as ordinary `program`-stage entries from cycle 0.0.2.
 | `probe10_view_edges.npk` | the five borrow edges, and §1 is the discriminator: an `alloc`'d block viewed and returned with **no parameter in the root chain** | TM-110, `SAFETY.md` S-22 |
 | `probe10b_view_of_temporary_refused.npk` | *(must not compile)* a view of a **temporary**, returned | TM-110 — fires `NITPICK-BORROW-012` |
 | `probe10c_view_of_move_param_refused.npk` | *(must not compile)* a view of a **`move` parameter**, returned | TM-110 — a `move` parameter is the callee's own |
+| `probe10d_view_held_across_growth_refused.npk` | *(must not compile)* `bytes_view`'s answer held across a `bytes_push` that grows the sink — `bytes_view_lifetime`'s §2 until cycle 0.4.0a, whose last read gave the allocator's poison, 170 | S-18e, TM-265 — `NITPICK-BORROW-015` |
 | `probe11_failsafe_arms.npk` | the `failsafe` arm contract: an import that declares and raises one `error:` | TM-017, TM-107, `SAFETY.md` S-2/S-4/S-4b/S-4c/S-6 |
 | `probe11b_arm_omitted_refused.npk` | *(must not compile)* the same, minus one arm | the same rules — the negative half TM-017 rests on |
 | `probe11c_import_arm_cost.npk` | *(must not compile)* what an imported module's **arithmetic** costs a consumer | TM-107, `SAFETY.md` S-4b |
@@ -149,6 +150,7 @@ by the harness as ordinary `program`-stage entries from cycle 0.0.2.
 | `probe18_zero_length_owner.npk` | does a `string[0]` field cost nothing, move, drop, and leave an `int64[0]` twin copyable? | S-18g — the language fact under `Vec`'s marker |
 | `probe18b_zero_length_owner_copy_refused.npk` | *(must not compile)* a struct whose one owning field is `string[0]`, copied | S-18g — `NITPICK-TYPE-046` |
 | `probe19_pod_owner_refused.npk` | *(must not compile)* `Copy` claimed for `Bytes`, an owning type of this library's own — for `string` until cycle 0.4.0a (TM-263), and until cycle 0.2.0a `Pod` implemented as its trait declared it, `TYPE-047` (TM-211) | S-18h — `NITPICK-TYPE-087` |
+| `probe19b_orphan_copy_refused.npk` | *(must not compile)* `Copy` claimed for `string`, in a tree that declares neither — `probe19`'s question until cycle 0.4.0a, `TYPE-087` at `7e91730` | S-18h, TM-265 — `NITPICK-TYPE-099` |
 | `probe20_instant_literal_refused.npk` | *(must not compile)* an `Instant` built by a consumer's struct literal | `TIME_MODEL.md` M-2, TM-215 — `NITPICK-TYPE-079`, twice: one report per sealed field *(once since compiler `7e91730`, naming both: its DEF-165, TM-259)* |
 | `probe20b_instant_conversion_refused.npk` | *(must not compile)* `instant_to_timestamp` called | M-3, TM-010 — `NITPICK-RESOLVE-002` |
 | `probe20c_instant_as_timestamp_refused.npk` | *(must not compile)* an `Instant` handed to `Timestamp`'s `cmp` | M-3, TM-221 — `NITPICK-TYPE-007` |

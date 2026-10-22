@@ -1109,6 +1109,19 @@ lines, measured. The unit takes each view in a block of its own, ended before
 the next push, and its §1 takes its view again after the pushes; §2's stale
 read leaves the unit, a refusal now.
 
+*(2026-10-22, cycle 0.4.0a, TM-265.)* **And the compiler refuses the
+use-after-free this rule says no gate here can find.** Since its D-341
+(landing 128) `bytes_view`'s `#wild_slice` is a view of the caller's sink,
+travelling up through the pointer parameter, so a caller holding the answer
+across a call that can grow the sink is `NITPICK-BORROW-015` at that call's
+argument, where it is written —
+`tests/probe/probe10d_view_held_across_growth_refused.npk`, whose control is
+the old compiler: it compiled and read the poison, 170. Measured call by
+call, the six calls that can grow a sink are refused while a view lives, and
+the five that cannot are not, `bytes_clear` among them: the rule this section
+wrote is the compiler's, to the function. What it says of this repository's
+own gates stands — each is a leak gate.
+
 **Rule S-18f (TM-188) — no function hands back a `string` made by
 `string_from_bytes`, because the type cannot tell a view from a copy.**
 `string_from_bytes` wraps existing bytes as a VIEW — capacity 0, by the
@@ -1217,6 +1230,13 @@ impl, asked before the `Copy` judgement (the compiler's D-359, landing 124):
 `impl:string:Copy` names neither, so the probe would have shown that rule and
 not this one. `impl:Bytes:Copy = { };` is admitted by the orphan rule and
 refused by the judgement, `NITPICK-TYPE-087`, at both compilers, measured.
+*(2026-10-22, cycle 0.4.0a, TM-265.)* **And a claim made outside the type's
+tree is refused before the judgement is asked**: `impl:string:Copy` is
+`NITPICK-TYPE-099` at `2e1cb4a`
+(`tests/probe/probe19b_orphan_copy_refused.npk`), and so is a consumer's
+`impl:Bytes:Copy` in a tree of its own, measured. So the bound has two walls:
+a consumer can claim `Copy` for no type it does not declare, and a type's own
+tree is refused by the judgement when the type owns.
 
 **Rule S-19.** The generated zone tables are `fixed` module state — read-only
 memory, no initialisation at startup, nothing to leak, and nothing to race.

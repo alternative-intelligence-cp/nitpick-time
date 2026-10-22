@@ -354,7 +354,11 @@ pub func:vec_push<T: Copy> = NIL(Vec<T>->:v, move T:x) never fails {
 // that owns nothing claims it in one line where it is declared --
 // `impl:Pt:Copy = { };` for a struct of integers or a payload enum such as
 // `FORMAT_MODEL.md`'s parts (`../../tests/unit/vec_at_pod.npk`) -- and needs
-// nothing from this library to do it.
+// nothing from this library to do it. *(Since compiler `2e1cb4a`, cycle
+// 0.4.0a, TM-263 and TM-265: `impl:string:Copy` is `NITPICK-TYPE-099` there,
+// the orphan rule asked before the judgement (the compiler's D-359), which
+// `probe19b` asserts; `probe19` asks the judgement of `Bytes`,
+// `NITPICK-TYPE-087`, the refusal above on a type of this library's own.)*
 //
 // UNTIL CYCLE 0.2.0a THIS BLOCK DECLARED `Pod` -- `nitpick-regex`'s trait, text
 // for text, `pod_copy` lending its `self` -- and its nine scalar impls (TM-194),

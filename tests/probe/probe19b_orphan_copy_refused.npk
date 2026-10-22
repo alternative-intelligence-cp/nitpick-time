@@ -1,0 +1,60 @@
+// expect-error: NITPICK-TYPE-099
+// expect-error-at: 32:1
+//
+// PROBE 19b -- A CLAIM OF `Copy` FOR A TYPE THE CLAIMING TREE DOES NOT
+// DECLARE IS REFUSED BEFORE THE JUDGEMENT IS ASKED (cycle 0.4.0a, TM-265).
+//
+// ASKS: may code in this tree declare `string` -- a builtin -- `Copy`, the
+// prelude's trait? It is `probe19`'s question as it stood until cycle 0.4.0a,
+// and its text.
+//
+// MATTERS BECAUSE `vec_at<T: Copy>` hands an element back by value
+// (`SAFETY.md` S-18h, TM-211), and the bound is worth something only if the
+// language decides who may claim it: a claim of `Copy` for an owning type
+// would make `vec_at` hand back a second owner of the element.
+//
+// ANSWER, measured at compiler `2e1cb4a`: NO, by a rule asked first. An impl
+// names a type or a trait declared in its own manifest's tree, or it is
+// `NITPICK-TYPE-099` at the impl (the compiler's D-359, landing 124), asked
+// before coherence and the `Copy` judgement: `string` is a builtin and `Copy`
+// the prelude's, so this impl names neither -- "an impl names at least one
+// type or trait declared in its own manifest's tree (D-359)" -- once. A
+// consumer's `impl:Bytes:Copy`, in a tree of its own, is refused the same
+// way, measured: a consumer can claim `Copy` for no type it does not declare,
+// and a type's own tree is refused by the judgement when the type owns
+// (`probe19`). THE REFUSAL IS THE ASSERTION (B-7). ITS CONTROL is this file
+// at compiler `7e91730`, before the orphan rule, where the judgement answered,
+// `NITPICK-TYPE-087`, once, at the impl.
+mod:probe19b_orphan_copy_refused;
+
+use "../../src/core/vec.npk".*;
+
+impl:string:Copy = { };
+
+func:main = int32(cstring[]:_~argv) {
+    exit 0i32;
+};
+
+// A SUPERSET of what `NITPICK-REACH-002` asks, deliberately (`SAFETY.md` S-6b,
+// constraint 3: a superset compiles). If a later compiler reordered its phases
+// so that the reach analysis ran before the check this file asserts, a
+// failsafe naming exactly the demanded arms could add a stray `REACH-002` to
+// the refusal; this one cannot.
+func:failsafe = int32(Error:e) {
+    pick (e) {
+        (HeapBadRequest)    { exit 91i32; },
+        (HeapOom)           { exit 92i32; },
+        (IntOverflow)       { exit 93i32; },
+        (OutOfBounds)       { exit 94i32; },
+        (Unreachable)       { exit 95i32; },
+        (WildLeak)          { exit 96i32; },
+        (DivByZero)         { exit 97i32; },
+        (DivOverflow)       { exit 98i32; },
+        (StackExhausted)    { exit 106i32; },
+        (MachineFault)      { exit 107i32; },
+        (DecreasesViolated) { exit 108i32; },
+        (LimitViolated)     { exit 109i32; },
+        (*)                 { exit 99i32; }
+    }
+    exit 9i32;
+};

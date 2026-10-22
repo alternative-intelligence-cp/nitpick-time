@@ -72,9 +72,9 @@ lld-flags     = ["-static"]
 # disagrees with the files under its path is worse than an empty one, because
 # it fails for a reason that is not the library's. `tests/probe/` holds 30
 # positive probes [[sweep: probe_exit=30]] (29 until cycle 0.3.2, 28 until
-# cycle 0.2.4b) and 29 that
-# MUST NOT COMPILE [[sweep: probe_error=29]] (23 until cycle 0.2.1, 21 until
-# 0.2.0), and the
+# cycle 0.2.4b) and 31 that
+# MUST NOT COMPILE [[sweep: probe_error=31]] (29 until cycle 0.4.0a, 23 until
+# cycle 0.2.1, 21 until 0.2.0), and the
 # schema selects by
 # directory, never by file (the compiler's runner globs `<path>/*.npk`). That
 # was O-X7, and it is SETTLED as TM-119: within a `program` entry the runner
@@ -87,8 +87,9 @@ lld-flags     = ["-static"]
 # and again through `opt -O2`, the same exit required both times (B-3).
 #
 # NOT `recursive`, and the omission is the point: a plain glob is
-# `tests/probe/*.npk`, which is exactly the 59 probe programs
-# [[sweep: probe_dir=59]] (58 until cycle 0.3.2, 57 until cycle 0.2.4b) and
+# `tests/probe/*.npk`, which is exactly the 61 probe programs
+# [[sweep: probe_dir=61]] (59 until cycle 0.4.0a, 58 until cycle 0.3.2, 57
+# until cycle 0.2.4b) and
 # EXCLUDES the two
 # subdirectories that must never
 # be run as tests --
@@ -138,7 +139,8 @@ path  = "tests/probe"
 #   `parse`   HAS NO ENTRY BY DESIGN, not by omission (TM-123). It is a
 #             WHOLE-TREE stage: `BUILD.md` §3's Directory column for it reads
 #             "every `.npk` in the tree", and that is where its value is — of
-#             the 163 files here [[sweep: npk_total=163]] (159 until cycle
+#             the 165 files here [[sweep: npk_total=165]] (163 until cycle
+#             0.4.0a's two probes, 159 until cycle
 #             0.3.3's double and its three tests, 152, 151 and 150
 #             until cycle 0.3.2's three steps, 149 until 0.3.0, 147 until 0.2.4b), 40 are put in front of the compiler
 #             by nothing else (41 until cycle 0.3.0, when the library build

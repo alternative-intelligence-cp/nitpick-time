@@ -58,6 +58,16 @@ move, and `p_parse_import` and `num_scan` read the same at both pins. No
 span this module finds moved, so nothing below moved -- and the float case
 the list below names, `e+r"` after one, now reads as this module reads it:
 `1.5e+r"a"` is `NITPICK-LEX-009` at its tail and then a raw string.
+AND AGAIN AT `2e1cb4a` (cycle 0.4.0a, TM-265), where `lexer.npk` and
+`numeric.npk` refuse a numeral whose digit run ends in `_` -- `10_`, `1_i32`,
+`1.5_f64` -- one report for the literal (the compiler's DEF-190, landing
+135); `??!` is one token (D-360, landing 120), and `|>` and `<|` are still
+lexed and refused by the parser (D-362, landing 133); `parse_decl.npk`'s
+`p_parse_import` reads a LOGICAL import's last `.name` as the member it
+imports (DEF-234 (b), landing 125), a path this module never enters, and a
+keyword declared as a name is refused at the name (DEF-235, DEF-258,
+DEF-259, landings 113 and 136); `escapes.npk` and `num_width.npk` did not
+move. No span this module finds moved, so nothing below moved.
 
   * THE TEXT IS BYTES. `read()` maps each byte to one character (latin-1), so
     every offset is the compiler's byte offset, `\\n` (byte 10) is the only

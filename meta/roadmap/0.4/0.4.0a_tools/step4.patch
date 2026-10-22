@@ -1,0 +1,243 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 953825ecc8c0d430e9913928e9733a6f28a765f1..535a8d24dc23c1efd3e146bcbcda26399b2d5c1c 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -11,7 +11,7 @@
+ # ============================================================================
+ # THE TWO CONDITIONS THIS FILE EXISTS TO WRITE DOWN
+ # ============================================================================
+-# A green run here may be read as "ntime builds against compiler 7e91730" only
++# A green run here may be read as "ntime builds against compiler 2e1cb4a" only
+ # because BOTH of the following are stated AND enforced below. Either one
+ # missing and the claim is weaker than it sounds.
+ #
+@@ -53,9 +53,10 @@
+ # interop -- and `src/host/` since 0.3.0, the clocks --
+ # re-exported together as 84 public names [[sweep: lib_reexports=84]] (81
+ # until cycle 0.3.2 added the system zone's three),
+-# so this IS evidence about behaviour, of the 146 units the runner reports at
+-# compiler `7e91730` since cycle 0.3.3, the double's three tests among them
+-# (143 at `7e91730` at cycle 0.3.2a, 143 at `5fbaf4a` at cycle 0.3.2, 134 at cycles 0.3.0 and 0.3.1, 133 at cycles 0.2.4b and 0.2.4, 131 at cycles 0.2.3 and 0.2.4a, 126 at cycles 0.2.2 and 0.2.3a, 122 at cycle 0.2.1, 114 at cycle 0.2.0, 111 at 0.2.0b, 113 at 0.2.0a and at
++# so this IS evidence about behaviour, of the 148 units the runner reports at
++# compiler `2e1cb4a` since cycle 0.4.0a, two refusal probes among them
++# (146 at `7e91730` at cycle 0.3.3, the double's three tests among them,
++# 143 at `7e91730` at cycle 0.3.2a, 143 at `5fbaf4a` at cycle 0.3.2, 134 at cycles 0.3.0 and 0.3.1, 133 at cycles 0.2.4b and 0.2.4, 131 at cycles 0.2.3 and 0.2.4a, 126 at cycles 0.2.2 and 0.2.3a, 122 at cycle 0.2.1, 114 at cycle 0.2.0, 111 at 0.2.0b, 113 at 0.2.0a and at
+ # `c970483` at cycle 0.1.5's second half; 62 at cycle 0.0.6, 67 at 0.1.0,
+ # 70 at 0.1.0b, 75 at 0.1.0c, 78 at 0.1.1, 81 at 0.1.2, 86 at 0.1.3, 90 at
+ # 0.1.3b, 91 at 0.1.4 and 0.1.4b, all at `c3bdae2` from 0.1.0b on, 101 at
+@@ -212,7 +213,14 @@
+ # READ-ONLY view, `fixed uint8[]`, and every slot of the tree they reach says
+ # so -- the compiler refuses a plain one and a write through one (TM-258);
+ # and a header names what that compiler reports, one `NITPICK-TYPE-079` for a
+-# literal of sealed fields and one report for one mistake (TM-259).
++# literal of sealed fields and one report for one mistake (TM-259). AND SINCE
++# CYCLE 0.4.0a, AT COMPILER `2e1cb4a`: a view of a sink's body holds its sink,
++# so no view the library takes outlives a write that can free the body, and a
++# consumer's view held across a call that can grow the sink is refused where
++# it is written -- asserted by a refusal probe (TM-263, TM-265); `bytes_view`
++# answers the read-only view, so no byte of a sink is a consumer's to write
++# (TM-264); and a claim of `Copy` for an owning type is refused, by the
++# judgement in this tree and by the orphan rule in any other (TM-263, TM-265).
+ #
+ # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
+ # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
+@@ -281,7 +289,7 @@ permissions:
+   contents: read
+ 
+ env:
+-  # ../BOARD.md's pinned toolchain, by FULL sha. `7e91730` is the short form
++  # ../BOARD.md's pinned toolchain, by FULL sha. `2e1cb4a` is the short form
+   # used in the roadmap and in the transcripts.
+   #
+   # THIS PIN WAS `0dfddac` UNTIL CYCLE 0.0.6 AND THE COMMENT ABOVE WAS FALSE
+@@ -324,31 +332,50 @@ env:
+   # together, so CI runs once, on the adopted tree
+   # (`meta/roadmap/done/0.3/0.3.2a.md` §3).
+   #
++  # AND IT WAS `7e91730` UNTIL CYCLE 0.4.0a, which moves it to `2e1cb4a`, the
++  # compiler's landing 140 -- the libraries' one re-pin, by the author's word
++  # of 2026-10-22, carrying its landings 104 ... 140, this repository having
++  # taken no pin between -- IN A COMMIT OF ITS OWN, after the adoption's three
++  # and before its prose: the adopted tree is RED at `7e91730`, which makes
++  # neither refusal its two new probes assert, and the unadopted tree is RED
++  # at `2e1cb4a`, which refuses its self-check's numeric program and eight
++  # roots that reach `bytes_reserve` (TM-263, TM-265). All of them are pushed
++  # together, so CI runs once, on the adopted tree
++  # (`meta/roadmap/0.4/0.4.0a.md` §3).
++  #
+   # EVERY HEX VALUE IN THIS BLOCK IS QUOTED. GitHub's YAML reads a bare scalar
+   # of digits, one `e` and digits as a NUMBER: unquoted, `7e91730` is the
+-  # float 7 x 10^91730, and the first run at this pin, 38022131137, held
++  # float 7 x 10^91730, and the first run at that pin, 38022131137, held
+   # NITPICK_COMMIT_SHORT=Infinity and printed "built from compiler Infinity".
+   # No assertion reads that row, so the run was green; PyYAML, which read
+   # this file at the plan's rehearsal, takes the same text as a string. A
+   # quoted value is its text, whatever its characters, so the commit and the
+   # three digests are quoted too (cycle 0.3.2a's record).
+-  NITPICK_COMMIT: "7e91730d19cffd35fcff25c36893cfaa2c01509e"
+-  NITPICK_COMMIT_SHORT: "7e91730"
++  NITPICK_COMMIT: "2e1cb4adef795488c0530be297e441f923bbe090"
++  NITPICK_COMMIT_SHORT: "2e1cb4a"
+   # nitpick.toml [toolchain] llvm. Condition (1) above. 20.1.2 until cycle
+   # 0.3.2a: the upstream release tarball of 20.1.8 is the asset the install step
+   # below names, as it named 20.1.2's.
+   LLVM_VERSION: 20.1.8
++  # THAT ASSET'S DIGEST, AND WHAT IT IS (cycle 0.4.0a, TM-265): the sha256 of
++  # https://github.com/llvm/llvm-project/releases/download/llvmorg-20.1.8/LLVM-20.1.8-Linux-X64.tar.xz,
++  # 2 021 269 412 bytes, measured from the asset at the plan's writing and
++  # equal to GitHub's record of it and to the provenance the LLVM project's
++  # release workflow attests (meta/research/llvm-release-asset.md). The install
++  # step holds the download to it before unpacking, and the cache key names it.
++  LLVM_TARBALL_SHA256: "1ead36b3dfcb774b57be530df42bec70ab2d239fbce9889447c7a29a4ddc1ae6"
+   # The digests of the artefacts the workbench pins, from
+-  # ../.internal/toolchain/7e91730/SHA256SUMS. Reported against CI's own, never
++  # ../.internal/toolchain/2e1cb4a/SHA256SUMS. Reported against CI's own, never
+   # asserted -- see the step that uses them for why.
+-  NPKC_SHA256_WORKBENCH: "9067e39ee00bd8454c1f9b882a106b32d163d43240b22e55cf38c51a276e3cc3"
++  NPKC_SHA256_WORKBENCH: "1a42e012c0e7f93827db30e9eb64003d05c936e3556df2937304ae489f5b4f2c"
+   NPKRT_SHA256_WORKBENCH: "c8e5033ad17c70f838d567157738a6cc046af0ca3140ad92259fa71f0e747b4e"
+   # THE EMISSION AT THAT COMMIT, as the compiler's own build recorded it -- notice
+-  # 103's `npkc.ll` row, in ../.internal/toolchain/7e91730/PIN.md (notice 82's,
+-  # `5630c2b4...` / 30 232 291 B, until cycle 0.3.2a). ASSERTED by the
++  # 140's `npkc.ll` row, in ../.internal/toolchain/2e1cb4a/PIN.md (notice 103's,
++  # `b79f89c5...` / 31 527 001 B, from cycle 0.3.2a until cycle 0.4.0a, and
++  # notice 82's, `5630c2b4...` / 30 232 291 B, before). ASSERTED by the
+   # step below since cycle 0.2.0a (TM-212), and moved with every pin.
+-  NPKC_LL_SHA256: "b79f89c554ef83eeadca05d4e22929e70746483aec74e7b2f046f7a3933b66e7"
+-  NPKC_LL_BYTES: 31527001
++  NPKC_LL_SHA256: "0073060250f0e56329ab77a01de45b0f499c0441db66215b7b762c9fe911b27c"
++  NPKC_LL_BYTES: 32569732
+ 
+ jobs:
+   build:
+@@ -392,14 +419,27 @@ jobs:
+ 
+       # The upstream release tarball, because apt.llvm.org packages by MAJOR
+       # version and would give whatever 20.1.x is current -- which is precisely
+-      # the pin condition (1) forbids. ~2 GB, so it is cached on the version
+-      # alone: the asset is immutable for a given tag.
++      # the pin condition (1) forbids. ~2 GB, so it is cached, on the version
++      # and on the asset's digest.
++      #
++      # WHAT THE CHECK GUARANTEES (cycle 0.4.0a, TM-265). This comment said
++      # "the asset is immutable for a given tag" until then, and nothing here
++      # measured it: the LLVM release is not an immutable one in GitHub's
++      # sense, so an asset can be deleted and uploaded again under its name,
++      # and the tarball was piped into `tar` unchecked, under a cache key that
++      # named the version alone -- a replaced asset would have been unpacked,
++      # and kept. Now the install step downloads the tarball to a file and
++      # holds it to LLVM_TARBALL_SHA256 with `sha256sum -c` before `tar` reads
++      # a byte of it, so a tree unpacked on a cache miss is the asset the
++      # digest names, and the key names the digest, so a hit restores only a
++      # tree such a run unpacked. It does not say who built the asset: that
++      # the digest is the LLVM project's own is what the plan measured, once.
+       - name: Cache LLVM ${{ env.LLVM_VERSION }}
+         id: llvm-cache
+         uses: actions/cache@v4
+         with:
+           path: ~/llvm
+-          key: llvm-${{ env.LLVM_VERSION }}-linux-x64
++          key: llvm-${{ env.LLVM_VERSION }}-linux-x64-${{ env.LLVM_TARBALL_SHA256 }}
+ 
+       - name: Install LLVM ${{ env.LLVM_VERSION }}
+         if: steps.llvm-cache.outputs.cache-hit != 'true'
+@@ -407,7 +447,12 @@ jobs:
+           set -euo pipefail
+           mkdir -p ~/llvm
+           url="https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/LLVM-${LLVM_VERSION}-Linux-X64.tar.xz"
+-          curl -fsSL "$url" | tar -xJ --strip-components=1 -C ~/llvm
++          tarball="$RUNNER_TEMP/LLVM-${LLVM_VERSION}-Linux-X64.tar.xz"
++          curl -fsSL -o "$tarball" "$url"
++          echo "downloaded $(stat -c '%s' "$tarball") B: $url"
++          echo "$LLVM_TARBALL_SHA256  $tarball" | sha256sum -c -
++          tar -xJf "$tarball" --strip-components=1 -C ~/llvm
++          rm -f "$tarball"
+ 
+       # CONDITION (1), enforced.
+       - name: Put LLVM on PATH and assert the exact patch release
+@@ -471,8 +516,9 @@ jobs:
+           # runner, as it may. So every artefact the ladder leaves is printed,
+           # size beside digest, so the first that differs names the stage, and
+           # `npkc.ll` is held to the pinned commit's row (`NPKC_LL_SHA256` and
+-          # `NPKC_LL_BYTES` above, notice 103's since cycle 0.3.2a and notice
+-          # 82's before), AFTER everything is printed. A
++          # `NPKC_LL_BYTES` above, notice 140's since cycle 0.4.0a, notice
++          # 103's from cycle 0.3.2a and notice 82's before), AFTER everything is
++          # printed. A
+           # difference is a compiler defect to raise through the workbench,
+           # never a pin to bump. The workbench's binary digests stay printed
+           # beside CI's, for that measurement's record, and are EXPECTED to
+diff --git a/meta/research/CURRENCY.md b/meta/research/CURRENCY.md
+index d290e2b8dd3e2e21d6cb8816c4467d4fdc1a69c7..78ea3c4a5f6d882692d4473698c4ea9696429a6a 100644
+--- a/meta/research/CURRENCY.md
++++ b/meta/research/CURRENCY.md
+@@ -16,6 +16,7 @@ tree at the pinned commit.
+ | POSIX's `TZ` — a leading `:` makes what follows implementation-defined, and a set, empty `TZ` is unspecified; what `HOST.md` H-13's first step strips. The digest is [`tz-environment.md`](tz-environment.md) | The Open Group Base Specifications Issue 8, IEEE Std 1003.1-2024, §8.3 | 2026-10-08 | pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap08.html | TM-256 |
+ | The GNU C library's `tzset` — strips one leading `:`, reads an empty `TZ` as UTC and an unset one as `/etc/localtime`; the reason an empty `TZ` answers H-13's first step. The digest is [`tz-environment.md`](tz-environment.md) | `master`, `time/tzset.c`'s `tzset_internal`, read through the GitHub mirror | 2026-10-08 | github.com/bminor/glibc, mirroring sourceware.org/git/glibc.git | TM-256 |
+ | Ubuntu 24.04 LTS's restriction on unprivileged user namespaces — on by default, the namespace created and the capabilities inside it denied, lifted by `kernel.apparmor_restrict_unprivileged_userns=0`; what CI's step before the harness lifts, so that a unit can make its own `/etc` (`TESTING.md` V-1m). The digest is [`user-namespaces.md`](user-namespaces.md) | 24.04 LTS, the runner image `.github/workflows/ci.yml` pins (`ubuntu-24.04`) | 2026-10-08 | discourse.ubuntu.com, *Ubuntu 24.04 LTS (Noble Numbat) Release Notes* | TM-255 |
++| The LLVM 20.1.8 release asset CI installs — `LLVM-20.1.8-Linux-X64.tar.xz` at the project's `llvmorg-20.1.8` release, held by `.github/workflows/ci.yml` to its sha256 before it is unpacked; the digest is [`llvm-release-asset.md`](llvm-release-asset.md). LLVM's release is the compiler's pin (its D-349) and no row here; the asset's bytes are this repository's to check | sha256 `1ead36b3dfcb774b57be530df42bec70ab2d239fbce9889447c7a29a4ddc1ae6`, 2 021 269 412 B — the release is not immutable, so the pin is the digest and not the name | 2026-10-22 — measured from the asset, and equal to GitHub's record of it and to the provenance the project's release workflow attests; CI's fetch at the push is the second reading of the asset itself. Security-sensitive: stale on 2027-01-20 | github.com/llvm/llvm-project/releases/tag/llvmorg-20.1.8, and its `.jsonl` attestation | TM-265 |
+ | ISO 8601-1 — the week-date rule of `CALENDAR.md` C-14 (week 1 holds the year's first Thursday, clause 3.1.1.23); the digest is [`iso-8601-week-date.md`](iso-8601-week-date.md). **Monday = 1 … Sunday = 7 could not be quoted from the 2019 text** and rests on C-7, RFC 3339's informational appendix and Python's `isocalendar()` | 2019, first edition, with Amd 1:2022 — its successor ISO/CD 8601-1 at stage 30.60 since 2026-07-25: re-check at DIS, and at 0.8 at the latest | 2026-09-25 | iss.rs/en/project/show/iso:proj:70907 (iso.org answered 403); the text through the distributor iTeh's previews of ISO's own pages | C-14 |
+ | RFC 3339 — *Date and Time on the Internet: Timestamps*, the `date-time` grammar of `FORMAT_MODEL.md` F-2's `to_rfc3339`, `to_rfc3339_offset` and `parse_rfc3339`, and the year range F-3 refuses outside. **Updated by RFC 9557 (April 2024) in its §4.3: `Z` now means that the time in UTC is known and the offset to local time is not — what `-00:00` meant — and differs from `+00:00`**, which still names UTC the preferred reference point; to be read against F-2 and F-13 before cycle 0.4.1. The digest is [`format-standards.md`](format-standards.md) | RFC 3339 (July 2002, Proposed Standard), obsoleted by nothing, as RFC 9557 updates it — its `date-time` and `time-numoffset` unchanged; seven errata, none on `time-offset`, `time-secfrac` or `date-fullyear` | 2026-10-15 — by cycle 0.3's close, for cycle 0.4 | rfc-editor.org/info/rfc3339, rfc-editor.org/rfc/rfc9557.html, errata.rfc-editor.org/rfc3339 | F-2, F-3, F-12, F-14 — no decision pins it yet |
+ | RFC 5322 — *Internet Message Format*, §3.3's `date-time` and §4.3's obsolete forms: F-2's `to_rfc5322` and `parse_rfc5322`, F-9's English day and month names, and cycle 0.4.4's two-digit years. The digest is [`format-standards.md`](format-standards.md) | RFC 5322 (October 2008, Draft Standard), obsoleted by nothing, updated by RFC 6854 alone; its erratum 6639, verified 2024-05-15, lets whitespace precede an obsolete zone name — `zone = (FWS ( "+" / "-" ) 4DIGIT) / [FWS] obs-zone`. Its successor draft, rfc5322bis, was in the RFC Editor's queue: re-check before cycle 0.4.1 | 2026-10-15 — by cycle 0.3's close, for cycle 0.4 | rfc-editor.org/info/rfc5322, errata.rfc-editor.org/rfc5322 | F-2, F-9 — no decision pins it yet |
+diff --git a/meta/research/llvm-release-asset.md b/meta/research/llvm-release-asset.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..71be6bb7eb4dc7c0092bd322f9535eebc1df81ee
+--- /dev/null
++++ b/meta/research/llvm-release-asset.md
+@@ -0,0 +1,56 @@
++# The LLVM 20.1.8 release asset CI installs — research digest
++
++**As of 2026-10-22.** Question: what are the sha256 and the size of
++`LLVM-20.1.8-Linux-X64.tar.xz` at the LLVM project's `llvmorg-20.1.8` release —
++the asset `.github/workflows/ci.yml` installs — and can it be replaced under its
++name? Filed by cycle 0.4.0a (TM-265), whose CI step pins the digest.
++
++## Answer
++
++The asset is
++`https://github.com/llvm/llvm-project/releases/download/llvmorg-20.1.8/LLVM-20.1.8-Linux-X64.tar.xz`,
++**2 021 269 412 bytes, sha256
++`1ead36b3dfcb774b57be530df42bec70ab2d239fbce9889447c7a29a4ddc1ae6`**. Three
++readings agree: the asset itself, downloaded once and hashed whole; GitHub's
++record of the asset; and the provenance the LLVM project's release workflow
++signed for it. **The release is not immutable** — GitHub's record of it reads
++`"immutable": false` — so an asset can be deleted and uploaded again under the
++same name, and the pin is the digest, not the name.
++
++## Evidence
++
++- `https://github.com/llvm/llvm-project/releases/download/llvmorg-20.1.8/LLVM-20.1.8-Linux-X64.tar.xz`
++  — retrieved 2026-10-22 05:47:29–05:48:25 EDT, streamed through `sha256sum`
++  and `wc -c`: `1ead36b3dfcb774b57be530df42bec70ab2d239fbce9889447c7a29a4ddc1ae6`,
++  `2021269412` bytes.
++- `https://api.github.com/repos/llvm/llvm-project/releases/tags/llvmorg-20.1.8`
++  — retrieved 2026-10-22: the asset's record, `"id": 271269785`, `"size":
++  2021269412`, `"digest":
++  "sha256:1ead36b3dfcb774b57be530df42bec70ab2d239fbce9889447c7a29a4ddc1ae6"`,
++  `"created_at": "2025-07-09T05:32:33Z"`, `"updated_at":
++  "2025-07-09T05:33:23Z"`, uploaded by `github-actions[bot]`; and the
++  release's own, `"immutable": false`, published `2025-07-09T03:20:57Z`.
++- `https://github.com/llvm/llvm-project/releases/download/llvmorg-20.1.8/LLVM-20.1.8-Linux-X64.tar.xz.jsonl`
++  — retrieved 2026-10-22, 10 422 bytes: a Sigstore bundle whose in-toto
++  statement, `"predicateType": "https://slsa.dev/provenance/v1"`, names the
++  subject `LLVM-20.1.8-Linux-X64.tar.xz` with `{"sha256":
++  "1ead36b3dfcb774b57be530df42bec70ab2d239fbce9889447c7a29a4ddc1ae6"}`, built by
++  `.github/workflows/release-tasks.yml` at `refs/tags/llvmorg-20.1.8` (the
++  project's run 16159480195), and logged at Rekor index 268489885.
++
++## What would change this
++
++A digest that differed between the readings, or an asset record updated after
++2025-07-09: either would mean the asset changed under its name, and CI's check
++would refuse the changed asset, which is the check's purpose. Neither did.
++
++## Confidence and gaps
++
++High for the digest and the size: the asset was hashed whole, and two records
++kept by others agree with it. **Not checked: the attestation's signature** —
++its certificate chain and its inclusion in the transparency log were read as
++the project's statement, not verified as a signature; CI holds the asset to its
++digest and reads no provenance. The second reading of the asset itself is CI's
++own fetch, at the push that first runs the check. Security-sensitive: stale
++ninety days after its date, on 2027-01-20, and re-checked whenever the pinned
++LLVM release moves.

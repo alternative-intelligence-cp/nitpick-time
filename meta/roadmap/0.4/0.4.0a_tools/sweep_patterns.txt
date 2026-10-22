@@ -1,0 +1,20 @@
+# 0.4.0a's omission sweep, block 6 -- one extended regular expression per line, each read by `sweep.py` line by line
+# AND across line breaks, case-insensitive: every statement steps 1 ... 5 make false, and the words of each claim
+# they correct (a sweep built only from what the steps change cannot see a twin of a corrected claim). The old pin
+# and its rows; the counts the two probes move; `bytes_view`'s plain answer and the view's hazard; the unit's old
+# shape; `probe19`'s old question; the reserved words' old report; the module binding with no initialiser;
+# TM-171's table; part E's numeral; CI's LLVM asset; D-341's sites; and what is next.
+7e91730|b79f89c5|9067e39e|notice 103|31 ?527 ?001
+\b146\b.{0,20}units?|\b193\b.{0,20}decisions?|\b163\b.{0,30}(files|\.npk)|\b59\b.{0,20}probe|\b(29|45)\b.{0,40}(refus|expect-error|must not)|\b111\b.{0,30}(suite|roots)|\b(of|the) 163\b
+bytes_view.{0,60}(uint8\[\]|writable|plain)|(plain|writable) view of the (sink|body)|the seal (now )?keeps|uint8\[\]:[a-z_]+ = raw bytes_view
+invalidated by growth|valid until the next call|no gate (here|this repository)|by a wrong answer|is a wrong answer|freeze does not track|the view still points|reads? (the )?(allocator.s )?(.0xAA. )?poison
+held across|holds? a view across|the held view|(forty|40) (non-growing )?pushes|exit 26
+impl:string:Copy|TYPE-087|cannot claim .?Copy|owning type (cannot|can not)
+PARSE-002|expected an expression|refused as local names|the diagnostic will not tell|never closed|fails where you did not write|found .:.|unclosed brace
+no initiali[sz]er|read-only zero|legs disagree|compiler-defect candidate
+not spellable|TYPE-035|Weekday\[7\]|manufactur
+86400_i64|\b22 spellings|spellings of a number|wherever it stands|before the width
+immutable|tarball|release asset|curl
+D-341|wild_slice.{0,20}sites|checked index|checked indexing|move\(fresh\)|wild_slice<uint8>\(b\.body|without a bounds check
+(is|are|comes) next|NEXT\*\*|— NEXT:
+re-read|again at

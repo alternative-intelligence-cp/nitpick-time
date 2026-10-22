@@ -52,6 +52,7 @@ means writing a parser with nothing to feed it.
 
 | # | Topic | Ends with |
 |---|---|---|
+| 0.4.0a | **The adoption of compiler `2e1cb4a`** — landing 140, the libraries' one re-pin, by the author's word of 2026-10-22, two pins on from cycle 0.3's `7e91730` (landings 104 … 140): each view landing 128 ties to its owner in a block of its own, `probe19` asking the `Copy` judgement of `Bytes`, and `bytes_view`'s answer the read-only view — at the old pin first, which sees no difference; then the pin's own moves — part E's refused numeral, a held view and an orphan impl each a refusal asserted, TM-171's `fixed Weekday[7]` table weighed again and declined, the adoption list below each measured — and CI pinned, its LLVM asset's digest checked before it is unpacked — **[`0.4.0a.md`](0.4.0a.md)**, planned and rehearsed 2026-10-22 at both pins; it runs before 0.4.0 | the tree green at `2e1cb4a` |
 | 0.4.0 | **The layout type** — `FmtPart`, `Layout`, `layout_validate` — **[`0.4.0.md`](0.4.0.md)**, written at cycle 0.3's close at `7e91730` (its §8 says whether it was rehearsed) | a layout is a value the type checker sees |
 | 0.4.1 | **The printer** — `format_with`, and the named emitters | goldens for every format |
 | 0.4.2 | **The parser** — `parse_with`, the named parsers, `Parsed`, `ParseError` | every format read back |
@@ -60,6 +61,16 @@ means writing a parser with nothing to feed it.
 | 0.4.5 | **Close** | `done/0.4/`, `0.5.0.md` written |
 
 ## Checklist
+
+### 0.4.0a — the adoption of compiler `2e1cb4a`
+*(Written at 0.4.0a's planning, 2026-10-22 — `0.4.0a.md`, PD-201 … PD-203. It carries this README's list "The adoption, when the pin moves", below, and the three items the workbench's board holds for it: landing 128's freeze, 124's orphan rule and 123's enum constant.)*
+- [ ] the unchanged tree measured at both pins — every `.npk` a root, the full run, and the emissions compared through the compiler's normalisers — blocks 0a and 0b
+- [ ] the freeze met at the old pin, which sees no difference: `bytes_reserve`'s two views in a block, `bytes_view_lifetime`'s each in a block of its own, and `probe19` on `Bytes` (PD-201)
+- [ ] `bytes_view`'s result the read-only view, with every slot that binds it, at the old pin; `src/`'s nine `#wild_slice` sites each measured where they stand (PD-202)
+- [ ] the pin moved: part E's refused numeral, a held view and an orphan impl each a refusal asserted, the lexer re-read, the reserved words, and the adoption list's six items each measured (PD-203)
+- [ ] TM-171's `fixed Weekday[7]` table, spellable at `2e1cb4a`, weighed again and declined, in a dated note (PD-203)
+- [ ] CI pinned to `2e1cb4a`, its LLVM asset's digest pinned and checked before it is unpacked, and its log read per job
+- [ ] the prose, and the sweep read line by line
 
 ### 0.4.0 — the layout type
 *(Restated 2026-10-15, at cycle 0.3's close, to `0.4.0.md`'s drafted decisions, PD-149 … PD-154. The instrument's item moves first, in a commit of its own, and says where and what it reads — the first question above, which PD-149 answers; `Layout`'s fields, its pool and its release are named; construction never fails, as F-4's `drop` requires; and `layout_validate` is F-7's answer, a predicate. The rest keep their words.)*

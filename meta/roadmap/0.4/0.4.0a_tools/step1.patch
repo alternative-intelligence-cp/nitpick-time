@@ -1,0 +1,337 @@
+diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
+index 9a390d0ccc73c9d33769d5053857f58c6329840b..69c3caa610b30ba7724962b4c523cc92c0a4d468 100644
+--- a/meta/DECISIONS.md
++++ b/meta/DECISIONS.md
+@@ -5039,6 +5039,13 @@ becomes a test of the allocator's accounting, which `bytes_view_lifetime.npk`
+ already argues against for `!=` over `== 170`.
+ 
+ ### TM-185 — six files carry bounds: each leaking twin's `peak_live` at least its leak's arithmetic; each remedy's `peak_live` under a ceiling and its `count` over the allocations its loop must make; the two `Bytes` tests' `peak_live` under a ceiling; every ceiling the geometric mean of the correct program's measured peak and a leak mutant's, rounded down to two significant figures
++> **Read with TM-263 (@@DATE040A@@, cycle 0.4.0a).** `bytes_view_lifetime`'s
++> exit 26, the poison read this decision names as the file's other sight of a
++> `bytes_reserve` that keeps its old bodies, left the file at the adoption of
++> compiler `2e1cb4a`, where the read is refused. Its ceiling is now the only
++> thing in it that sees that mutant, as in `bytes_growth`: measured, the mutant
++> peaks at 214 there and exits 0 at both pins. The bound stands; the text below
++> is left exactly as written.
+ 
+ **2026-09-26, cycle 0.1.4b (PD-36).** `0.1.0.md` §8 named four: the two twin pairs
+ and the two `Bytes` tests, six files. Measured at `c3bdae2`, identical on both
+@@ -8973,3 +8980,65 @@ measured flat over a hundred thousand settings, and test infrastructure is not
+ what `heap:` was built to hold; **V-11 left to read "everything that reads a
+ clock", and `probe03` given `// stress: 40`** — the probe asks the
+ `timespec`'s shape, which forty runs ask forty times.
++
++# Cycle 0.4.0a — the adoption of compiler `2e1cb4a`, ratified @@DATE040A@@
++
++Three decisions, drafted at planning (`meta/roadmap/0.4/0.4.0a.md` §2,
++PD-201 … PD-203, in that order), accepted by the orchestrator at the plan's
++verification, and each measured at both compilers: the one this repository
++leaves, `7e91730`, its landing 103, and the one it adopts, `2e1cb4a`, its
++landing 140 — the libraries' one re-pin, by the author's word of 2026-10-22,
++two pins on, since this repository did not take the adoption of `c9baa9e`
++(landing 118). The first two are made at the OLD pin, so that the old compiler
++testifies they changed no answer; the third moves the pin.
++
++### TM-263 — the view's freeze met: `bytes_reserve`'s two views are a block of their own, ended before its overwrite; `bytes_view_lifetime.npk` holds no view across a push; and `probe19` asks the `Copy` judgement of `Bytes`, an owning type of this library's own
++
++**@@DATE040A@@, cycle 0.4.0a (the plan's PD-201) — the adoption of compiler
++`2e1cb4a`, its landings 128 (the compiler's D-341) and 124 (D-359). Re-spells
++`src/core/bytes.npk`'s `bytes_reserve`, `tests/unit/bytes_view_lifetime.npk`
++and `tests/probe/probe19_pod_owner_refused.npk`, each a spelling both compilers
++accept; dates `SAFETY.md` S-18e and S-18h and the probe README's row; and
++marks TM-185.**
++
++**What was found** (`0.4.0a.md` §1). Every file compiled as a root reports at
++`2e1cb4a` the codes and sites it reports at `7e91730` but nine. Eight reach
++`bytes.npk`'s line 140, `b.body = move(fresh);`, which is `NITPICK-BORROW-015`
++twice — the write to `b.body` under `from`'s view of `b.body.ptr`, and the move
++of `fresh` under `into`'s view of `fresh.ptr` — since a `#wild_slice` over a
++managed header's pointer is a view of its owner (D-341), held to the end of the
++block that declares it (the compiler's D-325). Both views are dead after the
++copy, so this is the freeze's lexical reach, not a use-after-free of the
++library's own. `bytes_view_lifetime` is refused twice more, at the push that
++follows each held view, 77:63 and 107:63: §2's is the use-after-free the file
++was written to show — its last read gives the allocator's poison, 170 on both
++legs at `7e91730` — and §1's, which grows nothing, is refused the same way,
++since what the compiler reads is the call, which can grow the sink. Measured
++call by call: while a view lives, the six calls that can grow a sink are
++refused at their argument, and the five that cannot are not. And `probe19`'s
++`impl:string:Copy` is `NITPICK-TYPE-099` at `2e1cb4a` where it was
++`NITPICK-TYPE-087`, the orphan rule asked first: `string` is a builtin and
++`Copy` the prelude's.
++
++**The decision.** *The copy in `bytes_reserve` and its two views are a block of
++their own, ended before the overwrite — D-341's own words for this file; the old
++compiler emits the same code for it but the site table's lines. Every view
++`bytes_view_lifetime` takes is a block of its own, ended before the next push;
++§1 takes its view again after its pushes and reads the bytes the first view
++read; §2's last read leaves the file, its refusal asserted by the batch's third
++decision. `probe19` claims `Copy` for `Bytes`, declared in this tree and owning
++a `buffer`: the orphan rule admits the impl and the judgement refuses it,
++`NITPICK-TYPE-087`, at both compilers.*
++
++*Alternatives declined:* **the checked spellings D-341 builds — `fresh[i] =
++b.body[i]`, and no view at all** — a spelling the old compiler refuses, since a
++`buffer` has no checked index there, so it cannot be made at the old pin; and
++each slice's guard is the compiler's already (S-17c). The batch's second
++decision reads every site where it stands. **The views' declarations moved
++below the overwrite** — they are the copy's source and target, which the
++overwrite ends. **`bytes_view_lifetime`'s §1 retired with its stale read** — it
++is the control TM-139 asks for: a sink that does not grow, whose bytes a later
++view reads. **`probe19` re-headed to `NITPICK-TYPE-099`** — it would assert the
++orphan rule and no longer S-18h's claim. **A struct declared in the probe** —
++admitted and refused alike, measured; `Bytes` is the library's own owning type,
++which a consumer's `Vec<Bytes>` would make the element.
+diff --git a/meta/specs/SAFETY.md b/meta/specs/SAFETY.md
+index 6551901649f5941c14ff1492f169cdcbbe1491a2..30075b08efbd9e3d9cc359d8fb23b3868263529c 100644
+--- a/meta/specs/SAFETY.md
++++ b/meta/specs/SAFETY.md
+@@ -1096,6 +1096,19 @@ be held:
+   — but **no function in `vec.npk` returns a slice**, so there is no view for a
+   caller to hold. `vec_at<T>` returns by value.
+ 
++*(@@DATE040A@@, cycle 0.4.0a, TM-263 — the adoption of compiler `2e1cb4a`.)*
++**`bytes_reserve`'s two views are a block of their own, ended before its
++overwrite, and `bytes_view_lifetime` holds no view across a push.** Since that
++compiler a `#wild_slice` over a managed header's pointer is a view of its owner
++(the compiler's D-341, landing 128), held to the end of the block that
++declares it (D-325). Declared in `bytes_reserve`'s body, `from` and `into` held
++`b.body` and `fresh` across `b.body = move(fresh);` — `NITPICK-BORROW-015`
++twice, though neither is read past the copy — so the copy and its views take a
++block, which the old compiler emits the same code for but the site table's
++lines, measured. The unit takes each view in a block of its own, ended before
++the next push, and its §1 takes its view again after the pushes; §2's stale
++read leaves the unit, a refusal now.
++
+ **Rule S-18f (TM-188) — no function hands back a `string` made by
+ `string_from_bytes`, because the type cannot tell a view from a copy.**
+ `string_from_bytes` wraps existing bytes as a VIEW — capacity 0, by the
+@@ -1196,6 +1209,15 @@ derivable for a struct of copyables; at the re-pin that carries it, `Pod` is
+ replaced by `Copy` — its block in `src/core/vec.npk`, one bound, one call, one
+ umbrella line and three test impls — and this rule is restated for it.
+ 
++*(@@DATE040A@@, cycle 0.4.0a, TM-263 — the adoption of compiler `2e1cb4a`.)*
++**`probe19` asks the judgement of `Bytes`, this library's own owning type,
++where it asked `string`'s.** Since that compiler an impl names a type or a
++trait declared in its own manifest's tree, or it is `NITPICK-TYPE-099` at the
++impl, asked before the `Copy` judgement (the compiler's D-359, landing 124):
++`impl:string:Copy` names neither, so the probe would have shown that rule and
++not this one. `impl:Bytes:Copy = { };` is admitted by the orphan rule and
++refused by the judgement, `NITPICK-TYPE-087`, at both compilers, measured.
++
+ **Rule S-19.** The generated zone tables are `fixed` module state — read-only
+ memory, no initialisation at startup, nothing to leak, and nothing to race.
+ 
+diff --git a/src/core/bytes.npk b/src/core/bytes.npk
+index 66aa9ba660b1ca95293b85b01ec0a86dd8e8e912..29f35400578f949e84b1b05dadcbc7cb27c45695 100644
+--- a/src/core/bytes.npk
++++ b/src/core/bytes.npk
+@@ -117,24 +117,36 @@ pub func:bytes_init = Bytes(int64:cap) never fails {
+ // DOUBLING, which is what makes a run of pushes amortised linear rather than
+ // quadratic. The new capacity is at least twice the old and at least what was
+ // asked for, so `bytes_push` needs no special case for the first byte.
++//
++// THE COPY AND ITS TWO VIEWS ARE A BLOCK OF THEIR OWN, ENDED BEFORE THE
++// OVERWRITE (cycle 0.4.0a, the adoption of compiler `2e1cb4a`, TM-263). Since
++// that compiler a `#wild_slice` over a managed header's pointer is a view of
++// its owner (the compiler's D-341, landing 128), held to the end of the block
++// that declares it (D-325). Declared in the function's body, `from` held
++// `b.body` and `into` held `fresh` across `b.body = move(fresh);`, which that
++// compiler refuses, `NITPICK-BORROW-015` twice. Neither view is read past the
++// copy, so the block is a spelling and not a fix: the old compiler emits the
++// same code for it but for the site table's line numbers, measured.
+ pub func:bytes_reserve = NIL(Bytes->:b, int64:need) never fails {
+     int64:want = b.len + need;
+     if (b.body.cap >= want) { pass NIL; }
+     int64:n = b.body.cap * 2i64;
+     if (n < want) { n = want; }
+     buffer:fresh = buffer_new(n);
+-    uint8[]:from = #wild_slice<uint8>(b.body.ptr, b.len);
+-    uint8[]:into = #wild_slice<uint8>(fresh.ptr, b.len);
+-    int64:i = 0i64;
+-    // `live` IS HOISTED SO THE MEASURE IS OVER TWO LOCALS (cycle 0.1.0b,
+-    // TM-151). `b.len` is read through a pointer, and a measure over it keeps
+-    // its `terminate` row open whatever the proof effort (the compiler's
+-    // DEF-14 frame problem). Nothing in the loop writes `b.len`, so the hoist
+-    // changes nothing at run time.
+-    int64:live = b.len;
+-    while (i < live) decreases live - i {
+-        into[i] = from[i];
+-        i = i + 1i64;
++    {
++        uint8[]:from = #wild_slice<uint8>(b.body.ptr, b.len);
++        uint8[]:into = #wild_slice<uint8>(fresh.ptr, b.len);
++        int64:i = 0i64;
++        // `live` IS HOISTED SO THE MEASURE IS OVER TWO LOCALS (cycle 0.1.0b,
++        // TM-151). `b.len` is read through a pointer, and a measure over it
++        // keeps its `terminate` row open whatever the proof effort (the
++        // compiler's DEF-14 frame problem). Nothing in the loop writes
++        // `b.len`, so the hoist changes nothing at run time.
++        int64:live = b.len;
++        while (i < live) decreases live - i {
++            into[i] = from[i];
++            i = i + 1i64;
++        }
+     }
+     // THE OVERWRITE THAT DROPS THE OLD BODY (D-186), measured above.
+     b.body = move(fresh);
+diff --git a/tests/probe/README.md b/tests/probe/README.md
+index 67fb8eef5b353d41cc702170cf757ec559dc9284..03ec012a457c62e68f2384da520519c2460d2c67 100644
+--- a/tests/probe/README.md
++++ b/tests/probe/README.md
+@@ -148,7 +148,7 @@ by the harness as ordinary `program`-stage entries from cycle 0.0.2.
+ | `probe16i_bytes_body_write_refused.npk` | *(must not compile)* a write through `Bytes.body`'s pointer | S-17b — `NITPICK-TYPE-080` |
+ | `probe18_zero_length_owner.npk` | does a `string[0]` field cost nothing, move, drop, and leave an `int64[0]` twin copyable? | S-18g — the language fact under `Vec`'s marker |
+ | `probe18b_zero_length_owner_copy_refused.npk` | *(must not compile)* a struct whose one owning field is `string[0]`, copied | S-18g — `NITPICK-TYPE-046` |
+-| `probe19_pod_owner_refused.npk` | *(must not compile)* `Copy` claimed for `string` — until cycle 0.2.0a, `Pod` implemented as its trait declared it, `TYPE-047` (TM-211) | S-18h — `NITPICK-TYPE-087` |
++| `probe19_pod_owner_refused.npk` | *(must not compile)* `Copy` claimed for `Bytes`, an owning type of this library's own — for `string` until cycle 0.4.0a (TM-263), and until cycle 0.2.0a `Pod` implemented as its trait declared it, `TYPE-047` (TM-211) | S-18h — `NITPICK-TYPE-087` |
+ | `probe20_instant_literal_refused.npk` | *(must not compile)* an `Instant` built by a consumer's struct literal | `TIME_MODEL.md` M-2, TM-215 — `NITPICK-TYPE-079`, twice: one report per sealed field *(once since compiler `7e91730`, naming both: its DEF-165, TM-259)* |
+ | `probe20b_instant_conversion_refused.npk` | *(must not compile)* `instant_to_timestamp` called | M-3, TM-010 — `NITPICK-RESOLVE-002` |
+ | `probe20c_instant_as_timestamp_refused.npk` | *(must not compile)* an `Instant` handed to `Timestamp`'s `cmp` | M-3, TM-221 — `NITPICK-TYPE-007` |
+diff --git a/tests/probe/probe19_pod_owner_refused.npk b/tests/probe/probe19_pod_owner_refused.npk
+index e04941737fe5fdee3fb7c45ab9e00365af6108f8..78bcde3d6c1a3235c28cdb06438169ff5adb2bb2 100644
+--- a/tests/probe/probe19_pod_owner_refused.npk
++++ b/tests/probe/probe19_pod_owner_refused.npk
+@@ -32,11 +32,27 @@
+ // §1.6). This library writes none; `nitpick-regex` pins the shape. (CLOSED
+ // at `5fbaf4a`: such an impl is `NITPICK-TYPE-014` there, the compiler's
+ // landing 69, and `Copy` has no method to declare one on -- TM-211.)
++//
++// *(CYCLE 0.4.0a, THE ADOPTION OF COMPILER `2e1cb4a` -- @@DATE040A@@, TM-263:
++// THE TYPE ASKED ABOUT IS THIS LIBRARY'S OWN `Bytes`, WHERE IT WAS `string`.
++// Since that compiler an impl names a type or a trait declared in its own
++// manifest's tree, or it is `NITPICK-TYPE-099` at the impl, asked before the
++// `Copy` judgement (the compiler's D-359, landing 124). `impl:string:Copy`
++// names neither -- `string` is a builtin and `Copy` the prelude's -- so this
++// file would have read the orphan rule and not the judgement S-18h rests on.
++// `Bytes` is declared in this tree and owns a `buffer`, so the orphan rule
++// admits the impl and the judgement refuses it: `NITPICK-TYPE-087`, once, at
++// the impl -- *"`Bytes` owns what it holds, so a copy of it would be a second
++// owner"* -- at both compilers, measured. Were it admitted, `vec_at` at
++// `T = Bytes` would hand back a second owner of a sink's body. `string`'s
++// claim is `probe19b`'s, from the commit that moves the pin, where the
++// orphan rule refuses it before the judgement is asked.)*
+ mod:probe19_pod_owner_refused;
+ 
+ use "../../src/core/vec.npk".*;
++use "../../src/core/bytes.npk".Bytes;
+ 
+-impl:string:Copy = { };
++impl:Bytes:Copy = { };
+ 
+ func:main = int32(cstring[]:_~argv) {
+     exit 0i32;
+diff --git a/tests/unit/bytes_view_lifetime.npk b/tests/unit/bytes_view_lifetime.npk
+index fd433cc7e2bc984d5b4a5c765b08e294646a2fff..19c8d1b7ec62635dbea40efc12a868036d21c271 100644
+--- a/tests/unit/bytes_view_lifetime.npk
++++ b/tests/unit/bytes_view_lifetime.npk
+@@ -48,6 +48,26 @@
+ // here; the bound reads the allocator's COUNT, which no change to the poison
+ // moves. The ceiling is the geometric mean of 160 and 214 rounded down to two
+ // significant figures; the mutant is `meta/roadmap/done/0.1/0.1.4b.md` §7's K6.
++//
++// *(CYCLE 0.4.0a, THE ADOPTION OF COMPILER `2e1cb4a` -- @@DATE040A@@, TM-263:
++// NO VIEW HERE LIVES ACROSS A PUSH, AND §2'S STALE READ HAS LEFT THE FILE.
++// Since that compiler a view `bytes_view` hands back holds the caller's sink
++// (its D-341, landing 128), and handing the sink to a call that can grow it
++// while the view lives is `NITPICK-BORROW-015` at that argument -- §1's
++// forty pushes as much as §2's, because the compiler reads the call, which
++// can grow the sink, and not the run, which in §1 does not. So every view is
++// taken in a block of its own and ended before the next push, and §1 takes
++// its view again after the pushes and reads the bytes the first view read:
++// no growth happened (exit 12), so the body is the one it was. §2's last
++// read, the use-after-free itself -- exit 26 above, the allocator's poison,
++// 170 on both legs at the old compiler -- cannot be written at the new one,
++// which refuses it where it stands, and
++// `tests/probe/probe10d_view_held_across_growth_refused.npk` asserts that
++// refusal from the commit that moves the pin. So the pair is a sink that
++// does not grow and one that does, each read through a view taken while
++// nothing writes it; and the release is the `heap:` bound's alone, as
++// `0.1.4b.md` §7's K6b found it could be: a `bytes_reserve` that keeps each
++// old body peaks at 214 and exits 0 here now, red by the ceiling.)*
+ mod:bytes_view_lifetime;
+ 
+ use "../../src/core/bytes.npk".*;
+@@ -69,9 +89,12 @@ func:main = int32(cstring[]:_~argv) {
+     // The capacity through `bytes_capacity` since cycle 0.1.3c (TM-195): `body`
+     // is `hidden`. It writes nothing, so it cannot move what it measures.
+     int64:cap_before = raw bytes_capacity(@b);
+-    uint8[]:v = raw bytes_view(@b);
+-    if (v.len != HELD)                          { exit 10i32; }
+-    if (v[0i64] != A)                           { exit 11i32; }
++    // THE VIEW IN A BLOCK, ENDED BEFORE THE PUSHES (cycle 0.4.0a, TM-263).
++    {
++        uint8[]:v = raw bytes_view(@b);
++        if (v.len != HELD)                      { exit 10i32; }
++        if (v[0i64] != A)                       { exit 11i32; }
++    }
+ 
+     i = 0i64;
+     while (i < PUSHES) decreases PUSHES - i { drop bytes_push(@b, B); i = i + 1i64; }
+@@ -83,10 +106,15 @@ func:main = int32(cstring[]:_~argv) {
+     if (raw bytes_capacity(@b) != cap_before)   { exit 12i32; }
+     if (raw bytes_len(@b) != HELD + PUSHES)     { exit 13i32; }
+ 
+-    // The held view is still the live prefix it was taken over.
+-    if (v.len != HELD)                          { exit 14i32; }
+-    if (v[0i64] != A)                           { exit 15i32; }
+-    if (v[HELD - 1i64] != A)                    { exit 16i32; }
++    // The view taken again reads the bytes the first one read: no growth, so
++    // the same body (cycle 0.4.0a, TM-263: the view held across the pushes,
++    // and its length the HELD bytes it was taken over, until then).
++    {
++        uint8[]:v = raw bytes_view(@b);
++        if (v.len != HELD + PUSHES)             { exit 14i32; }
++        if (v[0i64] != A)                       { exit 15i32; }
++        if (v[HELD - 1i64] != A)                { exit 16i32; }
++    }
+ 
+     // =======================================================================
+     // 2. THE SAME PROGRAM, ONE CAPACITY DIFFERENT -- growth is forced, and
+@@ -97,11 +125,13 @@ func:main = int32(cstring[]:_~argv) {
+     while (i < 2i64) decreases 2i64 - i { drop bytes_push(@c, A); i = i + 1i64; }
+ 
+     int64:cap_small = raw bytes_capacity(@c);
+-    uint8[]:w = raw bytes_view(@c);
+-    if (w.len != 2i64)                          { exit 20i32; }
+-    // VALID HERE, BEFORE ANY GROWTH -- so the read below is about the growth
+-    // and not about a view that never worked.
+-    if (w[0i64] != A)                           { exit 21i32; }
++    {
++        uint8[]:w = raw bytes_view(@c);
++        if (w.len != 2i64)                      { exit 20i32; }
++        // VALID HERE, BEFORE ANY GROWTH -- so the read below is about the
++        // growth and not about a view that never worked.
++        if (w[0i64] != A)                       { exit 21i32; }
++    }
+ 
+     i = 0i64;
+     while (i < PUSHES) decreases PUSHES - i { drop bytes_push(@c, B); i = i + 1i64; }
+@@ -111,16 +141,18 @@ func:main = int32(cstring[]:_~argv) {
+ 
+     // THE SINK ITSELF IS INTACT. Growth copies, so a view taken NOW is
+     // correct -- the defect is the stale handle, never the container.
+-    uint8[]:fresh = raw bytes_view(@c);
+-    if (fresh.len != 2i64 + PUSHES)             { exit 23i32; }
+-    if (fresh[0i64] != A)                       { exit 24i32; }
+-    if (fresh[2i64] != B)                       { exit 25i32; }
++    {
++        uint8[]:fresh = raw bytes_view(@c);
++        if (fresh.len != 2i64 + PUSHES)         { exit 23i32; }
++        if (fresh[0i64] != A)                   { exit 24i32; }
++        if (fresh[2i64] != B)                   { exit 25i32; }
++    }
+ 
+-    // AND THE OLD VIEW IS NOT THE SINK ANY MORE. This read is the
+-    // use-after-free itself, written down on purpose in the one file that
+-    // documents it. Everything else in this library must obey the rule the
+-    // header of `bytes_view` now states.
+-    if (w[0i64] == A)                           { exit 26i32; }
++    // AND THE OLD VIEW IS NOT THE SINK ANY MORE. The read that stood here,
++    // exit 26, was the use-after-free itself, written down on purpose in the
++    // one file that documented it; since compiler `2e1cb4a` it cannot be
++    // written -- `w` held across the pushes is `NITPICK-BORROW-015` at the
++    // push -- and the refusal is the probe's (cycle 0.4.0a, TM-263).
+ 
+     // NOTHING IS FREED HERE (P-24, TM-133). Both sinks are over a managed
+     // `buffer` and their scope-exit drop is the reclaim; there is no

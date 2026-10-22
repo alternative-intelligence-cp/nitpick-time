@@ -1,0 +1,237 @@
+diff --git a/meta/DECISIONS.md b/meta/DECISIONS.md
+index 69c3caa610b30ba7724962b4c523cc92c0a4d468..32a3dfdab45966741091a57f54e37803490d2433 100644
+--- a/meta/DECISIONS.md
++++ b/meta/DECISIONS.md
+@@ -8581,6 +8581,11 @@ compiler requires, made at the OLD pin first, so that the old compiler testifies
+ it changed no answer; the second moves the pin.
+ 
+ ### TM-258 — the read-only view: every slot a string's bytes reach is `fixed uint8[]` — forty-four in sixteen files, each one the new compiler refuses plain — and a parser takes one
++> **Read with TM-264 (@@DATE040A@@, cycle 0.4.0a).** The alternative declined
++> below as one the compiler's D-341 would reopen — `bytes_view`'s result
++> read-only, the slots that bind it, and `bytes_reserve`'s `from` — is taken
++> at the re-pin that carries D-341's build: each is `fixed uint8[]`. The four
++> slots written through stay plain. The text below is left exactly as written.
+ 
+ **2026-10-09, cycle 0.3.2a (the plan's PD-105) — the adoption of compiler
+ `7e91730`, its landing 103 (the compiler's D-348 step (ii), D-350, D-351).
+@@ -9042,3 +9047,49 @@ view reads. **`probe19` re-headed to `NITPICK-TYPE-099`** — it would assert th
+ orphan rule and no longer S-18h's claim. **A struct declared in the probe** —
+ admitted and refused alike, measured; `Bytes` is the library's own owning type,
+ which a consumer's `Vec<Bytes>` would make the element.
++
++### TM-264 — `bytes_view` returns the read-only view: its answer, every slot that binds it and `bytes_reserve`'s `from` are `fixed uint8[]`; and `src/`'s nine `#wild_slice` sites stand where they are, each measured at the pin that builds the compiler's D-341
++
++**@@DATE040A@@, cycle 0.4.0a (the plan's PD-202) — the cycle README's adoption
++list, its first item, owed at a pin that builds D-341 (landing 128): the nine
++`#wild_slice` sites of `src/` and `bytes_view`'s result. Re-spells
++`src/core/bytes.npk`'s `bytes_view` and `bytes_reserve`'s `from`, and the seven
++test locals that bind `bytes_view`'s answer; dates `SAFETY.md` S-22's
++exemption, the comments in `bytes.npk` and `src/lib.npk` that state the sink's
++seal, and the cycle README's hand-on; and marks TM-258.**
++
++**What was found** (`0.4.0a.md` §1). `bytes_view`'s answer was a writable view
++of the sink's `hidden` body at both compilers: a consumer's write through it
++read back 65 where the sink had written 97. Returned as `fixed uint8[]`, the
++write is `NITPICK-TYPE-086` where it is written, and a plain slot binding the
++answer `NITPICK-TYPE-007`, at both compilers — so the re-spelling is made at
++the old pin, as TM-263's is. Seven test locals bind the answer, none written
++through, and `bytes_extend`'s source takes it as it is. And D-341 reaches
++`src/`'s nine sites as its notice said, each measured where it stands: the
++four of `vec.npk` lay a slice over a `Vec`'s `wild` pointer, which the belt
++roots at the pointee, so they freeze nothing; `bytes_push`'s and
++`bytes_extend`'s `room` views are written through, and the writes land in the
++view and in `b.len`, a field the view does not reach; `bytes_view`'s travels
++up to its caller, so a caller holding its answer across a growing call is
++refused at that call; and `bytes_reserve`'s two are TM-263's block.
++
++**The decision.** *`bytes_view` returns `fixed uint8[]`, the read-only view:
++no byte of a `Bytes` is a consumer's to write but through the sink's own
++functions. The slots that bind its answer, and `bytes_reserve`'s `from`, which
++the copy only reads, are `fixed uint8[]`; the four slots written through —
++`bytes_reserve`'s `into`, the two `room`s and `civil_total_edges.npk`'s `bw` —
++stay plain. The nine `#wild_slice` sites stand where they are: each view is
++tied to its owner by D-341's belt or roots at a `wild` pointee, and each
++slice's guard is the compiler's (S-17c).*
++
++*Alternatives declined:* **the plain result kept** — a write path into a
++`hidden` body for no caller, the one place the seal did not reach. **The
++checked byte view D-341 builds, `b.body[0i64...b.len]`, as the body** — the
++same view of the same bytes, held the same way, and a spelling the old
++compiler refuses, in a subcycle whose re-spellings are judged there first.
++**`bytes.npk`'s other sites on the checked index, `b.body[i]`** — the slices
++are held to their owner by the belt and checked by the compiler's guard
++already, so the spelling would move every site and change no answer; nothing
++the new compiler requires moves them, and a later subcycle that wants a check
++the slices do not give may take it then. **`bytes_view` removed** — a consumer
++of a sink reads its bytes without a copy through it, and `bytes_take` copies.
+diff --git a/meta/roadmap/0.4/README.md b/meta/roadmap/0.4/README.md
+index 726a3f9182183131fbfd72e631ecf325d4a16d77..69ff96d11d1ee846fe96287cada623f6b389fdef 100644
+--- a/meta/roadmap/0.4/README.md
++++ b/meta/roadmap/0.4/README.md
+@@ -131,7 +131,10 @@ of the cycle 0.3 plan it names, read again at the close.)*
+   would refuse a consumer's write into the sink's `hidden` body. The
+   compiler's D-341, `buffer`'s checked indexing, names `bytes.npk` its
+   consumer and is not built — the list below — and the re-pin that carries
+-  its build is where both are decided (`0.3.2a.md` §7).
++  its build is where both are decided (`0.3.2a.md` §7). *(Decided at that
++  re-pin, cycle 0.4.0a, TM-264: `bytes_view` returns the read-only view,
++  `fixed uint8[]`, and `src/`'s nine `#wild_slice` sites stand where they
++  are, each measured — `0.4.0a.md` §1.)*
+ - **`fmt`'s functions are read in the library's emission the day they are
+   written.** `check_call_edges` holds every call a function of `src/` outside
+   `src/host/` makes to its reviewed allowlist, and names a non-generic
+diff --git a/meta/specs/SAFETY.md b/meta/specs/SAFETY.md
+index 30075b08efbd9e3d9cc359d8fb23b3868263529c..ab2c71ed337234796315dc0ee57af2c78bb9f9bc 100644
+--- a/meta/specs/SAFETY.md
++++ b/meta/specs/SAFETY.md
+@@ -1327,6 +1327,14 @@ returning a view, through a pointer to `Bytes`, which that file declares, and
+ named here — so the day any part of it is false, the run is red. At its first
+ run, `src/` declared 46 functions and one returned a view: `bytes_view`.)*
+ 
++*(@@DATE040A@@, cycle 0.4.0a, TM-264: **the exemption's view is the read-only
++one.** `bytes_view` returns `fixed uint8[]`: a consumer's write through its
++answer, which reached the sink's `hidden` body until then, is
++`NITPICK-TYPE-086` where it is written, and every slot that binds the answer
++says `fixed`. The exemption's reason is unchanged — the view roots at the
++container through a pointer parameter — and `check_no_view_returns` reads a
++`fixed` result as the view it is, measured.)*
++
+ *(Cycle 0.2.4a, TM-239 — the cycle audit's C4: and an optional of one.
+ `uint8[]?` — "the rest, or none", the result a parser wants first — hands its
+ caller a view whenever it is not `NIL`, compiles at the pin in a consumer, and
+diff --git a/src/core/bytes.npk b/src/core/bytes.npk
+index 29f35400578f949e84b1b05dadcbc7cb27c45695..deb9e10eeeaa97516ed29ed8e712ace84f06e47a 100644
+--- a/src/core/bytes.npk
++++ b/src/core/bytes.npk
+@@ -87,6 +87,10 @@
+ // `bytes_capacity`. Sixteen lines in three test files moved to it. The seal
+ // now keeps the bytes as well as the header, for every module but this one;
+ // and a `Vec`'s whole-struct copy is refused too, since the same cycle.)*
++// *(But for `bytes_view`'s answer, a writable view of the body until cycle
++// 0.4.0a, TM-264, which made it the read-only one: a consumer's write
++// through it read back 65 where the sink had written 97, measured at cycle
++// 0.3.2a. Since then the sentence above is true of every byte.)*
+ mod:bytes;
+ 
+ use "./limits.npk".*;
+@@ -134,7 +138,7 @@ pub func:bytes_reserve = NIL(Bytes->:b, int64:need) never fails {
+     if (n < want) { n = want; }
+     buffer:fresh = buffer_new(n);
+     {
+-        uint8[]:from = #wild_slice<uint8>(b.body.ptr, b.len);
++        fixed uint8[]:from = #wild_slice<uint8>(b.body.ptr, b.len);
+         uint8[]:into = #wild_slice<uint8>(fresh.ptr, b.len);
+         int64:i = 0i64;
+         // `live` IS HOISTED SO THE MEASURE IS OVER TWO LOCALS (cycle 0.1.0b,
+@@ -382,7 +386,16 @@ pub func:bytes_capacity = int64(Bytes->:b) never fails {
+ // repository's record of where the LANGUAGE does and does not catch a view
+ // escaping its owner. This is a different question: the view here never
+ // outlives its owner, it outlives its owner's BODY.
+-pub func:bytes_view = uint8[](Bytes->:b) never fails {
++//
++// THE ANSWER IS THE READ-ONLY VIEW, `fixed uint8[]` (cycle 0.4.0a, TM-264).
++// It was a plain `uint8[]` until then, and a consumer's write through it
++// reached the sink's `hidden` body -- 65 read back where the sink had written
++// 97, at both compilers, measured -- so the seal kept every byte of a `Bytes`
++// from a consumer but these. Now that write is `NITPICK-TYPE-086` where it is
++// written, and a plain `uint8[]` slot refuses the answer (`NITPICK-TYPE-007`):
++// a caller binds it `fixed uint8[]:v = raw bytes_view(@b);`. No caller here
++// writes through it, and `bytes_extend`'s source takes it as it is.
++pub func:bytes_view = fixed uint8[](Bytes->:b) never fails {
+     pass #wild_slice<uint8>(b.body.ptr, b.len);
+ };
+ 
+diff --git a/src/lib.npk b/src/lib.npk
+index 4fae51e3964f2f48fb79446be8ad0a63fad0ac63..8a165b59867454a50c62ef43dbc7a74de95f2650 100644
+--- a/src/lib.npk
++++ b/src/lib.npk
+@@ -126,7 +126,9 @@ pub use "./core/vec.npk".vec_free;
+ // `b.body.ptr` still passes (D-313), which `bytes.npk`'s header measures and
+ // the workbench's question 9 carries to the author. *(Until cycle 0.1.3c.
+ // Since then `body` is `hidden` (TM-195), so a consumer cannot name it at all,
+-// and reads the sink's capacity through `bytes_capacity`.)*
++// and reads the sink's capacity through `bytes_capacity`.)* *(And since cycle
++// 0.4.0a, TM-264, `bytes_view`'s answer is the read-only view, so no byte of
++// a sink is a consumer's to write but through the sink's own functions.)*
+ pub use "./core/bytes.npk".Bytes;
+ pub use "./core/bytes.npk".bytes_init;
+ pub use "./core/bytes.npk".bytes_reserve;
+diff --git a/tests/probe/probe16i_bytes_body_write_refused.npk b/tests/probe/probe16i_bytes_body_write_refused.npk
+index 8190e55c052f88f31db5e71d313fd4f730ced22b..a7c3175b65e10ae295f8e3ca907e79cd9827fafb 100644
+--- a/tests/probe/probe16i_bytes_body_write_refused.npk
++++ b/tests/probe/probe16i_bytes_body_write_refused.npk
+@@ -28,7 +28,7 @@ func:main = int32(cstring[]:_~argv) {
+     Bytes:b = raw bytes_init(4i64);
+     drop bytes_push(@b, 97u8);
+     b.body.ptr[0i64] = 65u8;
+-    uint8[]:v = raw bytes_view(@b);
++    fixed uint8[]:v = raw bytes_view(@b);
+     if (v[0i64] == 65u8) { exit 70i32; }
+     exit 0i32;
+ };
+diff --git a/tests/unit/bytes_growth.npk b/tests/unit/bytes_growth.npk
+index e3197d0017c9138774969c66a892b52a3a4a6cfd..65673b0504a11b63134b73bf2bb7c00c7222cc10 100644
+--- a/tests/unit/bytes_growth.npk
++++ b/tests/unit/bytes_growth.npk
+@@ -74,7 +74,7 @@ func:main = int32(cstring[]:_~argv) {
+ 
+     // The contents survived every reallocation -- the copy is the part of
+     // growth that fails silently.
+-    uint8[]:v = raw bytes_view(@b);
++    fixed uint8[]:v = raw bytes_view(@b);
+     if (v.len != N)                            { exit 15i32; }
+     if (v[0i64] != 65u8)                       { exit 16i32; }
+     if (v[N - 1i64] != 65u8)                   { exit 17i32; }
+diff --git a/tests/unit/bytes_put_int.npk b/tests/unit/bytes_put_int.npk
+index e2cd0579025e6e03804b35378335cb35f49bb1cb..fecf46eed1cf5d4183a6652b3054010183bf5289 100644
+--- a/tests/unit/bytes_put_int.npk
++++ b/tests/unit/bytes_put_int.npk
+@@ -58,7 +58,7 @@ fixed uint64:U64_MAX = ~0u64;
+ // The two answers, as bytes, so the comparison is against text and not against
+ // a re-implementation of the thing being tested.
+ func:expect = int32(Bytes->:b, string:want, int32:code) never fails {
+-    uint8[]:got = raw bytes_view(b);
++    fixed uint8[]:got = raw bytes_view(b);
+     fixed uint8[]:wanted = string_bytes(want);
+     if (got.len != wanted.len) { pass code; }
+     int64:i = 0i64;
+diff --git a/tests/unit/bytes_view_lifetime.npk b/tests/unit/bytes_view_lifetime.npk
+index 19c8d1b7ec62635dbea40efc12a868036d21c271..71c5198305b2e186e9af49f5d4411a2d9523570d 100644
+--- a/tests/unit/bytes_view_lifetime.npk
++++ b/tests/unit/bytes_view_lifetime.npk
+@@ -91,7 +91,7 @@ func:main = int32(cstring[]:_~argv) {
+     int64:cap_before = raw bytes_capacity(@b);
+     // THE VIEW IN A BLOCK, ENDED BEFORE THE PUSHES (cycle 0.4.0a, TM-263).
+     {
+-        uint8[]:v = raw bytes_view(@b);
++        fixed uint8[]:v = raw bytes_view(@b);
+         if (v.len != HELD)                      { exit 10i32; }
+         if (v[0i64] != A)                       { exit 11i32; }
+     }
+@@ -110,7 +110,7 @@ func:main = int32(cstring[]:_~argv) {
+     // the same body (cycle 0.4.0a, TM-263: the view held across the pushes,
+     // and its length the HELD bytes it was taken over, until then).
+     {
+-        uint8[]:v = raw bytes_view(@b);
++        fixed uint8[]:v = raw bytes_view(@b);
+         if (v.len != HELD + PUSHES)             { exit 14i32; }
+         if (v[0i64] != A)                       { exit 15i32; }
+         if (v[HELD - 1i64] != A)                { exit 16i32; }
+@@ -126,7 +126,7 @@ func:main = int32(cstring[]:_~argv) {
+ 
+     int64:cap_small = raw bytes_capacity(@c);
+     {
+-        uint8[]:w = raw bytes_view(@c);
++        fixed uint8[]:w = raw bytes_view(@c);
+         if (w.len != 2i64)                      { exit 20i32; }
+         // VALID HERE, BEFORE ANY GROWTH -- so the read below is about the
+         // growth and not about a view that never worked.
+@@ -142,7 +142,7 @@ func:main = int32(cstring[]:_~argv) {
+     // THE SINK ITSELF IS INTACT. Growth copies, so a view taken NOW is
+     // correct -- the defect is the stale handle, never the container.
+     {
+-        uint8[]:fresh = raw bytes_view(@c);
++        fixed uint8[]:fresh = raw bytes_view(@c);
+         if (fresh.len != 2i64 + PUSHES)         { exit 23i32; }
+         if (fresh[0i64] != A)                   { exit 24i32; }
+         if (fresh[2i64] != B)                   { exit 25i32; }

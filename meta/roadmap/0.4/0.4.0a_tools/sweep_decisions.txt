@@ -1,0 +1,13 @@
+# 0.4.0a's sweep with the decision log in it, block 6's second reading (`sweep.py ... decisions`): every text that
+# states what the pin moved -- a view of a sink's body with no owner, the stale read, `impl:string:Copy`'s code, a
+# keyword-named local's report, a module binding with no initialiser, TM-171's spellability, part E's numeral, the
+# old emission row -- and `bytes_view`'s plain answer. Each hit in `meta/DECISIONS.md` sits under a heading that
+# carries its marker, or is a dated measurement, or states what is still true.
+invalidated by growth|no gate here|by a wrong answer|exit 26|\b170\b
+impl:string:Copy|TYPE-087
+PARSE-002|refused as local names|the diagnostic will not tell
+no initiali[sz]er|read-only zero|legs disagree
+not spellable|TYPE-035
+86400_i64|before the width|wherever it stands
+b79f89c5|notice 103
+bytes_view.{0,60}(uint8\[\]|writable|plain)

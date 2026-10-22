@@ -10,7 +10,8 @@ answer on every machine.
 > [`meta/roadmap/done/0.3/`](meta/roadmap/done/0.3/README.md) — the clocks,
 > the purity boundary's instruments, the system zone, the adoption of
 > compiler `7e91730` and the double — and cycle 0.4, formatting and parsing,
-> is next**, as cycle 0.2, instants and timestamps, CLOSED on 2026-10-02
+> is in progress: its first subcycle, the adoption of compiler `2e1cb4a`, is
+> done**, as cycle 0.2, instants and timestamps, CLOSED on 2026-10-02
 > ([`meta/roadmap/done/0.2/`](meta/roadmap/done/0.2/README.md)), and cycle
 > 0.1, the civil calendar, on 2026-09-26 ([`meta/roadmap/done/0.1/`](meta/roadmap/done/0.1/README.md))
 > — each with its code, its gate and its audit done.
@@ -49,8 +50,9 @@ answer on every machine.
 > [`meta/roadmap/`](meta/roadmap/), written the way the compiler's are — specs
 > first, then a cycle map, then execution-grade subcycles, then code — against
 > a compiler that is still moving, pinned by commit (`CLAUDE.md` names the pin:
-> `7e91730` since cycle 0.3.2a, the libraries' one re-pin; `5fbaf4a` from cycle
-> 0.2.0a, the adoption that opened cycle 0.2).
+> `2e1cb4a` since cycle 0.4.0a, the libraries' one re-pin, the adoption that
+> opened cycle 0.4; `7e91730` from cycle 0.3.2a; `5fbaf4a` from cycle 0.2.0a,
+> the adoption that opened cycle 0.2).
 >
 > *(Until cycle 0.1.5 this block read "Status: planning. No code yet" — false
 > since cycle 0.0.4 — and "the compiler itself is at cycle 1.5"; between the
@@ -65,7 +67,8 @@ answer on every machine.
 > and until cycle 0.3.3, that its first subcycle alone was done, where the
 > block went on to report the next two — the documents audit's TA-1, and the
 > early ecosystem audit's E2-10; and until cycle 0.3.4, the close, that
-> cycle 0.3 was in progress, its first five subcycles done.)*
+> cycle 0.3 was in progress, its first five subcycles done; and until cycle
+> 0.4.0a, that cycle 0.4 was next.)*
 
 ---
 

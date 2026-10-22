@@ -214,7 +214,11 @@ against the summary line rather than left to review.
   leak gate and a use-after-free is a WRONG ANSWER (S-18e, TM-139). Two shipped
   in cycle 0.0 and both were found by reading, not by a gate — and a third
   shipped with them, `bytes_take`'s answer, found at cycle 0.1.4b by the heap
-  instrument's COUNT (S-18f).
+  instrument's COUNT (S-18f). *(Since compiler `2e1cb4a` the compiler holds a
+  view to its sink: one held across a call that can grow the sink is refused
+  at the call, which `probe10d` asserts, and `bytes_view`'s answer is
+  read-only — cycle 0.4.0a, TM-263 … TM-265 — so a green run says that much;
+  a gate of this harness's own still says nothing of it.)*
 - **Not that the tree checks have anything to check.** Nineteen
   <!-- [[sweep: family_live=19]] --> are live and several report `0` over a
   small denominator, which is the right answer and is why the denominator is
@@ -569,6 +573,23 @@ library + repro + suite at **111** (**59 probe**, **42 unit**, **8 sweep**,
 **1 golden**, and the conformance member). `146 = 35 + 111`. A full invocation
 about 230 s; the three tests cost about three seconds of it, both legs, the
 substitution's eighty runs included.
+
+**At cycle 0.4.0a, compiler `2e1cb4a`, 148 units**: two refusal probes added,
+`probe10d` and `probe19b` (TM-265). The self-check plants 12 of V-14's 13
+cases and 119 tree-check violations, as before; part E's third half reads 21
+spellings of a number where it read 22, the compiler refusing `86400_i64`;
+parse over 165 files, `118 + 45 + 2`; the defect corpus unchanged at 36; every
+heap figure as at `7e91730`; and the 108 functions of `src/`'s modules in the
+emissions reaching the same 17 runtime symbols — but the library's IR,
+**344 102 B** where it was 374 606 B, and the instances' 46 153 B where they
+were 79 007 B: landing 126 trims each emission's site table to the sites it
+holds. Library + repro + suite at **113** (**61 probe**, **42 unit**, **8
+sweep**, **1 golden**, and the conformance member). `148 = 35 + 113`. A full
+invocation about 235 s. **In a shell that refuses a user namespace** —
+`/proc/sys/user/max_user_namespaces` 0, as the planning sandbox of 2026-10-22
+was — `probe22` and `system_zone_etc` exit 20, their headers' code for the
+machine's refusal, and the run reads `RED -- 146 unit(s) of 148`; at either pin,
+the tree's or not.
 
 The floor under all of it is still TM-117's: every root re-emits the prelude,
 so a `npkc` invocation on anything that compiles costs a fixed amount and the

@@ -8,7 +8,8 @@ that would otherwise be found by writing the wrong code twice.
 the clocks, the purity boundary's instruments, the system zone, the adoption
 of compiler `7e91730` and the double — as cycle 0.2, instants and timestamps,
 is (2026-10-02), and cycle 0.1, the civil calendar (2026-09-26); cycle 0.4,
-formatting and parsing, is next.
+formatting and parsing, is in progress, its adoption of compiler `2e1cb4a`
+done.
 `src/core/` and `src/cal/` are real, `src/span/` holds `Instant` since cycle
 0.2.0, `Timestamp` since 0.2.1, the conversions between a `Timestamp` and its
 civil reading since 0.2.2, and the `Duration` interop since 0.2.3, and
@@ -21,7 +22,8 @@ can fail (`meta/specs/TESTING.md` V-14, V-15). *(This paragraph described cycle
 "is in its close" between the close's two halves, said cycle 0.3 "is next"
 until cycle 0.3.0, its first subcycle alone done until cycle 0.3.1,
 its first two until cycle 0.3.2, its first three until cycle 0.3.3 —
-which left out 0.3.2a — and its first five until cycle 0.3.4, the close.)*
+which left out 0.3.2a — and its first five until cycle 0.3.4, the close;
+and said cycle 0.4 "is next" until cycle 0.4.0a.)*
 
 ## Before you write anything
 
@@ -152,4 +154,7 @@ you wrote it — `PARSE-002` at the declaration, then *"this `{` is never
 closed"* pointing at `main`'s closing brace. It reads as a brace imbalance
 dozens of lines away and gets bisected as one; a sibling library lost about an
 hour to it. If a parse error claims an unclosed brace and the braces balance,
-look for a local named after a qualifier before you touch the braces.
+look for a local named after a qualifier before you touch the braces. *(Since
+compiler `2e1cb4a` the declaration's own report names it: `NITPICK-PARSE-001`
+at the name, "`stack` is a keyword and cannot name a binding" — the
+compiler's DEF-259; cycle 0.4.0a, TM-265.)*

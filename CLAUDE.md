@@ -13,12 +13,49 @@ system zone, the adoption of compiler `7e91730` and the double: `src/host/`
 reads the machine and nothing else in the library does — `check_purity`
 reads that in the source and `check_call_edges` in the library's emission —
 and the test host is a value in `tests/double/`, the substitution a type.
-Cycle 0.4, formatting and parsing, is next, its README opened at the close.
+Cycle 0.4, formatting and parsing, is in progress: 0.4.0a, the adoption of
+compiler `2e1cb4a`, DONE (2026-10-22), and 0.4.0, the layout type, next — its
+§1 re-measured at the new pin first.
 Cycle 0.2 CLOSED (2026-10-02), archived at `meta/roadmap/done/0.2/` — instants and timestamps:
 `Instant` and its two clocks, `Timestamp` and its one constructor, the
 conversions to and from the civil scale in UTC with their exhaustive gate on
 every run, and the `Duration` interop — after cycle 0.1, the civil calendar,
 CLOSED 2026-09-26 and archived at `meta/roadmap/done/0.1/`.**
+
+**After cycle 0.4.0a: the adoption of compiler `2e1cb4a`** — the compiler's
+landing 140, carrying its landings 104 … 140 over `7e91730`, two pins on, since
+this repository did not take `c9baa9e`: the libraries' one re-pin, by the
+author's word of 2026-10-22. **A view of a sink's body holds its sink**: since
+the compiler's D-341 (landing 128) a `#wild_slice` over a managed header's
+pointer is a view of its owner, frozen to the end of the block that declares
+it, so `bytes_reserve`'s copy and its two views are a block of their own, ended
+before `b.body = move(fresh);` — eight roots were refused at that line,
+`NITPICK-BORROW-015` twice — and `bytes_view_lifetime` takes each view in a
+block of its own, its stale read now the refusal `probe10d` asserts: a caller
+holding `bytes_view`'s answer across any of the six calls that can grow the
+sink is refused at the call, and the five that cannot are not — TM-139's rule,
+the compiler's to the function (TM-263). `probe19` asks the `Copy` judgement of
+`Bytes`, an owning type of the library's own, `NITPICK-TYPE-087` at both pins,
+since `impl:string:Copy` is the orphan rule's now, `NITPICK-TYPE-099` (D-359,
+landing 124), which `probe19b` asserts. Those re-spellings were made at the
+OLD pin first, which saw no difference — every file's codes and sites as
+before — and with them **`bytes_view` answers the read-only view**, `fixed
+uint8[]`, so no byte of a sink is a consumer's to write; `src/`'s nine
+`#wild_slice` sites stand where they are, each measured (TM-264). **Then the
+pin's own moves** (TM-265): part E's third half drops `86400_i64`, which the
+compiler refuses since its DEF-190 — a numeral's digit run ends in a digit; a
+local named after a keyword is `NITPICK-PARSE-001` at the name, naming it
+(`BUILD.md` §7's note); a module binding with no initialiser is
+`NITPICK-TYPE-055` (DEF-250, the candidate cycle 0.3.3 raised); TM-171's
+`fixed Weekday[7]` table is spellable now (D-356) and declined again; the
+emission moves in text by landing 115's attribute, 126's site table and 105's
+drops, and in nothing `check_call_edges`, `check_wide_types` or `check_purity`
+reads; and the cycle README's adoption list, each item measured. CI pins
+`2e1cb4a`, and holds the LLVM asset it installs to the asset's digest before
+unpacking it, its cache keyed on the digest too. A full invocation is **148
+units green** at pin `2e1cb4a` where a user namespace is allowed — CI's runner;
+a shell that refuses one reads 146 of them, `probe22` and `system_zone_etc`
+exiting 20, the machine's refusal their headers name.
 
 **After cycle 0.3.4: cycle 0.3's close.** The cycle's documents audit (the
 workbench's, at `fa9fb37`) found its predecessor's TA-1 … TA-7 fixed and four
@@ -60,7 +97,9 @@ a module declares keeps a reading between two calls — of the forms measured
 initialiser is `NITPICK-TYPE-055`, the compiler's D-211, a write into a part of a
 `fixed` one `NITPICK-TYPE-086`, an initialiser that calls `NITPICK-TYPE-035`,
 and one with no initialiser is a read-only zero whose plain write the legs
-disagree on, a compiler-defect candidate raised and relied on nowhere — and
+disagree on, a compiler-defect candidate raised and relied on nowhere *(and
+`NITPICK-TYPE-055` too since compiler `2e1cb4a` — the candidate, fixed as the
+compiler's DEF-250: cycle 0.4.0a, TM-265)* — and
 there is no `host` object to link in `host`'s place, `npkc` compiling the
 whole graph a root reaches (TM-117) and mapping no path to another. So
 `tests/double/host_double.npk` declares the seam, `HostReadings` — H-1's five
@@ -793,7 +832,10 @@ cycle 0.0 paid most for.**
   second compiled through the seal (D-313) until `body` was hidden (question 9).
 - **A `bytes_view` view is invalidated by GROWTH** (TM-139, S-18e). It is valid
   until the next call that can grow the sink and no longer; reading it after
-  one returns **170**, the allocator's poison. `bytes_view`'s header claimed
+  one returns **170**, the allocator's poison. *(Since compiler `2e1cb4a` the
+  compiler refuses that read's premise: a view held across one of the six
+  calls that can grow the sink is `NITPICK-BORROW-015` at the call, and the
+  answer is the read-only view — cycle 0.4.0a, TM-263 … TM-265.)* `bytes_view`'s header claimed
   the opposite from 0.0.4 to 0.0.6 and both it and `bytes_push` are public.
   **The structural half is the durable lesson: every gate this repository owns
   is a LEAK gate, and a use-after-free is found by a WRONG ANSWER.** Cycle 0.0
@@ -918,6 +960,18 @@ Full statement in `meta/specs/SAFETY.md` §1. The ones that bite hardest here:
   (`NITPICK-ASSIGN-002`). Bind it `fixed uint8[]:bs = string_bytes(v);`, take
   it as `fixed uint8[]:src`, and keep `uint8[]` where a function writes
   (TM-258).
+- **A view of a buffer's bytes holds the buffer** — since compiler `2e1cb4a`
+  (its D-341): a `#wild_slice` over a managed header's pointer is a view of
+  its owner, frozen to the end of the block that declares it, so a write over
+  the owner, a `move` out of it or `@owner` handed to a writer while the view
+  lives is `NITPICK-BORROW-015`. Declare such a view in a block that ends
+  before its owner is written, moved or grown, as `bytes_reserve` does; and a
+  caller of `bytes_view` holds its answer across no call that can grow the
+  sink, and binds it `fixed uint8[]` (TM-263, TM-264).
+- **An impl names a type or a trait of its own tree** — since compiler
+  `2e1cb4a` (its D-359): an impl whose type and trait are both another tree's,
+  `impl:string:Copy` among them, is `NITPICK-TYPE-099` at the impl, asked
+  before the `Copy` judgement (TM-265).
 - **A `cstring` owns what `to_cstring` makes, and is move-only** — since
   compiler `5fbaf4a` (its D-328): a copy of one is `NITPICK-TYPE-046`. Read an
   `environ()` element in place, `env[k].ptr`, and move `to_cstring`'s answer
@@ -970,7 +1024,9 @@ bound), `in`, `on`, `mod` (a modulus), `fixed` (as in "fixed offset"), `range`,
 `error`, `buffer`, `raw`, `move`, `any`, `is`, `never`, `fails`. And since
 cycle 0.3.2, measured: `uid` and `gid`, which a user namespace's maps want,
 and `pid`, `tid`, `fd`, `thread`, `cfg` and `arena` — `NITPICK-PARSE-002` at
-the declaration; this library writes `me` and `mg`.
+the declaration; this library writes `me` and `mg`. *(Since compiler `2e1cb4a`
+each is `NITPICK-PARSE-001` at the NAME, and the message names the keyword —
+`BUILD.md` §7's note, cycle 0.4.0a, TM-265.)*
 
 The substitutes this library uses, so the tree stays consistent: **`gran`** for
 a rounding granularity, **`hi`**/**`lo`** for range bounds, **`rem`** for a
@@ -997,7 +1053,10 @@ closed"* pointing at `main`'s closing brace — so it reads as a brace imbalance
 dozens of lines away and gets bisected as one. A sibling library lost about an
 hour to it. **If a parse error claims an unclosed brace and the braces are
 balanced, check whether a local is named after a qualifier before you touch the
-braces.**
+braces.** *(Since compiler `2e1cb4a` the declaration's own report says so: a
+local declared `T:stack` is `NITPICK-PARSE-001` at the name — "`stack` is a
+keyword and cannot name a binding" — the compiler's DEF-259, landing 136; the
+reports after it are the uses'. Cycle 0.4.0a, TM-265.)*
 
 Three shapes that surprise a C or Rust habit: adjacent string literals do not
 concatenate; `discard(x);` takes parentheses and `defer { … }` takes no

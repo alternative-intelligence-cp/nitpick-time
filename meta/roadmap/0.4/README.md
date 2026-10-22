@@ -53,7 +53,7 @@ means writing a parser with nothing to feed it.
 | # | Topic | Ends with |
 |---|---|---|
 | 0.4.0a | **The adoption of compiler `2e1cb4a`** — landing 140, the libraries' one re-pin, by the author's word of 2026-10-22, two pins on from cycle 0.3's `7e91730` (landings 104 … 140): each view landing 128 ties to its owner in a block of its own, `probe19` asking the `Copy` judgement of `Bytes`, and `bytes_view`'s answer the read-only view — at the old pin first, which sees no difference; then the pin's own moves — part E's refused numeral, a held view and an orphan impl each a refusal asserted, TM-171's `fixed Weekday[7]` table weighed again and declined, the adoption list below each measured — and CI pinned, its LLVM asset's digest checked before it is unpacked — **[`0.4.0a.md`](0.4.0a.md)**, planned and rehearsed 2026-10-22 at both pins; it runs before 0.4.0 | the tree green at `2e1cb4a` |
-| 0.4.0 | **The layout type** — `FmtPart`, `Layout`, `layout_validate` — **[`0.4.0.md`](0.4.0.md)**, written at cycle 0.3's close at `7e91730` (its §8 says whether it was rehearsed) | a layout is a value the type checker sees |
+| 0.4.0 | **The layout type** — `FmtPart`, `Layout`, `layout_validate` — **[`0.4.0.md`](0.4.0.md)**, written at cycle 0.3's close at `7e91730` (its §8 says whether it was rehearsed); its §1 is re-measured at `2e1cb4a` over 0.4.0a's tree before it is dispatched, by the list in `0.4.0a.md` §7 | a layout is a value the type checker sees |
 | 0.4.1 | **The printer** — `format_with`, and the named emitters | goldens for every format |
 | 0.4.2 | **The parser** — `parse_with`, the named parsers, `Parsed`, `ParseError` | every format read back |
 | 0.4.3 | **The round trip** — the generated corpus and the fixed-point gate | the cycle's gate |
@@ -185,6 +185,28 @@ each item measured by 0.3.2a at `7e91730` and owed again at every pin:
 6. **Each CI's pin bump**, and the emission row CI asserts (TM-212), in the
    adoption's own commit.
 
+*(Carried by 0.4.0a, the adoption of compiler `2e1cb4a`, 2026-10-22 —
+`0.4.0a.md` §1, TM-263 … TM-265 — each item measured at both pins. **1** D-341
+is built at `2e1cb4a`: `bytes_reserve`'s two views take a block that ends before
+its overwrite (TM-263), `bytes_view` answers the read-only view, and the nine
+sites stand, each measured — `vec.npk`'s four over a `wild` pointer, which the
+belt roots at the pointee, `bytes_push`'s and `bytes_extend`'s written through
+into the view and `len`, and `bytes_view`'s travelling up to its caller
+(TM-264). **2** Both functions' `int128` arithmetic is inline at both pins, and
+no object names a symbol `npkrt.o` does not define. **3** The lexer re-read: a
+numeral whose digit run ends in `_` is refused (DEF-190), so part E's third
+half drops `86400_i64`; no span `lexical.py` finds moved (TM-265). **4** The
+builtin table's fifty-seven names and the prelude's sixty-three public
+functions are the same at both pins, the prelude unchanged and the one row that
+moved `#wild_slice`'s views, so `check_purity`'s list stands;
+`check_call_edges` reaches the same seventeen runtime symbols from every
+function, and the emission's names and type ids are as before. **5** The
+instances' unit compiles at `2e1cb4a`; CI's namespace step is read at the push.
+**6** CI is pinned to `2e1cb4a`, its emission row notice 140's, in a commit of
+its own after the adoption's three; and the LLVM asset it installs is held to
+its digest before it is unpacked. The next re-pin owes the list again, from
+0.4.0a's rows of the landings past `2e1cb4a`, §1.)*
+
 ## Gate
 
 The round-trip fixed point over the generated corpus, with exactly two
@@ -264,6 +286,10 @@ documented exceptions and a test that counts them.
   passed by pointer anyway, and a read-only one is this cycle's to shape, with
   a caller in hand (TM-013).
 - **`Bytes` and `Vec<T>` are indexed WITHOUT a bounds check** (TM-108, S-17b).
+  *(Since compiler `2e1cb4a` a `buffer` has checked indexing and ranging —
+  `b[i]` and `b[lo...hi]`, the compiler's D-341 — and `bytes.npk`'s accessors
+  keep their slices, each held to its owner by that decision's belt, TM-264; a
+  formatter goes through them, as below.)*
   Every formatter in this cycle writes into a `Bytes`, and `Layout` holds a
   `Vec<FmtPart>`; both are bare pointers to the emitter, so an out-of-range
   index is a wrong byte rather than a trap. Go through the accessors, which is

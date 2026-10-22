@@ -11,7 +11,7 @@
 # ============================================================================
 # THE TWO CONDITIONS THIS FILE EXISTS TO WRITE DOWN
 # ============================================================================
-# A green run here may be read as "ntime builds against compiler 7e91730" only
+# A green run here may be read as "ntime builds against compiler 2e1cb4a" only
 # because BOTH of the following are stated AND enforced below. Either one
 # missing and the claim is weaker than it sounds.
 #
@@ -53,9 +53,10 @@
 # interop -- and `src/host/` since 0.3.0, the clocks --
 # re-exported together as 84 public names [[sweep: lib_reexports=84]] (81
 # until cycle 0.3.2 added the system zone's three),
-# so this IS evidence about behaviour, of the 146 units the runner reports at
-# compiler `7e91730` since cycle 0.3.3, the double's three tests among them
-# (143 at `7e91730` at cycle 0.3.2a, 143 at `5fbaf4a` at cycle 0.3.2, 134 at cycles 0.3.0 and 0.3.1, 133 at cycles 0.2.4b and 0.2.4, 131 at cycles 0.2.3 and 0.2.4a, 126 at cycles 0.2.2 and 0.2.3a, 122 at cycle 0.2.1, 114 at cycle 0.2.0, 111 at 0.2.0b, 113 at 0.2.0a and at
+# so this IS evidence about behaviour, of the 148 units the runner reports at
+# compiler `2e1cb4a` since cycle 0.4.0a, two refusal probes among them
+# (146 at `7e91730` at cycle 0.3.3, the double's three tests among them,
+# 143 at `7e91730` at cycle 0.3.2a, 143 at `5fbaf4a` at cycle 0.3.2, 134 at cycles 0.3.0 and 0.3.1, 133 at cycles 0.2.4b and 0.2.4, 131 at cycles 0.2.3 and 0.2.4a, 126 at cycles 0.2.2 and 0.2.3a, 122 at cycle 0.2.1, 114 at cycle 0.2.0, 111 at 0.2.0b, 113 at 0.2.0a and at
 # `c970483` at cycle 0.1.5's second half; 62 at cycle 0.0.6, 67 at 0.1.0,
 # 70 at 0.1.0b, 75 at 0.1.0c, 78 at 0.1.1, 81 at 0.1.2, 86 at 0.1.3, 90 at
 # 0.1.3b, 91 at 0.1.4 and 0.1.4b, all at `c3bdae2` from 0.1.0b on, 101 at
@@ -212,7 +213,14 @@
 # READ-ONLY view, `fixed uint8[]`, and every slot of the tree they reach says
 # so -- the compiler refuses a plain one and a write through one (TM-258);
 # and a header names what that compiler reports, one `NITPICK-TYPE-079` for a
-# literal of sealed fields and one report for one mistake (TM-259).
+# literal of sealed fields and one report for one mistake (TM-259). AND SINCE
+# CYCLE 0.4.0a, AT COMPILER `2e1cb4a`: a view of a sink's body holds its sink,
+# so no view the library takes outlives a write that can free the body, and a
+# consumer's view held across a call that can grow the sink is refused where
+# it is written -- asserted by a refusal probe (TM-263, TM-265); `bytes_view`
+# answers the read-only view, so no byte of a sink is a consumer's to write
+# (TM-264); and a claim of `Copy` for an owning type is refused, by the
+# judgement in this tree and by the orphan rule in any other (TM-263, TM-265).
 #
 # AND, SINCE CYCLE 0.0.3, IT IS ALSO EVIDENCE THAT THE RUNNER CAN FAIL. The
 # harness's first step is `harness/selfcheck.py` (`meta/specs/TESTING.md` V-14,
@@ -281,7 +289,7 @@ permissions:
   contents: read
 
 env:
-  # ../BOARD.md's pinned toolchain, by FULL sha. `7e91730` is the short form
+  # ../BOARD.md's pinned toolchain, by FULL sha. `2e1cb4a` is the short form
   # used in the roadmap and in the transcripts.
   #
   # THIS PIN WAS `0dfddac` UNTIL CYCLE 0.0.6 AND THE COMMENT ABOVE WAS FALSE
@@ -324,31 +332,50 @@ env:
   # together, so CI runs once, on the adopted tree
   # (`meta/roadmap/done/0.3/0.3.2a.md` §3).
   #
+  # AND IT WAS `7e91730` UNTIL CYCLE 0.4.0a, which moves it to `2e1cb4a`, the
+  # compiler's landing 140 -- the libraries' one re-pin, by the author's word
+  # of 2026-10-22, carrying its landings 104 ... 140, this repository having
+  # taken no pin between -- IN A COMMIT OF ITS OWN, after the adoption's three
+  # and before its prose: the adopted tree is RED at `7e91730`, which makes
+  # neither refusal its two new probes assert, and the unadopted tree is RED
+  # at `2e1cb4a`, which refuses its self-check's numeric program and eight
+  # roots that reach `bytes_reserve` (TM-263, TM-265). All of them are pushed
+  # together, so CI runs once, on the adopted tree
+  # (`meta/roadmap/0.4/0.4.0a.md` §3).
+  #
   # EVERY HEX VALUE IN THIS BLOCK IS QUOTED. GitHub's YAML reads a bare scalar
   # of digits, one `e` and digits as a NUMBER: unquoted, `7e91730` is the
-  # float 7 x 10^91730, and the first run at this pin, 38022131137, held
+  # float 7 x 10^91730, and the first run at that pin, 38022131137, held
   # NITPICK_COMMIT_SHORT=Infinity and printed "built from compiler Infinity".
   # No assertion reads that row, so the run was green; PyYAML, which read
   # this file at the plan's rehearsal, takes the same text as a string. A
   # quoted value is its text, whatever its characters, so the commit and the
   # three digests are quoted too (cycle 0.3.2a's record).
-  NITPICK_COMMIT: "7e91730d19cffd35fcff25c36893cfaa2c01509e"
-  NITPICK_COMMIT_SHORT: "7e91730"
+  NITPICK_COMMIT: "2e1cb4adef795488c0530be297e441f923bbe090"
+  NITPICK_COMMIT_SHORT: "2e1cb4a"
   # nitpick.toml [toolchain] llvm. Condition (1) above. 20.1.2 until cycle
   # 0.3.2a: the upstream release tarball of 20.1.8 is the asset the install step
   # below names, as it named 20.1.2's.
   LLVM_VERSION: 20.1.8
+  # THAT ASSET'S DIGEST, AND WHAT IT IS (cycle 0.4.0a, TM-265): the sha256 of
+  # https://github.com/llvm/llvm-project/releases/download/llvmorg-20.1.8/LLVM-20.1.8-Linux-X64.tar.xz,
+  # 2 021 269 412 bytes, measured from the asset at the plan's writing and
+  # equal to GitHub's record of it and to the provenance the LLVM project's
+  # release workflow attests (meta/research/llvm-release-asset.md). The install
+  # step holds the download to it before unpacking, and the cache key names it.
+  LLVM_TARBALL_SHA256: "1ead36b3dfcb774b57be530df42bec70ab2d239fbce9889447c7a29a4ddc1ae6"
   # The digests of the artefacts the workbench pins, from
-  # ../.internal/toolchain/7e91730/SHA256SUMS. Reported against CI's own, never
+  # ../.internal/toolchain/2e1cb4a/SHA256SUMS. Reported against CI's own, never
   # asserted -- see the step that uses them for why.
-  NPKC_SHA256_WORKBENCH: "9067e39ee00bd8454c1f9b882a106b32d163d43240b22e55cf38c51a276e3cc3"
+  NPKC_SHA256_WORKBENCH: "1a42e012c0e7f93827db30e9eb64003d05c936e3556df2937304ae489f5b4f2c"
   NPKRT_SHA256_WORKBENCH: "c8e5033ad17c70f838d567157738a6cc046af0ca3140ad92259fa71f0e747b4e"
   # THE EMISSION AT THAT COMMIT, as the compiler's own build recorded it -- notice
-  # 103's `npkc.ll` row, in ../.internal/toolchain/7e91730/PIN.md (notice 82's,
-  # `5630c2b4...` / 30 232 291 B, until cycle 0.3.2a). ASSERTED by the
+  # 140's `npkc.ll` row, in ../.internal/toolchain/2e1cb4a/PIN.md (notice 103's,
+  # `b79f89c5...` / 31 527 001 B, from cycle 0.3.2a until cycle 0.4.0a, and
+  # notice 82's, `5630c2b4...` / 30 232 291 B, before). ASSERTED by the
   # step below since cycle 0.2.0a (TM-212), and moved with every pin.
-  NPKC_LL_SHA256: "b79f89c554ef83eeadca05d4e22929e70746483aec74e7b2f046f7a3933b66e7"
-  NPKC_LL_BYTES: 31527001
+  NPKC_LL_SHA256: "0073060250f0e56329ab77a01de45b0f499c0441db66215b7b762c9fe911b27c"
+  NPKC_LL_BYTES: 32569732
 
 jobs:
   build:
@@ -392,14 +419,27 @@ jobs:
 
       # The upstream release tarball, because apt.llvm.org packages by MAJOR
       # version and would give whatever 20.1.x is current -- which is precisely
-      # the pin condition (1) forbids. ~2 GB, so it is cached on the version
-      # alone: the asset is immutable for a given tag.
+      # the pin condition (1) forbids. ~2 GB, so it is cached, on the version
+      # and on the asset's digest.
+      #
+      # WHAT THE CHECK GUARANTEES (cycle 0.4.0a, TM-265). This comment said
+      # "the asset is immutable for a given tag" until then, and nothing here
+      # measured it: the LLVM release is not an immutable one in GitHub's
+      # sense, so an asset can be deleted and uploaded again under its name,
+      # and the tarball was piped into `tar` unchecked, under a cache key that
+      # named the version alone -- a replaced asset would have been unpacked,
+      # and kept. Now the install step downloads the tarball to a file and
+      # holds it to LLVM_TARBALL_SHA256 with `sha256sum -c` before `tar` reads
+      # a byte of it, so a tree unpacked on a cache miss is the asset the
+      # digest names, and the key names the digest, so a hit restores only a
+      # tree such a run unpacked. It does not say who built the asset: that
+      # the digest is the LLVM project's own is what the plan measured, once.
       - name: Cache LLVM ${{ env.LLVM_VERSION }}
         id: llvm-cache
         uses: actions/cache@v4
         with:
           path: ~/llvm
-          key: llvm-${{ env.LLVM_VERSION }}-linux-x64
+          key: llvm-${{ env.LLVM_VERSION }}-linux-x64-${{ env.LLVM_TARBALL_SHA256 }}
 
       - name: Install LLVM ${{ env.LLVM_VERSION }}
         if: steps.llvm-cache.outputs.cache-hit != 'true'
@@ -407,7 +447,12 @@ jobs:
           set -euo pipefail
           mkdir -p ~/llvm
           url="https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/LLVM-${LLVM_VERSION}-Linux-X64.tar.xz"
-          curl -fsSL "$url" | tar -xJ --strip-components=1 -C ~/llvm
+          tarball="$RUNNER_TEMP/LLVM-${LLVM_VERSION}-Linux-X64.tar.xz"
+          curl -fsSL -o "$tarball" "$url"
+          echo "downloaded $(stat -c '%s' "$tarball") B: $url"
+          echo "$LLVM_TARBALL_SHA256  $tarball" | sha256sum -c -
+          tar -xJf "$tarball" --strip-components=1 -C ~/llvm
+          rm -f "$tarball"
 
       # CONDITION (1), enforced.
       - name: Put LLVM on PATH and assert the exact patch release
@@ -471,8 +516,9 @@ jobs:
           # runner, as it may. So every artefact the ladder leaves is printed,
           # size beside digest, so the first that differs names the stage, and
           # `npkc.ll` is held to the pinned commit's row (`NPKC_LL_SHA256` and
-          # `NPKC_LL_BYTES` above, notice 103's since cycle 0.3.2a and notice
-          # 82's before), AFTER everything is printed. A
+          # `NPKC_LL_BYTES` above, notice 140's since cycle 0.4.0a, notice
+          # 103's from cycle 0.3.2a and notice 82's before), AFTER everything is
+          # printed. A
           # difference is a compiler defect to raise through the workbench,
           # never a pin to bump. The workbench's binary digests stay printed
           # beside CI's, for that measurement's record, and are EXPECTED to

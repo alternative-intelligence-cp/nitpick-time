@@ -74,7 +74,7 @@ func:main = int32(cstring[]:_~argv) {
 
     // The contents survived every reallocation -- the copy is the part of
     // growth that fails silently.
-    uint8[]:v = raw bytes_view(@b);
+    fixed uint8[]:v = raw bytes_view(@b);
     if (v.len != N)                            { exit 15i32; }
     if (v[0i64] != 65u8)                       { exit 16i32; }
     if (v[N - 1i64] != 65u8)                   { exit 17i32; }

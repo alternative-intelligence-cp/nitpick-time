@@ -1327,6 +1327,14 @@ returning a view, through a pointer to `Bytes`, which that file declares, and
 named here — so the day any part of it is false, the run is red. At its first
 run, `src/` declared 46 functions and one returned a view: `bytes_view`.)*
 
+*(2026-10-22, cycle 0.4.0a, TM-264: **the exemption's view is the read-only
+one.** `bytes_view` returns `fixed uint8[]`: a consumer's write through its
+answer, which reached the sink's `hidden` body until then, is
+`NITPICK-TYPE-086` where it is written, and every slot that binds the answer
+says `fixed`. The exemption's reason is unchanged — the view roots at the
+container through a pointer parameter — and `check_no_view_returns` reads a
+`fixed` result as the view it is, measured.)*
+
 *(Cycle 0.2.4a, TM-239 — the cycle audit's C4: and an optional of one.
 `uint8[]?` — "the rest, or none", the result a parser wants first — hands its
 caller a view whenever it is not `NIL`, compiles at the pin in a consumer, and

@@ -87,6 +87,10 @@
 // `bytes_capacity`. Sixteen lines in three test files moved to it. The seal
 // now keeps the bytes as well as the header, for every module but this one;
 // and a `Vec`'s whole-struct copy is refused too, since the same cycle.)*
+// *(But for `bytes_view`'s answer, a writable view of the body until cycle
+// 0.4.0a, TM-264, which made it the read-only one: a consumer's write
+// through it read back 65 where the sink had written 97, measured at cycle
+// 0.3.2a. Since then the sentence above is true of every byte.)*
 mod:bytes;
 
 use "./limits.npk".*;
@@ -134,7 +138,7 @@ pub func:bytes_reserve = NIL(Bytes->:b, int64:need) never fails {
     if (n < want) { n = want; }
     buffer:fresh = buffer_new(n);
     {
-        uint8[]:from = #wild_slice<uint8>(b.body.ptr, b.len);
+        fixed uint8[]:from = #wild_slice<uint8>(b.body.ptr, b.len);
         uint8[]:into = #wild_slice<uint8>(fresh.ptr, b.len);
         int64:i = 0i64;
         // `live` IS HOISTED SO THE MEASURE IS OVER TWO LOCALS (cycle 0.1.0b,
@@ -382,7 +386,16 @@ pub func:bytes_capacity = int64(Bytes->:b) never fails {
 // repository's record of where the LANGUAGE does and does not catch a view
 // escaping its owner. This is a different question: the view here never
 // outlives its owner, it outlives its owner's BODY.
-pub func:bytes_view = uint8[](Bytes->:b) never fails {
+//
+// THE ANSWER IS THE READ-ONLY VIEW, `fixed uint8[]` (cycle 0.4.0a, TM-264).
+// It was a plain `uint8[]` until then, and a consumer's write through it
+// reached the sink's `hidden` body -- 65 read back where the sink had written
+// 97, at both compilers, measured -- so the seal kept every byte of a `Bytes`
+// from a consumer but these. Now that write is `NITPICK-TYPE-086` where it is
+// written, and a plain `uint8[]` slot refuses the answer (`NITPICK-TYPE-007`):
+// a caller binds it `fixed uint8[]:v = raw bytes_view(@b);`. No caller here
+// writes through it, and `bytes_extend`'s source takes it as it is.
+pub func:bytes_view = fixed uint8[](Bytes->:b) never fails {
     pass #wild_slice<uint8>(b.body.ptr, b.len);
 };
 

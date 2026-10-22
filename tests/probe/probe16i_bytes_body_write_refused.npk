@@ -28,7 +28,7 @@ func:main = int32(cstring[]:_~argv) {
     Bytes:b = raw bytes_init(4i64);
     drop bytes_push(@b, 97u8);
     b.body.ptr[0i64] = 65u8;
-    uint8[]:v = raw bytes_view(@b);
+    fixed uint8[]:v = raw bytes_view(@b);
     if (v[0i64] == 65u8) { exit 70i32; }
     exit 0i32;
 };

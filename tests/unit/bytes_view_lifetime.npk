@@ -91,7 +91,7 @@ func:main = int32(cstring[]:_~argv) {
     int64:cap_before = raw bytes_capacity(@b);
     // THE VIEW IN A BLOCK, ENDED BEFORE THE PUSHES (cycle 0.4.0a, TM-263).
     {
-        uint8[]:v = raw bytes_view(@b);
+        fixed uint8[]:v = raw bytes_view(@b);
         if (v.len != HELD)                      { exit 10i32; }
         if (v[0i64] != A)                       { exit 11i32; }
     }
@@ -110,7 +110,7 @@ func:main = int32(cstring[]:_~argv) {
     // the same body (cycle 0.4.0a, TM-263: the view held across the pushes,
     // and its length the HELD bytes it was taken over, until then).
     {
-        uint8[]:v = raw bytes_view(@b);
+        fixed uint8[]:v = raw bytes_view(@b);
         if (v.len != HELD + PUSHES)             { exit 14i32; }
         if (v[0i64] != A)                       { exit 15i32; }
         if (v[HELD - 1i64] != A)                { exit 16i32; }
@@ -126,7 +126,7 @@ func:main = int32(cstring[]:_~argv) {
 
     int64:cap_small = raw bytes_capacity(@c);
     {
-        uint8[]:w = raw bytes_view(@c);
+        fixed uint8[]:w = raw bytes_view(@c);
         if (w.len != 2i64)                      { exit 20i32; }
         // VALID HERE, BEFORE ANY GROWTH -- so the read below is about the
         // growth and not about a view that never worked.
@@ -142,7 +142,7 @@ func:main = int32(cstring[]:_~argv) {
     // THE SINK ITSELF IS INTACT. Growth copies, so a view taken NOW is
     // correct -- the defect is the stale handle, never the container.
     {
-        uint8[]:fresh = raw bytes_view(@c);
+        fixed uint8[]:fresh = raw bytes_view(@c);
         if (fresh.len != 2i64 + PUSHES)         { exit 23i32; }
         if (fresh[0i64] != A)                   { exit 24i32; }
         if (fresh[2i64] != B)                   { exit 25i32; }

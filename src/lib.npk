@@ -126,7 +126,9 @@ pub use "./core/vec.npk".vec_free;
 // `b.body.ptr` still passes (D-313), which `bytes.npk`'s header measures and
 // the workbench's question 9 carries to the author. *(Until cycle 0.1.3c.
 // Since then `body` is `hidden` (TM-195), so a consumer cannot name it at all,
-// and reads the sink's capacity through `bytes_capacity`.)*
+// and reads the sink's capacity through `bytes_capacity`.)* *(And since cycle
+// 0.4.0a, TM-264, `bytes_view`'s answer is the read-only view, so no byte of
+// a sink is a consumer's to write but through the sink's own functions.)*
 pub use "./core/bytes.npk".Bytes;
 pub use "./core/bytes.npk".bytes_init;
 pub use "./core/bytes.npk".bytes_reserve;

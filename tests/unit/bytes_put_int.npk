@@ -58,7 +58,7 @@ fixed uint64:U64_MAX = ~0u64;
 // The two answers, as bytes, so the comparison is against text and not against
 // a re-implementation of the thing being tested.
 func:expect = int32(Bytes->:b, string:want, int32:code) never fails {
-    uint8[]:got = raw bytes_view(b);
+    fixed uint8[]:got = raw bytes_view(b);
     fixed uint8[]:wanted = string_bytes(want);
     if (got.len != wanted.len) { pass code; }
     int64:i = 0i64;

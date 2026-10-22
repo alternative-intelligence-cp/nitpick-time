@@ -131,7 +131,10 @@ of the cycle 0.3 plan it names, read again at the close.)*
   would refuse a consumer's write into the sink's `hidden` body. The
   compiler's D-341, `buffer`'s checked indexing, names `bytes.npk` its
   consumer and is not built — the list below — and the re-pin that carries
-  its build is where both are decided (`0.3.2a.md` §7).
+  its build is where both are decided (`0.3.2a.md` §7). *(Decided at that
+  re-pin, cycle 0.4.0a, TM-264: `bytes_view` returns the read-only view,
+  `fixed uint8[]`, and `src/`'s nine `#wild_slice` sites stand where they
+  are, each measured — `0.4.0a.md` §1.)*
 - **`fmt`'s functions are read in the library's emission the day they are
   written.** `check_call_edges` holds every call a function of `src/` outside
   `src/host/` makes to its reviewed allowlist, and names a non-generic

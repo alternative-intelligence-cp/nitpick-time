@@ -8581,6 +8581,11 @@ compiler requires, made at the OLD pin first, so that the old compiler testifies
 it changed no answer; the second moves the pin.
 
 ### TM-258 — the read-only view: every slot a string's bytes reach is `fixed uint8[]` — forty-four in sixteen files, each one the new compiler refuses plain — and a parser takes one
+> **Read with TM-264 (2026-10-22, cycle 0.4.0a).** The alternative declined
+> below as one the compiler's D-341 would reopen — `bytes_view`'s result
+> read-only, the slots that bind it, and `bytes_reserve`'s `from` — is taken
+> at the re-pin that carries D-341's build: each is `fixed uint8[]`. The four
+> slots written through stay plain. The text below is left exactly as written.
 
 **2026-10-09, cycle 0.3.2a (the plan's PD-105) — the adoption of compiler
 `7e91730`, its landing 103 (the compiler's D-348 step (ii), D-350, D-351).
@@ -9042,3 +9047,49 @@ view reads. **`probe19` re-headed to `NITPICK-TYPE-099`** — it would assert th
 orphan rule and no longer S-18h's claim. **A struct declared in the probe** —
 admitted and refused alike, measured; `Bytes` is the library's own owning type,
 which a consumer's `Vec<Bytes>` would make the element.
+
+### TM-264 — `bytes_view` returns the read-only view: its answer, every slot that binds it and `bytes_reserve`'s `from` are `fixed uint8[]`; and `src/`'s nine `#wild_slice` sites stand where they are, each measured at the pin that builds the compiler's D-341
+
+**2026-10-22, cycle 0.4.0a (the plan's PD-202) — the cycle README's adoption
+list, its first item, owed at a pin that builds D-341 (landing 128): the nine
+`#wild_slice` sites of `src/` and `bytes_view`'s result. Re-spells
+`src/core/bytes.npk`'s `bytes_view` and `bytes_reserve`'s `from`, and the seven
+test locals that bind `bytes_view`'s answer; dates `SAFETY.md` S-22's
+exemption, the comments in `bytes.npk` and `src/lib.npk` that state the sink's
+seal, and the cycle README's hand-on; and marks TM-258.**
+
+**What was found** (`0.4.0a.md` §1). `bytes_view`'s answer was a writable view
+of the sink's `hidden` body at both compilers: a consumer's write through it
+read back 65 where the sink had written 97. Returned as `fixed uint8[]`, the
+write is `NITPICK-TYPE-086` where it is written, and a plain slot binding the
+answer `NITPICK-TYPE-007`, at both compilers — so the re-spelling is made at
+the old pin, as TM-263's is. Seven test locals bind the answer, none written
+through, and `bytes_extend`'s source takes it as it is. And D-341 reaches
+`src/`'s nine sites as its notice said, each measured where it stands: the
+four of `vec.npk` lay a slice over a `Vec`'s `wild` pointer, which the belt
+roots at the pointee, so they freeze nothing; `bytes_push`'s and
+`bytes_extend`'s `room` views are written through, and the writes land in the
+view and in `b.len`, a field the view does not reach; `bytes_view`'s travels
+up to its caller, so a caller holding its answer across a growing call is
+refused at that call; and `bytes_reserve`'s two are TM-263's block.
+
+**The decision.** *`bytes_view` returns `fixed uint8[]`, the read-only view:
+no byte of a `Bytes` is a consumer's to write but through the sink's own
+functions. The slots that bind its answer, and `bytes_reserve`'s `from`, which
+the copy only reads, are `fixed uint8[]`; the four slots written through —
+`bytes_reserve`'s `into`, the two `room`s and `civil_total_edges.npk`'s `bw` —
+stay plain. The nine `#wild_slice` sites stand where they are: each view is
+tied to its owner by D-341's belt or roots at a `wild` pointee, and each
+slice's guard is the compiler's (S-17c).*
+
+*Alternatives declined:* **the plain result kept** — a write path into a
+`hidden` body for no caller, the one place the seal did not reach. **The
+checked byte view D-341 builds, `b.body[0i64...b.len]`, as the body** — the
+same view of the same bytes, held the same way, and a spelling the old
+compiler refuses, in a subcycle whose re-spellings are judged there first.
+**`bytes.npk`'s other sites on the checked index, `b.body[i]`** — the slices
+are held to their owner by the belt and checked by the compiler's guard
+already, so the spelling would move every site and change no answer; nothing
+the new compiler requires moves them, and a later subcycle that wants a check
+the slices do not give may take it then. **`bytes_view` removed** — a consumer
+of a sink reads its bytes without a copy through it, and `bytes_take` copies.
